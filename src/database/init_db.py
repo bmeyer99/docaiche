@@ -16,6 +16,12 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+# Import configuration system for integration
+try:
+    from src.core.config import get_system_configuration
+except ImportError:
+    get_system_configuration = None
+
 
 class DatabaseInitializer:
     """
@@ -37,11 +43,15 @@ class DatabaseInitializer:
         else:
             # Integrate with CFG-001 configuration system
             try:
-                from src.core.config import get_system_configuration
-                config = get_system_configuration()
-                self.db_path = os.path.join(config.app.data_dir, "docaiche.db")
+                if get_system_configuration is not None:
+                    config = get_system_configuration()
+                    self.db_path = os.path.join(config.app.data_dir, "docaiche.db")
+                    logger.info(f"Using configuration from CFG-001: {self.db_path}")
+                else:
+                    self.db_path = "/app/data/docaiche.db"
+                    logger.info("CFG-001 configuration not available, using default path")
             except Exception as e:
-                logger.warning(f"Could not load configuration, using default path: {e}")
+                logger.warning(f"Could not load CFG-001 configuration, using default path: {e}")
                 self.db_path = "/app/data/docaiche.db"
         
         self.schema_version = "1.0.0"

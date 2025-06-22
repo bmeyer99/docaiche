@@ -24,6 +24,12 @@ from .models import Base
 
 logger = logging.getLogger(__name__)
 
+# Import configuration system for integration
+try:
+    from src.core.config import get_system_configuration
+except ImportError:
+    get_system_configuration = None
+
 
 # Canonical data models from PRD-002
 class DocumentMetadata(BaseModel):
@@ -104,12 +110,14 @@ class DatabaseManager:
                 expire_on_commit=False
             )
             
-            # Test connection
+            # Test connection and enable foreign key constraints
             async with self.engine.begin() as conn:
+                # CRITICAL: Enable foreign key constraints for data integrity
+                await conn.execute(text("PRAGMA foreign_keys = ON"))
                 await conn.execute(text("SELECT 1"))
             
             self._connected = True
-            logger.info("Database connection established successfully")
+            logger.info("Database connection established successfully with foreign key constraints enabled")
             
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
@@ -127,8 +135,8 @@ class DatabaseManager:
         Execute a SQL query with parameters.
         
         Args:
-            query: SQL query string
-            params: Query parameters tuple
+            query: SQL query string with ? placeholders for positional parameters
+            params: Query parameters as tuple
             
         Raises:
             SQLAlchemyError: If query execution fails
@@ -138,7 +146,17 @@ class DatabaseManager:
         
         try:
             async with self.session_factory() as session:
-                await session.execute(text(query), dict(enumerate(params)))
+                # Convert positional parameters to dictionary for SQLAlchemy text()
+                if params:
+                    # For ? placeholders, convert to numbered parameters
+                    param_dict = {f"param_{i}": param for i, param in enumerate(params)}
+                    # Replace ? with :param_0, :param_1, etc.
+                    query_modified = query
+                    for i in range(len(params)):
+                        query_modified = query_modified.replace("?", f":param_{i}", 1)
+                    await session.execute(text(query_modified), param_dict)
+                else:
+                    await session.execute(text(query))
                 await session.commit()
         except SQLAlchemyError as e:
             logger.error(f"Query execution failed: {query[:100]}... Error: {e}")
@@ -149,8 +167,8 @@ class DatabaseManager:
         Fetch single row from query result.
         
         Args:
-            query: SQL query string
-            params: Query parameters tuple
+            query: SQL query string with ? placeholders for positional parameters
+            params: Query parameters as tuple
             
         Returns:
             Single row or None if no results
@@ -163,7 +181,17 @@ class DatabaseManager:
         
         try:
             async with self.session_factory() as session:
-                result = await session.execute(text(query), dict(enumerate(params)))
+                # Convert positional parameters to dictionary for SQLAlchemy text()
+                if params:
+                    # For ? placeholders, convert to numbered parameters
+                    param_dict = {f"param_{i}": param for i, param in enumerate(params)}
+                    # Replace ? with :param_0, :param_1, etc.
+                    query_modified = query
+                    for i in range(len(params)):
+                        query_modified = query_modified.replace("?", f":param_{i}", 1)
+                    result = await session.execute(text(query_modified), param_dict)
+                else:
+                    result = await session.execute(text(query))
                 return result.fetchone()
         except SQLAlchemyError as e:
             logger.error(f"Query fetch_one failed: {query[:100]}... Error: {e}")
@@ -174,8 +202,8 @@ class DatabaseManager:
         Fetch all rows from query result.
         
         Args:
-            query: SQL query string
-            params: Query parameters tuple
+            query: SQL query string with ? placeholders for positional parameters
+            params: Query parameters as tuple
             
         Returns:
             List of rows
@@ -188,7 +216,17 @@ class DatabaseManager:
         
         try:
             async with self.session_factory() as session:
-                result = await session.execute(text(query), dict(enumerate(params)))
+                # Convert positional parameters to dictionary for SQLAlchemy text()
+                if params:
+                    # For ? placeholders, convert to numbered parameters
+                    param_dict = {f"param_{i}": param for i, param in enumerate(params)}
+                    # Replace ? with :param_0, :param_1, etc.
+                    query_modified = query
+                    for i in range(len(params)):
+                        query_modified = query_modified.replace("?", f":param_{i}", 1)
+                    result = await session.execute(text(query_modified), param_dict)
+                else:
+                    result = await session.execute(text(query))
                 return result.fetchall()
         except SQLAlchemyError as e:
             logger.error(f"Query fetch_all failed: {query[:100]}... Error: {e}")
@@ -211,7 +249,17 @@ class DatabaseManager:
             async with self.session_factory() as session:
                 async with session.begin():
                     for query, params in queries:
-                        await session.execute(text(query), dict(enumerate(params)))
+                        # Convert positional parameters to dictionary for SQLAlchemy text()
+                        if params:
+                            # For ? placeholders, convert to numbered parameters
+                            param_dict = {f"param_{i}": param for i, param in enumerate(params)}
+                            # Replace ? with :param_0, :param_1, etc.
+                            query_modified = query
+                            for i in range(len(params)):
+                                query_modified = query_modified.replace("?", f":param_{i}", 1)
+                            await session.execute(text(query_modified), param_dict)
+                        else:
+                            await session.execute(text(query))
                     # Commit is automatic with async context manager
                 return True
         except SQLAlchemyError as e:
@@ -396,12 +444,12 @@ class CacheManager:
             key: Cache key
             
         Returns:
-            Cached value or None if not found
+            Cached value or None if not found or Redis unavailable
         """
-        if not self._connected:
-            await self.connect()
-        
         try:
+            if not self._connected:
+                await self.connect()
+            
             data = await self.redis_client.get(key)
             if data is None:
                 return None
@@ -413,6 +461,10 @@ class CacheManager:
             # Parse JSON
             return json.loads(data.decode('utf-8'))
             
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.warning(f"Redis connection failed for get({key}): {e}. Gracefully degrading without cache.")
+            self._connected = False
+            return None
         except Exception as e:
             logger.error(f"Cache get failed for key {key}: {e}")
             return None
@@ -426,10 +478,10 @@ class CacheManager:
             value: Value to cache
             ttl: Time to live in seconds
         """
-        if not self._connected:
-            await self.connect()
-        
         try:
+            if not self._connected:
+                await self.connect()
+            
             # Serialize to JSON
             data = json.dumps(value, default=str).encode('utf-8')
             
@@ -440,9 +492,13 @@ class CacheManager:
             # Set with TTL
             await self.redis_client.setex(key, ttl, data)
             
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.warning(f"Redis connection failed for set({key}): {e}. Gracefully degrading without cache.")
+            self._connected = False
+            # Don't raise - allow application to continue without cache
         except Exception as e:
             logger.error(f"Cache set failed for key {key}: {e}")
-            raise
+            # Don't raise - allow application to continue without cache
     
     async def delete(self, key: str) -> None:
         """
@@ -451,14 +507,18 @@ class CacheManager:
         Args:
             key: Cache key to delete
         """
-        if not self._connected:
-            await self.connect()
-        
         try:
+            if not self._connected:
+                await self.connect()
+            
             await self.redis_client.delete(key)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.warning(f"Redis connection failed for delete({key}): {e}. Gracefully degrading without cache.")
+            self._connected = False
+            # Don't raise - allow application to continue without cache
         except Exception as e:
             logger.error(f"Cache delete failed for key {key}: {e}")
-            raise
+            # Don't raise - allow application to continue without cache
     
     async def increment(self, key: str) -> int:
         """
@@ -468,16 +528,20 @@ class CacheManager:
             key: Cache key for counter
             
         Returns:
-            New counter value
+            New counter value, or 1 if Redis unavailable
         """
-        if not self._connected:
-            await self.connect()
-        
         try:
+            if not self._connected:
+                await self.connect()
+            
             return await self.redis_client.incr(key)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.warning(f"Redis connection failed for increment({key}): {e}. Gracefully degrading without cache.")
+            self._connected = False
+            return 1  # Return default value when Redis unavailable
         except Exception as e:
             logger.error(f"Cache increment failed for key {key}: {e}")
-            raise
+            return 1  # Return default value on error
     
     async def expire(self, key: str, seconds: int) -> None:
         """
@@ -487,14 +551,18 @@ class CacheManager:
             key: Cache key
             seconds: Expiration time in seconds
         """
-        if not self._connected:
-            await self.connect()
-        
         try:
+            if not self._connected:
+                await self.connect()
+            
             await self.redis_client.expire(key, seconds)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.warning(f"Redis connection failed for expire({key}): {e}. Gracefully degrading without cache.")
+            self._connected = False
+            # Don't raise - allow application to continue without cache
         except Exception as e:
             logger.error(f"Cache expire failed for key {key}: {e}")
-            raise
+            # Don't raise - allow application to continue without cache
     
     async def health_check(self) -> Dict[str, Any]:
         """
