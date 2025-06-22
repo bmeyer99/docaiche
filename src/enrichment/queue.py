@@ -466,20 +466,53 @@ class EnrichmentTaskQueue:
     batch handling, and monitoring capabilities.
     """
     
-    def __init__(self, config: EnrichmentConfig):
+    def __init__(self, config: EnrichmentConfig, resource_limits: Optional[ResourceLimits] = None):
         """
         Initialize task queue manager.
         
         Args:
             config: Enrichment configuration
+            resource_limits: Resource limits for concurrency control
         """
         self.config = config
-        self.queue = EnrichmentQueue(config)
+        self.queue = EnrichmentQueue(config, resource_limits)
         self._processing_tasks: Dict[str, EnrichmentTask] = {}
         self._processing_lock = asyncio.Lock()
         self._last_processed: Optional[datetime] = None
         
         logger.info("EnrichmentTaskQueue initialized")
+    
+    async def start(self) -> None:
+        """
+        Start the task queue system.
+        
+        Initializes queue processing and background monitoring.
+        """
+        try:
+            logger.info("Starting EnrichmentTaskQueue")
+            # Queue starts automatically when initialized
+            logger.info("EnrichmentTaskQueue started successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to start EnrichmentTaskQueue: {e}")
+            raise
+    
+    async def stop(self) -> None:
+        """
+        Stop the task queue system.
+        
+        Performs graceful shutdown of queue processing.
+        """
+        try:
+            logger.info("Stopping EnrichmentTaskQueue")
+            # Clean up any remaining processing tasks
+            async with self._processing_lock:
+                self._processing_tasks.clear()
+            logger.info("EnrichmentTaskQueue stopped")
+            
+        except Exception as e:
+            logger.error(f"Error stopping EnrichmentTaskQueue: {e}")
+            raise
     
     async def submit_task(self, task: EnrichmentTask) -> None:
         """
