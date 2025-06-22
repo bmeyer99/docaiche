@@ -1,19 +1,173 @@
-AI Documentation CacheThis project is an intelligent, self-improving documentation repository designed to reduce developer documentation lookup time from minutes to seconds. It maintains a locally-cached, AI-curated knowledge base sourced from authoritative repositories and official documentation sites.Table of ContentsProject VisionCore FeaturesSystem ArchitectureTechnology StackQuick StartDevelopment SprintsProject VisionThe goal is to create an intelligent documentation cache that learns from user queries to proactively source, curate, and rank documentation, providing instant, context-aware answers.Success MetricsPerformance: <1s response time for 95% of cached queries; <5s for queries requiring enrichment.Quality: >90% result relevance score and >80% cache hit rate after one week of usage.Adoption: A complete, one-command setup that is fully functional in under 5 minutes.Core FeaturesIntelligent Search: Semantic search across a local vector database.AI-Driven Enrichment: The system detects when local results are insufficient and uses an LLM to devise a strategy for finding and ingesting new, relevant documentation.Authoritative Sourcing: Prioritizes fetching content directly from official GitHub repositories over general web scraping.Feedback Loop: Improves over time by learning from both explicit (thumbs up/down) and implicit (result clicks) user feedback.Simple Deployment: A single Docker command launches the entire application stack.System ArchitectureThe system is designed as a set of coordinated services running within a Docker environment.┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   User / API    │───▶│ Docs Cache App   │───▶│   AnythingLLM   │
-│ (Search Query)  │    │ (FastAPI)        │    │ (Vector Search) │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                           │      ▲
-                           │      │ (Evaluation & Strategy)
-                           ▼      │
-                       ┌──────────────────┐
-                       │   Ollama / LLM   │
-                       │ (Decision Engine)│
-                       └──────────────────┘
-For a complete breakdown, see the System Architecture Document.Technology StackCategoryTechnologyVersionBackendPython3.12API FrameworkFastAPI0.111.0DatabaseSQLite3CachingRedis7.2Vector DBAnythingLLMlatestLocal LLMOllamalatestDeploymentDocker / Docker ComposelatestFor a complete analysis, see the Technology Stack Analysis Document.Quick StartPrerequisitesDocker and Docker ComposeGit1. Clone the Repositorygit clone <repository-url>
-cd <repository-name>
-2. Configure EnvironmentCopy the example environment file and, if you have one, add your GitHub API key to increase rate limits.cp .env.example .env
-# Optional: nano .env
-3. Launch the ApplicationThis command will build the Docker images and start all services.docker-compose up --build -d
-4. Perform One-Time Model SetupAfter the containers are running, you need to pull the required AI models into Ollama.docker-compose exec ollama ollama pull llama3.1:8b
-docker-compose exec ollama ollama pull nomic-embed-text
-5. Access the ServicesAdmin Web UI: http://localhost:8081API Documentation: http://localhost:8080/docsAnythingLLM UI: http://localhost:3001For detailed instructions, see the Setup & Deployment Guide.Development SprintsThe project is broken down into a 12-week (6-sprint) development plan. The master project document contains the detailed breakdown of all PRDs and the full sprint backlog.Sprint 1: Foundation (API & Database)Sprint 2: External Integrations (Clients for AnythingLLM, LLM, GitHub)Sprint 3: Content Pipeline (Scraping & Processing)Sprint 4: Core Intelligence (Search & Enrichment Orchestration)Sprint 5: User Features (Feedback System & Web UI)Sprint 6: Operations (Deployment & Final Documentation)
+# AI Documentation Cache System - FastAPI Foundation
+
+## Overview
+
+This project implements the FastAPI application foundation for the AI Documentation Cache System as specified in PRD-001: HTTP API Foundation and task API-001.
+
+## Architecture
+
+The implementation follows the exact specifications from the PRD and task requirements:
+
+- **FastAPI Application**: Core API server with CORS and security middleware
+- **Configuration Management**: Environment-based configuration with Pydantic validation
+- **Security Middleware**: Custom security headers middleware
+- **Health Endpoint**: Basic health check endpoint as specified
+- **OpenAPI Documentation**: Auto-generated API documentation
+
+## Project Structure
+
+```
+src/
+├── __init__.py              # Package initialization
+├── main.py                  # FastAPI application entry point
+├── core/
+│   ├── __init__.py
+│   ├── config.py           # Configuration management
+│   └── security.py         # Security middleware
+├── api/
+│   ├── __init__.py
+│   └── v1/
+│       ├── __init__.py
+│       └── api.py          # API router with health endpoint
+└── models/
+    └── __init__.py         # Data models package
+
+tests/
+├── __init__.py
+└── test_main.py            # Application tests
+
+requirements.txt            # Python dependencies
+.env.example               # Environment configuration example
+```
+
+## Features Implemented
+
+### ✅ FastAPI Application Setup
+- Application title: "AI Documentation Cache System API"
+- Version: "1.0.0"
+- Description: "Intelligent documentation cache with AI-powered search and enrichment"
+- OpenAPI tags for endpoint organization
+
+### ✅ CORS Configuration
+- Configurable CORS origins via environment variables
+- Support for credentials, all HTTP methods, and headers
+- Default development configuration allows all origins
+
+### ✅ Security Middleware
+- X-Content-Type-Options: nosniff
+- X-Frame-Options: DENY
+- X-XSS-Protection: 1; mode=block
+- Strict-Transport-Security (for HTTPS)
+- Content-Security-Policy
+- Referrer-Policy
+- Permissions-Policy
+
+### ✅ Health Endpoint
+- `/api/v1/health` endpoint returns:
+  ```json
+  {
+    "status": "healthy",
+    "timestamp": "2024-01-01T00:00:00Z",
+    "version": "1.0.0"
+  }
+  ```
+
+### ✅ Configuration Management
+- Environment-based configuration with validation
+- Support for .env files
+- Configurable CORS, security, and server settings
+- Type-safe configuration with Pydantic
+
+## Installation & Setup
+
+1. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Configure Environment** (optional):
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. **Run the Application**:
+   ```bash
+   cd src
+   python3 main.py
+   ```
+   
+   Or using uvicorn directly:
+   ```bash
+   cd src
+   uvicorn main:app --reload --host 0.0.0.0 --port 8080
+   ```
+
+## API Documentation
+
+Once the application is running, access the auto-generated API documentation:
+
+- **Swagger UI**: http://localhost:8080/docs
+- **ReDoc**: http://localhost:8080/redoc
+- **OpenAPI JSON**: http://localhost:8080/openapi.json
+
+## Testing
+
+Run the test suite:
+
+```bash
+python3 -m pytest tests/ -v
+```
+
+The test suite validates:
+- Application initialization
+- Health endpoint functionality
+- CORS headers presence
+- Security headers implementation
+- OpenAPI documentation generation
+
+## Configuration Options
+
+All configuration options can be set via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOST` | `0.0.0.0` | Server host address |
+| `PORT` | `8080` | Server port |
+| `CORS_ORIGINS` | `["*"]` | Allowed CORS origins |
+| `SECURITY_HEADERS_ENABLED` | `true` | Enable security headers |
+| `ENVIRONMENT` | `development` | Application environment |
+| `DEBUG` | `true` | Enable debug mode |
+
+## Acceptance Criteria Status
+
+- [x] FastAPI application starts successfully on port 8080
+- [x] CORS middleware allows cross-origin requests
+- [x] Security headers are present in all responses
+- [x] `/health` endpoint returns proper JSON response
+- [x] OpenAPI documentation is accessible at `/docs`
+- [x] Application follows established project structure
+- [x] All imports resolve correctly
+- [x] Code follows async/await patterns
+
+## Next Steps
+
+This implementation provides the foundation for the AI Documentation Cache System. The next tasks will build upon this foundation:
+
+- API-002: Implement Pydantic Schemas
+- API-003: Implement API Endpoint Stubs
+- PRD-002: Database & Caching Layer
+- PRD-003: Configuration Management System
+
+## Dependencies
+
+The implementation uses the following core dependencies as specified:
+
+- **FastAPI**: >= 0.100.0 - Web framework
+- **uvicorn[standard]**: >= 0.23.0 - ASGI server
+- **pydantic**: >= 2.0.0 - Data validation
+- **pydantic-settings**: >= 2.0.0 - Settings management
+
+## License
+
+This project is part of the AI Documentation Cache System implementation.

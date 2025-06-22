@@ -1,0 +1,32 @@
+# FastAPI Application Dependencies
+# PRD-001: HTTP API Foundation - Required Dependencies
+
+# Core FastAPI framework and server
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+
+# Data validation and settings management
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Form data support
+python-multipart>=0.0.6
+
+# HTTP client for external APIs
+aiohttp>=3.8.0
+
+# Database and caching
+aiosqlite>=0.19.0
+redis>=4.5.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+httpx>=0.24.0
+
+# Code quality tools
+mypy>=1.0.0
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+bandit>=1.7.0
