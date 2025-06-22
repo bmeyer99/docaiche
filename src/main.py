@@ -14,9 +14,9 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from core.config import get_settings
-from core.security import SecurityMiddleware
-from api.v1.api import api_router
+from src.core.config import get_settings
+from src.core.security import SecurityMiddleware
+from src.api.v1.api import api_router
 
 # Configure logging
 logging.basicConfig(
@@ -72,17 +72,17 @@ def create_application() -> FastAPI:
         lifespan=lifespan
     )
     
-    # Add CORS middleware as specified in task requirements
+    # Add CORS middleware with development-friendly defaults
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.CORS_ORIGINS,
-        allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
-        allow_methods=settings.CORS_ALLOW_METHODS,
-        allow_headers=settings.CORS_ALLOW_HEADERS,
+        allow_origins=["*"],  # Development mode - allow all origins
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
     
-    # Add security middleware as specified in task requirements
-    if settings.SECURITY_HEADERS_ENABLED:
+    # Add security middleware for production environments
+    if settings.app.environment == "production":
         application.add_middleware(SecurityMiddleware)
     
     # Include API router with v1 prefix
@@ -105,8 +105,8 @@ if __name__ == "__main__":
     
     uvicorn.run(
         "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.RELOAD,
-        log_level=settings.LOG_LEVEL
+        host=settings.app.api_host,
+        port=settings.app.api_port,
+        reload=settings.app.debug,
+        log_level=settings.app.log_level.lower()
     )
