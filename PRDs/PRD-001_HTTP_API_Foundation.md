@@ -92,7 +92,86 @@ class AdminSearchResponse(BaseModel):
     page: int = Field(..., description="Current page number (1-based).")
     page_size: int = Field(..., description="Number of items per page.")
     has_more: bool = Field(..., description="Whether there are more pages available.")
-```
+
+class SearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500, description="Search query string")
+    technology_hint: Optional[str] = Field(None, description="Optional technology filter (e.g., 'python', 'react')")
+    limit: int = Field(20, ge=1, le=100, description="Maximum number of results to return")
+    session_id: Optional[str] = Field(None, description="User session identifier for tracking")
+
+class SearchResult(BaseModel):
+    content_id: str = Field(..., description="Unique identifier for the content")
+    title: str = Field(..., description="Title of the document or section")
+    snippet: str = Field(..., description="Relevant excerpt from the content")
+    source_url: str = Field(..., description="Original source URL")
+    technology: str = Field(..., description="Associated technology or framework")
+    relevance_score: float = Field(..., ge=0.0, le=1.0, description="Relevance score for the query")
+    content_type: str = Field(..., description="Type of content (documentation, code, example, etc.)")
+    workspace: str = Field(..., description="AnythingLLM workspace containing this content")
+
+class SearchResponse(BaseModel):
+    results: List[SearchResult] = Field(..., description="List of search results")
+    total_count: int = Field(..., description="Total number of matching results")
+    query: str = Field(..., description="Original search query")
+    technology_hint: Optional[str] = Field(None, description="Technology filter applied")
+    execution_time_ms: int = Field(..., description="Time taken to execute the search")
+    cache_hit: bool = Field(..., description="Whether results were served from cache")
+    enrichment_triggered: bool = Field(False, description="Whether knowledge enrichment was triggered")
+
+class FeedbackRequest(BaseModel):
+    content_id: str = Field(..., description="ID of the content being rated")
+    feedback_type: Literal['helpful', 'not_helpful', 'outdated', 'incorrect', 'flag'] = Field(..., description="Type of feedback")
+    rating: Optional[int] = Field(None, ge=1, le=5, description="Optional 1-5 star rating")
+    comment: Optional[str] = Field(None, max_length=1000, description="Optional feedback comment")
+    query_context: Optional[str] = Field(None, description="Search query that led to this content")
+    session_id: Optional[str] = Field(None, description="User session identifier")
+
+class HealthStatus(BaseModel):
+    service: str = Field(..., description="Name of the service component")
+    status: Literal['healthy', 'degraded', 'unhealthy'] = Field(..., description="Current health status")
+    response_time_ms: Optional[int] = Field(None, description="Response time in milliseconds")
+    last_check: datetime = Field(..., description="Timestamp of last health check")
+    details: Optional[Dict[str, Any]] = Field(None, description="Additional status details")
+
+class HealthResponse(BaseModel):
+    overall_status: Literal['healthy', 'degraded', 'unhealthy'] = Field(..., description="Overall system health")
+    services: List[HealthStatus] = Field(..., description="Individual service health statuses")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Health check timestamp")
+
+class StatsResponse(BaseModel):
+    search_stats: Dict[str, Any] = Field(..., description="Search performance and usage statistics")
+    cache_stats: Dict[str, Any] = Field(..., description="Cache hit rates and performance")
+    content_stats: Dict[str, Any] = Field(..., description="Content collection and quality statistics")
+    system_stats: Dict[str, Any] = Field(..., description="System resource and performance statistics")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Statistics timestamp")
+
+class Collection(BaseModel):
+    slug: str = Field(..., description="Unique collection identifier")
+    name: str = Field(..., description="Human-readable collection name")
+    technology: str = Field(..., description="Primary technology or framework")
+    document_count: int = Field(..., description="Number of documents in collection")
+    last_updated: datetime = Field(..., description="Last update timestamp")
+    is_active: bool = Field(True, description="Whether collection is actively maintained")
+
+class CollectionsResponse(BaseModel):
+    collections: List[Collection] = Field(..., description="Available documentation collections")
+    total_count: int = Field(..., description="Total number of collections")
+
+class ConfigurationItem(BaseModel):
+    key: str = Field(..., description="Configuration key")
+    value: Any = Field(..., description="Configuration value")
+    schema_version: str = Field("1.0", description="Configuration schema version")
+    description: Optional[str] = Field(None, description="Human-readable description")
+    is_sensitive: bool = Field(False, description="Whether value contains sensitive data")
+
+class ConfigurationResponse(BaseModel):
+    items: List[ConfigurationItem] = Field(..., description="Configuration items")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Configuration timestamp")
+
+class ConfigurationUpdateRequest(BaseModel):
+    key: str = Field(..., description="Configuration key to update")
+    value: Any = Field(..., description="New configuration value")
+    description: Optional[str] = Field(None, description="Optional description of the change")
 
 ## Implementation Tasks
 

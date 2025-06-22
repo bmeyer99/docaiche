@@ -21,9 +21,9 @@ Specifies the system for collecting, storing, and processing user feedback. Cove
 | PRD-009: Search Orchestration Engine | Uses feedback to influence ranking |
 
 ## Cross-References
-- Uses `DatabaseManager` from PRD-002 for storage.
-- Called by PRD-001 for /api/v1/feedback and /api/v1/signals.
-- Updates content quality scores used by PRD-009.
+- Uses [`DatabaseManager`](PRD-002_DB_and_Caching_Layer.md) from [Database & Caching Layer](PRD-002_DB_and_Caching_Layer.md) for storage.
+- Called by [HTTP API Foundation](PRD-001_HTTP_API_Foundation.md) for /api/v1/feedback and /api/v1/signals endpoints.
+- Updates content quality scores used by [Search Orchestration Engine](PRD-009_search_orchestration_engine.md).
 
 ## Feedback Collector Interface
 

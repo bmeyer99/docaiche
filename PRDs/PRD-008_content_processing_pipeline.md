@@ -23,9 +23,9 @@ Specifies the content processing pipeline. Responsible for transforming raw cont
 | PRD-004: AnythingLLM Integration | Uploads processed documents |
 
 ## Cross-References
-- Uses `ContentConfig` from PRD-003 for chunk size limits and processing parameters.
-- Receives input from PRD-006 and PRD-007.
-- Outputs canonical models from [`PRD-002`](PRD-002_DB_and_Caching_Layer.md) to PRD-004.
+- Uses [`ContentConfig`](PRD-003_Config_Mgmt_System.md) from [Configuration Management](PRD-003_Config_Mgmt_System.md) for chunk size limits and processing parameters.
+- Receives input from [GitHub Repository Client](PRD-006_Github_repo_client.md) and [Web Scraping Client](PRD-007_web_scraping_client.md).
+- Outputs canonical models from [Database & Caching Layer](PRD-002_DB_and_Caching_Layer.md) to [AnythingLLM Integration](PRD-004_AnythingLLM_Integration.md).
 - Integrates with [`DatabaseManager`](PRD-002_DB_and_Caching_Layer.md:244) for content persistence.
 - Uses [`content_metadata`](PRD-002_DB_and_Caching_Layer.md:58) table for storage workflow.
 
@@ -34,7 +34,7 @@ Specifies the content processing pipeline. Responsible for transforming raw cont
 ```python
 from typing import List, Union, Optional, Tuple
 from pydantic import BaseModel, Field
-from PRD_002_models import DatabaseManager, ProcessedDocument, DocumentMetadata, DocumentChunk
+from .db_models import DatabaseManager, ProcessedDocument, DocumentMetadata, DocumentChunk
 
 class ContentProcessor:
     def __init__(self, config: ContentConfig, db_manager: DatabaseManager):
@@ -78,10 +78,14 @@ class ContentProcessor:
         """
         pass
 
-# All data models are now canonical models from PRD-002:
+# All data models are canonical models from PRD-002:
 # - ProcessedDocument: Complete document with metadata and chunks
 # - DocumentChunk: Individual content chunk with versioning
 # - DocumentMetadata: Document metadata with creation timestamps
+#
+# Import Note: Models are imported from .db_models module which provides
+# the canonical data structures defined in PRD-002. This ensures consistent
+# data contracts across all components that interact with the database layer.
 ```
 
 ## Content Processing Configuration
@@ -127,7 +131,7 @@ class ContentConfig(BaseModel):
 
 ```python
 from typing import Optional, Tuple
-from PRD_002_models import DatabaseManager, ProcessedDocument, DocumentMetadata
+from .db_models import DatabaseManager, ProcessedDocument, DocumentMetadata
 
 class ContentProcessor:
     def __init__(self, config: ContentConfig, db_manager: DatabaseManager):
@@ -198,7 +202,7 @@ async def _check_duplicate_content(self, content_hash: str) -> Optional[Processe
     query = "SELECT * FROM content_metadata WHERE content_hash = ?"
     result = await self.db_manager.fetch_one(query, (content_hash,))
     if result:
-        return await self._load_processed_document_from_metadata(result)
+        return await self.db_manager.load_processed_document_from_metadata(result)
     return None
 
 async def _create_initial_metadata_record(

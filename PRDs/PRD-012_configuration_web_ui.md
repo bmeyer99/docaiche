@@ -22,9 +22,9 @@ Specifies a simple, unauthenticated web interface for system administration. Pro
 | PRD-011: Feedback Collection System | Provides feedback data |
 
 ## Cross-References
-- Calls endpoints defined in PRD-001 for health, stats, config, and content management.
-- Displays configuration from PRD-003.
-- Shows content and feedback from PRD-002 and PRD-011.
+- Calls endpoints defined in [HTTP API Foundation](PRD-001_HTTP_API_Foundation.md) for health, stats, config, and content management.
+- Displays configuration from [Configuration Management](PRD-003_Config_Mgmt_System.md).
+- Shows content and feedback from [Database & Caching Layer](PRD-002_DB_and_Caching_Layer.md) and [Feedback Collection System](PRD-011_feedback_collection_system.md).
 
 ## UI Pages and Features
 

@@ -6,7 +6,7 @@ This document defines the standardized circuit breaker configurations used acros
 ## Service Categories and Standards
 
 ### 1. External APIs
-**Services**: GitHub API, OpenAI API, External LLM Providers  
+**Services**: GitHub API, OpenAI API
 **Configuration**:
 - `failure_threshold=5`
 - `recovery_timeout=300` (5 minutes)
@@ -15,22 +15,23 @@ This document defines the standardized circuit breaker configurations used acros
 **Rationale**: External APIs have rate limiting, variable response times, and occasional outages. Higher tolerance prevents unnecessary circuit opening due to temporary issues, while longer recovery accommodates provider-side rate limit resets and service restoration.
 
 **Applied to**:
-- [`PRD-005: LLM Provider Integration`](PRD-005_LLM_Provider_Integration.md) (OpenAI, Ollama)
+- [`PRD-005: LLM Provider Integration`](PRD-005_LLM_Provider_Integration.md) (OpenAI)
 - [`PRD-006: GitHub Repository Client`](PRD-006_Github_repo_client.md) (GitHub API)
 - [`PRD-003: Configuration Management`](PRD-003_Config_Mgmt_System.md) (OpenAIConfig, OllamaConfig, GitHubConfig)
 
 ### 2. Internal Services
-**Services**: AnythingLLM Integration  
+**Services**: AnythingLLM Integration, Ollama LLM Provider
 **Configuration**:
 - `failure_threshold=3`
 - `recovery_timeout=60` (1 minute)
 - `timeout=30` seconds
 
-**Rationale**: Internal services have predictable behavior and faster recovery capabilities. Medium tolerance with shorter recovery allows for quick failover while maintaining reasonable availability without overwhelming internal infrastructure.
+**Rationale**: Internal services have predictable behavior and faster recovery capabilities. Medium tolerance with shorter recovery allows for quick failover while maintaining reasonable availability without overwhelming internal infrastructure. Ollama runs as a local Docker container, making it an internal service with faster recovery compared to external API providers like OpenAI.
 
 **Applied to**:
 - [`PRD-004: AnythingLLM Integration`](PRD-004_AnythingLLM_Integration.md) (AnythingLLM API)
-- [`PRD-003: Configuration Management`](PRD-003_Config_Mgmt_System.md) (AnythingLLMConfig)
+- [`PRD-005: LLM Provider Integration`](PRD-005_LLM_Provider_Integration.md) (Ollama)
+- [`PRD-003: Configuration Management`](PRD-003_Config_Mgmt_System.md) (AnythingLLMConfig, OllamaConfig)
 
 ### 3. Web Scraping
 **Services**: Web Content Scraping  

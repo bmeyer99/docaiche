@@ -249,6 +249,8 @@ class DatabaseManager:
     async def fetch_one(self, query: str, params: Tuple = ()) -> Optional[Row]: ...
     async def fetch_all(self, query: str, params: Tuple = ()) -> List[Row]: ...
     async def execute_transaction(self, queries: List[Tuple[str, Tuple]]) -> bool: ...
+    async def transaction(self) -> AsyncContextManager: ...
+    async def load_processed_document_from_metadata(self, metadata_row: Row) -> ProcessedDocument: ...
 
 class CacheManager:
     """Manages Redis connections and cache operations."""
@@ -259,6 +261,59 @@ class CacheManager:
     async def delete(self, key: str) -> None: ...
     async def increment(self, key: str) -> int: ...
 ```
+
+## DatabaseManager Method Specifications
+
+### Transaction Management
+
+```python
+async def transaction(self) -> AsyncContextManager:
+    """
+    Provides async context manager for database transactions.
+    
+    Usage:
+        async with db_manager.transaction():
+            await db_manager.execute("INSERT INTO ...", params)
+            await db_manager.execute("UPDATE ...", params)
+            # Auto-commit on success, auto-rollback on exception
+    
+    Returns:
+        AsyncContextManager that handles transaction lifecycle
+        
+    Implementation Notes:
+        - Should use SQLAlchemy's async transaction context
+        - Must handle nested transactions appropriately
+        - Auto-rollback on any exception within context
+        - Auto-commit on successful completion
+    """
+    pass
+```
+
+### Document Loading
+
+```python
+async def load_processed_document_from_metadata(self, metadata_row: Row) -> ProcessedDocument:
+    """
+    Reconstructs ProcessedDocument from database metadata row.
+    
+    Args:
+        metadata_row: Row from content_metadata table query result
+        
+    Returns:
+        Complete ProcessedDocument with metadata and chunks
+        
+    Implementation Notes:
+        - Loads document chunks from cache if available
+        - Falls back to reconstructing from stored metadata
+        - Handles version compatibility for model evolution
+        - Preserves all original document structure and content
+        
+    Database Dependencies:
+        - Reads from content_metadata table
+        - May query cache for full document content
+        - Uses content_hash for cache key lookup
+    """
+    pass
 
 ## Schema Versioning Strategy
 
@@ -296,6 +351,11 @@ CREATE TABLE schema_versions (
 | DB-010  | Create comprehensive backup script for SQLite and Redis |
 | DB-011  | Implement canonical data models with versioning |
 | DB-012  | Create database schema upgrade and rollback procedures |
+| **DB-013** | **Implement transaction() context manager for DatabaseManager** |
+| **DB-014** | **Implement load_processed_document_from_metadata() method** |
+| **DB-015** | **Add transaction support to SQLAlchemy async configuration** |
+| **DB-016** | **Create integration tests for transaction rollback scenarios** |
+| **DB-017** | **Implement document reconstruction from metadata with cache fallback** |
 
 ## Integration Contracts
 - Accepts Python data types and Pydantic models from other components.
@@ -320,8 +380,18 @@ CREATE TABLE schema_versions (
 
 | Model Name      | Description                                 | Used In                 |
 |-----------------|---------------------------------------------|-------------------------|
-| DatabaseManager | Async DB access                             | PRD-003, PRD-004, etc.  |
+| DatabaseManager | Async DB access with transaction support    | PRD-003, PRD-004, PRD-008, etc.  |
 | CacheManager    | Async Redis access                          | PRD-003, PRD-005, etc.  |
+
+### DatabaseManager Methods
+
+| Method Name                               | Description                                 | Required For           |
+|-------------------------------------------|---------------------------------------------|------------------------|
+| connect(), disconnect()                   | Connection lifecycle management             | All components         |
+| execute(), fetch_one(), fetch_all()       | Basic query operations                      | All components         |
+| execute_transaction()                     | Multi-query transactions                    | Bulk operations        |
+| **transaction()**                         | **Async context manager for transactions** | **PRD-008 line 502**  |
+| **load_processed_document_from_metadata()** | **Reconstruct ProcessedDocument from Row** | **PRD-008 line 201**  |
 
 ### Implementation Tasks Table
 (see Implementation Tasks above)

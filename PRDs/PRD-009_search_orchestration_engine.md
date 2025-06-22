@@ -23,10 +23,10 @@ Specifies the core search workflow orchestrator. Manages the end-to-end process 
 | PRD-010: Knowledge Enrichment System | Triggers enrichment workflow |
 
 ## Cross-References
-- Uses `CacheManager` from PRD-002 for caching.
-- Calls `AnythingLLMClient` from PRD-004 for search.
-- Calls `LLMProviderClient` from PRD-005 for evaluation.
-- Triggers `KnowledgeEnricher` from PRD-010 for enrichment.
+- Uses [`CacheManager`](PRD-002_DB_and_Caching_Layer.md) from [Database & Caching Layer](PRD-002_DB_and_Caching_Layer.md) for caching.
+- Calls [`AnythingLLMClient`](PRD-004_AnythingLLM_Integration.md) from [AnythingLLM Integration](PRD-004_AnythingLLM_Integration.md) for search.
+- Calls [`LLMProviderClient`](PRD-005_LLM_Provider_Integration.md) from [LLM Provider Integration](PRD-005_LLM_Provider_Integration.md) for evaluation.
+- Triggers [`KnowledgeEnricher`](PRD-010_knowledge_enrichment_system.md) from [Knowledge Enrichment System](PRD-010_knowledge_enrichment_system.md) for enrichment.
 
 ## Workflow Logic
 

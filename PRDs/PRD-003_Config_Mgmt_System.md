@@ -80,8 +80,22 @@ class ScrapingConfig(BaseModel):
 class RedisConfig(BaseModel):
     host: str = Field("redis", description="Redis host")
     port: int = Field(6379, description="Redis port")
-    password: Optional[str] = Field(None, description="Redis password")
+    password: Optional[str] = Field(None, description="Redis password (recommended for production)")
     db: int = Field(0, description="Redis database number")
+    
+    # Connection pool settings
+    max_connections: int = Field(20, ge=1, description="Maximum connections in pool")
+    connection_timeout: int = Field(5, ge=1, description="Connection timeout in seconds")
+    socket_timeout: int = Field(5, ge=1, description="Socket operation timeout in seconds")
+    
+    # Memory and persistence settings (align with docker-compose)
+    maxmemory: str = Field("512mb", description="Maximum memory usage")
+    maxmemory_policy: str = Field("allkeys-lru", description="Memory eviction policy")
+    appendonly: bool = Field(True, description="Enable append-only file persistence")
+    
+    # Security settings
+    ssl: bool = Field(False, description="Enable SSL/TLS encryption")
+    ssl_cert_reqs: Optional[str] = Field(None, description="SSL certificate requirements")
 
 class OllamaConfig(BaseModel):
     """Ollama LLM provider configuration"""
@@ -91,7 +105,7 @@ class OllamaConfig(BaseModel):
     max_tokens: int = Field(4096, ge=1, description="Maximum tokens in response")
     timeout_seconds: int = Field(60, ge=1, description="Request timeout")
     circuit_breaker: CircuitBreakerConfig = Field(
-        default_factory=lambda: CircuitBreakerConfig(failure_threshold=5, recovery_timeout=300, timeout_seconds=30)
+        default_factory=lambda: CircuitBreakerConfig(failure_threshold=3, recovery_timeout=60, timeout_seconds=30)
     )
 
 class OpenAIConfig(BaseModel):
@@ -125,6 +139,29 @@ class SystemConfiguration(BaseModel):
     ai: AIConfig
 ```
 
+## Redis Environment Variable Mapping
+
+The following environment variables map to RedisConfig fields for containerized deployments:
+
+| Environment Variable | RedisConfig Field | Default Value | Description |
+|---------------------|-------------------|---------------|-------------|
+| `REDIS_HOST` | `host` | `"redis"` | Redis container hostname |
+| `REDIS_PORT` | `port` | `6379` | Redis service port |
+| `REDIS_PASSWORD` | `password` | `None` | Redis authentication password |
+| `REDIS_DB` | `db` | `0` | Redis database number |
+| `REDIS_MAX_CONNECTIONS` | `max_connections` | `20` | Connection pool size |
+| `REDIS_CONNECTION_TIMEOUT` | `connection_timeout` | `5` | Connection timeout (seconds) |
+| `REDIS_SOCKET_TIMEOUT` | `socket_timeout` | `5` | Socket operation timeout (seconds) |
+| `REDIS_MAXMEMORY` | `maxmemory` | `"512mb"` | Maximum memory usage |
+| `REDIS_MAXMEMORY_POLICY` | `maxmemory_policy` | `"allkeys-lru"` | Memory eviction policy |
+| `REDIS_APPENDONLY` | `appendonly` | `true` | Enable append-only persistence |
+| `REDIS_SSL` | `ssl` | `false` | Enable SSL/TLS encryption |
+| `REDIS_SSL_CERT_REQS` | `ssl_cert_reqs` | `None` | SSL certificate requirements |
+
+**Note:** In containerized environments, Redis configuration parameters (`maxmemory`, `maxmemory_policy`, `appendonly`) must align with the Redis service configuration in [`docker-compose.yml`](PRDs/PRD-013_operations_and_deployment.md:104). The application configuration validates against but does not override Docker-level Redis settings.
+
+**Password Handling:** For production deployments, set `REDIS_PASSWORD` in the `.env` file and ensure the Redis container is configured with the same password using Redis AUTH command or configuration file.
+
 ## Implementation Tasks
 
 | Task ID | Description |
@@ -139,11 +176,14 @@ class SystemConfiguration(BaseModel):
 | CFG-008 | Create default config.yaml file |
 | CFG-009 | Implement /api/v1/config POST and GET endpoints |
 | CFG-010 | Implement hot-reloading mechanism for config.yaml |
+| CFG-011 | Implement Redis configuration validation against docker-compose.yml settings |
 
 ## Integration Contracts
 - Reads from environment, YAML file, and database.
 - Provides validated SystemConfiguration Pydantic object.
 - Fails to start if config validation fails.
+- **Redis Configuration Validation:** Validates RedisConfig parameters against [`docker-compose.yml`](PRDs/PRD-013_operations_and_deployment.md:97-105) Redis service configuration to ensure compatibility.
+- **Production Password Handling:** For production deployments, RedisConfig validates that password authentication is properly configured when Redis service requires AUTH.
 
 ## Summary Tables
 

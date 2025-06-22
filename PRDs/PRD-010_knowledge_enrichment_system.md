@@ -24,11 +24,11 @@ Specifies the knowledge enrichment system. Orchestrates acquisition of new conte
 | PRD-009: Search Orchestration Engine | Triggers enrichment workflow |
 
 ## Cross-References
-- Uses `DatabaseManager` from PRD-002 for deduplication and storage.
-- Calls `GitHubClient` and `WebScrapingClient` for content acquisition.
-- Calls `ContentProcessor` for processing.
-- Calls `AnythingLLMClient` for storage.
-- Triggered by PRD-009 for dynamic enrichment.
+- Uses [`DatabaseManager`](PRD-002_DB_and_Caching_Layer.md) from [Database & Caching Layer](PRD-002_DB_and_Caching_Layer.md) for deduplication and storage.
+- Calls [`GitHubClient`](PRD-006_Github_repo_client.md) from [GitHub Repository Client](PRD-006_Github_repo_client.md) and [`WebScrapingClient`](PRD-007_web_scraping_client.md) from [Web Scraping Client](PRD-007_web_scraping_client.md) for content acquisition.
+- Calls [`ContentProcessor`](PRD-008_content_processing_pipeline.md) from [Content Processing Pipeline](PRD-008_content_processing_pipeline.md) for processing.
+- Calls [`AnythingLLMClient`](PRD-004_AnythingLLM_Integration.md) from [AnythingLLM Integration](PRD-004_AnythingLLM_Integration.md) for storage.
+- Triggered by [Search Orchestration Engine](PRD-009_search_orchestration_engine.md) for dynamic enrichment.
 
 ## Enricher Interface
 

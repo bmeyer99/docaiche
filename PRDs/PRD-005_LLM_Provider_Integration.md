@@ -21,10 +21,10 @@ Specifies a unified client for interacting with multiple Large Language Model (L
 | PRD-009: Search Orchestration Engine | Calls evaluation and enrichment methods |
 
 ## Cross-References
-- Uses `AIConfig`, `OllamaConfig`, `OpenAIConfig` from PRD-003.
-- Caches responses using `CacheManager` from PRD-002.
-- Called by PRD-009 for search evaluation and enrichment.
-- Prompt templates referenced in this PRD are stored as files.
+- Uses [`AIConfig`](PRD-003_Config_Mgmt_System.md), [`OllamaConfig`](PRD-003_Config_Mgmt_System.md), [`OpenAIConfig`](PRD-003_Config_Mgmt_System.md) from [Configuration Management](PRD-003_Config_Mgmt_System.md).
+- Caches responses using [`CacheManager`](PRD-002_DB_and_Caching_Layer.md) from [Database & Caching Layer](PRD-002_DB_and_Caching_Layer.md).
+- Called by [Search Orchestration Engine](PRD-009_search_orchestration_engine.md) for search evaluation and enrichment.
+- Prompt templates referenced in this PRD are stored as files in the configuration directory.
 
 ## Prompt Templates
 
@@ -68,7 +68,7 @@ Provide your assessment as a JSON object with the following structure:
 Be precise and objective in your evaluation.
 ```
 
-**Expected Output Schema**: [`EvaluationResult`](PRDs/PRD-005_LLM_Provider_Integration.md:64)
+**Expected Output Schema**: [`EvaluationResult`](PRD-005_LLM_Provider_Integration.md:266)
 
 **Example Usage**:
 ```python
@@ -132,7 +132,7 @@ Provide your strategy as a JSON object with the following structure:
 Focus on actionable, specific targets that will maximize information gain.
 ```
 
-**Expected Output Schema**: [`EnrichmentStrategy`](PRDs/PRD-005_LLM_Provider_Integration.md:80)
+**Expected Output Schema**: [`EnrichmentStrategy`](PRD-005_LLM_Provider_Integration.md:281)
 
 **Example Usage**:
 ```python
@@ -192,7 +192,7 @@ Classify the content type and provide your assessment as a JSON object:
 Be objective and consider long-term value for future searches.
 ```
 
-**Expected Output Schema**: [`QualityAssessment`](PRDs/PRD-005_LLM_Provider_Integration.md:88)
+**Expected Output Schema**: [`QualityAssessment`](PRD-005_LLM_Provider_Integration.md:289)
 
 **Example Usage**:
 ```python
@@ -220,12 +220,12 @@ All prompt templates must:
 
 ### Template Storage and Management
 
-Templates are stored as individual `.prompt` files in the configuration directory and loaded by the [`PromptManager`](PRDs/PRD-005_LLM_Provider_Integration.md:106) utility class. Each template file contains only the prompt text with variable placeholders, while metadata and schemas are defined in this PRD.
+Templates are stored as individual `.prompt` files in the configuration directory and loaded by the [`PromptManager`](PRD-005_LLM_Provider_Integration.md:307) utility class. Each template file contains only the prompt text with variable placeholders, while metadata and schemas are defined in this PRD.
 
 ## Circuit Breaker Implementation
 
-**Service Category**: External APIs (OpenAI, Ollama)
-**Rationale**: External LLM providers require higher tolerance due to potential rate limiting and variable response times. Longer recovery timeout accommodates provider-side issues and rate limit resets.
+**Service Category**: Mixed - OpenAI (External API), Ollama (Internal Service)
+**Rationale**: OpenAI is an external API requiring higher tolerance due to rate limiting and variable response times, while Ollama runs as a local Docker container with predictable behavior and faster recovery capabilities. Each provider requires different circuit breaker configurations based on their deployment model and reliability characteristics.
 
 ```python
 from circuitbreaker import circuit
@@ -233,11 +233,20 @@ import asyncio
 
 class LLMProviderClient:
     def __init__(self, config: AIConfig):
-        self.circuit_breaker = circuit(
+        # OpenAI (External API) - Higher tolerance for rate limits and external issues
+        self.openai_circuit_breaker = circuit(
             failure_threshold=5,
             recovery_timeout=300,
             timeout=30,
             expected_exception=(aiohttp.ClientError, asyncio.TimeoutError)
+        )
+        
+        # Ollama (Internal Service) - Lower tolerance for predictable local service
+        self.ollama_circuit_breaker = circuit(
+            failure_threshold=3,
+            recovery_timeout=60,
+            timeout=30,
+            expected_exception=(aiohttp.ClientError)
         )
     
     @circuit_breaker

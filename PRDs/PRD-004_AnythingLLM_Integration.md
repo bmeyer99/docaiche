@@ -62,9 +62,9 @@ class AnythingLLMClient:
 ## Data Models
 
 All data models are now defined in [`PRD-002`](PRD-002_DB_and_Caching_Layer.md) as canonical models:
-- [`ProcessedDocument`](PRD-002_DB_and_Caching_Layer.md:89) - Complete document with metadata and chunks
-- [`DocumentChunk`](PRD-002_DB_and_Caching_Layer.md:78) - Individual content chunk
-- [`DocumentMetadata`](PRD-002_DB_and_Caching_Layer.md:67) - Document metadata and versioning
+- [`ProcessedDocument`](PRD-002_DB_and_Caching_Layer.md:227) - Complete document with metadata and chunks
+- [`DocumentChunk`](PRD-002_DB_and_Caching_Layer.md:218) - Individual content chunk
+- [`DocumentMetadata`](PRD-002_DB_and_Caching_Layer.md:209) - Document metadata and versioning
 
 ## Implementation Tasks
 
