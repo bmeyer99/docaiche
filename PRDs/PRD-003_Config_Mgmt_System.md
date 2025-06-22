@@ -158,7 +158,7 @@ The following environment variables map to RedisConfig fields for containerized 
 | `REDIS_SSL` | `ssl` | `false` | Enable SSL/TLS encryption |
 | `REDIS_SSL_CERT_REQS` | `ssl_cert_reqs` | `None` | SSL certificate requirements |
 
-**Note:** In containerized environments, Redis configuration parameters (`maxmemory`, `maxmemory_policy`, `appendonly`) must align with the Redis service configuration in [`docker-compose.yml`](PRDs/PRD-013_operations_and_deployment.md:104). The application configuration validates against but does not override Docker-level Redis settings.
+**Note:** In containerized environments, Redis configuration parameters (`maxmemory`, `maxmemory_policy`, `appendonly`) must align with the Redis service configuration in [`docker-compose.yml`](PRD-013_operations_and_deployment.md:104). The application configuration validates against but does not override Docker-level Redis settings.
 
 **Password Handling:** For production deployments, set `REDIS_PASSWORD` in the `.env` file and ensure the Redis container is configured with the same password using Redis AUTH command or configuration file.
 
@@ -182,7 +182,7 @@ The following environment variables map to RedisConfig fields for containerized 
 - Reads from environment, YAML file, and database.
 - Provides validated SystemConfiguration Pydantic object.
 - Fails to start if config validation fails.
-- **Redis Configuration Validation:** Validates RedisConfig parameters against [`docker-compose.yml`](PRDs/PRD-013_operations_and_deployment.md:97-105) Redis service configuration to ensure compatibility.
+- **Redis Configuration Validation:** Validates RedisConfig parameters against [`docker-compose.yml`](PRD-013_operations_and_deployment.md:97-105) Redis service configuration to ensure compatibility.
 - **Production Password Handling:** For production deployments, RedisConfig validates that password authentication is properly configured when Redis service requires AUTH.
 
 ## Summary Tables

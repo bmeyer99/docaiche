@@ -1,1 +1,179 @@
-Master Product Requirements Document: AI Documentation Cache1. Executive SummaryProduct Vision: To create an intelligent, self-improving documentation cache that dramatically reduces developer search time and cognitive load. The system will learn from user queries to proactively source, curate, and rank authoritative documentation, providing instant, context-aware answers within the developer's workflow.Success Metrics:Performance: <1s response time for 95% of cached queries; <5s for queries requiring enrichment.Quality: Achieve a >90% result relevance score (based on user feedback) and a >80% cache hit rate after one week of typical usage for a specific technology stack.Adoption: Enable a complete, one-command setup that is fully functional in under 5 minutes on a standard developer machine.Development Timeline: The project is broken down into six, two-week sprints, for a total estimated timeline of 12 weeks for the initial version.2. Epic BreakdownThe project is organized into six epics, each corresponding to a development sprint and focusing on a distinct technical domain.Epic 1: Foundation (Sprint 1): Build the core HTTP API and data persistence layers.Epic 2: External Integrations (Sprint 2): Develop clients for all external services (AnythingLLM, LLM Providers, GitHub).Epic 3: Content Pipeline (Sprint 3): Implement the content acquisition and processing pipelines.Epic 4: Core Intelligence (Sprint 4): Implement the main search and enrichment orchestration logic.Epic 5: User Features (Sprint 5): Develop the feedback system and the administrative web UI.Epic 6: Operations (Sprint 6): Finalize deployment, packaging, and documentation.3. Individual Product Requirements DocumentsThis suite consists of 13 individual, implementation-ready PRDs. Each document provides exact specifications for a single component, eliminating ambiguity for the development team.PRD-001: HTTP API FoundationPRD-002: Database & Caching LayerPRD-003: Configuration Management SystemPRD-004: AnythingLLM Integration ClientPRD-005: LLM Provider Integration LayerPRD-006: GitHub Repository ClientPRD-007: Web Scraping ClientPRD-008: Content Processing PipelinePRD-009: Search Orchestration EnginePRD-010: Knowledge Enrichment SystemPRD-011: Feedback Collection SystemPRD-012: Configuration Web UIPRD-013: Operations & Deployment4. Sprint Backlog & TimelineThis backlog organizes all atomic tasks from the individual PRDs into a logical, domain-coherent sprint plan.Sprint 1: Foundation (Week 1-2)Domain Focus: Backend Infrastructure (HTTP & Data)API-001: Initialize FastAPI application with CORS and security middleware.API-002: Implement all Pydantic request/response schemas.API-003: Implement all API endpoint stubs with mock data responses.API-004: Add custom RequestValidationError exception handler.API-005: Integrate slowapi for rate limiting on all endpoints.DB-001: Write script to create SQLite database with the exact specified schema.DB-002: Define all SQLAlchemy 2.0 ORM models.DB-003: Implement the async DatabaseManager with connection pooling.DB-004: Implement the async CacheManager for Redis.DB-006: Set up Alembic for database migrations.CFG-001: Implement all Pydantic configuration models.CFG-002: Implement configuration loading from YAML file and environment variables.DELIVERABLE: A running API server with a persistent database and a layered configuration system.Sprint 2: External Integrations (Week 3-4)Domain Focus: External Service ClientsALM-001: Implement AnythingLLMClient class with aiohttp.ClientSession.ALM-002: Implement health_check and get_or_create_workspace methods.ALM-004: Implement upload_document method for AnythingLLM.ALM-005: Implement search_workspace method for AnythingLLM.LLM-001: Create BaseLLMProvider abstract class.LLM-002: Implement the OllamaProvider class.LLM-003: Implement the OpenAIProvider class.LLM-005: Create PromptManager to load and format prompt templates.LLM-006: Implement robust JSON parsing utility for LLM responses.GH-001: Implement GitHubClient class with authentication.GH-002: Implement get_rate_limit_status method.GH-003: Implement find_repo_for_technology method using the database.DELIVERABLE: Fully functional, tested clients for AnythingLLM, LLM providers, and the GitHub API.Sprint 3: Content Pipeline (Week 5-6)Domain Focus: Content Ingestion and ProcessingGH-004: Implement list_files_recursively method.GH-005: Implement download_file_content method.WS-001: Implement WebScrapingClient class.WS-002: Implement robots.txt parsing and checking.WS-003: Implement the scrape_page method.WS-004: Implement HTML cleaning logic using BeautifulSoup4.WS-005: Implement HTML to Markdown conversion using markdownify.CP-001: Implement the ContentProcessor class.CP-002: Implement markdown normalization logic.CP-003: Implement metadata extraction (word count, hash, etc.).CP-004: Implement initial quality scoring heuristics.CP-005: Implement the recursive character text chunking algorithm.DELIVERABLE: A complete content pipeline capable of sourcing raw content from GitHub and the web, and processing it into standardized, chunked documents.Sprint 4: Core Intelligence (Week 7-8)Domain Focus: Business Logic and OrchestrationSO-001: Implement the SearchOrchestrator class.SO-002: Implement the main execute_search workflow sequence.SO-004: Implement result aggregation from multiple workspaces.SO-005: Implement the enrichment decision matrix logic.SO-006: Integrate BackgroundTasks for the fire-and-forget enrichment call.SO-008: Implement asyncio.wait_for to enforce performance contracts.KE-001: Implement the KnowledgeEnricher class.KE-002: Implement the main enrich_knowledge workflow sequence.KE-003: Implement the GitHub sourcing logic within the enricher.KE-005: Implement the storage logic, calling the AnythingLLM client.KE-010: Implement content deduplication check against the database.SO-010: Connect the Search Orchestrator to the live API endpoints.DELIVERABLE: A fully functional search and enrichment engine. The core product logic is now complete.Sprint 5: User Features (Week 9-10)Domain Focus: User-Facing Systems (Feedback & UI)FC-001: Implement the /api/v1/feedback endpoint.FC-002: Implement record_explicit_feedback method and database insertion.FC-003: Implement record_implicit_signal method.FC-004: Implement the quality scoring algorithm.FC-005: Implement the content flagging system.UI-001: Configure FastAPI with Jinja2Templates and static files.UI-002: Create the base HTML template with Tailwind CSS.UI-003: Implement the Dashboard page with auto-refreshing stats.UI-004: Implement the Configuration page with its view and update form.UI-005: Implement the Content Management page with its search functionality.UI-006: Implement the client-side JavaScript for the "Flag for Removal" button.UI-008: Create the /api/v1/admin/search-content endpoint for the UI.DELIVERABLE: A working feedback system that influences search quality, and a web UI for administering the system.Sprint 6: Operations (Week 11-12)Domain Focus: Deployment and DocumentationOP-001: Create the multi-stage Dockerfile.OP-002: Create the docker-compose.yml file for the full application stack.OP-003: Create the .env.example file.OP-004: Write and test the backup.sh script.OP-005: Write and test the restore.sh script.OP-006: Create the Makefile for simplified operational commands.OP-007: Document the one-time Ollama model setup process.OP-008: Write the comprehensive README.md including quick start and configuration guides.Final Integration Testing: Perform end-to-end testing of the fully deployed application.Performance Tuning: Analyze logs and metrics to identify and address any performance bottlenecks.Bug Fixes: Address any bugs identified during final testing.Release Candidate 1.0.0: Tag the final commit.DELIVERABLE: A production-ready, fully documented, and deployable application package.5. Dependency & Risk AnalysisCritical Path: The critical path flows directly through the sprints: Foundation -> Integrations -> Content Pipeline -> Core Intelligence. A delay in any of these sprints will directly impact the project timeline.Key Dependencies:The entire system relies on a stable and performant AnythingLLM instance.The intelligence layer relies on a functional Ollama instance (or a configured cloud provider).Highest Risk: LLM Response Quality (Mitigation: PRD-005). The system's intelligence depends on the LLM's ability to reliably output structured JSON. The risk is mitigated by robust parsing logic, prompt engineering, and the ability to failover to different providers or rule-based systems.Second Highest Risk: Content Quality from Web Scraping (Mitigation: PRD-007, PRD-008). Scraped content can be noisy. This is mitigated by sophisticated content extraction selectors and the quality scoring heuristics in the processing pipeline.This completes the comprehensive PRD suite. The project is now fully specified and ready for implementation.
+# Master Product Requirements Document: AI Documentation Cache
+
+## 1. Executive Summary
+
+**Product Vision**: To create an intelligent, self-improving documentation cache that dramatically reduces developer search time and cognitive load. The system will learn from user queries to proactively source, curate, and rank authoritative documentation, providing instant, context-aware answers within the developer's workflow.
+
+**Success Metrics**:
+- **Performance**: <1s response time for 95% of cached queries; <5s for queries requiring enrichment.
+- **Quality**: Achieve a >90% result relevance score (based on user feedback) and a >80% cache hit rate after one week of typical usage for a specific technology stack.
+- **Adoption**: Enable a complete, one-command setup that is fully functional in under 5 minutes on a standard developer machine.
+
+**Development Timeline**: The project is broken down into six, two-week sprints, for a total estimated timeline of 12 weeks for the initial version.
+
+## 2. Documentation Standards
+
+### Cross-Reference Guidelines
+All PRD documents follow standardized cross-reference formatting to ensure consistency and maintainability. See [Cross-Reference Guidelines](cross_reference_guidelines.md) for detailed specifications including:
+
+- Standard format: `[ComponentName](PRD-XXX_Filename.md)` for file references
+- Line-specific format: `[ComponentName](PRD-XXX_Filename.md:line)` for specific implementations
+- Method format: `[ComponentName.method()](PRD-XXX_Filename.md:line)` for method references
+- Validation rules and maintenance procedures
+
+## 3. Epic Breakdown
+
+The project is organized into six epics, each corresponding to a development sprint and focusing on a distinct technical domain.
+
+- **Epic 1: Foundation (Sprint 1)**: Build the core HTTP API and data persistence layers.
+- **Epic 2: External Integrations (Sprint 2)**: Develop clients for all external services (AnythingLLM, LLM Providers, GitHub).
+- **Epic 3: Content Pipeline (Sprint 3)**: Implement the content acquisition and processing pipelines.
+- **Epic 4: Core Intelligence (Sprint 4)**: Implement the main search and enrichment orchestration logic.
+- **Epic 5: User Features (Sprint 5)**: Develop the feedback system and the administrative web UI.
+- **Epic 6: Operations (Sprint 6)**: Finalize deployment, packaging, and documentation.
+
+## 4. Individual Product Requirements Documents
+
+This suite consists of 13 individual, implementation-ready PRDs. Each document provides exact specifications for a single component, eliminating ambiguity for the development team.
+
+- [PRD-001: HTTP API Foundation](PRD-001_HTTP_API_Foundation.md)
+- [PRD-002: Database & Caching Layer](PRD-002_DB_and_Caching_Layer.md)
+- [PRD-003: Configuration Management System](PRD-003_Config_Mgmt_System.md)
+- [PRD-004: AnythingLLM Integration Client](PRD-004_AnythingLLM_Integration.md)
+- [PRD-005: LLM Provider Integration Layer](PRD-005_LLM_Provider_Integration.md)
+- [PRD-006: GitHub Repository Client](PRD-006_Github_repo_client.md)
+- [PRD-007: Web Scraping Client](PRD-007_web_scraping_client.md)
+- [PRD-008: Content Processing Pipeline](PRD-008_content_processing_pipeline.md)
+- [PRD-009: Search Orchestration Engine](PRD-009_search_orchestration_engine.md)
+- [PRD-010: Knowledge Enrichment System](PRD-010_knowledge_enrichment_system.md)
+- [PRD-011: Feedback Collection System](PRD-011_feedback_collection_system.md)
+- [PRD-012: Configuration Web UI](PRD-012_configuration_web_ui.md)
+- [PRD-013: Operations & Deployment](PRD-013_operations_and_deployment.md)
+
+## 5. Sprint Backlog & Timeline
+
+This backlog organizes all atomic tasks from the individual PRDs into a logical, domain-coherent sprint plan.
+
+### Sprint 1: Foundation (Week 1-2)
+**Domain Focus**: Backend Infrastructure (HTTP & Data)
+
+- API-001: Initialize FastAPI application with CORS and security middleware.
+- API-002: Implement all Pydantic request/response schemas.
+- API-003: Implement all API endpoint stubs with mock data responses.
+- API-004: Add custom RequestValidationError exception handler.
+- API-005: Integrate slowapi for rate limiting on all endpoints.
+- DB-001: Write script to create SQLite database with the exact specified schema.
+- DB-002: Define all SQLAlchemy 2.0 ORM models.
+- DB-003: Implement the async DatabaseManager with connection pooling.
+- DB-004: Implement the async CacheManager for Redis.
+- DB-006: Set up Alembic for database migrations.
+- CFG-001: Implement all Pydantic configuration models.
+- CFG-002: Implement configuration loading from YAML file and environment variables.
+
+**DELIVERABLE**: A running API server with a persistent database and a layered configuration system.
+
+### Sprint 2: External Integrations (Week 3-4)
+**Domain Focus**: External Service Clients
+
+- ALM-001: Implement AnythingLLMClient class with aiohttp.ClientSession.
+- ALM-002: Implement health_check and get_or_create_workspace methods.
+- ALM-004: Implement upload_document method for AnythingLLM.
+- ALM-005: Implement search_workspace method for AnythingLLM.
+- LLM-001: Create BaseLLMProvider abstract class.
+- LLM-002: Implement the OllamaProvider class.
+- LLM-003: Implement the OpenAIProvider class.
+- LLM-005: Create PromptManager to load and format prompt templates.
+- LLM-006: Implement robust JSON parsing utility for LLM responses.
+- GH-001: Implement GitHubClient class with authentication.
+- GH-002: Implement get_rate_limit_status method.
+- GH-003: Implement find_repo_for_technology method using the database.
+
+**DELIVERABLE**: Fully functional, tested clients for AnythingLLM, LLM providers, and the GitHub API.
+
+### Sprint 3: Content Pipeline (Week 5-6)
+**Domain Focus**: Content Ingestion and Processing
+
+- GH-004: Implement list_files_recursively method.
+- GH-005: Implement download_file_content method.
+- WS-001: Implement WebScrapingClient class.
+- WS-002: Implement robots.txt parsing and checking.
+- WS-003: Implement the scrape_page method.
+- WS-004: Implement HTML cleaning logic using BeautifulSoup4.
+- WS-005: Implement HTML to Markdown conversion using markdownify.
+- CP-001: Implement the ContentProcessor class.
+- CP-002: Implement markdown normalization logic.
+- CP-003: Implement metadata extraction (word count, hash, etc.).
+- CP-004: Implement initial quality scoring heuristics.
+- CP-005: Implement the recursive character text chunking algorithm.
+
+**DELIVERABLE**: A complete content pipeline capable of sourcing raw content from GitHub and the web, and processing it into standardized, chunked documents.
+
+### Sprint 4: Core Intelligence (Week 7-8)
+**Domain Focus**: Business Logic and Orchestration
+
+- SO-001: Implement the SearchOrchestrator class.
+- SO-002: Implement the main execute_search workflow sequence.
+- SO-004: Implement result aggregation from multiple workspaces.
+- SO-005: Implement the enrichment decision matrix logic.
+- SO-006: Integrate BackgroundTasks for the fire-and-forget enrichment call.
+- SO-008: Implement asyncio.wait_for to enforce performance contracts.
+- KE-001: Implement the KnowledgeEnricher class.
+- KE-002: Implement the main enrich_knowledge workflow sequence.
+- KE-003: Implement the GitHub sourcing logic within the enricher.
+- KE-005: Implement the storage logic, calling the AnythingLLM client.
+- KE-010: Implement content deduplication check against the database.
+- SO-010: Connect the Search Orchestrator to the live API endpoints.
+
+**DELIVERABLE**: A fully functional search and enrichment engine. The core product logic is now complete.
+
+### Sprint 5: User Features (Week 9-10)
+**Domain Focus**: User-Facing Systems (Feedback & UI)
+
+- FC-001: Implement the /api/v1/feedback endpoint.
+- FC-002: Implement record_explicit_feedback method and database insertion.
+- FC-003: Implement record_implicit_signal method.
+- FC-004: Implement the quality scoring algorithm.
+- FC-005: Implement the content flagging system.
+- UI-001: Configure FastAPI with Jinja2Templates and static files.
+- UI-002: Create the base HTML template with Tailwind CSS.
+- UI-003: Implement the Dashboard page with auto-refreshing stats.
+- UI-004: Implement the Configuration page with its view and update form.
+- UI-005: Implement the Content Management page with its search functionality.
+- UI-006: Implement the client-side JavaScript for the "Flag for Removal" button.
+- UI-008: Create the /api/v1/admin/search-content endpoint for the UI.
+
+**DELIVERABLE**: A working feedback system that influences search quality, and a web UI for administering the system.
+
+### Sprint 6: Operations (Week 11-12)
+**Domain Focus**: Deployment and Documentation
+
+- OP-001: Create the multi-stage Dockerfile.
+- OP-002: Create the docker-compose.yml file for the full application stack.
+- OP-003: Create the .env.example file.
+- OP-004: Write and test the backup.sh script.
+- OP-005: Write and test the restore.sh script.
+- OP-006: Create the Makefile for simplified operational commands.
+- OP-007: Document the one-time Ollama model setup process.
+- OP-008: Write the comprehensive README.md including quick start and configuration guides.
+- Final Integration Testing: Perform end-to-end testing of the fully deployed application.
+- Performance Tuning: Analyze logs and metrics to identify and address any performance bottlenecks.
+- Bug Fixes: Address any bugs identified during final testing.
+- Release Candidate 1.0.0: Tag the final commit.
+
+**DELIVERABLE**: A production-ready, fully documented, and deployable application package.
+
+## 6. Dependency & Risk Analysis
+
+**Critical Path**: The critical path flows directly through the sprints: Foundation -> Integrations -> Content Pipeline -> Core Intelligence. A delay in any of these sprints will directly impact the project timeline.
+
+**Key Dependencies**:
+- The entire system relies on a stable and performant AnythingLLM instance.
+- The intelligence layer relies on a functional Ollama instance (or a configured cloud provider).
+
+**Highest Risk**: LLM Response Quality (Mitigation: [PRD-005](PRD-005_LLM_Provider_Integration.md)). The system's intelligence depends on the LLM's ability to reliably output structured JSON. The risk is mitigated by robust parsing logic, prompt engineering, and the ability to failover to different providers or rule-based systems.
+
+**Second Highest Risk**: Content Quality from Web Scraping (Mitigation: [PRD-007](PRD-007_web_scraping_client.md), [PRD-008](PRD-008_content_processing_pipeline.md)). Scraped content can be noisy. This is mitigated by sophisticated content extraction selectors and the quality scoring heuristics in the processing pipeline.
+
+---
+
+*This completes the comprehensive PRD suite. The project is now fully specified and ready for implementation.*
