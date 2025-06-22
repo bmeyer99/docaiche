@@ -28,13 +28,204 @@ Specifies a unified client for interacting with multiple Large Language Model (L
 
 ## Prompt Templates
 
-| Template Name      | Description                                 |
-|--------------------|---------------------------------------------|
-| evaluation.prompt  | Evaluates sufficiency and quality of results|
-| strategy.prompt    | Generates enrichment strategy               |
-| quality.prompt     | Assesses content quality                    |
+### 1. evaluation.prompt
+
+**Purpose**: Evaluates the sufficiency and quality of search results against a user query to determine if enrichment is needed.
+
+**Input Variables**:
+- `query`: The original user search query
+- `results`: List of search results with titles, snippets, and URLs
+- `context`: Additional context about the search domain or requirements
+
+**Prompt Template**:
+```
+You are an expert information analyst. Evaluate whether the provided search results sufficiently answer the user's query.
+
+USER QUERY: {query}
+
+SEARCH RESULTS:
+{results}
+
+CONTEXT: {context}
+
+Analyze the search results and provide a structured evaluation. Consider:
+1. Coverage: Do the results comprehensively address the query?
+2. Quality: Are the sources authoritative and relevant?
+3. Completeness: Are there obvious gaps or missing information?
+4. Recency: Is the information current enough for the query?
+
+Provide your assessment as a JSON object with the following structure:
+{{
+  "model_version": "1.0.0",
+  "sufficiency_score": <float between 0.0 and 1.0>,
+  "confidence": <float between 0.0 and 1.0>,
+  "missing_aspects": [<list of strings describing missing information>],
+  "should_enrich": <boolean>,
+  "reasoning": "<detailed explanation of your assessment>",
+  "created_at": "<current UTC timestamp>"
+}}
+
+Be precise and objective in your evaluation.
+```
+
+**Expected Output Schema**: [`EvaluationResult`](PRDs/PRD-005_LLM_Provider_Integration.md:64)
+
+**Example Usage**:
+```python
+evaluation_prompt = prompt_manager.format_template(
+    "evaluation.prompt",
+    query="How to implement OAuth2 in FastAPI",
+    results=[{"title": "FastAPI OAuth2", "snippet": "...", "url": "..."}],
+    context="API development documentation search"
+)
+```
+
+---
+
+### 2. strategy.prompt
+
+**Purpose**: Generates a strategic enrichment plan for knowledge gaps identified in search results.
+
+**Input Variables**:
+- `original_query`: The original user search query
+- `missing_aspects`: List of identified missing information
+- `current_results`: Summary of existing search results
+- `domain`: The subject domain or technology area
+
+**Prompt Template**:
+```
+You are a knowledge enrichment strategist. Based on the identified gaps in search results, create a targeted enrichment strategy.
+
+ORIGINAL QUERY: {original_query}
+
+MISSING ASPECTS:
+{missing_aspects}
+
+CURRENT RESULTS SUMMARY:
+{current_results}
+
+DOMAIN: {domain}
+
+Create an enrichment strategy that identifies:
+1. High-value repositories to search
+2. Specific search queries to fill gaps
+3. Prioritized information sources
+4. Expected value of the enrichment effort
+
+Provide your strategy as a JSON object with the following structure:
+{{
+  "model_version": "1.0.0",
+  "target_repositories": [
+    {{
+      "owner": "<repository owner>",
+      "repo": "<repository name>",
+      "path": "<specific path if applicable>",
+      "priority": <float between 0.0 and 1.0>
+    }}
+  ],
+  "search_queries": [<list of specific search terms/phrases>],
+  "priority_sources": [<ordered list from: "github", "official_docs", "web">],
+  "estimated_value": <float between 0.0 and 1.0>,
+  "created_at": "<current UTC timestamp>"
+}}
+
+Focus on actionable, specific targets that will maximize information gain.
+```
+
+**Expected Output Schema**: [`EnrichmentStrategy`](PRDs/PRD-005_LLM_Provider_Integration.md:80)
+
+**Example Usage**:
+```python
+strategy_prompt = prompt_manager.format_template(
+    "strategy.prompt",
+    original_query="FastAPI middleware implementation",
+    missing_aspects=["error handling", "async middleware patterns"],
+    current_results="Basic middleware setup found",
+    domain="Python web frameworks"
+)
+```
+
+---
+
+### 3. quality.prompt
+
+**Purpose**: Assesses the quality and relevance of content to determine if it should be stored in the knowledge base.
+
+**Input Variables**:
+- `content`: The content to be assessed (text, code, documentation)
+- `source_url`: URL of the content source
+- `query_context`: The original search context that led to this content
+- `content_metadata`: Additional metadata about the content (author, date, etc.)
+
+**Prompt Template**:
+```
+You are a content quality assessor. Evaluate the provided content for relevance, quality, and value for storage in a knowledge base.
+
+CONTENT:
+{content}
+
+SOURCE URL: {source_url}
+
+QUERY CONTEXT: {query_context}
+
+CONTENT METADATA:
+{content_metadata}
+
+Assess the content based on:
+1. Relevance: How well does this content address the search context?
+2. Quality: Is the content well-written, accurate, and authoritative?
+3. Uniqueness: Does this provide unique value not found elsewhere?
+4. Completeness: Is the content complete and self-contained?
+5. Currency: Is the content current and not outdated?
+
+Classify the content type and provide your assessment as a JSON object:
+{{
+  "model_version": "1.0.0",
+  "relevance_score": <float between 0.0 and 1.0>,
+  "quality_score": <float between 0.0 and 1.0>,
+  "should_store": <boolean>,
+  "content_type": "<one of: tutorial, reference, guide, example, api, other>",
+  "confidence": <float between 0.0 and 1.0>,
+  "created_at": "<current UTC timestamp>"
+}}
+
+Be objective and consider long-term value for future searches.
+```
+
+**Expected Output Schema**: [`QualityAssessment`](PRDs/PRD-005_LLM_Provider_Integration.md:88)
+
+**Example Usage**:
+```python
+quality_prompt = prompt_manager.format_template(
+    "quality.prompt",
+    content="# FastAPI Middleware Guide\n\nMiddleware in FastAPI...",
+    source_url="https://github.com/example/fastapi-guide",
+    query_context="FastAPI middleware implementation patterns",
+    content_metadata={"author": "fastapi-team", "last_updated": "2024-01-15"}
+)
+```
+
+---
+
+### Template Validation Requirements
+
+All prompt templates must:
+1. Include the `model_version` field in expected JSON output for compatibility tracking
+2. Use consistent variable naming conventions with `{variable_name}` syntax
+3. Specify expected data types and ranges for numeric fields
+4. Include the `created_at` timestamp field for audit trails
+5. Align output schemas exactly with the Pydantic models defined in this PRD
+6. Provide clear instructions for objective, structured analysis
+7. Include example values or ranges to guide LLM responses
+
+### Template Storage and Management
+
+Templates are stored as individual `.prompt` files in the configuration directory and loaded by the [`PromptManager`](PRDs/PRD-005_LLM_Provider_Integration.md:106) utility class. Each template file contains only the prompt text with variable placeholders, while metadata and schemas are defined in this PRD.
 
 ## Circuit Breaker Implementation
+
+**Service Category**: External APIs (OpenAI, Ollama)
+**Rationale**: External LLM providers require higher tolerance due to potential rate limiting and variable response times. Longer recovery timeout accommodates provider-side issues and rate limit resets.
 
 ```python
 from circuitbreaker import circuit
@@ -43,8 +234,9 @@ import asyncio
 class LLMProviderClient:
     def __init__(self, config: AIConfig):
         self.circuit_breaker = circuit(
-            failure_threshold=3,
-            recovery_timeout=60,
+            failure_threshold=5,
+            recovery_timeout=300,
+            timeout=30,
             expected_exception=(aiohttp.ClientError, asyncio.TimeoutError)
         )
     

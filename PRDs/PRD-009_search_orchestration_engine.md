@@ -83,14 +83,14 @@ class WorkspaceInfo(BaseModel):
 
 | Task ID | Description |
 |---------|-------------|
-| SO-001  | Implement SearchOrchestrator class |
-| SO-002  | Implement execute_search workflow sequence |
-| SO-003  | Integrate cache check using CacheManager |
-| SO-004  | Aggregate and deduplicate results from workspaces |
-| SO-005  | Implement enrichment decision matrix logic |
-| SO-006  | Integrate BackgroundTasks for enrichment call |
-| SO-007  | Enforce performance contracts with asyncio.wait_for |
-| SO-008  | Connect orchestrator to live API endpoints |
+| SO-001  | Implement SearchOrchestrator class with core dependencies injection |
+| SO-002  | Implement query normalization and execute_search workflow sequence |
+| SO-003  | Integrate cache check using CacheManager for result retrieval and storage |
+| SO-004  | Implement multi-workspace search strategy and result aggregation/deduplication |
+| SO-005  | Implement AI evaluation and enrichment decision matrix logic |
+| SO-006  | Integrate BackgroundTasks for asynchronous knowledge enrichment calls |
+| SO-007  | Enforce performance contracts with asyncio.wait_for and timeout handling |
+| SO-008  | Connect orchestrator to live API endpoints and implement error handling |
 
 ## Integration Contracts
 - Accepts normalized query and returns SearchResponse.

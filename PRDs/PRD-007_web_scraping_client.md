@@ -25,6 +25,11 @@ Specifies the web scraping client responsible for fetching and extracting conten
 - Called by PRD-010 for enrichment.
 - Provides `ScrapedContent` to PRD-008 for processing.
 
+## Circuit Breaker Configuration
+
+**Service Category**: Web Scraping
+**Rationale**: Web scraping targets have high variability in response times and availability. Lower tolerance prevents wasting resources on unreliable sites, while moderate recovery timeout allows for temporary issues to resolve.
+
 ## Client Interface
 
 ```python
@@ -37,7 +42,8 @@ class WebScrapingClient:
     def __init__(self, config: ScrapingConfig):
         self.circuit_breaker = circuit(
             failure_threshold=3,
-            recovery_timeout=120,  # 2 minutes for web scraping
+            recovery_timeout=120,
+            timeout=15,
             expected_exception=(aiohttp.ClientError, asyncio.TimeoutError)
         )
     

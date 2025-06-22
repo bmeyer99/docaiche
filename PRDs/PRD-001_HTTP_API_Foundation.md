@@ -41,6 +41,7 @@ Defines the foundational HTTP server using FastAPI. Responsible for all API endp
 | GET    | /api/v1/collections    | Lists available documentation collections (workspaces) |
 | POST   | /api/v1/config         | Updates a specific part of the system configuration |
 | GET    | /api/v1/config         | Retrieves the current system configuration |
+| GET    | /api/v1/admin/search-content | Searches content metadata for admin management |
 | GET    | /docs                  | Serves the auto-generated OpenAPI (Swagger UI) documentation |
 
 ## Error Response Schema
@@ -56,6 +57,7 @@ class ProblemDetail(BaseModel):
     instance: Optional[str] = Field(None, description="URI reference identifying specific occurrence")
     error_code: Optional[str] = Field(None, description="Internal error code")
     trace_id: Optional[str] = Field(None, description="Request trace identifier")
+```
 
 ## Data Models
 
@@ -71,6 +73,25 @@ class SignalRequest(BaseModel):
     content_id: Optional[str] = Field(None, description="The ID of the document that was interacted with.")
     result_position: Optional[int] = Field(None, description="The 0-based index of the clicked result.")
     dwell_time_ms: Optional[int] = Field(None, description="Time in milliseconds spent on a result.")
+
+class AdminContentItem(BaseModel):
+    content_id: str = Field(..., description="Unique identifier for the content item.")
+    title: str = Field(..., description="Title of the content item.")
+    content_type: str = Field(..., description="Type of content (e.g., 'documentation', 'code', 'readme').")
+    technology: Optional[str] = Field(None, description="Associated technology or framework.")
+    source_url: Optional[str] = Field(None, description="Original source URL of the content.")
+    collection_name: str = Field(..., description="Name of the collection this content belongs to.")
+    created_at: datetime = Field(..., description="Timestamp when content was indexed.")
+    last_updated: datetime = Field(..., description="Timestamp when content was last modified.")
+    size_bytes: Optional[int] = Field(None, description="Size of the content in bytes.")
+    status: Literal['active', 'flagged', 'removed'] = Field(..., description="Current status of the content.")
+
+class AdminSearchResponse(BaseModel):
+    items: List[AdminContentItem] = Field(..., description="List of matching content items.")
+    total_count: int = Field(..., description="Total number of items matching the search criteria.")
+    page: int = Field(..., description="Current page number (1-based).")
+    page_size: int = Field(..., description="Number of items per page.")
+    has_more: bool = Field(..., description="Whether there are more pages available.")
 ```
 
 ## Implementation Tasks
@@ -88,6 +109,7 @@ class SignalRequest(BaseModel):
 | API-009 | Implement a global exception handler |
 | API-010 | Implement a middleware for request/response logging |
 | API-011 | Implement the /api/v1/signals endpoint (POST, validates SignalRequest, calls feedback_collector.record_implicit_signal as background task, returns HTTP 202) |
+| API-012 | Implement the /api/v1/admin/search-content endpoint (GET, accepts query parameters: search_term, content_type, technology, limit, offset, returns AdminSearchResponse) |
 
 ## Integration Contracts
 - Accepts and returns Pydantic models as defined above.
@@ -100,10 +122,24 @@ class SignalRequest(BaseModel):
 
 ### Data Models Table
 
-| Model Name      | Description                                 | Used In Endpoint(s)         |
-|-----------------|---------------------------------------------|-----------------------------|
-| SignalRequest   | Request body for /api/v1/signals            | POST /api/v1/signals        |
-| ...             | ...                                         | ...                         |
+| Model Name                   | Description                                           | Used In Endpoint(s)              |
+|------------------------------|-------------------------------------------------------|----------------------------------|
+| SearchRequest                | Request body for search queries                      | POST /api/v1/search              |
+| SearchResult                 | Individual search result item                        | Response data for search endpoints |
+| SearchResponse               | Response body for search queries                     | POST/GET /api/v1/search          |
+| FeedbackRequest              | Request body for user feedback submission           | POST /api/v1/feedback            |
+| SignalRequest                | Request body for implicit user signals              | POST /api/v1/signals             |
+| HealthStatus                 | Health status of individual service components      | Response data for health endpoint |
+| HealthResponse               | Response body for system health checks              | GET /api/v1/health               |
+| StatsResponse                | Response body for system usage statistics           | GET /api/v1/stats                |
+| Collection                   | Individual collection/workspace information         | Response data for collections endpoint |
+| CollectionsResponse          | Response body for available collections listing     | GET /api/v1/collections          |
+| ConfigurationItem            | Individual configuration key-value item             | Response data for config endpoint |
+| ConfigurationResponse        | Response body for system configuration retrieval   | GET /api/v1/config               |
+| ConfigurationUpdateRequest   | Request body for configuration updates              | POST /api/v1/config              |
+| AdminContentItem             | Individual content item with metadata for admin    | Response data for admin search endpoint |
+| AdminSearchResponse          | Response body for admin content search              | GET /api/v1/admin/search-content |
+| ProblemDetail                | Standard error response format (RFC 7807)          | All endpoints (error responses)  |
 
 ### Implementation Tasks Table
 (see Implementation Tasks above)

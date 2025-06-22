@@ -53,26 +53,28 @@ class ContentConfig(BaseModel):
 
 class CircuitBreakerConfig(BaseModel):
     """Circuit breaker configuration for API clients"""
-    failure_threshold: int = Field(5, description="Failures before opening circuit")
+    failure_threshold: int = Field(3, description="Failures before opening circuit")
     recovery_timeout: int = Field(60, description="Seconds before attempting recovery")
     timeout_seconds: int = Field(30, description="Request timeout in seconds")
 
 class AnythingLLMConfig(BaseModel):
     endpoint: str = Field(..., description="AnythingLLM API endpoint")
     api_key: str = Field(..., description="API key for authentication")
-    circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
+    circuit_breaker: CircuitBreakerConfig = Field(
+        default_factory=lambda: CircuitBreakerConfig(failure_threshold=3, recovery_timeout=60, timeout_seconds=30)
+    )
 
 class GitHubConfig(BaseModel):
     api_token: str = Field(..., description="GitHub API token")
     circuit_breaker: CircuitBreakerConfig = Field(
-        default_factory=lambda: CircuitBreakerConfig(recovery_timeout=300)
+        default_factory=lambda: CircuitBreakerConfig(failure_threshold=5, recovery_timeout=300, timeout_seconds=30)
     )
 
 class ScrapingConfig(BaseModel):
     user_agent: str = Field("DocaicheBot/1.0", description="User agent for web requests")
     rate_limit_delay: float = Field(1.0, description="Delay between requests in seconds")
     circuit_breaker: CircuitBreakerConfig = Field(
-        default_factory=lambda: CircuitBreakerConfig(failure_threshold=3, recovery_timeout=120)
+        default_factory=lambda: CircuitBreakerConfig(failure_threshold=3, recovery_timeout=120, timeout_seconds=15)
     )
 
 class RedisConfig(BaseModel):
@@ -80,6 +82,37 @@ class RedisConfig(BaseModel):
     port: int = Field(6379, description="Redis port")
     password: Optional[str] = Field(None, description="Redis password")
     db: int = Field(0, description="Redis database number")
+
+class OllamaConfig(BaseModel):
+    """Ollama LLM provider configuration"""
+    endpoint: str = Field("http://localhost:11434", description="Ollama API endpoint")
+    model: str = Field("llama2", description="Default model to use")
+    temperature: float = Field(0.7, ge=0.0, le=2.0, description="Model temperature")
+    max_tokens: int = Field(4096, ge=1, description="Maximum tokens in response")
+    timeout_seconds: int = Field(60, ge=1, description="Request timeout")
+    circuit_breaker: CircuitBreakerConfig = Field(
+        default_factory=lambda: CircuitBreakerConfig(failure_threshold=5, recovery_timeout=300, timeout_seconds=30)
+    )
+
+class OpenAIConfig(BaseModel):
+    """OpenAI LLM provider configuration"""
+    api_key: str = Field(..., description="OpenAI API key")
+    model: str = Field("gpt-3.5-turbo", description="Default model to use")
+    temperature: float = Field(0.7, ge=0.0, le=2.0, description="Model temperature")
+    max_tokens: int = Field(4096, ge=1, description="Maximum tokens in response")
+    timeout_seconds: int = Field(30, ge=1, description="Request timeout")
+    circuit_breaker: CircuitBreakerConfig = Field(
+        default_factory=lambda: CircuitBreakerConfig(failure_threshold=5, recovery_timeout=300, timeout_seconds=30)
+    )
+
+class AIConfig(BaseModel):
+    """AI provider configuration with failover support"""
+    primary_provider: Literal["ollama", "openai"] = Field("ollama", description="Primary LLM provider")
+    fallback_provider: Optional[Literal["ollama", "openai"]] = Field("openai", description="Fallback LLM provider")
+    enable_failover: bool = Field(True, description="Enable automatic failover")
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+    openai: OpenAIConfig
+    cache_ttl_seconds: int = Field(3600, ge=0, description="Cache TTL for LLM responses")
 
 class SystemConfiguration(BaseModel):
     """Top-level configuration object combining all config sections"""
@@ -89,6 +122,7 @@ class SystemConfiguration(BaseModel):
     github: GitHubConfig
     scraping: ScrapingConfig
     redis: RedisConfig
+    ai: AIConfig
 ```
 
 ## Implementation Tasks

@@ -28,6 +28,11 @@ Specifies the client for interacting with the GitHub REST API. Discovers documen
 - Called by PRD-010 for enrichment and bulk import.
 - Provides files to PRD-008 for processing.
 
+## Circuit Breaker Configuration
+
+**Service Category**: External APIs (GitHub)
+**Rationale**: GitHub API has rate limiting and occasional outages. Higher tolerance prevents unnecessary circuit opening due to temporary rate limits, while longer recovery accommodates GitHub's rate limit reset periods.
+
 ## Client Interface
 
 ```python
@@ -40,7 +45,8 @@ class GitHubClient:
     def __init__(self, config: GitHubConfig, db_manager: DatabaseManager):
         self.circuit_breaker = circuit(
             failure_threshold=5,
-            recovery_timeout=300,  # 5 minutes for GitHub API
+            recovery_timeout=300,
+            timeout=30,
             expected_exception=(aiohttp.ClientError, aiohttp.ClientResponseError)
         )
     

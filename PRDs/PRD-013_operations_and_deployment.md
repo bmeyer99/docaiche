@@ -66,8 +66,7 @@ services:
       - "8081:8081"
     volumes:
       - app_data:/app/data
-    environment:
-      - ./.env
+    env_file: .env
     depends_on:
       - anythingllm
       - ollama
@@ -226,9 +225,10 @@ echo "Restore completed successfully"
 
 | Service Name   | Purpose                         | Depends On           |
 |----------------|---------------------------------|----------------------|
-| docs-cache     | Main Python application         | anythingllm, ollama  |
+| docs-cache     | Main Python application         | anythingllm, ollama, redis |
 | anythingllm    | Vector database                 | -                    |
 | ollama         | LLM provider                    | -                    |
+| redis          | Cache and session storage       | -                    |
 
 ### Implementation Tasks Table
 (see Implementation Tasks above)

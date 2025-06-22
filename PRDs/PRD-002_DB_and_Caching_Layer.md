@@ -38,7 +38,151 @@ CREATE TABLE system_config (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_by TEXT NOT NULL DEFAULT 'system'
 );
--- ... (other tables as in original spec)
+
+-- Table to cache search queries and results (PRD-009)
+CREATE TABLE search_cache (
+    query_hash TEXT PRIMARY KEY NOT NULL,
+    original_query TEXT NOT NULL,
+    search_results JSON NOT NULL,
+    technology_hint TEXT,
+    workspace_slugs JSON,  -- Array of workspace slugs searched
+    result_count INTEGER NOT NULL DEFAULT 0,
+    execution_time_ms INTEGER NOT NULL DEFAULT 0,
+    cache_hit BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    access_count INTEGER NOT NULL DEFAULT 0,
+    last_accessed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table to track ingested content metadata (PRD-008, PRD-010)
+CREATE TABLE content_metadata (
+    content_id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    technology TEXT NOT NULL,
+    content_hash TEXT NOT NULL UNIQUE,
+    word_count INTEGER NOT NULL DEFAULT 0,
+    heading_count INTEGER NOT NULL DEFAULT 0,
+    code_block_count INTEGER NOT NULL DEFAULT 0,
+    chunk_count INTEGER NOT NULL DEFAULT 0,
+    quality_score REAL NOT NULL DEFAULT 0.0 CHECK (quality_score >= 0.0 AND quality_score <= 1.0),
+    freshness_score REAL NOT NULL DEFAULT 1.0 CHECK (freshness_score >= 0.0 AND freshness_score <= 1.0),
+    processing_status TEXT NOT NULL DEFAULT 'pending' CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed', 'flagged')),
+    anythingllm_workspace TEXT,
+    anythingllm_document_id TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_accessed_at TIMESTAMP,
+    access_count INTEGER NOT NULL DEFAULT 0
+);
+
+-- Table to store explicit user feedback (PRD-011)
+CREATE TABLE feedback_events (
+    event_id TEXT PRIMARY KEY NOT NULL,
+    content_id TEXT NOT NULL,
+    feedback_type TEXT NOT NULL CHECK (feedback_type IN ('helpful', 'not_helpful', 'outdated', 'incorrect', 'flag')),
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    user_session_id TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    search_query TEXT,
+    result_position INTEGER,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (content_id) REFERENCES content_metadata(content_id) ON DELETE CASCADE
+);
+
+-- Table to track implicit user interactions (PRD-011)
+CREATE TABLE usage_signals (
+    signal_id TEXT PRIMARY KEY NOT NULL,
+    content_id TEXT NOT NULL,
+    signal_type TEXT NOT NULL CHECK (signal_type IN ('click', 'dwell_time', 'copy', 'share', 'scroll_depth')),
+    signal_value REAL NOT NULL DEFAULT 0.0,  -- click=1, dwell_time=seconds, scroll_depth=percentage
+    search_query TEXT,
+    result_position INTEGER,
+    user_session_id TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    referrer TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (content_id) REFERENCES content_metadata(content_id) ON DELETE CASCADE
+);
+
+-- Table to track source reliability and performance (PRD-010)
+CREATE TABLE source_metadata (
+    source_id TEXT PRIMARY KEY NOT NULL,
+    source_type TEXT NOT NULL CHECK (source_type IN ('github', 'web', 'api')),
+    source_url TEXT NOT NULL,
+    technology TEXT NOT NULL,
+    reliability_score REAL NOT NULL DEFAULT 1.0 CHECK (reliability_score >= 0.0 AND reliability_score <= 1.0),
+    avg_processing_time_ms INTEGER NOT NULL DEFAULT 0,
+    total_documents_processed INTEGER NOT NULL DEFAULT 0,
+    last_successful_fetch TIMESTAMP,
+    last_failed_fetch TIMESTAMP,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    rate_limit_status TEXT DEFAULT 'normal' CHECK (rate_limit_status IN ('normal', 'limited', 'exhausted')),
+    rate_limit_reset_at TIMESTAMP,
+    avg_content_quality REAL DEFAULT 0.0 CHECK (avg_content_quality >= 0.0 AND avg_content_quality <= 1.0),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table to map technologies to authoritative sources (PRD-006, PRD-010)
+CREATE TABLE technology_mappings (
+    mapping_id TEXT PRIMARY KEY NOT NULL,
+    technology TEXT NOT NULL,
+    source_type TEXT NOT NULL CHECK (source_type IN ('github', 'web')),
+    owner TEXT,  -- GitHub owner/organization
+    repo TEXT,   -- GitHub repository name
+    docs_path TEXT NOT NULL DEFAULT 'docs',  -- Path to documentation within repo
+    file_patterns JSON NOT NULL DEFAULT '["*.md", "*.mdx"]',  -- File patterns to search for
+    base_url TEXT,  -- Base URL for web sources
+    priority INTEGER NOT NULL DEFAULT 1,  -- Higher number = higher priority
+    is_official BOOLEAN NOT NULL DEFAULT FALSE,  -- True for official documentation
+    last_updated TIMESTAMP,
+    update_frequency_hours INTEGER NOT NULL DEFAULT 24,  -- How often to check for updates
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(technology, source_type, owner, repo, base_url)
+);
+
+-- Indexes for performance optimization
+CREATE INDEX idx_search_cache_expires_at ON search_cache(expires_at);
+CREATE INDEX idx_search_cache_technology_hint ON search_cache(technology_hint);
+CREATE INDEX idx_search_cache_created_at ON search_cache(created_at);
+
+CREATE INDEX idx_content_metadata_technology ON content_metadata(technology);
+CREATE INDEX idx_content_metadata_source_url ON content_metadata(source_url);
+CREATE INDEX idx_content_metadata_content_hash ON content_metadata(content_hash);
+CREATE INDEX idx_content_metadata_quality_score ON content_metadata(quality_score);
+CREATE INDEX idx_content_metadata_processing_status ON content_metadata(processing_status);
+CREATE INDEX idx_content_metadata_created_at ON content_metadata(created_at);
+CREATE INDEX idx_content_metadata_last_accessed_at ON content_metadata(last_accessed_at);
+
+CREATE INDEX idx_feedback_events_content_id ON feedback_events(content_id);
+CREATE INDEX idx_feedback_events_feedback_type ON feedback_events(feedback_type);
+CREATE INDEX idx_feedback_events_created_at ON feedback_events(created_at);
+CREATE INDEX idx_feedback_events_user_session_id ON feedback_events(user_session_id);
+
+CREATE INDEX idx_usage_signals_content_id ON usage_signals(content_id);
+CREATE INDEX idx_usage_signals_signal_type ON usage_signals(signal_type);
+CREATE INDEX idx_usage_signals_created_at ON usage_signals(created_at);
+CREATE INDEX idx_usage_signals_user_session_id ON usage_signals(user_session_id);
+
+CREATE INDEX idx_source_metadata_source_type ON source_metadata(source_type);
+CREATE INDEX idx_source_metadata_technology ON source_metadata(technology);
+CREATE INDEX idx_source_metadata_reliability_score ON source_metadata(reliability_score);
+CREATE INDEX idx_source_metadata_is_active ON source_metadata(is_active);
+CREATE INDEX idx_source_metadata_updated_at ON source_metadata(updated_at);
+
+CREATE INDEX idx_technology_mappings_technology ON technology_mappings(technology);
+CREATE INDEX idx_technology_mappings_source_type ON technology_mappings(source_type);
+CREATE INDEX idx_technology_mappings_priority ON technology_mappings(priority);
+CREATE INDEX idx_technology_mappings_is_active ON technology_mappings(is_active);
+CREATE INDEX idx_technology_mappings_is_official ON technology_mappings(is_official);
 ```
 
 ## Redis Cache Structure

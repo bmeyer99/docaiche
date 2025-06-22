@@ -38,14 +38,18 @@ Specifies the complete HTTP client for interacting with an AnythingLLM instance.
 
 ## Circuit Breaker Configuration
 
+**Service Category**: Internal Services
+**Rationale**: AnythingLLM is an internal service with predictable behavior. Medium tolerance with shorter recovery allows for quick failover while maintaining reasonable availability.
+
 ```python
 from circuitbreaker import circuit
 
 class AnythingLLMClient:
     def __init__(self, config: AnythingLLMConfig):
         self.circuit_breaker = circuit(
-            failure_threshold=5,
-            recovery_timeout=30,
+            failure_threshold=3,
+            recovery_timeout=60,
+            timeout=30,
             expected_exception=aiohttp.ClientError
         )
     
