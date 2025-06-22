@@ -86,6 +86,7 @@ class TestAnythingLLMClient:
         return client
     
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_client_initialization(self, config):
         """Test client initialization with configuration"""
         client = AnythingLLMClient(config)
@@ -95,6 +96,8 @@ class TestAnythingLLMClient:
         assert client.api_key == "test-api-key-12345"
         assert client.session is None
     
+    @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_session_lifecycle(self, config):
         """Test session connection and disconnection"""
         async with AnythingLLMClient(config) as client:
@@ -104,6 +107,8 @@ class TestAnythingLLMClient:
         # Session should be closed after context exit
         assert client.session.closed
     
+    @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_health_check_success(self, client):
         """Test successful health check"""
         # Mock successful response
@@ -128,6 +133,8 @@ class TestAnythingLLMClient:
             "GET", "http://localhost:3001/api/health"
         )
     
+    @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_health_check_failure(self, client):
         """Test health check with service failure"""
         # Mock connection error
@@ -141,6 +148,8 @@ class TestAnythingLLMClient:
         assert "error" in result
         assert "circuit_breaker" in result
     
+    @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_list_workspaces_success(self, client):
         """Test successful workspace listing"""
         mock_response = AsyncMock()
@@ -160,6 +169,8 @@ class TestAnythingLLMClient:
         assert workspaces[0]["slug"] == "react-docs"
         assert workspaces[1]["slug"] == "vue-docs"
     
+    @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_get_or_create_workspace_existing(self, client):
         """Test getting existing workspace"""
         mock_response = AsyncMock()
@@ -182,6 +193,8 @@ class TestAnythingLLMClient:
             "GET", "http://localhost:3001/api/workspace/react-docs"
         )
     
+    @pytest.mark.asyncio
+    @pytest.mark.asyncio
     async def test_get_or_create_workspace_new(self, client):
         """Test creating new workspace when not found"""
         # Mock 404 for GET, then successful POST
@@ -215,6 +228,7 @@ class TestAnythingLLMClient:
         # Should have made both GET and POST calls
         assert client.session.request.call_count == 2
     
+    @pytest.mark.asyncio
     async def test_upload_document_success(self, client, sample_document):
         """Test successful document upload"""
         # Mock workspace exists
@@ -242,6 +256,7 @@ class TestAnythingLLMClient:
         assert len(result["uploaded_chunk_ids"]) == 2
         assert len(result["failed_chunk_ids"]) == 0
     
+    @pytest.mark.asyncio
     async def test_upload_document_partial_failure(self, client, sample_document):
         """Test document upload with some chunk failures"""
         # Mock workspace exists
@@ -276,6 +291,7 @@ class TestAnythingLLMClient:
         assert len(result["failed_chunk_ids"]) == 1
         assert len(result["errors"]) > 0
     
+    @pytest.mark.asyncio
     async def test_search_workspace_success(self, client):
         """Test successful workspace search"""
         mock_response = AsyncMock()
@@ -314,6 +330,7 @@ class TestAnythingLLMClient:
             }
         )
     
+    @pytest.mark.asyncio
     async def test_list_workspace_documents(self, client):
         """Test listing workspace documents"""
         mock_response = AsyncMock()
@@ -333,6 +350,7 @@ class TestAnythingLLMClient:
         assert documents[0]["title"] == "React Basics"
         assert documents[1]["title"] == "Advanced React"
     
+    @pytest.mark.asyncio
     async def test_delete_document_success(self, client):
         """Test successful document deletion"""
         mock_response = AsyncMock()
@@ -349,6 +367,7 @@ class TestAnythingLLMClient:
             "http://localhost:3001/api/workspace/react-docs/delete/doc-123"
         )
     
+    @pytest.mark.asyncio
     async def test_delete_document_not_found(self, client):
         """Test deleting document that doesn't exist"""
         mock_response = AsyncMock()
@@ -360,6 +379,7 @@ class TestAnythingLLMClient:
         
         assert result is True  # 404 treated as success (already deleted)
     
+    @pytest.mark.asyncio
     async def test_authentication_error(self, client):
         """Test authentication error handling"""
         mock_response = AsyncMock()
@@ -379,6 +399,7 @@ class TestAnythingLLMClient:
         assert "Authentication failed" in str(exc_info.value)
         assert exc_info.value.status_code == 401
     
+    @pytest.mark.asyncio
     async def test_rate_limit_error(self, client):
         """Test rate limit error handling"""
         mock_response = AsyncMock()
@@ -400,6 +421,7 @@ class TestAnythingLLMClient:
         assert exc_info.value.retry_after == 60
         assert exc_info.value.status_code == 429
     
+    @pytest.mark.asyncio
     async def test_workspace_not_found_error(self, client):
         """Test workspace not found error handling"""
         mock_response = AsyncMock()
@@ -419,6 +441,7 @@ class TestAnythingLLMClient:
         assert "Workspace error" in str(exc_info.value)
         assert exc_info.value.workspace_slug == "nonexistent"
     
+    @pytest.mark.asyncio
     async def test_connection_timeout_error(self, client):
         """Test connection timeout error handling"""
         client.session.request.side_effect = asyncio.TimeoutError()
@@ -429,6 +452,7 @@ class TestAnythingLLMClient:
         assert "Request timeout" in str(exc_info.value)
         assert exc_info.value.status_code == 503
     
+    @pytest.mark.asyncio
     async def test_session_not_initialized_error(self, config):
         """Test error when session not initialized"""
         client = AnythingLLMClient(config)
@@ -439,6 +463,7 @@ class TestAnythingLLMClient:
         
         assert "Client session not initialized" in str(exc_info.value)
     
+    @pytest.mark.asyncio
     async def test_request_logging(self, client, caplog):
         """Test request and response logging"""
         mock_response = AsyncMock()

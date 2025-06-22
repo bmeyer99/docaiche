@@ -65,7 +65,6 @@ class AnythingLLMClient:
         self.circuit_breaker = circuit(
             failure_threshold=config.circuit_breaker.failure_threshold,
             recovery_timeout=config.circuit_breaker.recovery_timeout,
-            timeout=config.circuit_breaker.timeout_seconds,
             expected_exception=aiohttp.ClientError
         )
         
