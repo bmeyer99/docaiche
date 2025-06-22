@@ -12,19 +12,18 @@ This module provides:
 
 from .init_db import DatabaseInitializer
 from .connection import DatabaseManager, CacheManager
-from .models import Base, SystemConfig, SearchCache, ContentMetadata, FeedbackEvents, UsageSignals, SourceMetadata, TechnologyMappings, SchemaVersions
+from .models import Base, SystemConfig, SearchCache, ContentMetadata, FeedbackEvents, UsageSignals, SourceMetadata, TechnologyMappings
 
 __all__ = [
     "DatabaseInitializer",
-    "DatabaseManager", 
+    "DatabaseManager",
     "CacheManager",
     "Base",
     "SystemConfig",
-    "SearchCache", 
+    "SearchCache",
     "ContentMetadata",
     "FeedbackEvents",
     "UsageSignals",
     "SourceMetadata",
     "TechnologyMappings",
-    "SchemaVersions",
 ]

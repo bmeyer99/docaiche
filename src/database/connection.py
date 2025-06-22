@@ -34,6 +34,8 @@ except ImportError:
 # Canonical data models from PRD-002
 class DocumentMetadata(BaseModel):
     """Document metadata model for compatibility"""
+    model_config = {"protected_namespaces": ()}
+    
     model_version: str = "1.0.0"
     word_count: int
     heading_count: int
@@ -45,6 +47,8 @@ class DocumentMetadata(BaseModel):
 
 class DocumentChunk(BaseModel):
     """Document chunk model for compatibility"""
+    model_config = {"protected_namespaces": ()}
+    
     model_version: str = "1.0.0"
     id: str
     parent_document_id: str
@@ -56,6 +60,8 @@ class DocumentChunk(BaseModel):
 
 class ProcessedDocument(BaseModel):
     """Complete processed document model"""
+    model_config = {"protected_namespaces": ()}
+    
     model_version: str = "1.0.0"
     id: str
     title: str
@@ -610,16 +616,23 @@ async def create_database_manager(config: Optional[Dict[str, Any]] = None) -> Da
     if config is None:
         # Integrate with CFG-001 configuration system
         try:
-            from src.core.config import get_system_configuration
-            system_config = get_system_configuration()
-            db_path = f"{system_config.app.data_dir}/docaiche.db"
+            if get_system_configuration is not None:
+                system_config = get_system_configuration()
+                db_path = f"{system_config.app.data_dir}/docaiche.db"
+            else:
+                db_path = "./data/docaiche.db"
         except Exception as e:
             logger.warning(f"Could not load configuration, using default: {e}")
-            db_path = "/app/data/docaiche.db"
+            db_path = "./data/docaiche.db"
     else:
         db_path = config.get("db_path", "/app/data/docaiche.db")
     
-    database_url = f"sqlite+aiosqlite:///{db_path}"
+    # Fix SQLite URL construction - ensure no double slashes
+    # db_path already includes leading slash, so don't add extra slash
+    if db_path.startswith('/'):
+        database_url = f"sqlite+aiosqlite://{db_path}"
+    else:
+        database_url = f"sqlite+aiosqlite:///{db_path}"
     return DatabaseManager(database_url)
 
 
@@ -636,18 +649,28 @@ async def create_cache_manager(config: Optional[Dict[str, Any]] = None) -> Cache
     if config is None:
         # Integrate with CFG-001 configuration system
         try:
-            from src.core.config import get_system_configuration
-            system_config = get_system_configuration()
-            redis_config = {
-                "host": system_config.redis.host,
-                "port": system_config.redis.port,
-                "password": system_config.redis.password,
-                "db": system_config.redis.db,
-                "max_connections": system_config.redis.max_connections,
-                "connection_timeout": system_config.redis.connection_timeout,
-                "socket_timeout": system_config.redis.socket_timeout,
-                "ssl": system_config.redis.ssl,
-            }
+            if get_system_configuration is not None:
+                system_config = get_system_configuration()
+                redis_config = {
+                    "host": system_config.redis.host,
+                    "port": system_config.redis.port,
+                    "password": system_config.redis.password,
+                    "db": system_config.redis.db,
+                    "max_connections": system_config.redis.max_connections,
+                    "connection_timeout": system_config.redis.connection_timeout,
+                    "socket_timeout": system_config.redis.socket_timeout,
+                    "ssl": system_config.redis.ssl,
+                }
+            else:
+                redis_config = {
+                    "host": "redis",
+                    "port": 6379,
+                    "db": 0,
+                    "max_connections": 20,
+                    "connection_timeout": 5,
+                    "socket_timeout": 5,
+                    "ssl": False,
+                }
         except Exception as e:
             logger.warning(f"Could not load configuration, using defaults: {e}")
             redis_config = {

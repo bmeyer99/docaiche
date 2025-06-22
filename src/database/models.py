@@ -309,17 +309,5 @@ class TechnologyMappings(Base):
     )
 
 
-class SchemaVersions(Base):
-    """
-    Schema versions table for tracking database migrations.
-    
-    Maps to schema_versions table from task requirements.
-    """
-    __tablename__ = "schema_versions"
-    
-    version_id: Mapped[str] = mapped_column(String, primary_key=True)
-    applied_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=func.current_timestamp()
-    )
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    migration_script: Mapped[Optional[str]] = mapped_column(Text)
+# Note: Schema versioning is handled by Alembic as per PRD-002
+# No custom schema_versions table needed - removed to match exact 7-table requirement

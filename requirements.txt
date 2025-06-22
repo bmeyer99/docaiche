@@ -15,6 +15,9 @@ python-multipart>=0.0.6
 # HTTP client for external APIs
 aiohttp>=3.8.0
 
+# Circuit breaker for resilience
+circuitbreaker>=1.4.0
+
 # Database and caching
 aiosqlite>=0.19.0
 redis>=4.5.0

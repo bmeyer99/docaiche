@@ -27,7 +27,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 
 from src.database.init_db import DatabaseInitializer
 from src.database.connection import DatabaseManager, CacheManager, create_database_manager, create_cache_manager
-from src.database.models import Base, SystemConfig, SearchCache, ContentMetadata, FeedbackEvents, UsageSignals, SourceMetadata, TechnologyMappings, SchemaVersions
+from src.database.models import Base, SystemConfig, SearchCache, ContentMetadata, FeedbackEvents, UsageSignals, SourceMetadata, TechnologyMappings
 
 
 class TestPRD002FunctionalRequirements:
@@ -57,16 +57,16 @@ class TestPRD002FunctionalRequirements:
             tables = [row[0] for row in cursor.fetchall()]
             
             required_tables = [
-                'system_config', 'search_cache', 'content_metadata', 
-                'feedback_events', 'usage_signals', 'source_metadata', 
-                'technology_mappings', 'schema_versions'
+                'system_config', 'search_cache', 'content_metadata',
+                'feedback_events', 'usage_signals', 'source_metadata',
+                'technology_mappings'
             ]
             
             for table in required_tables:
                 assert table in tables, f"Required table '{table}' not found"
             
-            # Verify total count matches expected (7 + schema_versions = 8)
-            assert len(tables) == 8, f"Expected 8 tables, found {len(tables)}: {tables}"
+            # Verify total count matches expected (7 tables)
+            assert len(tables) == 7, f"Expected 7 tables, found {len(tables)}: {tables}"
             conn.close()
     
     def test_system_config_table_schema(self):
@@ -259,6 +259,7 @@ class TestPRD002FunctionalRequirements:
             
             conn.close()
     
+    @pytest.mark.skip(reason="SchemaVersions table removed; Alembic handles schema versioning")
     def test_schema_version_tracking(self):
         """TEST-F008: Verify schema version is properly tracked"""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -675,7 +676,7 @@ class TestPRD002OperationalValidation:
             
             assert info["exists"] is True
             assert info["path"] == db_path
-            assert info["table_count"] == 8  # 7 main tables + schema_versions
+            assert info["table_count"] == 7  # 7 main tables
             assert info["schema_version"] == "1.0.0"
             assert "file_size_bytes" in info
             assert "file_size_mb" in info
