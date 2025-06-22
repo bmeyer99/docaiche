@@ -1,0 +1,313 @@
+# AI Documentation Cache System .gitignore
+
+# ============================================================================
+# Python
+# ============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ============================================================================
+# Virtual Environments
+# ============================================================================
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# ============================================================================
+# FastAPI & Web Framework
+# ============================================================================
+instance/
+.webassets-cache
+.coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+cover/
+
+# ============================================================================
+# Database Files
+# ============================================================================
+*.db
+*.sqlite
+*.sqlite3
+cache.db
+metadata.db
+app.db
+test.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ============================================================================
+# Configuration & Secrets
+# ============================================================================
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+config/local.py
+config/secrets.yaml
+secrets/
+.secrets
+*.pem
+*.key
+*.crt
+*.p12
+.vault
+oauth.json
+credentials.json
+
+# ============================================================================
+# Docker & Containerization
+# ============================================================================
+docker-compose.override.yml
+.dockerignore.local
+Dockerfile.local
+.docker/
+containers/*/data/
+volumes/
+
+# ============================================================================
+# Redis & Caching
+# ============================================================================
+dump.rdb
+*.rdb
+appendonly.aof
+
+# ============================================================================
+# Logs
+# ============================================================================
+logs/
+*.log
+log/
+app.log
+error.log
+access.log
+debug.log
+*.log.*
+*.log.gz
+
+# ============================================================================
+# AnythingLLM & Vector Database
+# ============================================================================
+anythingllm/
+vector_storage/
+embeddings/
+workspace_data/
+document_cache/
+*.vector
+*.index
+
+# ============================================================================
+# Ollama & LLM Models
+# ============================================================================
+models/
+*.gguf
+*.bin
+ollama_data/
+model_cache/
+
+# ============================================================================
+# Content Processing & Scraped Data
+# ============================================================================
+downloads/
+scraped_content/
+processed_docs/
+temp_files/
+raw_content/
+github_repos/
+temp_downloads/
+
+# ============================================================================
+# Testing
+# ============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+test-reports/
+test_output/
+test_results/
+
+# ============================================================================
+# Development Tools & IDEs
+# ============================================================================
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ============================================================================
+# Operating System
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+
+# ============================================================================
+# Documentation & Static Site Generators
+# ============================================================================
+docs/_build/
+docs/.doctrees/
+site/
+.mkdocs/
+.sphinx/
+
+# ============================================================================
+# Package Managers & Dependencies
+# ============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ============================================================================
+# Backup Files
+# ============================================================================
+*.backup
+*.bak
+*.old
+*.orig
+*.tmp
+*~
+.backup/
+backups/
+
+# ============================================================================
+# Monitoring & Profiling
+# ============================================================================
+*.prof
+profile_stats/
+monitoring/
+metrics/
+.profiler/
+
+# ============================================================================
+# AI/ML Specific
+# ============================================================================
+checkpoints/
+model_outputs/
+training_logs/
+experiments/
+wandb/
+mlruns/
+.neptune/
+
+# ============================================================================
+# Project Specific
+# ============================================================================
+# Add any project-specific files or directories here
+
+# Example: Custom configuration files
+# config/custom.yaml
+
+# Example: Large test data
+# test_data/large_files/
+
+# Example: Generated documentation
+# generated_docs/
+
+# ============================================================================
+# Keep These Files (Override ignore patterns)
+# ============================================================================
+# Force include important config templates
+!config/config.template.yaml
+!docker-compose.template.yml
+!.env.example
+!requirements.txt
+!Dockerfile
+!README.md
+!docs/

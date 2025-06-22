@@ -343,6 +343,9 @@ class ConcurrentTaskExecutor:
         self.config = config
         self.resource_limits = resource_limits or ResourceLimits()
         
+        # Expose max_concurrent_tasks for component integration
+        self.max_concurrent_tasks = getattr(config, 'max_concurrent_tasks', self.resource_limits.max_processing_slots)
+        
         # Initialize resource pools
         self._resource_pools = {
             ResourceType.API_CALLS: ResourcePool(

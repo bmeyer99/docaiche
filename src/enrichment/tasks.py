@@ -20,6 +20,7 @@ from .queue import EnrichmentTaskQueue
 from .analyzers import ContentAnalyzer, RelationshipAnalyzer, TagGenerator
 from .exceptions import TaskProcessingError, EnrichmentTimeoutError
 from .concurrent import ConcurrentTaskExecutor, ResourceType, ResourceLimits
+from .security import SecureTaskExecutor, get_task_privilege_level
 from src.database.connection import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class TaskManager:
         resource_limits: Optional[ResourceLimits] = None
     ):
         """
-        Initialize task manager with concurrency controls.
+        Initialize task manager with concurrency controls and secure task execution.
         
         Args:
             config: Enrichment configuration
@@ -56,6 +57,9 @@ class TaskManager:
         # Initialize concurrent task executor
         self.concurrent_executor = ConcurrentTaskExecutor(config, resource_limits)
         
+        # Initialize secure task executor for privilege isolation
+        self.secure_executor = SecureTaskExecutor()
+        
         # Initialize analyzers
         self.content_analyzer = ContentAnalyzer()
         self.relationship_analyzer = RelationshipAnalyzer()
@@ -67,7 +71,7 @@ class TaskManager:
         self._metrics = EnrichmentMetrics()
         self._priority_queue_processor: Optional[asyncio.Task] = None
         
-        logger.info("TaskManager initialized with concurrency controls")
+        logger.info("TaskManager initialized with concurrency controls and secure execution")
     
     async def start(self) -> None:
         """
@@ -294,7 +298,7 @@ class TaskManager:
     
     async def _process_task(self, task: EnrichmentTask) -> None:
         """
-        Process individual enrichment task.
+        Process individual enrichment task with secure privilege isolation.
         
         Args:
             task: Task to process
@@ -303,8 +307,39 @@ class TaskManager:
             TaskProcessingError: If task processing fails
         """
         try:
-            logger.debug(f"Processing task: {task.content_id} ({task.task_type})")
+            logger.debug(f"Processing task with security isolation: {task.content_id} ({task.task_type})")
             
+            # Determine appropriate privilege level for task type
+            privilege_level = get_task_privilege_level(task.task_type.value)
+            
+            # Execute task with secure privilege isolation
+            await self.secure_executor.execute_task_securely(
+                task,
+                self._execute_task_logic,
+                privilege_level
+            )
+            
+            logger.debug(f"Task completed securely: {task.content_id}")
+            
+        except Exception as e:
+            logger.error(f"Secure task processing failed for {task.content_id}: {e}")
+            raise TaskProcessingError(
+                f"Secure task processing failed: {str(e)}",
+                content_id=task.content_id,
+                task_type=task.task_type.value
+            )
+    
+    async def _execute_task_logic(self, task: EnrichmentTask) -> None:
+        """
+        Execute the core task logic within secure context.
+        
+        Args:
+            task: Task to execute
+            
+        Raises:
+            TaskProcessingError: If task execution fails
+        """
+        try:
             # Get content from database
             content_data = await self._get_content_data(task.content_id)
             if not content_data:
@@ -342,12 +377,10 @@ class TaskManager:
             if result:
                 await self._store_enrichment_result(result)
             
-            logger.debug(f"Task completed: {task.content_id}")
-            
         except Exception as e:
-            logger.error(f"Task processing failed for {task.content_id}: {e}")
+            logger.error(f"Task logic execution failed for {task.content_id}: {e}")
             raise TaskProcessingError(
-                f"Task processing failed: {str(e)}",
+                f"Task logic execution failed: {str(e)}",
                 content_id=task.content_id,
                 task_type=task.task_type.value
             )
@@ -380,9 +413,13 @@ class TaskManager:
             if not re.match(r'^[a-zA-Z0-9_-]+$', content_id):
                 raise ValueError("Invalid content_id format: contains illegal characters")
             
-            async with self.db_manager.get_connection() as conn:
+            # Fix async context manager - get connection properly
+            conn = await self.db_manager.get_connection()
+            try:
                 result = await conn.execute(query, (content_id,))
                 row = await result.fetchone()
+            finally:
+                await conn.close()
                 
                 if row:
                     return {

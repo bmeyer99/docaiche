@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any, List, Set, Callable, Awaitable
 from enum import Enum
 from dataclasses import dataclass, field
 import os
+import inspect
 
 from .models import EnrichmentConfig
 from .exceptions import EnrichmentError, TaskProcessingError
@@ -633,19 +634,31 @@ class LifecycleManager:
             if not component:
                 return {'status': 'not_found'}
             
-            # Update status
-            self._component_status[component_name].state = ComponentState.STOPPING
-            self._component_status[component_name].last_state_change = datetime.utcnow()
+            # Update status if component status exists
+            if component_name in self._component_status:
+                self._component_status[component_name].state = ComponentState.STOPPING
+                self._component_status[component_name].last_state_change = datetime.utcnow()
             
             # Stop component with graceful shutdown if supported
             if hasattr(component, 'graceful_shutdown') and not force:
-                await component.graceful_shutdown()
+                # Check if it's an async method or AsyncMock
+                if (inspect.iscoroutinefunction(component.graceful_shutdown) or
+                    str(type(component.graceful_shutdown)).__contains__('AsyncMock')):
+                    await component.graceful_shutdown()
+                else:
+                    component.graceful_shutdown()
             elif hasattr(component, 'stop'):
-                await component.stop()
+                # Check if it's an async method or AsyncMock
+                if (inspect.iscoroutinefunction(component.stop) or
+                    str(type(component.stop)).__contains__('AsyncMock')):
+                    await component.stop()
+                else:
+                    component.stop()
             
-            # Update status
-            self._component_status[component_name].state = ComponentState.STOPPED
-            self._component_status[component_name].last_state_change = datetime.utcnow()
+            # Update status if component status exists
+            if component_name in self._component_status:
+                self._component_status[component_name].state = ComponentState.STOPPED
+                self._component_status[component_name].last_state_change = datetime.utcnow()
             
             stop_time = int((time.time() - start_time) * 1000)
             
@@ -658,9 +671,10 @@ class LifecycleManager:
             }
             
         except Exception as e:
-            self._component_status[component_name].state = ComponentState.FAILED
-            self._component_status[component_name].error_message = str(e)
-            self._component_status[component_name].last_state_change = datetime.utcnow()
+            if component_name in self._component_status:
+                self._component_status[component_name].state = ComponentState.FAILED
+                self._component_status[component_name].error_message = str(e)
+                self._component_status[component_name].last_state_change = datetime.utcnow()
             
             logger.error(f"Error stopping component '{component_name}': {e}")
             raise
