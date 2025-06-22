@@ -14,30 +14,35 @@ from collections import deque
 import heapq
 
 from .models import (
-    EnrichmentTask, EnrichmentPriority, TaskStatus, 
+    EnrichmentTask, EnrichmentPriority, TaskStatus,
     TaskQueueStatus, EnrichmentConfig
 )
 from .exceptions import QueueError, TaskProcessingError
+from .concurrent import ResourceType, ResourceLimits
 
 logger = logging.getLogger(__name__)
 
 
 class EnrichmentQueue:
     """
-    Priority-based queue for enrichment tasks.
+    Priority-based queue for enrichment tasks with semaphore-based resource limiting.
     
-    Manages task queuing, priority ordering, and basic queue operations
+    Manages task queuing, priority ordering, and concurrency controls
     as specified in PRD-010.
     """
     
-    def __init__(self, config: EnrichmentConfig):
+    def __init__(self, config: EnrichmentConfig, resource_limits: Optional[ResourceLimits] = None):
         """
-        Initialize enrichment queue.
+        Initialize enrichment queue with concurrency controls.
         
         Args:
             config: Enrichment configuration
+            resource_limits: Resource limits for concurrency control
         """
         self.config = config
+        self.resource_limits = resource_limits or ResourceLimits()
+        
+        # Priority queue with thread-safe operations
         self._queue: List[tuple] = []  # Priority heap: (priority_value, timestamp, task)
         self._queue_lock = asyncio.Lock()
         self._priority_map = {
@@ -47,32 +52,95 @@ class EnrichmentQueue:
             EnrichmentPriority.LOW: 3
         }
         
-        logger.info("EnrichmentQueue initialized")
+        # Semaphore-based resource limiting
+        self._processing_semaphore = asyncio.Semaphore(config.max_concurrent_tasks)
+        self._queue_capacity_semaphore = asyncio.Semaphore(1000)  # Prevent queue overflow
+        
+        # Task isolation tracking
+        self._task_isolation_map: Dict[str, Dict[str, Any]] = {}
+        self._isolation_lock = asyncio.Lock()
+        
+        # Backpressure handling
+        self._backpressure_threshold = 500
+        self._backpressure_active = False
+        self._backpressure_lock = asyncio.Lock()
+        
+        # Metrics for monitoring
+        self._metrics = {
+            'tasks_enqueued': 0,
+            'tasks_dequeued': 0,
+            'backpressure_events': 0,
+            'isolation_violations': 0,
+            'queue_full_events': 0
+        }
+        
+        logger.info(f"EnrichmentQueue initialized with concurrency controls (max_concurrent: {config.max_concurrent_tasks})")
     
     async def enqueue(self, task: EnrichmentTask) -> None:
         """
-        Add task to priority queue.
+        Add task to priority queue with backpressure handling and isolation.
         
         Args:
             task: Enrichment task to enqueue
             
         Raises:
-            QueueError: If queue operation fails
+            QueueError: If queue operation fails or backpressure activated
         """
         try:
-            async with self._queue_lock:
-                priority_value = self._priority_map.get(task.priority, 2)
-                timestamp = datetime.utcnow().timestamp()
-                
-                # Use negative timestamp for FIFO within same priority
-                heap_item = (priority_value, -timestamp, task)
-                heapq.heappush(self._queue, heap_item)
-                
-                logger.debug(
-                    f"Task enqueued: {task.content_id} with priority {task.priority}",
-                    extra={"task_id": task.content_id, "priority": task.priority}
+            # Check backpressure before attempting to acquire semaphore
+            async with self._backpressure_lock:
+                if len(self._queue) >= self._backpressure_threshold:
+                    self._backpressure_active = True
+                    self._metrics['backpressure_events'] += 1
+                    raise QueueError(
+                        "Queue backpressure activated - capacity exceeded",
+                        queue_size=len(self._queue),
+                        operation="enqueue"
+                    )
+            
+            # Acquire queue capacity semaphore to prevent overflow
+            try:
+                await asyncio.wait_for(
+                    self._queue_capacity_semaphore.acquire(),
+                    timeout=5.0
                 )
+            except asyncio.TimeoutError:
+                self._metrics['queue_full_events'] += 1
+                raise QueueError(
+                    "Queue capacity full - unable to enqueue task",
+                    queue_size=len(self._queue),
+                    operation="enqueue"
+                )
+            
+            try:
+                # Create isolated task context
+                await self._create_task_isolation(task)
                 
+                async with self._queue_lock:
+                    priority_value = self._priority_map.get(task.priority, 2)
+                    timestamp = datetime.utcnow().timestamp()
+                    
+                    # Use negative timestamp for FIFO within same priority
+                    heap_item = (priority_value, -timestamp, task)
+                    heapq.heappush(self._queue, heap_item)
+                    
+                    self._metrics['tasks_enqueued'] += 1
+                    
+                    logger.debug(
+                        f"Task enqueued with isolation: {task.content_id} with priority {task.priority}",
+                        extra={
+                            "task_id": task.content_id,
+                            "priority": task.priority,
+                            "queue_size": len(self._queue)
+                        }
+                    )
+                    
+            finally:
+                # Always release the capacity semaphore
+                self._queue_capacity_semaphore.release()
+                
+        except QueueError:
+            raise
         except Exception as e:
             logger.error(f"Failed to enqueue task {task.content_id}: {e}")
             raise QueueError(
@@ -83,7 +151,7 @@ class EnrichmentQueue:
     
     async def dequeue(self) -> Optional[EnrichmentTask]:
         """
-        Remove and return highest priority task.
+        Remove and return highest priority task with semaphore-based throttling.
         
         Returns:
             Next task to process or None if queue is empty
@@ -92,18 +160,47 @@ class EnrichmentQueue:
             QueueError: If queue operation fails
         """
         try:
-            async with self._queue_lock:
-                if not self._queue:
-                    return None
-                
-                priority_value, neg_timestamp, task = heapq.heappop(self._queue)
-                
-                logger.debug(
-                    f"Task dequeued: {task.content_id}",
-                    extra={"task_id": task.content_id, "priority": task.priority}
+            # Acquire processing semaphore to enforce concurrency limits
+            try:
+                await asyncio.wait_for(
+                    self._processing_semaphore.acquire(),
+                    timeout=10.0
                 )
-                
-                return task
+            except asyncio.TimeoutError:
+                logger.warning("Processing semaphore acquisition timeout - system overloaded")
+                return None
+            
+            try:
+                async with self._queue_lock:
+                    if not self._queue:
+                        return None
+                    
+                    priority_value, neg_timestamp, task = heapq.heappop(self._queue)
+                    self._metrics['tasks_dequeued'] += 1
+                    
+                    # Validate task isolation
+                    await self._validate_task_isolation(task)
+                    
+                    # Reset backpressure if queue is below threshold
+                    if len(self._queue) < self._backpressure_threshold * 0.8:
+                        async with self._backpressure_lock:
+                            self._backpressure_active = False
+                    
+                    logger.debug(
+                        f"Task dequeued with semaphore: {task.content_id}",
+                        extra={
+                            "task_id": task.content_id,
+                            "priority": task.priority,
+                            "queue_size": len(self._queue)
+                        }
+                    )
+                    
+                    return task
+                    
+            except Exception as e:
+                # Release semaphore on error
+                self._processing_semaphore.release()
+                raise
                 
         except Exception as e:
             logger.error(f"Failed to dequeue task: {e}")
@@ -247,6 +344,117 @@ class EnrichmentQueue:
             'oldest_pending_task': status.oldest_pending_task,
             'queue_health': status.queue_health,
             'last_processed_task': status.last_processed_task
+        }
+    
+    async def _create_task_isolation(self, task: EnrichmentTask) -> None:
+        """
+        Create isolation context for task processing.
+        
+        Args:
+            task: Task to create isolation for
+        """
+        async with self._isolation_lock:
+            isolation_key = f"isolation_{task.content_id}_{task.task_type.value}"
+            
+            # Check for existing isolation violations
+            for existing_key, existing_context in self._task_isolation_map.items():
+                if existing_context.get('content_id') == task.content_id:
+                    self._metrics['isolation_violations'] += 1
+                    logger.warning(
+                        f"Task isolation violation: {task.content_id} already has active task",
+                        extra={"task_id": task.content_id, "existing_key": existing_key}
+                    )
+            
+            self._task_isolation_map[isolation_key] = {
+                'content_id': task.content_id,
+                'task_type': task.task_type.value,
+                'priority': task.priority.value,
+                'created_at': datetime.utcnow(),
+                'isolation_level': 'task_level'
+            }
+            
+            logger.debug(f"Task isolation created: {isolation_key}")
+    
+    async def _validate_task_isolation(self, task: EnrichmentTask) -> None:
+        """
+        Validate task isolation before processing.
+        
+        Args:
+            task: Task to validate isolation for
+            
+        Raises:
+            QueueError: If isolation violation detected
+        """
+        async with self._isolation_lock:
+            isolation_key = f"isolation_{task.content_id}_{task.task_type.value}"
+            
+            if isolation_key not in self._task_isolation_map:
+                self._metrics['isolation_violations'] += 1
+                raise QueueError(
+                    f"Task isolation violation: missing isolation context for {task.content_id}",
+                    operation="validate_isolation"
+                )
+            
+            logger.debug(f"Task isolation validated: {isolation_key}")
+    
+    async def release_task_semaphore(self, task_id: str) -> None:
+        """
+        Release processing semaphore for completed task.
+        
+        Args:
+            task_id: Task identifier
+        """
+        try:
+            self._processing_semaphore.release()
+            
+            # Clean up isolation context
+            async with self._isolation_lock:
+                keys_to_remove = [
+                    key for key, context in self._task_isolation_map.items()
+                    if context.get('content_id') == task_id
+                ]
+                
+                for key in keys_to_remove:
+                    del self._task_isolation_map[key]
+                    logger.debug(f"Task isolation cleaned up: {key}")
+            
+        except Exception as e:
+            logger.error(f"Failed to release semaphore for task {task_id}: {e}")
+    
+    async def get_concurrency_metrics(self) -> Dict[str, Any]:
+        """
+        Get concurrency-specific metrics for the queue.
+        
+        Returns:
+            Concurrency metrics and statistics
+        """
+        async with self._queue_lock:
+            queue_size = len(self._queue)
+        
+        async with self._isolation_lock:
+            isolation_count = len(self._task_isolation_map)
+        
+        return {
+            'queue_metrics': self._metrics.copy(),
+            'semaphore_status': {
+                'processing_available': self._processing_semaphore._value,
+                'processing_capacity': self.config.max_concurrent_tasks,
+                'queue_capacity_available': self._queue_capacity_semaphore._value
+            },
+            'backpressure': {
+                'active': self._backpressure_active,
+                'threshold': self._backpressure_threshold,
+                'current_queue_size': queue_size
+            },
+            'isolation': {
+                'active_isolations': isolation_count,
+                'isolation_violations': self._metrics['isolation_violations']
+            },
+            'resource_limits': {
+                'api_calls_per_minute': self.resource_limits.api_calls_per_minute,
+                'max_processing_slots': self.resource_limits.max_processing_slots,
+                'max_database_connections': self.resource_limits.max_database_connections
+            }
         }
 
 

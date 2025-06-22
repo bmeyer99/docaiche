@@ -13,12 +13,13 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 
 from .models import (
-    EnrichmentTask, EnrichmentResult, EnrichmentPriority, 
+    EnrichmentTask, EnrichmentResult, EnrichmentPriority,
     EnrichmentType, TaskStatus, EnrichmentConfig, EnrichmentMetrics
 )
 from .queue import EnrichmentTaskQueue
 from .analyzers import ContentAnalyzer, RelationshipAnalyzer, TagGenerator
 from .exceptions import TaskProcessingError, EnrichmentTimeoutError
+from .concurrent import ConcurrentTaskExecutor, ResourceType, ResourceLimits
 from src.database.connection import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -36,35 +37,41 @@ class TaskManager:
         self,
         config: EnrichmentConfig,
         task_queue: EnrichmentTaskQueue,
-        db_manager: DatabaseManager
+        db_manager: DatabaseManager,
+        resource_limits: Optional[ResourceLimits] = None
     ):
         """
-        Initialize task manager.
+        Initialize task manager with concurrency controls.
         
         Args:
             config: Enrichment configuration
             task_queue: Task queue manager
             db_manager: Database manager
+            resource_limits: Resource limit configuration for concurrency control
         """
         self.config = config
         self.task_queue = task_queue
         self.db_manager = db_manager
+        
+        # Initialize concurrent task executor
+        self.concurrent_executor = ConcurrentTaskExecutor(config, resource_limits)
         
         # Initialize analyzers
         self.content_analyzer = ContentAnalyzer()
         self.relationship_analyzer = RelationshipAnalyzer()
         self.tag_generator = TagGenerator()
         
-        # Worker management
+        # Worker management with concurrency control
         self._workers: List[asyncio.Task] = []
         self._running = False
         self._metrics = EnrichmentMetrics()
+        self._priority_queue_processor: Optional[asyncio.Task] = None
         
-        logger.info("TaskManager initialized")
+        logger.info("TaskManager initialized with concurrency controls")
     
     async def start(self) -> None:
         """
-        Start the task manager and worker processes.
+        Start the task manager with concurrent execution and priority queue processing.
         
         Raises:
             TaskProcessingError: If startup fails
@@ -77,12 +84,17 @@ class TaskManager:
             self._running = True
             logger.info(f"Starting TaskManager with {self.config.max_concurrent_tasks} workers")
             
-            # Start worker tasks
+            # Start worker tasks with concurrency control
             for i in range(self.config.max_concurrent_tasks):
                 worker = asyncio.create_task(self._worker_loop(f"worker-{i}"))
                 self._workers.append(worker)
             
-            logger.info("TaskManager started successfully")
+            # Start priority queue processor
+            self._priority_queue_processor = asyncio.create_task(
+                self.concurrent_executor.process_priority_queue()
+            )
+            
+            logger.info("TaskManager started successfully with concurrency controls")
             
         except Exception as e:
             logger.error(f"Failed to start TaskManager: {e}")
@@ -92,10 +104,23 @@ class TaskManager:
             )
     
     async def stop(self) -> None:
-        """Stop the task manager and all workers."""
+        """Stop the task manager with graceful shutdown of concurrent executor."""
         try:
             logger.info("Stopping TaskManager")
             self._running = False
+            
+            # Gracefully shutdown concurrent executor
+            if hasattr(self, 'concurrent_executor'):
+                shutdown_stats = await self.concurrent_executor.graceful_shutdown()
+                logger.info(f"Concurrent executor shutdown: {shutdown_stats}")
+            
+            # Stop priority queue processor
+            if self._priority_queue_processor:
+                self._priority_queue_processor.cancel()
+                try:
+                    await self._priority_queue_processor
+                except asyncio.CancelledError:
+                    pass
             
             # Cancel all workers
             for worker in self._workers:
@@ -106,6 +131,7 @@ class TaskManager:
                 await asyncio.gather(*self._workers, return_exceptions=True)
             
             self._workers.clear()
+            self._priority_queue_processor = None
             logger.info("TaskManager stopped")
             
         except Exception as e:
@@ -190,12 +216,12 @@ class TaskManager:
     
     async def _worker_loop(self, worker_id: str) -> None:
         """
-        Main worker loop for processing tasks.
+        Main worker loop for processing tasks with concurrent execution.
         
         Args:
             worker_id: Worker identifier
         """
-        logger.info(f"Worker {worker_id} started")
+        logger.info(f"Worker {worker_id} started with concurrency controls")
         
         while self._running:
             try:
@@ -207,55 +233,54 @@ class TaskManager:
                     await asyncio.sleep(self.config.queue_poll_interval)
                     continue
                 
-                # Process task with timeout
-                start_time = time.time()
-                success = False
-                error_message = None
+                # Determine required resources based on task type
+                required_resources = self._get_required_resources(task)
                 
+                # Execute task with concurrent executor
                 try:
-                    await asyncio.wait_for(
-                        self._process_task(task),
-                        timeout=self.config.task_timeout_seconds
+                    result = await self.concurrent_executor.execute_task(
+                        task,
+                        self._process_task,
+                        required_resources
                     )
-                    success = True
                     
-                except asyncio.TimeoutError:
-                    error_message = f"Task timed out after {self.config.task_timeout_seconds}s"
-                    logger.error(f"Task {task.content_id} timed out")
+                    # Complete task successfully
+                    await self.task_queue.complete_task(task.content_id, True)
+                    
+                    # Update metrics
+                    self._metrics.total_tasks_processed += 1
+                    self._metrics.successful_tasks += 1
+                    
+                    logger.debug(
+                        f"Task completed by {worker_id}: {task.content_id} (success)",
+                        extra={
+                            "worker_id": worker_id,
+                            "content_id": task.content_id,
+                            "success": True
+                        }
+                    )
                     
                 except Exception as e:
-                    error_message = str(e)
-                    logger.error(f"Task {task.content_id} failed: {e}")
-                
-                # Complete task
-                processing_time = int((time.time() - start_time) * 1000)
-                await self.task_queue.complete_task(task.content_id, success, error_message)
-                
-                # Update metrics
-                self._metrics.total_tasks_processed += 1
-                if success:
-                    self._metrics.successful_tasks += 1
-                else:
+                    # Task failed, complete with error
+                    await self.task_queue.complete_task(task.content_id, False, str(e))
+                    
+                    # Update metrics
+                    self._metrics.total_tasks_processed += 1
                     self._metrics.failed_tasks += 1
-                
-                # Update average processing time
-                if self._metrics.total_tasks_processed > 0:
-                    current_avg = self._metrics.average_processing_time_ms
-                    new_avg = (current_avg * (self._metrics.total_tasks_processed - 1) + processing_time) / self._metrics.total_tasks_processed
-                    self._metrics.average_processing_time_ms = new_avg
+                    
+                    logger.error(
+                        f"Task failed by {worker_id}: {task.content_id}: {e}",
+                        extra={
+                            "worker_id": worker_id,
+                            "content_id": task.content_id,
+                            "success": False,
+                            "error": str(e)
+                        }
+                    )
                 
                 # Update error rate
-                self._metrics.error_rate = self._metrics.failed_tasks / self._metrics.total_tasks_processed
-                
-                logger.debug(
-                    f"Task completed by {worker_id}: {task.content_id} ({'success' if success else 'failed'})",
-                    extra={
-                        "worker_id": worker_id,
-                        "content_id": task.content_id,
-                        "success": success,
-                        "processing_time_ms": processing_time
-                    }
-                )
+                if self._metrics.total_tasks_processed > 0:
+                    self._metrics.error_rate = self._metrics.failed_tasks / self._metrics.total_tasks_processed
                 
             except asyncio.CancelledError:
                 logger.info(f"Worker {worker_id} cancelled")
@@ -542,16 +567,78 @@ class TaskManager:
             logger.error(f"Failed to store enrichment result: {e}")
             raise
     
+    def _get_required_resources(self, task: EnrichmentTask) -> List[ResourceType]:
+        """
+        Determine required resources based on task type.
+        
+        Args:
+            task: Enrichment task
+            
+        Returns:
+            List of required resource types
+        """
+        base_resources = [ResourceType.PROCESSING_SLOTS, ResourceType.DATABASE_CONNECTIONS]
+        
+        # Add task-specific resources
+        if task.task_type == EnrichmentType.CONTENT_ANALYSIS:
+            base_resources.append(ResourceType.API_CALLS)
+            
+        elif task.task_type == EnrichmentType.RELATIONSHIP_MAPPING:
+            base_resources.extend([ResourceType.VECTOR_DB_CONNECTIONS, ResourceType.API_CALLS])
+            
+        elif task.task_type == EnrichmentType.TAG_GENERATION:
+            base_resources.append(ResourceType.LLM_CONNECTIONS)
+            
+        elif task.task_type == EnrichmentType.QUALITY_ASSESSMENT:
+            base_resources.extend([ResourceType.LLM_CONNECTIONS, ResourceType.API_CALLS])
+            
+        elif task.task_type == EnrichmentType.METADATA_ENHANCEMENT:
+            base_resources.append(ResourceType.API_CALLS)
+        
+        return base_resources
+
+    async def submit_priority_task(
+        self,
+        task: EnrichmentTask,
+        priority: Optional[EnrichmentPriority] = None
+    ) -> None:
+        """
+        Submit task to priority queue with concurrency controls.
+        
+        Args:
+            task: Task to submit
+            priority: Override task priority
+            
+        Raises:
+            QueueError: If queue is at capacity
+        """
+        if priority:
+            task.priority = priority
+        
+        required_resources = self._get_required_resources(task)
+        
+        await self.concurrent_executor.submit_priority_task(
+            task,
+            self._process_task,
+            required_resources
+        )
+        
+        logger.info(f"Priority task submitted: {task.content_id} with resources {[r.value for r in required_resources]}")
+
     async def health_check(self) -> Dict[str, Any]:
         """
-        Perform task manager health check.
+        Perform comprehensive task manager health check with concurrency metrics.
         
         Returns:
-            Health status information
+            Health status information including concurrency controls
         """
         try:
             queue_health = await self.task_queue.health_check()
             metrics = await self.get_metrics()
+            
+            # Get concurrency metrics
+            concurrency_health = await self.concurrent_executor.health_check()
+            concurrency_metrics = await self.concurrent_executor.get_concurrency_metrics()
             
             # Check worker status
             active_workers = sum(1 for worker in self._workers if not worker.done())
@@ -559,7 +646,8 @@ class TaskManager:
             is_healthy = (
                 self._running and
                 active_workers > 0 and
-                queue_health.get('status') == 'healthy'
+                queue_health.get('status') == 'healthy' and
+                concurrency_health.get('status') == 'healthy'
             )
             
             return {
@@ -568,10 +656,19 @@ class TaskManager:
                 'active_workers': active_workers,
                 'total_workers': len(self._workers),
                 'queue_health': queue_health,
+                'concurrency_health': concurrency_health,
                 'metrics': {
                     'total_processed': metrics.total_tasks_processed,
                     'success_rate': 1.0 - metrics.error_rate if metrics.total_tasks_processed > 0 else 0.0,
                     'avg_processing_time_ms': metrics.average_processing_time_ms
+                },
+                'concurrency_metrics': {
+                    'active_tasks': concurrency_metrics['active_tasks']['total'],
+                    'priority_queue_size': concurrency_metrics['priority_queue']['size'],
+                    'resource_utilization': {
+                        pool_name: pool_metrics['utilization_percent']
+                        for pool_name, pool_metrics in concurrency_metrics['resource_pools'].items()
+                    }
                 },
                 'timestamp': datetime.utcnow().isoformat()
             }

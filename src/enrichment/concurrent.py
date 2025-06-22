@@ -188,7 +188,7 @@ class ResourcePool:
         # Determine health based on utilization and timeout rate
         utilization = metrics['utilization_percent']
         timeout_rate = (
-            self._metrics['acquisition_timeouts'] / 
+            self._metrics['acquisition_timeouts'] /
             max(1, self._metrics['total_acquired'])
         ) * 100
         
@@ -201,6 +201,31 @@ class ResourcePool:
             'available_slots': metrics['available_slots'],
             'max_size': self.max_size
         }
+    
+    async def cleanup(self) -> None:
+        """
+        Clean up resource pool during shutdown.
+        
+        Releases all resources and resets metrics.
+        """
+        try:
+            async with self._resource_lock:
+                # Clear active resources
+                self._active_resources.clear()
+                
+                # Reset metrics
+                self._metrics = {
+                    'total_acquired': 0,
+                    'total_released': 0,
+                    'current_active': 0,
+                    'acquisition_timeouts': 0,
+                    'max_concurrent': 0
+                }
+                
+                logger.debug(f"Resource pool '{self.name}' cleaned up")
+                
+        except Exception as e:
+            logger.error(f"Error cleaning up resource pool '{self.name}': {e}")
 
 
 class TaskIsolationManager:
@@ -633,14 +658,75 @@ class ConcurrentTaskExecutor:
                     task.completed_at = datetime.utcnow()
                 self._active_tasks.clear()
         
+        # Clean up resource pools
+        await self._cleanup_resource_pools()
+        
         shutdown_time = time.time() - shutdown_start
         
         return {
             'shutdown_time_seconds': shutdown_time,
             'graceful': remaining_tasks == 0,
             'terminated_tasks': remaining_tasks,
-            'final_metrics': self._metrics.copy()
+            'final_metrics': self._metrics.copy(),
+            'resource_cleanup_completed': True
         }
+    
+    async def _cleanup_resource_pools(self) -> None:
+        """Clean up all resource pools during shutdown."""
+        try:
+            logger.info("Cleaning up resource pools")
+            
+            # Clear deadlock detector
+            await self._deadlock_detector.cleanup()
+            
+            # Reset resource pool metrics for clean shutdown
+            for resource_type, pool in self._resource_pools.items():
+                await pool.cleanup()
+                logger.debug(f"Resource pool '{resource_type.value}' cleaned up")
+            
+            logger.info("Resource pool cleanup completed")
+            
+        except Exception as e:
+            logger.error(f"Error during resource pool cleanup: {e}")
+    
+    async def start(self) -> None:
+        """
+        Start the concurrent task executor.
+        
+        Initializes resource pools and starts background processing.
+        """
+        try:
+            logger.info("Starting ConcurrentTaskExecutor")
+            
+            # Reset shutdown event
+            self._shutdown_event.clear()
+            
+            # Validate resource pools
+            for resource_type, pool in self._resource_pools.items():
+                health = await pool.health_check()
+                if health.get('status') != 'healthy':
+                    logger.warning(f"Resource pool '{resource_type.value}' health check: {health}")
+            
+            logger.info("ConcurrentTaskExecutor started successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to start ConcurrentTaskExecutor: {e}")
+            raise
+    
+    async def stop(self) -> None:
+        """
+        Stop the concurrent task executor.
+        
+        Performs graceful shutdown with default timeout.
+        """
+        try:
+            logger.info("Stopping ConcurrentTaskExecutor")
+            await self.graceful_shutdown()
+            logger.info("ConcurrentTaskExecutor stopped")
+            
+        except Exception as e:
+            logger.error(f"Error stopping ConcurrentTaskExecutor: {e}")
+            raise
     
     async def get_concurrency_metrics(self) -> Dict[str, Any]:
         """
@@ -889,9 +975,33 @@ class DeadlockDetector:
                 'deadlock_metrics': self._metrics.copy(),
                 'active_tasks': len(self._task_resources),
                 'resource_contention': {
-                    resource: len(waiters) 
+                    resource: len(waiters)
                     for resource, waiters in self._resource_waiters.items()
                     if waiters
                 },
                 'potential_deadlocks': self._metrics['potential_deadlocks']
             }
+    
+    async def cleanup(self) -> None:
+        """
+        Clean up deadlock detector during shutdown.
+        
+        Clears all tracking data and resets metrics.
+        """
+        try:
+            async with self._detection_lock:
+                # Clear all tracking data
+                self._task_resources.clear()
+                self._resource_waiters.clear()
+                
+                # Reset metrics
+                self._metrics = {
+                    'deadlocks_detected': 0,
+                    'deadlocks_prevented': 0,
+                    'potential_deadlocks': 0
+                }
+                
+                logger.debug("DeadlockDetector cleaned up")
+                
+        except Exception as e:
+            logger.error(f"Error cleaning up DeadlockDetector: {e}")

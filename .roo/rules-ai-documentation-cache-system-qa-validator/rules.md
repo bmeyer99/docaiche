@@ -1,127 +1,121 @@
-# AI Documentation Cache System - Roo Code Rules
+# .roomodes - Universal Agent Definitions
 
-## Project Context
-This is an AI Documentation Cache System with microservices architecture using Docker, FastAPI, AnythingLLM, Ollama, Redis, and SQLite. The system follows PRD specifications (PRD-001 through PRD-013) for component implementation.
+- name: "Orchestrator"
+  slug: "orchestrator"
+  role: "Master coordinator for project architecture and task assignment. No automation - only work when explicitly assigned tasks."
+  tools: ["read_file", "write_to_file", "list_files", "search_files", "web_search"]
+  customInstructions: |
+    - Assign tasks with clear success criteria and deliverables
+    - Maintain architectural consistency across components
+    - Priority: Requirements > Security > Maintainability > Performance
 
-## Core Implementation Rules
+- name: "Implementation"
+  slug: "implementation"
+  role: "Expert engineer implementing clean, secure code following specifications exactly."
+  tools: ["read_file", "write_to_file", "list_files", "search_files", "execute_command"]
+  customInstructions: |
+    - Implement exactly what is specified - no feature creep
+    - Write secure, maintainable code with proper error handling
+    - Include comprehensive tests and documentation
 
-### PRD Strict Adherence
-- Implement ONLY what is explicitly stated in PRD specifications
-- Never add features beyond what is documented in requirements
-- Use exact data structures, APIs, and interfaces as specified
-- When ambiguous, follow priority: Project Conformity > Security > Ease of Deployment > Simplicity > Efficiency
+- name: "QA Validator"
+  slug: "qa"
+  role: "Quality assurance specialist creating tests first, validating implementations. Code passes only if ALL tests pass."
+  tools: ["read_file", "write_to_file", "list_files", "search_files", "execute_command"]
+  customInstructions: |
+    - Create comprehensive test suites before validation
+    - Test functionality, security, performance, integration
+    - 100% test pass rate required - no partial compliance
 
-### Technology Stack (Required)
-- **API Framework**: FastAPI with async/await for all I/O operations
-- **Database**: SQLite for metadata, Redis for caching
-- **Vector Database**: AnythingLLM via HTTP API
-- **LLM Provider**: Ollama via HTTP API
-- **Containerization**: Docker with Docker Compose
-- **Background Tasks**: FastAPI BackgroundTasks or asyncio
+- name: "Debugger"
+  slug: "debugger"
+  role: "System troubleshooter providing systematic analysis and actionable solutions."
+  tools: ["read_file", "write_to_file", "list_files", "search_files", "execute_command", "web_search"]
+  customInstructions: |
+    - Perform root cause analysis with specific resolution steps
+    - Document solutions and prevention measures
+    - Test fixes thoroughly before completion
 
-### Security Requirements (Based on Secure Code Warrior AI Security Rules)
-- Use parameterized queries to prevent SQL injection
-- Validate all user inputs on both client and server side
-- Implement proper authentication with JWT tokens
-- Never store credentials in plain text or hardcode secrets
+---
+
+# .roo/rules/security.md - Universal Security Standards
+
+## Input & Authentication
+- Validate ALL inputs on server side - never trust client data
+- Use parameterized queries - never string concatenation for SQL
+- Implement proper authentication with secure session management
+- Never store credentials in plain text or commit secrets to code
 - Use HTTPS/TLS for all external communications
-- Sanitize all external data before processing or storage
-- Never run containers as root user
 - Implement rate limiting to prevent abuse
+
+## Data Protection
+- Encrypt sensitive data in transit and at rest
 - Use environment variables for configuration secrets
+- Implement proper error handling without information leakage
+- Use secure random generators for tokens and IDs
+- Follow principle of least privilege for access controls
 
-### Code Quality Standards
-- Use type hints for all function parameters and returns
-- Implement comprehensive error handling with structured exceptions
-- Include structured logging (JSON format) for container environments
-- Use Pydantic models for data validation and serialization
-- Include health check endpoints (`/health`) for all services
-- Follow async/await patterns consistently
-- Achieve 80%+ test coverage for critical components
+## Infrastructure
+- Never run services with unnecessary privileges
+- Use secure defaults and minimal configurations
+- Keep dependencies updated and scan for vulnerabilities
+- Implement proper logging without exposing sensitive data
 
-### Architecture Requirements
-- Follow microservices pattern with clear component separation
-- Maintain PRD component boundaries (001-013)
-- Use dependency injection through FastAPI's system
-- Implement connection pooling for databases and external services
-- Include proper timeout handling for all external operations
-- Support graceful shutdown with signal handling
+---
 
-### Docker & Deployment Standards
-- Use multi-stage builds for optimized images
-- Implement health checks for all containers
-- Configure proper resource limits and networking
-- Use proper volume management for persistent data
-- Never include secrets in container images
-- Use minimal, updated base images
+# .roo/rules/code-quality.md - Universal Code Standards
 
-### Testing Requirements
-- Create unit tests for all business logic
-- Include integration tests for API endpoints
-- Add security tests for authentication and input validation
-- Implement performance tests for load and resource usage
+## Core Principles
+- Write self-documenting code with clear naming
+- Implement comprehensive error handling and logging
+- Follow single responsibility principle
+- Use consistent formatting and style
+- Include type hints/annotations where supported
+- **Keep file sizes below 500 lines maximum** - split into smaller modules for maintainability
+- Use only extreme exceptions for files exceeding 500 lines (must be justified and documented)
+
+## Documentation
+- Write clear docstrings for all functions and classes
+- Maintain updated README with setup and usage
+- Document configuration options and environment variables
+- Comment complex business logic
+
+## Testing
+- Write unit tests for all business logic
+- Include integration tests for external dependencies
 - Test error conditions and edge cases
-- Mock external dependencies in tests
+- Maintain meaningful test coverage for critical paths
 
-### Documentation Standards
-- Include comprehensive docstrings for all functions and classes
-- Maintain API documentation using OpenAPI/FastAPI auto-generation
-- Document all configuration options and environment variables
-- Provide clear setup, deployment, and troubleshooting guides
-- Keep README files updated with current usage instructions
+## Performance
+- Use efficient algorithms and appropriate data structures
+- Implement proper connection pooling for external services
+- Add caching only where beneficial and documented
+- Monitor resource usage in production
 
-### AI/LLM Specific Security
-- Sanitize prompts to prevent injection attacks
-- Validate and sanitize LLM outputs before use
-- Implement timeouts and resource limits for AI operations
-- Use structured output parsing with error handling
-- Monitor for prompt injection attempts
-- Never expose raw AI model outputs without validation
+---
 
-## Component-Specific Guidelines
+# .roo/rules/architecture.md - Universal Design Standards
 
-### API Components (PRD-001)
-- Use FastAPI with Pydantic models for validation
-- Implement authentication middleware for protected endpoints
-- Include CORS configuration for web UI integration
-- Return appropriate HTTP status codes and error formats
+## Application Design
+- Separate concerns with clear module boundaries
+- Use dependency injection for loose coupling
+- Design for testability and maintainability
+- Implement proper configuration management
 
-### Database Components (PRD-002)
-- Use SQLite with proper connection pooling
-- Implement Redis caching with appropriate TTL values
-- Use database migrations for schema changes
-- Include backup and restore procedures
+## API Design
+- Use consistent RESTful conventions
+- Implement proper HTTP status codes and error responses
+- Include request/response validation
+- Design with versioning in mind
 
-### Vector Database (PRD-004)
-- Handle AnythingLLM authentication and workspace management
-- Implement retry logic for connection failures
-- Support document operations with proper chunking
-- Include health checks for service availability
+## Data Management
+- Design normalized schemas with proper relationships
+- Use migrations for all schema changes
+- Implement proper backup and recovery procedures
+- Use transactions for multi-step operations
 
-### LLM Integration (PRD-005)
-- Support Ollama model management and switching
-- Implement prompt templates with response parsing
-- Handle streaming responses when applicable
-- Include model availability checks
-
-### Content Processing (PRD-008)
-- Implement content cleaning and standardization
-- Support specified input formats with validation
-- Use defined chunking strategies
-- Extract metadata as specified in PRDs
-
-## Error Handling Patterns
-- Use structured exceptions with appropriate HTTP status codes
-- Log errors with context for debugging without exposing sensitive information
-- Implement retry logic for transient failures
-- Provide helpful error messages for API consumers
-- Never expose internal system details in error responses
-
-## Performance Guidelines
-- Use caching strategies where specified in PRDs
-- Implement efficient algorithms prioritizing clarity over premature optimization
-- Monitor resource usage in containerized environments
-- Use connection pooling for external services
-- Implement proper indexing for database queries
-
-Remember: Focus on correctness, completeness, and PRD compliance rather than creative enhancements. Every implementation should be traceable back to specific PRD requirements.
+## Production Readiness
+- Include health check endpoints
+- Implement structured logging with correlation IDs
+- Add monitoring for key metrics
+- Design for graceful degradation and failure handling

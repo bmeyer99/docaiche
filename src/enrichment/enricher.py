@@ -66,19 +66,22 @@ class KnowledgeEnricher:
     
     async def start(self) -> None:
         """
-        Start the knowledge enricher system.
+        Start the knowledge enricher system with dependency validation.
         
-        Initializes all components and begins background processing.
+        Validates all dependencies and initializes components with proper error handling.
         
         Raises:
-            EnrichmentError: If startup fails
+            EnrichmentError: If startup fails or dependencies are not available
         """
         try:
             if self._running:
                 logger.warning("KnowledgeEnricher already running")
                 return
             
-            logger.info("Starting KnowledgeEnricher")
+            logger.info("Starting KnowledgeEnricher with dependency validation")
+            
+            # Validate dependencies before starting
+            await self._validate_startup_dependencies()
             
             # Start task manager
             await self.task_manager.start()
@@ -92,6 +95,61 @@ class KnowledgeEnricher:
             raise EnrichmentError(
                 f"Failed to start knowledge enricher: {str(e)}"
             )
+    
+    async def _validate_startup_dependencies(self) -> None:
+        """
+        Validate all required dependencies are available before startup.
+        
+        Raises:
+            EnrichmentError: If required dependencies are not available
+        """
+        validation_errors = []
+        
+        # Validate database manager
+        if not self.db_manager:
+            validation_errors.append("Database manager is required")
+        else:
+            try:
+                # Test database connection
+                async with self.db_manager.get_connection() as conn:
+                    await conn.execute("SELECT 1")
+                logger.debug("Database connection validated")
+            except Exception as e:
+                validation_errors.append(f"Database connection failed: {str(e)}")
+        
+        # Validate task manager
+        if not self.task_manager:
+            validation_errors.append("Task manager is required")
+        
+        # Validate task queue
+        if not self.task_queue:
+            validation_errors.append("Task queue is required")
+        else:
+            try:
+                # Test task queue health
+                health = await self.task_queue.health_check()
+                if health.get('status') != 'healthy':
+                    validation_errors.append(f"Task queue unhealthy: {health}")
+                logger.debug("Task queue validated")
+            except Exception as e:
+                validation_errors.append(f"Task queue validation failed: {str(e)}")
+        
+        # Optional component validation (warn but don't fail)
+        if not self.content_processor:
+            logger.warning("Content processor not available - some features may be limited")
+        
+        if not self.anythingllm_client:
+            logger.warning("AnythingLLM client not available - vector operations will be limited")
+        
+        if not self.search_orchestrator:
+            logger.warning("Search orchestrator not available - search integration will be limited")
+        
+        if validation_errors:
+            error_message = "Dependency validation failed: " + "; ".join(validation_errors)
+            logger.error(error_message)
+            raise EnrichmentError(error_message)
+        
+        logger.info("All required dependencies validated successfully")
     
     async def stop(self) -> None:
         """Stop the knowledge enricher system."""
