@@ -61,6 +61,17 @@ def get_environment_overrides() -> Dict[str, Any]:
         "content.chunk_size_default": int(os.getenv("CONTENT_CHUNK_SIZE_DEFAULT", "1000")),
         "content.chunk_size_max": int(os.getenv("CONTENT_CHUNK_SIZE_MAX", "4000")),
         "content.quality_threshold": float(os.getenv("CONTENT_QUALITY_THRESHOLD", "0.3")),
+        
+        # Enrichment configuration
+        "enrichment.max_concurrent_tasks": int(os.getenv("ENRICHMENT_MAX_CONCURRENT_TASKS", "5")),
+        "enrichment.task_timeout_seconds": int(os.getenv("ENRICHMENT_TASK_TIMEOUT_SECONDS", "300")),
+        "enrichment.retry_delay_seconds": int(os.getenv("ENRICHMENT_RETRY_DELAY_SECONDS", "60")),
+        "enrichment.queue_poll_interval": int(os.getenv("ENRICHMENT_QUEUE_POLL_INTERVAL", "10")),
+        "enrichment.batch_size": int(os.getenv("ENRICHMENT_BATCH_SIZE", "10")),
+        "enrichment.enable_relationship_mapping": os.getenv("ENRICHMENT_ENABLE_RELATIONSHIP_MAPPING", "true").lower() == "true",
+        "enrichment.enable_tag_generation": os.getenv("ENRICHMENT_ENABLE_TAG_GENERATION", "true").lower() == "true",
+        "enrichment.enable_quality_assessment": os.getenv("ENRICHMENT_ENABLE_QUALITY_ASSESSMENT", "true").lower() == "true",
+        "enrichment.min_confidence_threshold": float(os.getenv("ENRICHMENT_MIN_CONFIDENCE_THRESHOLD", "0.7")),
     }
     
     # Filter out None values

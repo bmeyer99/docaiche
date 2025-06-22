@@ -188,6 +188,66 @@ class EnrichmentQueue:
         """
         async with self._queue_lock:
             return len(self._queue) == 0
+    
+    # API compatibility aliases
+    async def add_task(self, task: EnrichmentTask) -> None:
+        """
+        Add task to queue (alias for enqueue).
+        
+        Args:
+            task: Enrichment task to add
+        """
+        await self.enqueue(task)
+    
+    async def get_next_task(self) -> Optional[EnrichmentTask]:
+        """
+        Get next task from queue (alias for dequeue).
+        
+        Returns:
+            Next task or None if queue is empty
+        """
+        return await self.dequeue()
+    
+    async def mark_completed(self, task_id: str, success: bool = True) -> None:
+        """
+        Mark task as completed (placeholder for compatibility).
+        
+        Args:
+            task_id: Task identifier
+            success: Whether task completed successfully
+        """
+        # This is a simplified queue, task completion tracking would be
+        # handled by the higher-level EnrichmentTaskQueue
+        pass
+    
+    async def mark_failed(self, task_id: str, error_message: str) -> None:
+        """
+        Mark task as failed (placeholder for compatibility).
+        
+        Args:
+            task_id: Task identifier
+            error_message: Error message
+        """
+        # This is a simplified queue, task failure tracking would be
+        # handled by the higher-level EnrichmentTaskQueue
+        pass
+    
+    async def get_queue_stats(self) -> Dict[str, Any]:
+        """
+        Get queue statistics (alias for get_status).
+        
+        Returns:
+            Queue statistics
+        """
+        status = await self.get_status()
+        return {
+            'pending_tasks': status.pending_tasks,
+            'processing_tasks': status.processing_tasks,
+            'queue_size': status.queue_size,
+            'oldest_pending_task': status.oldest_pending_task,
+            'queue_health': status.queue_health,
+            'last_processed_task': status.last_processed_task
+        }
 
 
 class EnrichmentTaskQueue:
@@ -438,3 +498,50 @@ class EnrichmentTaskQueue:
                 "status": "unhealthy",
                 "error": str(e)
             }
+    
+    # Additional API compatibility methods
+    async def add_task(self, task: EnrichmentTask) -> None:
+        """
+        Add task to queue (alias for submit_task).
+        
+        Args:
+            task: Task to add
+        """
+        await self.submit_task(task)
+    
+    async def mark_completed(self, content_id: str, success: bool = True) -> None:
+        """
+        Mark task as completed (alias for complete_task).
+        
+        Args:
+            content_id: Content ID of completed task
+            success: Whether task completed successfully
+        """
+        await self.complete_task(content_id, success)
+    
+    async def mark_failed(self, content_id: str, error_message: str) -> None:
+        """
+        Mark task as failed.
+        
+        Args:
+            content_id: Content ID of failed task
+            error_message: Error message
+        """
+        await self.complete_task(content_id, success=False, error_message=error_message)
+    
+    async def get_queue_stats(self) -> Dict[str, Any]:
+        """
+        Get queue statistics (alias for get_status).
+        
+        Returns:
+            Queue statistics
+        """
+        status = await self.get_status()
+        return {
+            'pending_tasks': status.pending_tasks,
+            'processing_tasks': status.processing_tasks,
+            'queue_size': status.queue_size,
+            'oldest_pending_task': status.oldest_pending_task,
+            'queue_health': status.queue_health,
+            'last_processed_task': status.last_processed_task
+        }

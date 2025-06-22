@@ -32,6 +32,24 @@ class EnrichmentType(str, Enum):
     METADATA_ENHANCEMENT = "metadata_enhancement"
 
 
+class EnrichmentStrategy(str, Enum):
+    """Enrichment strategies for API compatibility - alias for EnrichmentType"""
+    CONTENT_GAP_ANALYSIS = "content_analysis"
+    RELATIONSHIP_MAPPING = "relationship_mapping"
+    TAG_GENERATION = "tag_generation"
+    QUALITY_ASSESSMENT = "quality_assessment"
+    METADATA_ENHANCEMENT = "metadata_enhancement"
+
+
+class TaskPriority(str, Enum):
+    """Task priority levels - alias for EnrichmentPriority for API compatibility"""
+    URGENT = "urgent"
+    HIGH = "high"
+    MEDIUM = "normal"  # Map MEDIUM to NORMAL for compatibility
+    NORMAL = "normal"
+    LOW = "low"
+
+
 class TaskStatus(str, Enum):
     """Task processing status enumeration"""
     PENDING = "pending"
@@ -134,6 +152,45 @@ class TaskQueueStatus(BaseModel):
     oldest_pending_task: Optional[datetime] = Field(None, description="Timestamp of oldest pending task")
     queue_health: str = Field("healthy", description="Queue health status")
     last_processed_task: Optional[datetime] = Field(None, description="Last task processing time")
+
+
+class ContentGap(BaseModel):
+    """
+    Content gap model for gap analysis results.
+    
+    Represents identified gaps in content coverage.
+    """
+    query: str = Field(..., description="Query that identified the gap")
+    gap_type: str = Field(..., description="Type of content gap")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in gap identification")
+    suggested_sources: List[str] = Field(default_factory=list, description="Suggested sources to fill gap")
+    priority: str = Field("medium", description="Gap priority level")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional gap metadata")
+
+
+class RelationshipType(str, Enum):
+    """Relationship types for content connections"""
+    SIMILAR = "similar"
+    RELATED = "related"
+    DUPLICATE = "duplicate"
+    REFERENCE = "reference"
+    PREREQUISITE = "prerequisite"
+    FOLLOW_UP = "follow_up"
+
+
+class KnowledgeGraph(BaseModel):
+    """
+    Knowledge graph model for content relationships.
+    
+    Represents the relationship graph between content items.
+    """
+    content_id: str = Field(..., description="Content ID")
+    related_content: List[ContentRelationship] = Field(default_factory=list, description="Related content items")
+    topics: List[str] = Field(default_factory=list, description="Content topics")
+    concepts: List[str] = Field(default_factory=list, description="Key concepts")
+    complexity_score: float = Field(0.0, ge=0.0, le=1.0, description="Content complexity score")
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Graph creation time")
+    updated_at: Optional[datetime] = Field(None, description="Last update time")
 
 
 class EnrichmentAnalytics(BaseModel):

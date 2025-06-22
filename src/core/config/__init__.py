@@ -150,6 +150,17 @@ def _build_default_config_dict() -> Dict[str, Any]:
                 "timeout_seconds": int(os.getenv("OPENAI_TIMEOUT_SECONDS", "30")),
             },
         },
+        "enrichment": {
+            "max_concurrent_tasks": int(os.getenv("ENRICHMENT_MAX_CONCURRENT_TASKS", "5")),
+            "task_timeout_seconds": int(os.getenv("ENRICHMENT_TASK_TIMEOUT_SECONDS", "300")),
+            "retry_delay_seconds": int(os.getenv("ENRICHMENT_RETRY_DELAY_SECONDS", "60")),
+            "queue_poll_interval": int(os.getenv("ENRICHMENT_QUEUE_POLL_INTERVAL", "10")),
+            "batch_size": int(os.getenv("ENRICHMENT_BATCH_SIZE", "10")),
+            "enable_relationship_mapping": os.getenv("ENRICHMENT_ENABLE_RELATIONSHIP_MAPPING", "true").lower() == "true",
+            "enable_tag_generation": os.getenv("ENRICHMENT_ENABLE_TAG_GENERATION", "true").lower() == "true",
+            "enable_quality_assessment": os.getenv("ENRICHMENT_ENABLE_QUALITY_ASSESSMENT", "true").lower() == "true",
+            "min_confidence_threshold": float(os.getenv("ENRICHMENT_MIN_CONFIDENCE_THRESHOLD", "0.7")),
+        },
     }
 
 def _build_system_configuration(config_dict: Dict[str, Any]) -> SystemConfiguration:
@@ -201,6 +212,11 @@ def _build_system_configuration(config_dict: Dict[str, Any]) -> SystemConfigurat
             openai=openai_config,
         )
         
+        # Build enrichment config
+        enrichment_dict = config_dict.get("enrichment", {})
+        from .models import EnrichmentConfig
+        enrichment_config = EnrichmentConfig(**enrichment_dict)
+        
         # Build complete system configuration
         system_config = SystemConfiguration(
             app=app_config,
@@ -210,6 +226,7 @@ def _build_system_configuration(config_dict: Dict[str, Any]) -> SystemConfigurat
             scraping=scraping_config,
             redis=redis_config,
             ai=ai_config,
+            enrichment=enrichment_config,
         )
         
         logger.info("System configuration built and validated successfully")

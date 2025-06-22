@@ -174,6 +174,19 @@ class AIConfig(BaseModel):
     cache_ttl_seconds: int = Field(3600, ge=0, description="Cache TTL for LLM responses")
 
 
+class EnrichmentConfig(BaseModel):
+    """Knowledge enrichment system configuration"""
+    max_concurrent_tasks: int = Field(5, ge=1, le=20, description="Maximum concurrent enrichment tasks")
+    task_timeout_seconds: int = Field(300, ge=30, description="Task timeout in seconds")
+    retry_delay_seconds: int = Field(60, ge=1, description="Delay between retries")
+    queue_poll_interval: int = Field(10, ge=1, description="Queue polling interval in seconds")
+    batch_size: int = Field(10, ge=1, le=100, description="Batch processing size")
+    enable_relationship_mapping: bool = Field(True, description="Enable relationship mapping")
+    enable_tag_generation: bool = Field(True, description="Enable automatic tag generation")
+    enable_quality_assessment: bool = Field(True, description="Enable quality assessment")
+    min_confidence_threshold: float = Field(0.7, ge=0.0, le=1.0, description="Minimum confidence threshold")
+
+
 class SystemConfiguration(BaseModel):
     """Top-level configuration object combining all config sections"""
     app: AppConfig
@@ -183,6 +196,7 @@ class SystemConfiguration(BaseModel):
     scraping: ScrapingConfig
     redis: RedisConfig
     ai: AIConfig
+    enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     
     model_config = {
         # Allow population by field name or alias

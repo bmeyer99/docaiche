@@ -303,3 +303,105 @@ class MetadataEnhancementError(EnrichmentError):
             **(error_context or {})
         }
         super().__init__(message, context, recoverable=True)
+
+
+class InvalidTaskError(EnrichmentError):
+    """
+    Exception for invalid task parameters or configurations.
+    
+    Handles errors when task data is malformed or invalid.
+    """
+    
+    def __init__(
+        self,
+        message: str,
+        task_id: Optional[str] = None,
+        invalid_field: Optional[str] = None,
+        expected_format: Optional[str] = None,
+        error_context: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize invalid task error.
+        
+        Args:
+            message: Error message
+            task_id: Task identifier that is invalid
+            invalid_field: Field that failed validation
+            expected_format: Expected format description
+            error_context: Additional error context
+        """
+        context = {
+            "task_id": task_id,
+            "invalid_field": invalid_field,
+            "expected_format": expected_format,
+            **(error_context or {})
+        }
+        super().__init__(message, context, recoverable=False)
+
+
+class QualityThresholdError(EnrichmentError):
+    """
+    Exception for quality threshold validation failures.
+    
+    Handles errors when content quality doesn't meet minimum thresholds.
+    """
+    
+    def __init__(
+        self,
+        message: str,
+        content_id: Optional[str] = None,
+        current_score: Optional[float] = None,
+        threshold: Optional[float] = None,
+        quality_metrics: Optional[Dict[str, Any]] = None,
+        error_context: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize quality threshold error.
+        
+        Args:
+            message: Error message
+            content_id: Content ID that failed threshold
+            current_score: Current quality score
+            threshold: Required threshold value
+            quality_metrics: Detailed quality metrics
+            error_context: Additional error context
+        """
+        context = {
+            "content_id": content_id,
+            "current_score": current_score,
+            "threshold": threshold,
+            "quality_metrics": quality_metrics,
+            **(error_context or {})
+        }
+        super().__init__(message, context, recoverable=True)
+
+
+class TaskExecutionError(EnrichmentError):
+    """
+    Exception for task execution failures.
+    
+    Handles errors during task processing and execution.
+    """
+    
+    def __init__(
+        self,
+        message: str,
+        task_id: Optional[str] = None,
+        execution_stage: Optional[str] = None,
+        error_context: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize task execution error.
+        
+        Args:
+            message: Error message
+            task_id: Task identifier that failed
+            execution_stage: Stage where execution failed
+            error_context: Additional error context
+        """
+        context = {
+            "task_id": task_id,
+            "execution_stage": execution_stage,
+            **(error_context or {})
+        }
+        super().__init__(message, context, recoverable=True)

@@ -7,6 +7,7 @@ Handles task processing, coordination, and monitoring as specified in PRD-010.
 
 import asyncio
 import logging
+import re
 import time
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
@@ -337,13 +338,22 @@ class TaskManager:
             Content data or None if not found
         """
         try:
-            # Query content metadata table
+            # Query content metadata table with parameterized query for security
             query = """
-            SELECT content_id, title, source_url, technology, quality_score, 
+            SELECT content_id, title, source_url, technology, quality_score,
                    word_count, chunk_count, created_at
-            FROM content_metadata 
+            FROM content_metadata
             WHERE content_id = ?
             """
+            
+            # Input validation for content_id
+            if not content_id or not isinstance(content_id, str):
+                raise ValueError("Invalid content_id: must be non-empty string")
+            
+            # Sanitize content_id to prevent injection
+            content_id = content_id.strip()
+            if not re.match(r'^[a-zA-Z0-9_-]+$', content_id):
+                raise ValueError("Invalid content_id format: contains illegal characters")
             
             async with self.db_manager.get_connection() as conn:
                 result = await conn.execute(query, (content_id,))
