@@ -7,7 +7,7 @@ as specified in PRD-009 with proper error context and recovery guidance.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
