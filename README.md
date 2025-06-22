@@ -1,0 +1,19 @@
+AI Documentation CacheThis project is an intelligent, self-improving documentation repository designed to reduce developer documentation lookup time from minutes to seconds. It maintains a locally-cached, AI-curated knowledge base sourced from authoritative repositories and official documentation sites.Table of ContentsProject VisionCore FeaturesSystem ArchitectureTechnology StackQuick StartDevelopment SprintsProject VisionThe goal is to create an intelligent documentation cache that learns from user queries to proactively source, curate, and rank documentation, providing instant, context-aware answers.Success MetricsPerformance: <1s response time for 95% of cached queries; <5s for queries requiring enrichment.Quality: >90% result relevance score and >80% cache hit rate after one week of usage.Adoption: A complete, one-command setup that is fully functional in under 5 minutes.Core FeaturesIntelligent Search: Semantic search across a local vector database.AI-Driven Enrichment: The system detects when local results are insufficient and uses an LLM to devise a strategy for finding and ingesting new, relevant documentation.Authoritative Sourcing: Prioritizes fetching content directly from official GitHub repositories over general web scraping.Feedback Loop: Improves over time by learning from both explicit (thumbs up/down) and implicit (result clicks) user feedback.Simple Deployment: A single Docker command launches the entire application stack.System ArchitectureThe system is designed as a set of coordinated services running within a Docker environment.┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   User / API    │───▶│ Docs Cache App   │───▶│   AnythingLLM   │
+│ (Search Query)  │    │ (FastAPI)        │    │ (Vector Search) │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                           │      ▲
+                           │      │ (Evaluation & Strategy)
+                           ▼      │
+                       ┌──────────────────┐
+                       │   Ollama / LLM   │
+                       │ (Decision Engine)│
+                       └──────────────────┘
+For a complete breakdown, see the System Architecture Document.Technology StackCategoryTechnologyVersionBackendPython3.12API FrameworkFastAPI0.111.0DatabaseSQLite3CachingRedis7.2Vector DBAnythingLLMlatestLocal LLMOllamalatestDeploymentDocker / Docker ComposelatestFor a complete analysis, see the Technology Stack Analysis Document.Quick StartPrerequisitesDocker and Docker ComposeGit1. Clone the Repositorygit clone <repository-url>
+cd <repository-name>
+2. Configure EnvironmentCopy the example environment file and, if you have one, add your GitHub API key to increase rate limits.cp .env.example .env
+# Optional: nano .env
+3. Launch the ApplicationThis command will build the Docker images and start all services.docker-compose up --build -d
+4. Perform One-Time Model SetupAfter the containers are running, you need to pull the required AI models into Ollama.docker-compose exec ollama ollama pull llama3.1:8b
+docker-compose exec ollama ollama pull nomic-embed-text
+5. Access the ServicesAdmin Web UI: http://localhost:8081API Documentation: http://localhost:8080/docsAnythingLLM UI: http://localhost:3001For detailed instructions, see the Setup & Deployment Guide.Development SprintsThe project is broken down into a 12-week (6-sprint) development plan. The master project document contains the detailed breakdown of all PRDs and the full sprint backlog.Sprint 1: Foundation (API & Database)Sprint 2: External Integrations (Clients for AnythingLLM, LLM, GitHub)Sprint 3: Content Pipeline (Scraping & Processing)Sprint 4: Core Intelligence (Search & Enrichment Orchestration)Sprint 5: User Features (Feedback System & Web UI)Sprint 6: Operations (Deployment & Final Documentation)
