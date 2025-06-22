@@ -112,13 +112,18 @@ class SearchOrchestrator:
             normalized_query = self._normalize_query(query)
             logger.debug(f"Normalized query: {normalized_query.query}")
             
-            # Step 2: Cache Check
-            cached_results = await self.search_cache.get_cached_results(normalized_query)
-            if cached_results:
-                execution_time = int((time.time() - start_time) * 1000)
-                cached_results.query_time_ms = execution_time
-                logger.info(f"Cache hit - returning {len(cached_results.results)} results")
-                return cached_results
+            # Step 2: Cache Check with graceful degradation
+            cached_results = None
+            try:
+                cached_results = await self.search_cache.get_cached_results(normalized_query)
+                if cached_results:
+                    execution_time = int((time.time() - start_time) * 1000)
+                    cached_results.query_time_ms = execution_time
+                    logger.info(f"Cache hit - returning {len(cached_results.results)} results")
+                    return cached_results
+            except Exception as e:
+                logger.warning(f"Cache check failed, continuing without cache: {e}")
+                # Continue without caching
             
             # Step 3: Multi-Workspace Search with timeout
             try:
@@ -163,12 +168,12 @@ class SearchOrchestrator:
                 enrichment_triggered=enrichment_triggered
             )
             
-            # Step 7: Cache Results
+            # Step 7: Cache Results with graceful degradation
             try:
                 await self.search_cache.cache_results(normalized_query, final_results)
             except Exception as e:
                 logger.warning(f"Failed to cache results: {e}")
-                # Continue without caching
+                # Continue without caching - this is non-critical
             
             logger.info(f"Search completed: {len(final_results.results)} results in {execution_time}ms")
             return final_results
@@ -422,7 +427,16 @@ class SearchOrchestrator:
             
             # Check if any component is unhealthy
             for component_name, component_health in health_status["components"].items():
-                if component_health.get("status") != "healthy":
+                # Handle different component response formats
+                if component_name == "cache":
+                    # Cache returns cache_status field
+                    component_status = component_health.get("cache_status", "unknown")
+                else:
+                    # Other components return status field
+                    component_status = component_health.get("status", "unknown")
+                
+                # Only mark degraded for truly unhealthy components
+                if component_status in ["unhealthy", "error"]:
                     health_status["status"] = "degraded"
                     break
             
