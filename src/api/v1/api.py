@@ -12,6 +12,7 @@ from typing import Dict, Any
 from fastapi import APIRouter, HTTPException
 
 from .enrichment import enrichment_router
+from .ingestion import ingestion_router
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ api_router = APIRouter()
 
 # Include component routers
 api_router.include_router(enrichment_router)
+api_router.include_router(ingestion_router)
 
 
 @api_router.get("/health", tags=["health"])
