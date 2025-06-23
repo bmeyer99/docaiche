@@ -18,7 +18,7 @@ from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 
 from src.core.config.models import AnythingLLMConfig, CircuitBreakerConfig
-from src.models.schemas import ProcessedDocument, DocumentChunk
+from src.database.connection import ProcessedDocument, DocumentChunk, UploadResult, DocumentMetadata
 from src.clients.anythingllm import AnythingLLMClient
 from src.clients.exceptions import (
     AnythingLLMError,
@@ -49,40 +49,75 @@ class TestAnythingLLMClient:
     @pytest.fixture
     def sample_document(self):
         """Create sample processed document for testing"""
+        created_time = datetime.utcnow()
+        
         chunks = [
             DocumentChunk(
                 id="chunk-1",
+                parent_document_id="doc-123",
                 content="This is the first chunk of content about React.",
                 chunk_index=0,
                 total_chunks=2,
-                word_count=10
+                created_at=created_time
             ),
             DocumentChunk(
-                id="chunk-2", 
+                id="chunk-2",
+                parent_document_id="doc-123",
                 content="This is the second chunk with more React information.",
                 chunk_index=1,
                 total_chunks=2,
-                word_count=9
+                created_at=created_time
             )
         ]
+        
+        metadata = DocumentMetadata(
+            word_count=19,
+            heading_count=2,
+            code_block_count=0,
+            content_hash="abc123def456",
+            created_at=created_time
+        )
         
         return ProcessedDocument(
             id="doc-123",
             title="React Documentation",
+            full_content="This is the first chunk of content about React. This is the second chunk with more React information.",
             source_url="https://react.dev/learn",
             technology="react",
-            content_hash="abc123def456",
+            metadata=metadata,
+            quality_score=0.85,
             chunks=chunks,
-            word_count=19,
-            quality_score=0.85
+            created_at=created_time
         )
     
     @pytest.fixture
-    async def client(self, config):
+    def client(self, config):
         """Create client with mocked session"""
         client = AnythingLLMClient(config)
         # Mock the session to avoid real HTTP calls
         client.session = AsyncMock()
+        
+        # Create proper circuit breaker mock with state
+        mock_cb = MagicMock()
+        mock_cb.state = MagicMock()
+        mock_cb.state.name = 'CLOSED'
+        mock_cb.failure_count = 0
+        mock_cb.last_failure_time = None
+        client.circuit_breaker = mock_cb
+        
+        # Mock the circuit breaker call to bypass it - accept all pybreaker parameters
+        def bypass_circuit_breaker(*cb_args, **cb_kwargs):
+            def decorator(func):
+                async def wrapper(*args, **kwargs):
+                    return await func(*args, **kwargs)
+                return wrapper
+            return decorator
+        
+        # Replace circuit breaker decorator with passthrough
+        import src.clients.anythingllm
+        original_circuit = src.clients.anythingllm.circuit
+        src.clients.anythingllm.circuit = bypass_circuit_breaker
+        
         return client
     
     @pytest.mark.asyncio
@@ -108,19 +143,24 @@ class TestAnythingLLMClient:
         assert client.session.closed
     
     @pytest.mark.asyncio
-    @pytest.mark.asyncio
     async def test_health_check_success(self, client):
         """Test successful health check"""
-        # Mock successful response
-        mock_response = AsyncMock()
-        mock_response.json.return_value = {
+        # Mock successful response with proper data structure
+        health_data = {
             "status": "healthy",
             "version": "1.0.0",
             "uptime": 12345
         }
+        
+        mock_response = AsyncMock()
+        # Configure json() method to return actual data, not MagicMock
+        mock_response.json.return_value = health_data
         mock_response.status = 200
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         result = await client.health_check()
         
@@ -149,19 +189,21 @@ class TestAnythingLLMClient:
         assert "circuit_breaker" in result
     
     @pytest.mark.asyncio
-    @pytest.mark.asyncio
     async def test_list_workspaces_success(self, client):
         """Test successful workspace listing"""
         mock_response = AsyncMock()
-        mock_response.json.return_value = {
+        mock_response.json = AsyncMock(return_value={
             "workspaces": [
                 {"slug": "react-docs", "name": "React Documentation"},
                 {"slug": "vue-docs", "name": "Vue.js Documentation"}
             ]
-        }
+        })
         mock_response.status = 200
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         workspaces = await client.list_workspaces()
         
@@ -170,18 +212,20 @@ class TestAnythingLLMClient:
         assert workspaces[1]["slug"] == "vue-docs"
     
     @pytest.mark.asyncio
-    @pytest.mark.asyncio
     async def test_get_or_create_workspace_existing(self, client):
         """Test getting existing workspace"""
         mock_response = AsyncMock()
-        mock_response.json.return_value = {
+        mock_response.json = AsyncMock(return_value={
             "slug": "react-docs",
             "name": "React Documentation",
             "id": "workspace-123"
-        }
+        })
         mock_response.status = 200
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager mock
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         workspace = await client.get_or_create_workspace("react-docs")
         
@@ -193,7 +237,6 @@ class TestAnythingLLMClient:
             "GET", "http://localhost:3001/api/workspace/react-docs"
         )
     
-    @pytest.mark.asyncio
     @pytest.mark.asyncio
     async def test_get_or_create_workspace_new(self, client):
         """Test creating new workspace when not found"""
@@ -207,18 +250,21 @@ class TestAnythingLLMClient:
         )
         
         post_response = AsyncMock()
-        post_response.json.return_value = {
+        post_response.json = AsyncMock(return_value={
             "slug": "new-workspace",
             "name": "New Workspace",
             "id": "workspace-456"
-        }
+        })
         post_response.status = 201
         
         # Configure side_effect for multiple calls
-        client.session.request.return_value.__aenter__.side_effect = [
-            get_response,  # First call (GET) returns 404
-            post_response  # Second call (POST) creates workspace
-        ]
+        async_context_get = AsyncMock()
+        async_context_get.__aenter__ = AsyncMock(return_value=get_response)
+        
+        async_context_post = AsyncMock()
+        async_context_post.__aenter__ = AsyncMock(return_value=post_response)
+        
+        client.session.request.side_effect = [async_context_get, async_context_post]
         
         workspace = await client.get_or_create_workspace("new-workspace", "New Workspace")
         
@@ -248,13 +294,13 @@ class TestAnythingLLMClient:
         
         result = await client.upload_document("react-docs", sample_document)
         
-        assert result["document_id"] == "doc-123"
-        assert result["workspace_slug"] == "react-docs"
-        assert result["total_chunks"] == 2
-        assert result["successful_uploads"] == 2
-        assert result["failed_uploads"] == 0
-        assert len(result["uploaded_chunk_ids"]) == 2
-        assert len(result["failed_chunk_ids"]) == 0
+        assert result.document_id == "doc-123"
+        assert result.workspace_slug == "react-docs"
+        assert result.total_chunks == 2
+        assert result.successful_uploads == 2
+        assert result.failed_uploads == 0
+        assert len(result.uploaded_chunk_ids) == 2
+        assert len(result.failed_chunk_ids) == 0
     
     @pytest.mark.asyncio
     async def test_upload_document_partial_failure(self, client, sample_document):
@@ -284,18 +330,18 @@ class TestAnythingLLMClient:
         
         result = await client.upload_document("react-docs", sample_document)
         
-        assert result["total_chunks"] == 2
-        assert result["successful_uploads"] == 1
-        assert result["failed_uploads"] == 1
-        assert len(result["uploaded_chunk_ids"]) == 1
-        assert len(result["failed_chunk_ids"]) == 1
-        assert len(result["errors"]) > 0
+        assert result.total_chunks == 2
+        assert result.successful_uploads == 1
+        assert result.failed_uploads == 1
+        assert len(result.uploaded_chunk_ids) == 1
+        assert len(result.failed_chunk_ids) == 1
+        assert len(result.errors) > 0
     
     @pytest.mark.asyncio
     async def test_search_workspace_success(self, client):
         """Test successful workspace search"""
         mock_response = AsyncMock()
-        mock_response.json.return_value = {
+        mock_response.json = AsyncMock(return_value={
             "results": [
                 {
                     "content": "React is a JavaScript library",
@@ -308,10 +354,13 @@ class TestAnythingLLMClient:
                     "id": "result-2"
                 }
             ]
-        }
+        })
         mock_response.status = 200
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         results = await client.search_workspace("react-docs", "React components", limit=10)
         
@@ -321,7 +370,7 @@ class TestAnythingLLMClient:
         
         # Verify search request
         client.session.request.assert_called_with(
-            "POST", 
+            "POST",
             "http://localhost:3001/api/workspace/react-docs/search",
             json={
                 "message": "React components",
@@ -334,15 +383,18 @@ class TestAnythingLLMClient:
     async def test_list_workspace_documents(self, client):
         """Test listing workspace documents"""
         mock_response = AsyncMock()
-        mock_response.json.return_value = {
+        mock_response.json = AsyncMock(return_value={
             "documents": [
                 {"id": "doc-1", "title": "React Basics", "chunks": 5},
                 {"id": "doc-2", "title": "Advanced React", "chunks": 8}
             ]
-        }
+        })
         mock_response.status = 200
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         documents = await client.list_workspace_documents("react-docs")
         
@@ -384,14 +436,17 @@ class TestAnythingLLMClient:
         """Test authentication error handling"""
         mock_response = AsyncMock()
         mock_response.status = 401
-        mock_response.text.return_value = "Invalid API key"
+        mock_response.text = AsyncMock(return_value="Invalid API key")
         mock_response.raise_for_status.side_effect = aiohttp.ClientResponseError(
             request_info=MagicMock(),
             history=(),
             status=401
         )
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         with pytest.raises(AnythingLLMAuthenticationError) as exc_info:
             await client.list_workspaces()
@@ -405,14 +460,17 @@ class TestAnythingLLMClient:
         mock_response = AsyncMock()
         mock_response.status = 429
         mock_response.headers = {"Retry-After": "60"}
-        mock_response.text.return_value = "Rate limit exceeded"
+        mock_response.text = AsyncMock(return_value="Rate limit exceeded")
         mock_response.raise_for_status.side_effect = aiohttp.ClientResponseError(
             request_info=MagicMock(),
             history=(),
             status=429
         )
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         with pytest.raises(AnythingLLMRateLimitError) as exc_info:
             await client.search_workspace("test", "query")
@@ -426,14 +484,17 @@ class TestAnythingLLMClient:
         """Test workspace not found error handling"""
         mock_response = AsyncMock()
         mock_response.status = 404
-        mock_response.text.return_value = "Workspace not found"
+        mock_response.text = AsyncMock(return_value="Workspace not found")
         mock_response.raise_for_status.side_effect = aiohttp.ClientResponseError(
             request_info=MagicMock(),
             history=(),
             status=404
         )
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         with pytest.raises(AnythingLLMWorkspaceError) as exc_info:
             await client.search_workspace("nonexistent", "query")
@@ -468,9 +529,12 @@ class TestAnythingLLMClient:
         """Test request and response logging"""
         mock_response = AsyncMock()
         mock_response.status = 200
-        mock_response.json.return_value = {"status": "healthy"}
+        mock_response.json = AsyncMock(return_value={"status": "healthy"})
         
-        client.session.request.return_value.__aenter__.return_value = mock_response
+        # Create proper async context manager
+        async_context = AsyncMock()
+        async_context.__aenter__ = AsyncMock(return_value=mock_response)
+        client.session.request.return_value = async_context
         
         with caplog.at_level("DEBUG"):
             await client.health_check()

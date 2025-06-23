@@ -76,6 +76,20 @@ class ProcessedDocument(BaseModel):
     updated_at: Optional[datetime] = None
 
 
+class UploadResult(BaseModel):
+    """Result of document upload operation to AnythingLLM"""
+    model_config = {"protected_namespaces": ()}
+    
+    document_id: str
+    workspace_slug: str
+    total_chunks: int
+    successful_uploads: int
+    failed_uploads: int
+    uploaded_chunk_ids: List[str]
+    failed_chunk_ids: List[str]
+    errors: List[str]
+
+
 class DatabaseManager:
     """
     Manages async database connections and executes queries using SQLAlchemy 2.0.
