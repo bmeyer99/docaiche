@@ -34,6 +34,8 @@ from .models import (
 from .validation import ConfigurationValidators
 from .defaults import get_environment_overrides, apply_nested_override
 from .secrets import SecretsManager
+from .manager import ConfigurationManager, get_configuration_manager, get_current_configuration
+from .loader import ConfigurationLoader, create_configuration_loader
 
 # Configuration functions - implemented directly in this package
 import logging
@@ -51,6 +53,7 @@ def get_system_configuration() -> SystemConfiguration:
     Get the comprehensive system configuration from CFG-001.
     
     This is the primary configuration interface for all components.
+    Uses the new ConfigurationManager for hierarchical loading.
     
     Returns:
         SystemConfiguration: Complete system configuration
@@ -61,28 +64,44 @@ def get_system_configuration() -> SystemConfiguration:
     global _system_config
     if _system_config is None:
         try:
-            # Build configuration from environment overrides and defaults
-            from .defaults import get_default_configuration_dict
-            config_dict = get_default_configuration_dict()
-            
-            # Ensure we have the basic structure even if no env vars are set
-            if not config_dict:
-                config_dict = _build_default_config_dict()
-            
-            # Build the comprehensive configuration
-            _system_config = _build_system_configuration(config_dict)
-            
-            # Validate production secrets if in production
-            if _system_config.app.environment == "production":
-                SecretsManager.validate_production_secrets(_system_config)
-            
-            logger.info(f"System configuration loaded successfully for environment: {_system_config.app.environment}")
+            # Try to use new ConfigurationManager if available
+            import asyncio
+            try:
+                # Check if we're in an async context
+                loop = asyncio.get_running_loop()
+                # If we get here, we're in async context - use async version
+                logger.warning("get_system_configuration called from async context. Use get_current_configuration() instead.")
+                # Fall back to legacy implementation for compatibility
+                _system_config = _legacy_load_configuration()
+            except RuntimeError:
+                # No running loop - we're in sync context
+                _system_config = _legacy_load_configuration()
             
         except Exception as e:
             logger.error(f"Failed to load system configuration: {e}")
             raise ValueError(f"Configuration initialization failed: {e}")
     
     return _system_config
+
+def _legacy_load_configuration() -> SystemConfiguration:
+    """Legacy configuration loading for backward compatibility"""
+    # Build configuration from environment overrides and defaults
+    from .defaults import get_default_configuration_dict
+    config_dict = get_default_configuration_dict()
+    
+    # Ensure we have the basic structure even if no env vars are set
+    if not config_dict:
+        config_dict = _build_default_config_dict()
+    
+    # Build the comprehensive configuration
+    system_config = _build_system_configuration(config_dict)
+    
+    # Validate production secrets if in production
+    if system_config.app.environment == "production":
+        SecretsManager.validate_production_secrets(system_config)
+    
+    logger.info(f"System configuration loaded successfully for environment: {system_config.app.environment}")
+    return system_config
 
 def _build_default_config_dict() -> Dict[str, Any]:
     """Build default configuration dictionary with fallback values"""
@@ -329,6 +348,7 @@ def get_settings() -> SystemConfiguration:
     return get_system_configuration()
 
 __all__ = [
+    # Configuration models
     "AppConfig",
     "CircuitBreakerConfig",
     "ContentConfig",
@@ -340,10 +360,21 @@ __all__ = [
     "OpenAIConfig",
     "AIConfig",
     "SystemConfiguration",
+    
+    # Configuration management
+    "ConfigurationManager",
+    "ConfigurationLoader",
+    "get_configuration_manager",
+    "get_current_configuration",
+    "create_configuration_loader",
+    
+    # Utilities
     "ConfigurationValidators",
     "get_environment_overrides",
     "apply_nested_override",
     "SecretsManager",
+    
+    # Legacy functions
     "get_system_configuration",
     "validate_configuration",
     "reload_configuration",

@@ -92,7 +92,7 @@ class ConfigurationValidators:
         Raises:
             ValueError: If memory format is invalid
         """
-        if not re.match(r'^\d+[kmgKMG]?[bB]?$', v):
+        if not re.match(r'^\d+[kmgKMG][bB]?$', v):
             raise ValueError('Invalid memory format. Use format like "512mb", "1gb", etc.')
         return v.lower()
 

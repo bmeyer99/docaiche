@@ -1,0 +1,147 @@
+# AI Documentation Cache System Configuration
+# PRD-003 CFG-008: Default Configuration File
+# Comprehensive production defaults for all configuration sections
+
+# Application Configuration
+app:
+  version: "1.0.0"
+  environment: "production"  # development, production, testing
+  debug: false
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  data_dir: "/app/data"
+  api_host: "0.0.0.0"
+  api_port: 8080
+  web_port: 8081
+  workers: 4
+
+# Content Processing Configuration
+content:
+  chunk_size_default: 1000
+  chunk_size_max: 4000
+  chunk_overlap: 100
+  quality_threshold: 0.3
+  min_content_length: 50
+  max_content_length: 1000000
+
+# AnythingLLM Integration Configuration
+anythingllm:
+  endpoint: "http://anythingllm:3001"
+  api_key: "${ANYTHINGLLM_API_KEY}"  # Set via environment variable
+  circuit_breaker:
+    failure_threshold: 3
+    recovery_timeout: 60
+    timeout_seconds: 30
+
+# GitHub Integration Configuration
+github:
+  api_token: "${GITHUB_API_TOKEN}"  # Set via environment variable
+  circuit_breaker:
+    failure_threshold: 5
+    recovery_timeout: 300
+    timeout_seconds: 30
+
+# Web Scraping Configuration
+scraping:
+  user_agent: "DocaicheBot/1.0"
+  rate_limit_delay: 1.0
+  circuit_breaker:
+    failure_threshold: 3
+    recovery_timeout: 120
+    timeout_seconds: 15
+
+# Redis Cache Configuration
+redis:
+  host: "redis"
+  port: 6379
+  password: null  # Set REDIS_PASSWORD environment variable for production
+  db: 0
+  
+  # Connection pool settings
+  max_connections: 20
+  connection_timeout: 5
+  socket_timeout: 5
+  
+  # Memory and persistence settings
+  # Note: These must align with docker-compose.yml Redis service configuration
+  maxmemory: "512mb"
+  maxmemory_policy: "allkeys-lru"
+  appendonly: true
+  
+  # Security settings
+  ssl: false
+  ssl_cert_reqs: null
+
+# AI Provider Configuration
+ai:
+  primary_provider: "ollama"
+  fallback_provider: "openai"
+  enable_failover: true
+  cache_ttl_seconds: 3600
+  
+  # Ollama Configuration
+  ollama:
+    endpoint: "http://ollama:11434"
+    model: "llama2"
+    temperature: 0.7
+    max_tokens: 4096
+    timeout_seconds: 60
+    circuit_breaker:
+      failure_threshold: 3
+      recovery_timeout: 60
+      timeout_seconds: 30
+  
+  # OpenAI Configuration
+  openai:
+    api_key: "${OPENAI_API_KEY}"  # Set via environment variable
+    model: "gpt-3.5-turbo"
+    temperature: 0.7
+    max_tokens: 4096
+    timeout_seconds: 30
+    circuit_breaker:
+      failure_threshold: 5
+      recovery_timeout: 300
+      timeout_seconds: 30
+
+# Knowledge Enrichment Configuration
+enrichment:
+  max_concurrent_tasks: 5
+  task_timeout_seconds: 300
+  retry_delay_seconds: 60
+  queue_poll_interval: 10
+  batch_size: 10
+  enable_relationship_mapping: true
+  enable_tag_generation: true
+  enable_quality_assessment: true
+  min_confidence_threshold: 0.7
+
+# Configuration Notes:
+# 
+# 1. Environment Variables Override:
+#    - Use environment variables for sensitive data (API keys, passwords)
+#    - Environment variables take highest priority over this file
+#    - Example: REDIS_HOST=localhost overrides redis.host above
+#
+# 2. Database Overrides:
+#    - Configuration can be overridden via system_config table
+#    - Database overrides have lowest priority
+#
+# 3. Redis Production Security:
+#    - Set REDIS_PASSWORD environment variable for production
+#    - Enable SSL/TLS by setting REDIS_SSL=true if needed
+#
+# 4. API Keys and Tokens:
+#    - ANYTHINGLLM_API_KEY: Required for AnythingLLM integration
+#    - GITHUB_API_TOKEN: Required for GitHub repository access
+#    - OPENAI_API_KEY: Required if using OpenAI as primary/fallback provider
+#
+# 5. Docker Compose Alignment:
+#    - Redis memory settings must match docker-compose.yml
+#    - Service endpoints assume docker-compose service names
+#
+# 6. Circuit Breaker Settings:
+#    - Configured per service with appropriate timeouts
+#    - Prevents cascade failures in distributed architecture
+#
+# 7. Content Processing Limits:
+#    - Prevents processing of excessively large content
+#    - Quality threshold filters low-quality content

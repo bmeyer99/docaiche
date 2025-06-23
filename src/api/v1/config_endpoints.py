@@ -1,6 +1,9 @@
 """
-Configuration API Endpoints - PRD-001: HTTP API Foundation
-Configuration management and collections endpoints
+Configuration API Endpoints - PRD-003 CFG-009: API Endpoints Integration
+Configuration management endpoints integrated with PRD-001 HTTP API Foundation
+
+Implements /api/v1/config GET and POST endpoints with ConfigurationManager integration
+as specified in CFG-009 requirements.
 """
 
 import logging
@@ -16,7 +19,7 @@ from .schemas import (
 from .middleware import limiter
 from .dependencies import get_anythingllm_client
 from src.clients.anythingllm import AnythingLLMClient
-from src.core.config import get_settings
+from src.core.config import get_settings, get_configuration_manager
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +35,9 @@ async def get_configuration(
     """
     GET /api/v1/config - Retrieves the current system configuration
     
+    CFG-009: API Endpoints Integration
+    Integrates with ConfigurationManager for comprehensive configuration access
+    
     Args:
         request: FastAPI request object (required for rate limiting)
         
@@ -39,14 +45,21 @@ async def get_configuration(
         ConfigurationResponse with current configuration items
     """
     try:
-        config = get_settings()
+        # Use ConfigurationManager for hierarchical configuration access
+        try:
+            config_manager = await get_configuration_manager()
+            config = config_manager.get_configuration()
+        except Exception:
+            # Fall back to legacy method for compatibility
+            config = get_settings()
         
-        # Return non-sensitive configuration items
+        # Return non-sensitive configuration items with comprehensive coverage
         items = [
+            # Application configuration
             ConfigurationItem(
                 key="app.environment",
                 value=config.app.environment,
-                description="Application environment"
+                description="Application environment (development/production/testing)"
             ),
             ConfigurationItem(
                 key="app.debug",
@@ -54,15 +67,83 @@ async def get_configuration(
                 description="Debug mode enabled"
             ),
             ConfigurationItem(
+                key="app.log_level",
+                value=config.app.log_level,
+                description="Logging level"
+            ),
+            ConfigurationItem(
+                key="app.api_port",
+                value=config.app.api_port,
+                description="API service port"
+            ),
+            ConfigurationItem(
+                key="app.workers",
+                value=config.app.workers,
+                description="Number of worker processes"
+            ),
+            
+            # Content processing configuration
+            ConfigurationItem(
                 key="content.chunk_size_default",
                 value=config.content.chunk_size_default,
-                description="Default content chunk size"
+                description="Default content chunk size in characters"
             ),
+            ConfigurationItem(
+                key="content.chunk_size_max",
+                value=config.content.chunk_size_max,
+                description="Maximum content chunk size in characters"
+            ),
+            ConfigurationItem(
+                key="content.quality_threshold",
+                value=config.content.quality_threshold,
+                description="Minimum quality score for content processing"
+            ),
+            
+            # Redis configuration (non-sensitive)
             ConfigurationItem(
                 key="redis.host",
                 value=config.redis.host,
-                description="Redis host address"
-            )
+                description="Redis cache server host"
+            ),
+            ConfigurationItem(
+                key="redis.port",
+                value=config.redis.port,
+                description="Redis cache server port"
+            ),
+            ConfigurationItem(
+                key="redis.db",
+                value=config.redis.db,
+                description="Redis database number"
+            ),
+            ConfigurationItem(
+                key="redis.max_connections",
+                value=config.redis.max_connections,
+                description="Maximum Redis connections in pool"
+            ),
+            
+            # AI configuration (non-sensitive)
+            ConfigurationItem(
+                key="ai.primary_provider",
+                value=config.ai.primary_provider,
+                description="Primary AI/LLM provider"
+            ),
+            ConfigurationItem(
+                key="ai.enable_failover",
+                value=config.ai.enable_failover,
+                description="Enable AI provider failover"
+            ),
+            ConfigurationItem(
+                key="ai.cache_ttl_seconds",
+                value=config.ai.cache_ttl_seconds,
+                description="AI response cache TTL in seconds"
+            ),
+            
+            # Service endpoints (non-sensitive)
+            ConfigurationItem(
+                key="anythingllm.endpoint",
+                value=config.anythingllm.endpoint,
+                description="AnythingLLM service endpoint"
+            ),
         ]
         
         return ConfigurationResponse(
@@ -85,6 +166,9 @@ async def update_configuration(
     """
     POST /api/v1/config - Updates a specific part of the system configuration
     
+    CFG-009: API Endpoints Integration
+    Updates configuration using ConfigurationManager with database persistence
+    
     Args:
         request: FastAPI request object (required for rate limiting)
         config_request: Configuration update request
@@ -94,17 +178,38 @@ async def update_configuration(
         Confirmation message with HTTP 202
     """
     try:
-        logger.info(f"Configuration update request: {config_request.key}")
+        logger.info(f"Configuration update request: {config_request.key} = {config_request.value}")
         
-        # Add background task to update configuration (placeholder)
-        def update_config():
-            logger.info(f"Updating configuration: {config_request.key} = {config_request.value}")
-            # TODO: Implement configuration update logic
+        # Validate configuration key format
+        if not config_request.key or '.' not in config_request.key:
+            raise HTTPException(
+                status_code=400,
+                detail="Configuration key must be in dot notation format (e.g., 'app.debug')"
+            )
+        
+        # Add background task to update configuration using ConfigurationManager
+        async def update_config():
+            try:
+                config_manager = await get_configuration_manager()
+                
+                # Update configuration in database with runtime reload
+                await config_manager.update_in_db(config_request.key, config_request.value)
+                
+                logger.info(f"Configuration updated successfully: {config_request.key}")
+                
+            except Exception as e:
+                logger.error(f"Configuration update failed: {config_request.key} - {e}")
         
         background_tasks.add_task(update_config)
         
-        return {"message": f"Configuration update for {config_request.key} queued"}
+        return {
+            "message": f"Configuration update for '{config_request.key}' queued",
+            "key": config_request.key,
+            "status": "accepted"
+        }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Configuration update failed: {e}")
         raise HTTPException(status_code=500, detail="Configuration update failed")

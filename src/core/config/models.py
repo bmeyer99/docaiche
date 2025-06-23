@@ -39,15 +39,15 @@ class ContentConfig(BaseModel):
     chunk_size_default: int = Field(1000, description="Default chunk size in characters")
     chunk_size_max: int = Field(4000, description="Maximum chunk size in characters")
     chunk_overlap: int = Field(100, description="Character overlap between chunks")
-    quality_threshold: float = Field(0.01, ge=0.0, le=1.0, description="Minimum quality score")
-    min_content_length: int = Field(10, description="Minimum content length to process")
+    quality_threshold: float = Field(0.3, ge=0.0, le=1.0, description="Minimum quality score")
+    min_content_length: int = Field(50, description="Minimum content length to process")
     max_content_length: int = Field(1000000, description="Maximum content length to process")
 
 
 class AnythingLLMConfig(BaseModel):
     """AnythingLLM service configuration"""
-    endpoint: str = Field(..., description="AnythingLLM API endpoint")
-    api_key: str = Field(..., description="API key for authentication")
+    endpoint: str = Field("http://anythingllm:3001", description="AnythingLLM API endpoint")
+    api_key: str = Field("development-key", description="API key for authentication")
     circuit_breaker: CircuitBreakerConfig = Field(
         default_factory=lambda: CircuitBreakerConfig(failure_threshold=3, recovery_timeout=60, timeout_seconds=30)
     )
@@ -71,7 +71,7 @@ class AnythingLLMConfig(BaseModel):
 
 class GitHubConfig(BaseModel):
     """GitHub API configuration"""
-    api_token: str = Field(..., description="GitHub API token")
+    api_token: str = Field("development-token", description="GitHub API token")
     circuit_breaker: CircuitBreakerConfig = Field(
         default_factory=lambda: CircuitBreakerConfig(failure_threshold=5, recovery_timeout=300, timeout_seconds=30)
     )
@@ -119,7 +119,7 @@ class RedisConfig(BaseModel):
     @classmethod
     def validate_redis_memory(cls, v: str) -> str:
         """Validate Redis memory configuration"""
-        if not re.match(r'^\d+[kmgKMG]?[bB]?$', v):
+        if not re.match(r'^\d+[kmgKMG][bB]?$', v):
             raise ValueError('Invalid memory format. Use format like "512mb", "1gb", etc.')
         return v.lower()
 
@@ -146,7 +146,7 @@ class OllamaConfig(BaseModel):
 
 class OpenAIConfig(BaseModel):
     """OpenAI LLM provider configuration"""
-    api_key: str = Field(..., description="OpenAI API key")
+    api_key: str = Field("development-key", description="OpenAI API key")
     model: str = Field("gpt-3.5-turbo", description="Default model to use")
     temperature: float = Field(0.7, ge=0.0, le=2.0, description="Model temperature")
     max_tokens: int = Field(4096, ge=1, description="Maximum tokens in response")

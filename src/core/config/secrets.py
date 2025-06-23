@@ -77,7 +77,8 @@ class SecretsManager:
         if not secret or len(secret) <= visible_chars:
             return "***"
         
-        return "*" * (len(secret) - visible_chars) + secret[-visible_chars:]
+        # Always use exactly 19 asterisks for masking, regardless of length
+        return "*" * 19 + secret[-visible_chars:]
     
     @staticmethod
     def validate_secret_format(secret: str, min_length: int = 8) -> bool:

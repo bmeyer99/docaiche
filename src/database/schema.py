@@ -81,11 +81,11 @@ def _create_system_config_table(conn: sqlite3.Connection) -> None:
     """Create system_config table - PRD-002 lines 34-40"""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS system_config (
-            key TEXT PRIMARY KEY NOT NULL,
-            value JSON NOT NULL,
-            schema_version TEXT NOT NULL DEFAULT '1.0',
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_by TEXT NOT NULL DEFAULT 'system'
+            config_key TEXT PRIMARY KEY NOT NULL,
+            config_value TEXT NOT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            updated_at INTEGER DEFAULT (strftime('%s', 'now'))
         )
     """)
 

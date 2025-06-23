@@ -15,68 +15,104 @@ logger = logging.getLogger(__name__)
 
 def get_environment_overrides() -> Dict[str, Any]:
     """
-    Map environment variables to configuration fields.
-    Follows the naming convention: COMPONENT_FIELD_NAME
+    Parse environment variables dynamically to support nested configuration overrides.
+    Supports patterns like:
+    - APP_DEBUG=true -> app.debug
+    - AI_OLLAMA_MODEL=llama3 -> ai.ollama.model
+    - REDIS_HOST=redis-server -> redis.host
     """
-    env_mappings = {
+    overrides = {}
+    
+    # Environment variable mapping patterns
+    env_patterns = {
         # App configuration
-        "app.environment": os.getenv("APP_ENVIRONMENT", "production"),
-        "app.debug": os.getenv("APP_DEBUG", "false").lower() == "true",
-        "app.log_level": os.getenv("APP_LOG_LEVEL", "INFO"),
-        "app.api_port": int(os.getenv("APP_API_PORT", "8080")),
-        "app.web_port": int(os.getenv("APP_WEB_PORT", "8081")),
-        "app.workers": int(os.getenv("APP_WORKERS", "4")),
+        "APP_ENVIRONMENT": "app.environment",
+        "APP_DEBUG": ("app.debug", lambda x: x.lower() == "true"),
+        "APP_LOG_LEVEL": "app.log_level",
+        "APP_API_PORT": ("app.api_port", int),
+        "APP_WEB_PORT": ("app.web_port", int),
+        "APP_WORKERS": ("app.workers", int),
         
         # Redis configuration
-        "redis.host": os.getenv("REDIS_HOST", "redis"),
-        "redis.port": int(os.getenv("REDIS_PORT", "6379")),
-        "redis.password": os.getenv("REDIS_PASSWORD"),
-        "redis.db": int(os.getenv("REDIS_DB", "0")),
-        "redis.max_connections": int(os.getenv("REDIS_MAX_CONNECTIONS", "20")),
-        "redis.maxmemory": os.getenv("REDIS_MAXMEMORY", "512mb"),
-        "redis.ssl": os.getenv("REDIS_SSL", "false").lower() == "true",
+        "REDIS_HOST": "redis.host",
+        "REDIS_PORT": ("redis.port", int),
+        "REDIS_PASSWORD": "redis.password",
+        "REDIS_DB": ("redis.db", int),
+        "REDIS_MAX_CONNECTIONS": ("redis.max_connections", int),
+        "REDIS_CONNECTION_TIMEOUT": ("redis.connection_timeout", int),
+        "REDIS_SOCKET_TIMEOUT": ("redis.socket_timeout", int),
+        "REDIS_MAXMEMORY": "redis.maxmemory",
+        "REDIS_MAXMEMORY_POLICY": "redis.maxmemory_policy",
+        "REDIS_APPENDONLY": ("redis.appendonly", lambda x: x.lower() == "true"),
+        "REDIS_SSL": ("redis.ssl", lambda x: x.lower() == "true"),
+        "REDIS_SSL_CERT_REQS": "redis.ssl_cert_reqs",
         
         # AnythingLLM configuration
-        "anythingllm.endpoint": os.getenv("ANYTHINGLLM_ENDPOINT", "http://anythingllm:3001"),
-        "anythingllm.api_key": os.getenv("ANYTHINGLLM_API_KEY", "development-key"),
+        "ANYTHINGLLM_ENDPOINT": "anythingllm.endpoint",
+        "ANYTHINGLLM_API_KEY": "anythingllm.api_key",
         
         # GitHub configuration
-        "github.api_token": os.getenv("GITHUB_API_TOKEN", "development-token"),
+        "GITHUB_API_TOKEN": "github.api_token",
         
         # AI configuration
-        "ai.primary_provider": os.getenv("AI_PRIMARY_PROVIDER", "ollama"),
-        "ai.enable_failover": os.getenv("AI_ENABLE_FAILOVER", "true").lower() == "true",
+        "AI_PRIMARY_PROVIDER": "ai.primary_provider",
+        "AI_FALLBACK_PROVIDER": "ai.fallback_provider",
+        "AI_ENABLE_FAILOVER": ("ai.enable_failover", lambda x: x.lower() == "true"),
+        "AI_CACHE_TTL_SECONDS": ("ai.cache_ttl_seconds", int),
         
         # Ollama configuration
-        "ai.ollama.endpoint": os.getenv("OLLAMA_ENDPOINT", "http://ollama:11434"),
-        "ai.ollama.model": os.getenv("OLLAMA_MODEL", "llama2"),
-        "ai.ollama.temperature": float(os.getenv("OLLAMA_TEMPERATURE", "0.7")),
+        "AI_OLLAMA_ENDPOINT": "ai.ollama.endpoint",
+        "AI_OLLAMA_MODEL": "ai.ollama.model",
+        "AI_OLLAMA_TEMPERATURE": ("ai.ollama.temperature", float),
+        "AI_OLLAMA_MAX_TOKENS": ("ai.ollama.max_tokens", int),
+        "AI_OLLAMA_TIMEOUT": ("ai.ollama.timeout_seconds", int),
         
         # OpenAI configuration
-        "ai.openai.api_key": os.getenv("OPENAI_API_KEY", "development-key"),
-        "ai.openai.model": os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"),
-        "ai.openai.temperature": float(os.getenv("OPENAI_TEMPERATURE", "0.7")),
+        "AI_OPENAI_API_KEY": "ai.openai.api_key",
+        "AI_OPENAI_MODEL": "ai.openai.model",
+        "AI_OPENAI_TEMPERATURE": ("ai.openai.temperature", float),
+        "AI_OPENAI_MAX_TOKENS": ("ai.openai.max_tokens", int),
+        "AI_OPENAI_TIMEOUT": ("ai.openai.timeout_seconds", int),
         
         # Content processing configuration
-        "content.chunk_size_default": int(os.getenv("CONTENT_CHUNK_SIZE_DEFAULT", "1000")),
-        "content.chunk_size_max": int(os.getenv("CONTENT_CHUNK_SIZE_MAX", "4000")),
-        "content.quality_threshold": float(os.getenv("CONTENT_QUALITY_THRESHOLD", "0.01")),
-        "content.min_content_length": int(os.getenv("CONTENT_MIN_CONTENT_LENGTH", "10")),
+        "CONTENT_CHUNK_SIZE_DEFAULT": ("content.chunk_size_default", int),
+        "CONTENT_CHUNK_SIZE_MAX": ("content.chunk_size_max", int),
+        "CONTENT_CHUNK_OVERLAP": ("content.chunk_overlap", int),
+        "CONTENT_QUALITY_THRESHOLD": ("content.quality_threshold", float),
+        "CONTENT_MIN_CONTENT_LENGTH": ("content.min_content_length", int),
+        "CONTENT_MAX_CONTENT_LENGTH": ("content.max_content_length", int),
         
         # Enrichment configuration
-        "enrichment.max_concurrent_tasks": int(os.getenv("ENRICHMENT_MAX_CONCURRENT_TASKS", "5")),
-        "enrichment.task_timeout_seconds": int(os.getenv("ENRICHMENT_TASK_TIMEOUT_SECONDS", "300")),
-        "enrichment.retry_delay_seconds": int(os.getenv("ENRICHMENT_RETRY_DELAY_SECONDS", "60")),
-        "enrichment.queue_poll_interval": int(os.getenv("ENRICHMENT_QUEUE_POLL_INTERVAL", "10")),
-        "enrichment.batch_size": int(os.getenv("ENRICHMENT_BATCH_SIZE", "10")),
-        "enrichment.enable_relationship_mapping": os.getenv("ENRICHMENT_ENABLE_RELATIONSHIP_MAPPING", "true").lower() == "true",
-        "enrichment.enable_tag_generation": os.getenv("ENRICHMENT_ENABLE_TAG_GENERATION", "true").lower() == "true",
-        "enrichment.enable_quality_assessment": os.getenv("ENRICHMENT_ENABLE_QUALITY_ASSESSMENT", "true").lower() == "true",
-        "enrichment.min_confidence_threshold": float(os.getenv("ENRICHMENT_MIN_CONFIDENCE_THRESHOLD", "0.7")),
+        "ENRICHMENT_MAX_CONCURRENT_TASKS": ("enrichment.max_concurrent_tasks", int),
+        "ENRICHMENT_TASK_TIMEOUT_SECONDS": ("enrichment.task_timeout_seconds", int),
+        "ENRICHMENT_RETRY_DELAY_SECONDS": ("enrichment.retry_delay_seconds", int),
+        "ENRICHMENT_QUEUE_POLL_INTERVAL": ("enrichment.queue_poll_interval", int),
+        "ENRICHMENT_BATCH_SIZE": ("enrichment.batch_size", int),
+        "ENRICHMENT_ENABLE_RELATIONSHIP_MAPPING": ("enrichment.enable_relationship_mapping", lambda x: x.lower() == "true"),
+        "ENRICHMENT_ENABLE_TAG_GENERATION": ("enrichment.enable_tag_generation", lambda x: x.lower() == "true"),
+        "ENRICHMENT_ENABLE_QUALITY_ASSESSMENT": ("enrichment.enable_quality_assessment", lambda x: x.lower() == "true"),
+        "ENRICHMENT_MIN_CONFIDENCE_THRESHOLD": ("enrichment.min_confidence_threshold", float),
     }
     
-    # Filter out None values
-    return {k: v for k, v in env_mappings.items() if v is not None}
+    # Process environment variables that are actually set
+    for env_var, mapping in env_patterns.items():
+        value = os.getenv(env_var)
+        if value is not None:
+            try:
+                if isinstance(mapping, tuple):
+                    config_key, converter = mapping
+                    converted_value = converter(value)
+                else:
+                    config_key = mapping
+                    converted_value = value
+                
+                overrides[config_key] = converted_value
+                logger.debug(f"Environment override: {env_var} -> {config_key} = {converted_value}")
+                
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Failed to convert environment variable {env_var}={value}: {e}")
+    
+    return overrides
 
 
 def apply_nested_override(config_dict: Dict[str, Any], key: str, value: Any) -> None:
