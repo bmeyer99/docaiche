@@ -11,7 +11,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 
 from fastapi import BackgroundTasks
 
@@ -79,7 +79,7 @@ class SearchOrchestrator:
         self, 
         query: SearchQuery,
         background_tasks: Optional[BackgroundTasks] = None
-    ) -> SearchResults:
+    ) -> Tuple[SearchResults, SearchQuery]:
         """
         Execute complete search workflow as specified in PRD-009.
         
@@ -97,7 +97,9 @@ class SearchOrchestrator:
             background_tasks: FastAPI background tasks for enrichment
             
         Returns:
-            SearchResults with ranked results and metadata
+            Tuple[SearchResults, SearchQuery]: 
+                - SearchResults with ranked results and metadata
+                - The normalized SearchQuery object used internally
             
         Raises:
             SearchOrchestrationError: If search workflow fails
@@ -120,7 +122,7 @@ class SearchOrchestrator:
                     execution_time = int((time.time() - start_time) * 1000)
                     cached_results.query_time_ms = execution_time
                     logger.info(f"Cache hit - returning {len(cached_results.results)} results")
-                    return cached_results
+                    return cached_results, normalized_query
             except Exception as e:
                 logger.warning(f"Cache check failed, continuing without cache: {e}")
                 # Continue without caching
@@ -176,7 +178,7 @@ class SearchOrchestrator:
                 # Continue without caching - this is non-critical
             
             logger.info(f"Search completed: {len(final_results.results)} results in {execution_time}ms")
-            return final_results
+            return final_results, normalized_query
             
         except SearchTimeoutError:
             # Re-raise timeout errors

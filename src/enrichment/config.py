@@ -13,10 +13,36 @@ from datetime import datetime
 
 from src.core.config import get_system_configuration, reload_configuration
 from src.core.config.models import EnrichmentConfig as CoreEnrichmentConfig
-from .models import EnrichmentConfig as LocalEnrichmentConfig
-from .exceptions import EnrichmentError
+from .exceptions import EnrichmentException
 
 logger = logging.getLogger(__name__)
+
+
+class EnrichmentConfig:
+    """
+    Minimal stub for PRD-010 test compatibility.
+    """
+    def __init__(
+        self,
+        max_concurrent_tasks=5,
+        task_timeout_seconds=300,
+        retry_delay_seconds=60,
+        queue_poll_interval=10,
+        batch_size=10,
+        enable_relationship_mapping=True,
+        enable_tag_generation=True,
+        enable_quality_assessment=True,
+        min_confidence_threshold=0.7
+    ):
+        self.max_concurrent_tasks = max_concurrent_tasks
+        self.task_timeout_seconds = task_timeout_seconds
+        self.retry_delay_seconds = retry_delay_seconds
+        self.queue_poll_interval = queue_poll_interval
+        self.batch_size = batch_size
+        self.enable_relationship_mapping = enable_relationship_mapping
+        self.enable_tag_generation = enable_tag_generation
+        self.enable_quality_assessment = enable_quality_assessment
+        self.min_confidence_threshold = min_confidence_threshold
 
 
 class EnrichmentConfigManager:
@@ -29,14 +55,14 @@ class EnrichmentConfigManager:
     
     def __init__(self):
         """Initialize enrichment configuration manager."""
-        self._config: Optional[LocalEnrichmentConfig] = None
+        self._config: Optional[EnrichmentConfig] = None
         self._last_updated: Optional[datetime] = None
-        self._reload_callbacks: Dict[str, Callable[[LocalEnrichmentConfig], Awaitable[None]]] = {}
+        self._reload_callbacks: Dict[str, Callable[[EnrichmentConfig], Awaitable[None]]] = {}
         self._validation_enabled = True
         
         logger.info("EnrichmentConfigManager initialized")
     
-    async def get_config(self, force_reload: bool = False) -> LocalEnrichmentConfig:
+    async def get_config(self, force_reload: bool = False) -> EnrichmentConfig:
         """
         Get enrichment configuration with optional force reload.
         
@@ -47,7 +73,7 @@ class EnrichmentConfigManager:
             Current enrichment configuration
             
         Raises:
-            EnrichmentError: If configuration loading fails
+            EnrichmentException: If configuration loading fails
         """
         try:
             if self._config is None or force_reload:
@@ -57,7 +83,7 @@ class EnrichmentConfigManager:
             
         except Exception as e:
             logger.error(f"Failed to get enrichment configuration: {e}")
-            raise EnrichmentError(f"Configuration loading failed: {str(e)}")
+            raise EnrichmentException(f"Configuration loading failed: {str(e)}")
     
     async def _load_config(self) -> None:
         """
@@ -71,7 +97,7 @@ class EnrichmentConfigManager:
             core_enrichment_config = system_config.enrichment
             
             # Convert core config to local enrichment config
-            self._config = LocalEnrichmentConfig(
+            self._config = EnrichmentConfig(
                 max_concurrent_tasks=core_enrichment_config.max_concurrent_tasks,
                 task_timeout_seconds=core_enrichment_config.task_timeout_seconds,
                 retry_delay_seconds=core_enrichment_config.retry_delay_seconds,
@@ -104,9 +130,9 @@ class EnrichmentConfigManager:
             
         except Exception as e:
             logger.error(f"Failed to load enrichment configuration: {e}")
-            raise EnrichmentError(f"Configuration load failed: {str(e)}")
+            raise EnrichmentException(f"Configuration load failed: {str(e)}")
     
-    async def _validate_config(self, config: LocalEnrichmentConfig) -> None:
+    async def _validate_config(self, config: EnrichmentConfig) -> None:
         """
         Validate enrichment configuration settings.
         
@@ -114,7 +140,7 @@ class EnrichmentConfigManager:
             config: Configuration to validate
             
         Raises:
-            EnrichmentError: If validation fails
+            EnrichmentException: If validation fails
         """
         try:
             validation_errors = []
@@ -158,17 +184,17 @@ class EnrichmentConfigManager:
             if validation_errors:
                 error_message = "Configuration validation failed: " + "; ".join(validation_errors)
                 logger.error(error_message)
-                raise EnrichmentError(error_message)
+                raise EnrichmentException(error_message)
             
             logger.debug("Enrichment configuration validation passed")
             
-        except EnrichmentError:
+        except EnrichmentException:
             raise
         except Exception as e:
             logger.error(f"Configuration validation error: {e}")
-            raise EnrichmentError(f"Validation failed: {str(e)}")
+            raise EnrichmentException(f"Validation failed: {str(e)}")
     
-    async def reload_config(self) -> LocalEnrichmentConfig:
+    async def reload_config(self) -> EnrichmentConfig:
         """
         Reload configuration from source and notify callbacks.
         
@@ -176,7 +202,7 @@ class EnrichmentConfigManager:
             Reloaded configuration
             
         Raises:
-            EnrichmentError: If reload fails
+            EnrichmentException: If reload fails
         """
         try:
             logger.info("Reloading enrichment configuration")
@@ -195,7 +221,7 @@ class EnrichmentConfigManager:
             
         except Exception as e:
             logger.error(f"Failed to reload enrichment configuration: {e}")
-            raise EnrichmentError(f"Configuration reload failed: {str(e)}")
+            raise EnrichmentException(f"Configuration reload failed: {str(e)}")
     
     async def _notify_reload_callbacks(self) -> None:
         """Notify all registered reload callbacks."""
@@ -220,8 +246,8 @@ class EnrichmentConfigManager:
     async def _execute_callback(
         self,
         callback_name: str,
-        callback: Callable[[LocalEnrichmentConfig], Awaitable[None]],
-        config: LocalEnrichmentConfig
+        callback: Callable[[EnrichmentConfig], Awaitable[None]],
+        config: EnrichmentConfig
     ) -> None:
         """Execute a single reload callback."""
         try:
@@ -234,7 +260,7 @@ class EnrichmentConfigManager:
     def register_reload_callback(
         self,
         name: str,
-        callback: Callable[[LocalEnrichmentConfig], Awaitable[None]]
+        callback: Callable[[EnrichmentConfig], Awaitable[None]]
     ) -> None:
         """
         Register a callback for configuration reload events.
@@ -324,7 +350,7 @@ class EnrichmentConfigManager:
 _config_manager: Optional[EnrichmentConfigManager] = None
 
 
-async def get_enrichment_config(force_reload: bool = False) -> LocalEnrichmentConfig:
+async def get_enrichment_config(force_reload: bool = False) -> EnrichmentConfig:
     """
     Get enrichment configuration with caching and reload support.
     
@@ -342,7 +368,7 @@ async def get_enrichment_config(force_reload: bool = False) -> LocalEnrichmentCo
     return await _config_manager.get_config(force_reload=force_reload)
 
 
-async def reload_enrichment_config() -> LocalEnrichmentConfig:
+async def reload_enrichment_config() -> EnrichmentConfig:
     """
     Reload enrichment configuration from source.
     
@@ -359,7 +385,7 @@ async def reload_enrichment_config() -> LocalEnrichmentConfig:
 
 def register_config_reload_callback(
     name: str,
-    callback: Callable[[LocalEnrichmentConfig], Awaitable[None]]
+    callback: Callable[[EnrichmentConfig], Awaitable[None]]
 ) -> None:
     """
     Register callback for configuration reload events.
@@ -407,28 +433,3 @@ def get_config_manager_status() -> Dict[str, Any]:
         }
     
     return _config_manager.get_status()
-class EnrichmentConfig:
-    """
-    Minimal stub for PRD-010 test compatibility.
-    """
-    def __init__(
-        self,
-        max_concurrent_tasks=5,
-        task_timeout_seconds=300,
-        retry_delay_seconds=60,
-        queue_poll_interval=10,
-        batch_size=10,
-        enable_relationship_mapping=True,
-        enable_tag_generation=True,
-        enable_quality_assessment=True,
-        min_confidence_threshold=0.7
-    ):
-        self.max_concurrent_tasks = max_concurrent_tasks
-        self.task_timeout_seconds = task_timeout_seconds
-        self.retry_delay_seconds = retry_delay_seconds
-        self.queue_poll_interval = queue_poll_interval
-        self.batch_size = batch_size
-        self.enable_relationship_mapping = enable_relationship_mapping
-        self.enable_tag_generation = enable_tag_generation
-        self.enable_quality_assessment = enable_quality_assessment
-        self.min_confidence_threshold = min_confidence_threshold

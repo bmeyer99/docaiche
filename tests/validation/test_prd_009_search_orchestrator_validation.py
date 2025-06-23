@@ -124,10 +124,13 @@ class TestPRD009FunctionalRequirements:
         )
         
         # Execute search workflow
-        results = await orchestrator.execute_search(query)
+        results, normalized_query = await orchestrator.execute_search(query)
         
         # Verify Step 1: Query Normalization
-        assert query.query != "  FastAPI   Tutorial  "  # Should be normalized internally
+        assert normalized_query.query == "fastapi tutorial"
+        assert normalized_query.query != "  FastAPI   Tutorial  "  # Should be normalized internally
+        assert isinstance(results, SearchResults)
+        assert isinstance(normalized_query, SearchQuery)
         
         # Verify Step 2: Cache Check was called
         orchestrator.search_cache.get_cached_results.assert_called_once()
@@ -559,8 +562,9 @@ class TestPRD009ErrorHandlingValidation:
         
         # Should handle cache failures gracefully
         try:
-            results = await orchestrator.execute_search(query)
+            results, normalized_query = await orchestrator.execute_search(query)
             assert isinstance(results, SearchResults)
+            assert isinstance(normalized_query, SearchQuery)
         except SearchCacheError:
             pytest.fail("Should handle cache errors gracefully")
 

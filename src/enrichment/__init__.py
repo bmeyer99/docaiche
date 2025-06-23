@@ -9,26 +9,20 @@ and quality improvement capabilities as specified in PRD-010.
 # Core enrichment components
 from .enricher import KnowledgeEnricher
 from .tasks import TaskManager
-from .queue import EnrichmentTaskQueue, EnrichmentQueue
+from .queue import EnrichmentTaskQueue
 
 # Analysis components
-from .analyzers import ContentAnalyzer, RelationshipAnalyzer, TagGenerator
+from .analyzers import GapAnalyzer
 
 # Data models
 from .models import (
-    EnrichmentTask, EnrichmentResult, EnrichmentConfig,
-    EnrichmentMetrics, EnrichmentAnalytics, TaskQueueStatus,
-    ContentRelationship, EnrichmentType, EnrichmentPriority,
-    EnrichmentStrategy, TaskPriority, TaskStatus,
-    ContentGap, KnowledgeGraph, RelationshipType
+    EnrichmentTask, EnrichmentStatus, GapAnalysisResult
 )
 
 # Exceptions
 from .exceptions import (
-    EnrichmentError, TaskProcessingError, AnalysisError,
-    RelationshipMappingError, EnrichmentTimeoutError,
-    QueueError, TagGenerationError, QualityAssessmentError,
-    MetadataEnhancementError
+    EnrichmentException, GapAnalysisException, ContentAcquisitionException,
+    BackgroundTaskException
 )
 
 # Factory functions
@@ -51,35 +45,20 @@ __all__ = [
     "KnowledgeEnricher",
     "TaskManager", 
     "EnrichmentTaskQueue",
-    "EnrichmentQueue",
     
     # Analysis components
-    "ContentAnalyzer",
-    "RelationshipAnalyzer", 
-    "TagGenerator",
+    "GapAnalyzer",
     
     # Data models
     "EnrichmentTask",
-    "EnrichmentResult",
-    "EnrichmentConfig",
-    "EnrichmentMetrics",
-    "EnrichmentAnalytics",
-    "TaskQueueStatus",
-    "ContentRelationship",
-    "EnrichmentType",
-    "EnrichmentPriority", 
-    "TaskStatus",
+    "EnrichmentStatus",
+    "GapAnalysisResult",
     
     # Exceptions
-    "EnrichmentError",
-    "TaskProcessingError",
-    "AnalysisError",
-    "RelationshipMappingError",
-    "EnrichmentTimeoutError",
-    "QueueError",
-    "TagGenerationError",
-    "QualityAssessmentError",
-    "MetadataEnhancementError",
+    "EnrichmentException",
+    "GapAnalysisException",
+    "ContentAcquisitionException",
+    "BackgroundTaskException",
     
     # Factory functions
     "create_knowledge_enricher",

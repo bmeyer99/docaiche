@@ -19,7 +19,7 @@ from enum import Enum
 from .models import EnrichmentTask, EnrichmentConfig, TaskStatus, EnrichmentPriority
 from .exceptions import (
     TaskProcessingError, EnrichmentTimeoutError, QueueError,
-    TaskExecutionError, EnrichmentError
+    TaskExecutionError, EnrichmentException
 )
 
 logger = logging.getLogger(__name__)

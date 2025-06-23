@@ -148,3 +148,42 @@ class AnythingLLMCircuitBreakerError(AnythingLLMError):
             status_code=503,  # Service Unavailable
             error_context={"circuit_breaker_open": True}
         )
+class WebScrapingError(Exception):
+    """
+    Exception for web scraping errors (PRD-007).
+    Includes HTTP status code and error context for structured error handling.
+    """
+    def __init__(self, message: str, status_code: int = 500, error_context: dict = None):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
+        self.error_context = error_context or {}
+
+    def __str__(self):
+        return f"WebScrapingError({self.status_code}): {self.message}"
+class GitHubClientError(Exception):
+    """
+    Exception for GitHub API client errors (PRD-006).
+    Includes HTTP status code and error context for structured error handling.
+    """
+    def __init__(self, message: str, status_code: int = 500, error_context: dict = None):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
+        self.error_context = error_context or {}
+
+    def __str__(self):
+        return f"GitHubClientError({self.status_code}): {self.message}"
+
+class CircuitBreakerError(Exception):
+    """
+    Exception for open circuit breaker state (PRD-006).
+    Raised when the circuit breaker is open and API calls are blocked.
+    """
+    def __init__(self, message: str = "Circuit breaker is open"):
+        super().__init__(message)
+        self.message = message
+        self.status_code = 503
+
+    def __str__(self):
+        return f"CircuitBreakerError({self.status_code}): {self.message}"

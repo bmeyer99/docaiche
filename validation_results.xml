@@ -1,184 +1,37 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="25" failures="0" skipped="0" tests="25" time="0.913" timestamp="2025-06-23T20:07:30.963542+00:00" hostname="860ccdba2723"><testcase classname="" name="tests.validation.test_db_001_re_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_db_001_re_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_db_001_re_validation.py:26: in &lt;module&gt;
-    from src.database.init_db import DatabaseInitializer
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_db_001_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_db_001_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_db_001_validation.py:28: in &lt;module&gt;
-    from src.database.init_db import DatabaseInitializer
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_comprehensive_validation.py'.
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="4" failures="0" skipped="0" tests="4" time="1.155" timestamp="2025-06-23T20:54:18.931828+00:00" hostname="860ccdba2723"><testcase classname="" name="tests.validation.test_document_ingestion_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_comprehensive_validation.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/lib/python3.10/importlib/__init__.py:126: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
 tests/validation/test_document_ingestion_comprehensive_validation.py:26: in &lt;module&gt;
     from src.ingestion.pipeline import IngestionPipeline, create_ingestion_pipeline
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_final_production_approval" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_final_production_approval.py'.
+src/ingestion/pipeline.py:15: in &lt;module&gt;
+    from src.processors.content_processor import ContentProcessor, FileContent
+src/processors/__init__.py:6: in &lt;module&gt;
+    from .content_processor import ContentProcessor, FileContent, ScrapedContent
+E   ImportError: cannot import name 'FileContent' from 'src.processors.content_processor' (/home/lab/docaiche/src/processors/content_processor.py)</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_final_production_approval" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_final_production_approval.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/lib/python3.10/importlib/__init__.py:126: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_document_ingestion_final_production_approval.py:26: in &lt;module&gt;
-    from src.database.connection import DatabaseManager, create_database_manager
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_final_production_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_final_production_validation.py'.
+tests/validation/test_document_ingestion_final_production_approval.py:27: in &lt;module&gt;
+    from src.ingestion.pipeline import IngestionPipeline, create_ingestion_pipeline
+src/ingestion/pipeline.py:15: in &lt;module&gt;
+    from src.processors.content_processor import ContentProcessor, FileContent
+E   ImportError: cannot import name 'FileContent' from 'src.processors.content_processor' (/home/lab/docaiche/src/processors/content_processor.py)</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_final_production_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_final_production_validation.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/lib/python3.10/importlib/__init__.py:126: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
 tests/validation/test_document_ingestion_final_production_validation.py:14: in &lt;module&gt;
     from src.ingestion.pipeline import IngestionPipeline, create_ingestion_pipeline
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_production_blocker_assessment" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_production_blocker_assessment.py'.
+src/ingestion/pipeline.py:15: in &lt;module&gt;
+    from src.processors.content_processor import ContentProcessor, FileContent
+E   ImportError: cannot import name 'FileContent' from 'src.processors.content_processor' (/home/lab/docaiche/src/processors/content_processor.py)</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_production_blocker_assessment" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_production_blocker_assessment.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/lib/python3.10/importlib/__init__.py:126: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
 tests/validation/test_document_ingestion_production_blocker_assessment.py:11: in &lt;module&gt;
     from src.api.v1.ingestion import get_ingestion_pipeline
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_001_api_foundation_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_001_api_foundation_comprehensive_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_001_api_foundation_comprehensive_validation.py:36: in &lt;module&gt;
-    from src.main import create_application
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_001_api_foundation_working_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_001_api_foundation_working_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_001_api_foundation_working_validation.py:32: in &lt;module&gt;
-    from src.api.v1.schemas import (
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_002_critical_fixes_re_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_002_critical_fixes_re_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_002_critical_fixes_re_validation.py:18: in &lt;module&gt;
-    from src.database.schema import create_database_schema
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_003_005_llm_optional_provider_final_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_003_005_llm_optional_provider_final_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_003_005_llm_optional_provider_final_validation.py:5: in &lt;module&gt;
-    import src.main
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_003_005_llm_optional_provider_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_003_005_llm_optional_provider_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_003_005_llm_optional_provider_validation.py:9: in &lt;module&gt;
-    import src.main
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_003_configuration_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_003_configuration_comprehensive_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_003_configuration_comprehensive_validation.py:35: in &lt;module&gt;
-    from src.core.config.models import (
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_004_anythingllm_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_004_anythingllm_comprehensive_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_004_anythingllm_comprehensive_validation.py:30: in &lt;module&gt;
-    from src.core.config.models import AnythingLLMConfig, CircuitBreakerConfig
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_004_production_readiness_assessment" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_004_production_readiness_assessment.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_004_production_readiness_assessment.py:33: in &lt;module&gt;
-    from src.core.config.models import AnythingLLMConfig, CircuitBreakerConfig
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_004_production_readiness_comprehensive" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_004_production_readiness_comprehensive.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_004_production_readiness_comprehensive.py:14: in &lt;module&gt;
-    from src.core.config.models import AnythingLLMConfig, CircuitBreakerConfig
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_005_llm_provider_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_005_llm_provider_comprehensive_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_005_llm_provider_comprehensive_validation.py:21: in &lt;module&gt;
-    from src.llm.models import LLMProviderUnavailableError, get_provider_status
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_006_document_processing_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_006_document_processing_comprehensive_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_006_document_processing_comprehensive_validation.py:3: in &lt;module&gt;
-    from src.main import app
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_006_llm_integration_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_006_llm_integration_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_006_llm_integration_validation.py:4: in &lt;module&gt;
-    from src.main import app
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_009_search_orchestrator_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_009_search_orchestrator_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_009_search_orchestrator_validation.py:26: in &lt;module&gt;
-    from src.search.orchestrator import SearchOrchestrator
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_010_complete_system_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_complete_system_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_010_complete_system_validation.py:30: in &lt;module&gt;
-    from src.enrichment.enricher import KnowledgeEnricher
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_010_complete_system_validation_final" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_complete_system_validation_final.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_010_complete_system_validation_final.py:30: in &lt;module&gt;
-    from src.enrichment.enricher import KnowledgeEnricher
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_010_complete_system_validation_fixed" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_complete_system_validation_fixed.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_010_complete_system_validation_fixed.py:30: in &lt;module&gt;
-    from src.enrichment.enricher import KnowledgeEnricher
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_010_final_production_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_final_production_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_010_final_production_validation.py:32: in &lt;module&gt;
-    from src.enrichment.enricher import KnowledgeEnricher
-E   ModuleNotFoundError: No module named 'src'</error></testcase><testcase classname="" name="tests.validation.test_prd_010_knowledge_enrichment_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_knowledge_enrichment_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_010_knowledge_enrichment_validation.py:18: in &lt;module&gt;
-    from src.enrichment import (
-src/enrichment/__init__.py:43: in &lt;module&gt;
-    from .config import (
-src/enrichment/config.py:14: in &lt;module&gt;
-    from src.core.config import get_system_configuration, reload_configuration
-E   ImportError: cannot import name 'get_system_configuration' from 'src.core.config' (/home/lab/docaiche/src/core/config/__init__.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_performance_benchmarks" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_performance_benchmarks.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_prd_010_performance_benchmarks.py:25: in &lt;module&gt;
-    from src.enrichment.config import EnrichmentConfig
-src/enrichment/__init__.py:43: in &lt;module&gt;
-    from .config import (
-src/enrichment/config.py:14: in &lt;module&gt;
-    from src.core.config import get_system_configuration, reload_configuration
-E   ImportError: cannot import name 'get_system_configuration' from 'src.core.config' (/home/lab/docaiche/src/core/config/__init__.py)</error></testcase></testsuite></testsuites>
+E   ImportError: cannot import name 'get_ingestion_pipeline' from 'src.api.v1.ingestion' (/home/lab/docaiche/src/api/v1/ingestion.py)</error></testcase></testsuite></testsuites>

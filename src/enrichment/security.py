@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 import signal
 
 from .models import EnrichmentTask
-from .exceptions import TaskExecutionError, EnrichmentError
+from .exceptions import TaskExecutionError, EnrichmentException
 
 logger = logging.getLogger(__name__)
 
