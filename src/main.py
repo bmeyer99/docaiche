@@ -2,8 +2,8 @@
 FastAPI application entry point for AI Documentation Cache System
 PRD-001: HTTP API Foundation - Main Application
 
-This module implements the FastAPI application initialization exactly as specified
-in task API-001, including CORS middleware, security middleware, and basic health endpoint.
+This module implements the comprehensive FastAPI application with all PRD-001
+components: middleware, exception handlers, rate limiting, and complete API endpoints.
 """
 
 import logging
@@ -13,12 +13,18 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from src.core.config import get_settings
 from src.core.security import SecurityMiddleware
-from src.api.v1.api import api_router
+from src.api.v1.api import api_router, setup_exception_handlers
+from src.api.v1.middleware import LoggingMiddleware, limiter, rate_limit_handler
+from src.api.v1.dependencies import cleanup_dependencies
 
-# Configure logging
+# Configure structured logging for container environments
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -31,6 +37,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Application lifespan context manager for startup and shutdown logic.
     
+    Manages dependency initialization and cleanup as specified in PRD-001.
+    
     Args:
         app: The FastAPI application instance
         
@@ -41,23 +49,35 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("AI Documentation Cache System API starting up...")
     try:
         settings = get_settings()
-        logger.info(f"Application starting in {settings.ENVIRONMENT} mode")
+        logger.info(f"Application starting in {settings.app.environment} mode")
+        
+        # Initialize rate limiter state
+        app.state.limiter = limiter
+        
+        logger.info("Application startup completed successfully")
         yield
+        
     finally:
         # Shutdown logic
         logger.info("AI Documentation Cache System API shutting down...")
+        try:
+            await cleanup_dependencies()
+            logger.info("Dependency cleanup completed")
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
+        logger.info("AI Documentation Cache System API shutdown complete")
 
 
 def create_application() -> FastAPI:
     """
-    Create and configure the FastAPI application.
+    Create and configure the FastAPI application with all PRD-001 components.
     
     Returns:
-        FastAPI: The configured FastAPI application instance
+        FastAPI: The fully configured FastAPI application instance
     """
     settings = get_settings()
     
-    # Create FastAPI application with exact specifications from task
+    # Create FastAPI application with comprehensive OpenAPI configuration
     application = FastAPI(
         title="AI Documentation Cache System API",
         version="1.0.0",
@@ -69,7 +89,9 @@ def create_application() -> FastAPI:
             {"name": "config", "description": "Configuration management"},
             {"name": "health", "description": "System health monitoring"},
         ],
-        lifespan=lifespan
+        lifespan=lifespan,
+        docs_url="/docs",  # API-006: Auto-generated OpenAPI documentation
+        redoc_url="/redoc"
     )
     
     # Add CORS middleware with development-friendly defaults
@@ -81,9 +103,19 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
     
+    # API-005: Add rate limiting middleware
+    application.state.limiter = limiter
+    application.add_middleware(SlowAPIMiddleware)
+    
+    # API-007 & API-010: Add structured logging middleware
+    application.add_middleware(LoggingMiddleware)
+    
     # Add security middleware for production environments
     if settings.app.environment == "production":
         application.add_middleware(SecurityMiddleware)
+    
+    # Setup all exception handlers (API-004, API-009)
+    setup_exception_handlers(application)
     
     # Include API router with v1 prefix
     application.include_router(api_router, prefix="/api/v1")

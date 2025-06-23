@@ -15,6 +15,9 @@ python-multipart>=0.0.6
 # HTTP client for external APIs
 aiohttp>=3.8.0
 
+# Rate limiting for API endpoints (API-005)
+slowapi>=0.1.9
+
 # Circuit breaker for resilience
 circuitbreaker>=1.4.0
 

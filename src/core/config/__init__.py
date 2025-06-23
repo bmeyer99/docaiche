@@ -143,7 +143,7 @@ def _build_default_config_dict() -> Dict[str, Any]:
                 "timeout_seconds": int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "60")),
             },
             "openai": {
-                "api_key": os.getenv("OPENAI_API_KEY", "development-key"),
+                "api_key": os.getenv("OPENAI_API_KEY", ""),
                 "model": os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"),
                 "temperature": float(os.getenv("OPENAI_TEMPERATURE", "0.7")),
                 "max_tokens": int(os.getenv("OPENAI_MAX_TOKENS", "4096")),

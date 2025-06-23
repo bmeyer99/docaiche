@@ -11,13 +11,15 @@ This module provides:
 """
 
 from .init_db import DatabaseInitializer
-from .connection import DatabaseManager, CacheManager
+from .manager import DatabaseManager, create_database_manager
 from .models import Base, SystemConfig, SearchCache, ContentMetadata, FeedbackEvents, UsageSignals, SourceMetadata, TechnologyMappings
+from .schema import create_database_schema
 
 __all__ = [
     "DatabaseInitializer",
     "DatabaseManager",
-    "CacheManager",
+    "create_database_manager",
+    "create_database_schema",
     "Base",
     "SystemConfig",
     "SearchCache",

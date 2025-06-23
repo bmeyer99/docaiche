@@ -1,6 +1,12 @@
 """
-Models module for AI Documentation Cache System
-PRD-001: HTTP API Foundation - Data Models Package
-
-This module contains all Pydantic models for request/response validation.
+Canonical Data Models Package - PRD-002 DB-011
+Shared data models ensuring consistency across all PRD components
 """
+
+from .document import DocumentMetadata, DocumentChunk, ProcessedDocument
+
+__all__ = [
+    "DocumentMetadata",
+    "DocumentChunk", 
+    "ProcessedDocument"
+]

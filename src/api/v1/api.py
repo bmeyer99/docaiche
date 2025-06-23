@@ -2,48 +2,62 @@
 API v1 router for AI Documentation Cache System
 PRD-001: HTTP API Foundation - Main API Router
 
-This module contains the main API router that will be included in the FastAPI application.
-Includes health endpoint and routes to all component endpoints.
+This module contains the main API router that integrates all PRD-001 endpoints
+with comprehensive middleware, error handling, and rate limiting.
 """
 
 import logging
-from datetime import datetime
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Request
+from fastapi.exceptions import RequestValidationError
+from slowapi.errors import RateLimitExceeded
 
+from .search_endpoints import router as search_router
+from .admin_endpoints import router as admin_router
+from .config_endpoints import router as config_router
+from .health_endpoints import router as health_router
 from .enrichment import enrichment_router
 from .ingestion import ingestion_router
+from .middleware import limiter, rate_limit_handler
+from .exceptions import (
+    validation_exception_handler,
+    http_exception_handler,
+    global_exception_handler
+)
 
 logger = logging.getLogger(__name__)
 
 # Create the main API router
 api_router = APIRouter()
 
-# Include component routers (they already have their own prefixes)
+# Include all endpoint routers
+api_router.include_router(search_router)
+api_router.include_router(admin_router)
+api_router.include_router(config_router)
+api_router.include_router(health_router)
 api_router.include_router(enrichment_router)
 api_router.include_router(ingestion_router)
 
+# Add rate limiter state to router
+api_router.state = type('State', (), {'limiter': limiter})()
 
-@api_router.get("/health", tags=["health"])
-async def health_check() -> Dict[str, Any]:
+
+def setup_exception_handlers(app):
     """
-    Basic health endpoint as specified in API-001 task requirements.
+    Setup all exception handlers for the FastAPI application.
     
-    Returns:
-        Dict[str, Any]: Health status with timestamp and version
-        
-    Raises:
-        HTTPException: If health check fails
+    Args:
+        app: FastAPI application instance
     """
-    try:
-        return {
-            "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat() + "Z",
-            "version": "1.0.0"
-        }
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Health check failed"
-        )
+    # API-004: Custom RequestValidationError handler
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    
+    # Rate limiting exception handler for API-005
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+    
+    # HTTP exception handler for structured error responses
+    app.add_exception_handler(Exception, http_exception_handler)
+    
+    # API-009: Global exception handler (fallback)
+    app.add_exception_handler(Exception, global_exception_handler)
+    
+    logger.info("Exception handlers configured successfully")
