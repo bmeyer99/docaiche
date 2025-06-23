@@ -2,7 +2,6 @@
 
 Responsible for assembling response objects from synthesized content and templates.
 """
-
 from typing import Any, Dict, Optional
 import logging
 
@@ -15,7 +14,7 @@ class ResponseBuilder:
         None (dependencies injected via methods if needed)
 
     Methods:
-        build: Assemble a response from content and metadata
+        build: Assemble a response from content and meta
 
     Raises:
         ValueError: On invalid input
@@ -33,14 +32,14 @@ class ResponseBuilder:
         self,
         synthesized_content: Any,
         template_name: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Build a structured response object.
 
         Args:
             synthesized_content: Content to include in the response
             template_name: Name of the template to use
-            metadata: Optional metadata for the response
+            meta: Optional meta for the response
 
         Returns:
             Dict representing the response structure
@@ -54,11 +53,11 @@ class ResponseBuilder:
             response = {
                 "template": template_name,
                 "content": synthesized_content,
-                "metadata": metadata or {},
+                "metadata": meta or {},
             }
-            # Extensible: allow metadata to override/add top-level keys
-            if metadata:
-                for k, v in metadata.items():
+            # Extensible: allow meta to override/add top-level keys
+            if meta:
+                for k, v in meta.items():
                     if k not in response:
                         response[k] = v
             return response

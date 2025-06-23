@@ -2,7 +2,6 @@
 
 Ensures generated responses meet quality, structure, and completeness requirements.
 """
-
 from typing import Any, Dict, Optional
 import logging
 
@@ -42,7 +41,7 @@ class ResponseValidator:
             quality_checks: Optional quality check parameters
 
         Returns:
-            True if valid, raises ValueError otherwise
+            True if valid, False if invalid
 
         Raises:
             ValueError: On validation failure
@@ -68,7 +67,7 @@ class ResponseValidator:
             if errors:
                 for err in errors:
                     self.logger.error(f"Response validation error: {err}")
-                raise ValueError(f"Response validation failed: {errors}")
+                return False
             return True
         except Exception as e:
             self.logger.error(f"Response validation exception: {e}")

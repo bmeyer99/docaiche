@@ -2,7 +2,6 @@
 
 Responsible for merging, deduplicating, and prioritizing content for response generation.
 """
-
 from typing import Any, Dict, Optional, List
 import logging
 
@@ -49,6 +48,14 @@ class ContentSynthesizer:
             ValueError: On invalid input
         """
         try:
+            # Input validation
+            if search_results is None and enriched_content is None:
+                raise ValueError("At least one of search_results or enriched_content must be provided.")
+            if search_results is not None and not isinstance(search_results, (list, dict, str)):
+                raise ValueError("search_results must be a list, dict, or str.")
+            if enriched_content is not None and not isinstance(enriched_content, (list, dict, str)):
+                raise ValueError("enriched_content must be a list, dict, or str.")
+
             # Normalize input to lists
             base = []
             if search_results:

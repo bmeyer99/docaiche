@@ -23,7 +23,7 @@ class ResponseGenerator:
     Args:
         builder: ResponseBuilder instance for constructing responses
         template_engine: TemplateEngine for formatting and rendering
-        synthesizer: ContentSynthesizer for combining search and enrichment
+        content_synthesizer: ContentSynthesizer for combining search and enrichment
         formatter: ResponseFormatter for output format handling
         validator: ResponseValidator for quality checks
 
@@ -41,17 +41,17 @@ class ResponseGenerator:
 
     def __init__(
         self,
-        builder: ResponseBuilder,
-        template_engine: TemplateEngine,
-        synthesizer: ContentSynthesizer,
-        formatter: ResponseFormatter,
-        validator: ResponseValidator,
+        builder: Optional[ResponseBuilder] = None,
+        template_engine: Optional[TemplateEngine] = None,
+        content_synthesizer: Optional[ContentSynthesizer] = None,
+        formatter: Optional[ResponseFormatter] = None,
+        validator: Optional[ResponseValidator] = None,
     ):
-        self.builder = builder
-        self.template_engine = template_engine
-        self.synthesizer = synthesizer
-        self.formatter = formatter
-        self.validator = validator
+        self.builder = builder or ResponseBuilder()
+        self.template_engine = template_engine or TemplateEngine()
+        self.content_synthesizer = content_synthesizer or ContentSynthesizer()
+        self.formatter = formatter or ResponseFormatter()
+        self.validator = validator or ResponseValidator()
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     async def generate_response(
@@ -79,15 +79,15 @@ class ResponseGenerator:
         """
         try:
             # 1. Synthesize content from search_results and enriched_content
-            synthesized_content = self.synthesizer.synthesize(
+            synthesized_content = self.content_synthesizer.synthesize(
                 search_results, enriched_content, context
             )
 
             # 2. Build response structure using ResponseBuilder
             template_name = context.get("template_name") if context and "template_name" in context else "default"
-            metadata = context.get("metadata") if context and "metadata" in context else {}
+            meta = context.get("meta") if context and "meta" in context else {}
             response_obj = self.builder.build(
-                synthesized_content, template_name, metadata
+                synthesized_content, template_name, meta
             )
 
             # 3. Render response using TemplateEngine
@@ -97,7 +97,7 @@ class ResponseGenerator:
                 self.logger.error(f"Template loading failed: {e}")
                 raise ResponseGenerationError(f"Template loading failed: {e}")
 
-            render_ctx = dict(query=query, **(metadata or {}))
+            render_ctx = dict(query=query, **(meta or {}))
             render_ctx["content"] = synthesized_content
             try:
                 rendered = self.template_engine.render_template(template_str, render_ctx)

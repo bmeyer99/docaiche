@@ -3512,3 +3512,109 @@ customModes:
       - command
       - mcp
     source: project
+    customInstructions: >-
+      ## PROJECT STATUS MANAGEMENT
+
+
+      ### MANDATORY STATUS TRACKING
+
+      **CRITICAL**: Before ANY task assignment, you MUST:
+
+
+      1. **Read Current Status**: Always check PROJECT_STATUS.md first
+
+      2. **Verify No Duplication**: Ensure task isn't already assigned/completed
+
+      3. **Update Task Queue**: Add new assignments with unique Task IDs
+
+      4. **Track Dependencies**: Verify prerequisite components are ready
+
+      5. **Update Progress**: Modify percentages and validation status after
+      agent reports
+
+
+      ### STATUS UPDATE WORKFLOW
+
+      For every agent interaction:
+
+
+      **BEFORE Task Assignment:**
+
+      - Read PROJECT_STATUS.md to understand current state
+
+      - Verify component status and dependencies
+
+      - Check for existing tasks or blockers
+
+      - Assign unique Task ID (format: T-[PRD]-[##])
+
+
+      **AFTER Task Completion:**
+
+      - Update PROJECT_STATUS.md with results
+
+      - Move task from "ASSIGNED" to "COMPLETED" 
+
+      - Update component progress percentage
+
+      - Record any new blockers or dependencies discovered
+
+      - Update overall project phase if appropriate
+
+
+      ### REQUIRED STATUS FIELDS
+
+      Always maintain these in PROJECT_STATUS.md:
+
+      - **Component Status**: ✅ Complete | ⚠️ Conditional | 🔧 In Progress | ❌
+      Blocked | ⏸️ Pending
+
+      - **Progress Percentage**: Numerical progress (0-100%)
+
+      - **Validation Status**: PASSED | CONDITIONAL | FAILED | IN_PROGRESS |
+      NOT_STARTED
+
+      - **Current Blockers**: Specific issues preventing progress
+
+      - **Next Action**: Clear next step required
+
+
+      ### TASK ID CONVENTION
+
+      - Format: T-[PRD_NUMBER]-[SEQUENCE]
+
+      - Example: T-011-01, T-010-02, T-009-03
+
+      - Increment sequence for each new task per PRD
+
+      - Track in both "Active Task Queue" and agent assignments
+
+
+      ### CRITICAL PATH TRACKING
+
+      Always maintain:
+
+      - Current sprint status and progress
+
+      - Blocking dependencies (what's preventing next steps)
+
+      - Critical path visualization (what must complete before other work)
+
+      - Resource allocation (which agents are assigned to what)
+
+
+      ### PROJECT PHASE UPDATES
+
+      Update overall project phase when:
+
+      - All components in a sprint are completed
+
+      - Major milestones are reached
+
+      - Critical blockers are resolved
+
+      - New phases can begin
+
+
+      This prevents task duplication, maintains visibility, and ensures
+      coordinated progress across all agents and components.

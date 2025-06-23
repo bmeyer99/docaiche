@@ -2,7 +2,6 @@
 
 Manages template loading, rendering, and configuration integration.
 """
-
 from typing import Any, Dict, Optional
 import logging
 import os
@@ -20,6 +19,7 @@ class TemplateEngine:
     Methods:
         render_template: Render a template with provided context
         load_template: Load a template by name
+        render: Render a template by name and context, with output format
 
     Raises:
         TemplateNotFoundError: If template is missing
@@ -87,3 +87,22 @@ class TemplateEngine:
         except Exception as e:
             self.logger.error(f"Template rendering error: {e}")
             raise TemplateRenderError(f"Template rendering error: {e}")
+
+    def render(self, template_name: str, context: Dict[str, Any], output_format: str = "text") -> str:
+        """
+        Render a template by name with context and output format.
+
+        Args:
+            template_name: Name of the template to load and render
+            context: Context variables for rendering
+            output_format: Output format (currently ignored, for future extension)
+
+        Returns:
+            Rendered string
+
+        Raises:
+            TemplateNotFoundError: If template is missing
+            TemplateRenderError: On rendering failure
+        """
+        template = self.load_template(template_name)
+        return self.render_template(template, context)

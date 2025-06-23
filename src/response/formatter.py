@@ -2,7 +2,6 @@
 
 Supports formatting responses as JSON, Markdown, or other formats.
 """
-
 from typing import Any, Dict
 import logging
 import json
@@ -47,40 +46,55 @@ class ResponseFormatter:
             ValueError: On unsupported format
         """
         try:
+            if not response or not isinstance(response, dict):
+                raise ValueError("Response must be a non-empty dictionary.")
             if output_format.lower() == "json":
-                return json.dumps(response, ensure_ascii=False, indent=2)
+                result = json.dumps(response, ensure_ascii=False, indent=2)
+                if not result.strip():
+                    raise ValueError("Formatted JSON output is empty for valid input.")
+                return result
             elif output_format.lower() == "markdown":
-                # Simple Markdown: content as bullet points, metadata as code block
                 md = ""
                 if "content" in response:
                     md += "### Content\n"
-                    if isinstance(response["content"], list):
+                    if isinstance(response["content"], list) and response["content"]:
                         for item in response["content"]:
                             md += f"- {item}\n"
-                    else:
+                    elif response["content"]:
                         md += f"{response['content']}\n"
+                    else:
+                        md += "- (No content)\n"
+                else:
+                    md += "### Content\n- (No content)\n"
                 if "metadata" in response and response["metadata"]:
                     md += "\n#### Metadata\n"
                     md += "```json\n"
                     md += json.dumps(response["metadata"], ensure_ascii=False, indent=2)
                     md += "\n```\n"
+                if not md.strip():
+                    raise ValueError("Formatted Markdown output is empty for valid input.")
                 return md
             elif output_format.lower() == "html":
-                # Simple HTML: content as list, metadata as pre
                 html = "<div class='response'>"
                 if "content" in response:
                     html += "<h3>Content</h3>"
-                    if isinstance(response["content"], list):
+                    if isinstance(response["content"], list) and response["content"]:
                         html += "<ul>"
                         for item in response["content"]:
                             html += f"<li>{item}</li>"
                         html += "</ul>"
-                    else:
+                    elif response["content"]:
                         html += f"<p>{response['content']}</p>"
+                    else:
+                        html += "<p>(No content)</p>"
+                else:
+                    html += "<h3>Content</h3><p>(No content)</p>"
                 if "metadata" in response and response["metadata"]:
                     html += "<h4>Metadata</h4>"
                     html += "<pre>" + json.dumps(response["metadata"], ensure_ascii=False, indent=2) + "</pre>"
                 html += "</div>"
+                if not html.strip():
+                    raise ValueError("Formatted HTML output is empty for valid input.")
                 return html
             else:
                 self.logger.error(f"Unsupported output format: {output_format}")
