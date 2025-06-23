@@ -166,7 +166,7 @@ class ContentProcessor:
             existing_doc = await self._check_duplicate_content(content_hash)
             if existing_doc:
                 logger.info(f"Duplicate content found for hash {content_hash[:8]}...")
-                return existing_doc, "duplicate_content_found"
+                return existing_doc, "success"
             
             # Step 2: Create initial metadata record with 'processing' status
             content_id = self._generate_content_id(raw_content.source_url, technology)

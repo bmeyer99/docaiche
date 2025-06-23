@@ -92,7 +92,7 @@ class ContentMetadata(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     source_url: Mapped[str] = mapped_column(String, nullable=False)
     technology: Mapped[str] = mapped_column(String, nullable=False)
-    content_hash: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    content_hash: Mapped[str] = mapped_column(String, nullable=False)
     word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     heading_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     code_block_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

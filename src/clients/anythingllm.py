@@ -23,7 +23,7 @@ except ImportError:
         return decorator
 
 from src.core.config.models import AnythingLLMConfig
-from src.models.schemas import ProcessedDocument, DocumentChunk
+from src.models.schemas import ProcessedDocument, DocumentChunk, UploadResult
 from src.database.models import ContentMetadata
 from .exceptions import (
     AnythingLLMError,
@@ -157,7 +157,7 @@ class AnythingLLMClient:
             return await response.json()
     
     @circuit
-    async def upload_document(self, workspace_slug: str, document: ProcessedDocument) -> Dict[str, Any]:
+    async def upload_document(self, workspace_slug: str, document: ProcessedDocument) -> UploadResult:
         """
         Upload ProcessedDocument to workspace by iterating over chunks.
         

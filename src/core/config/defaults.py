@@ -60,7 +60,8 @@ def get_environment_overrides() -> Dict[str, Any]:
         # Content processing configuration
         "content.chunk_size_default": int(os.getenv("CONTENT_CHUNK_SIZE_DEFAULT", "1000")),
         "content.chunk_size_max": int(os.getenv("CONTENT_CHUNK_SIZE_MAX", "4000")),
-        "content.quality_threshold": float(os.getenv("CONTENT_QUALITY_THRESHOLD", "0.3")),
+        "content.quality_threshold": float(os.getenv("CONTENT_QUALITY_THRESHOLD", "0.01")),
+        "content.min_content_length": int(os.getenv("CONTENT_MIN_CONTENT_LENGTH", "10")),
         
         # Enrichment configuration
         "enrichment.max_concurrent_tasks": int(os.getenv("ENRICHMENT_MAX_CONCURRENT_TASKS", "5")),

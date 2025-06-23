@@ -107,6 +107,22 @@ class SearchResponse(BaseModel):
     technology_hint: Optional[str] = Field(None, description="Technology hint used")
 
 
+class UploadResult(BaseModel):
+    """
+    Result of document upload operation to AnythingLLM.
+    
+    Used by AnythingLLM client to return upload status and details.
+    """
+    document_id: str = Field(..., description="Document identifier")
+    workspace_slug: str = Field(..., description="Target workspace slug")
+    total_chunks: int = Field(..., description="Total number of chunks")
+    successful_uploads: int = Field(..., description="Successfully uploaded chunks")
+    failed_uploads: int = Field(..., description="Failed chunk uploads")
+    uploaded_chunk_ids: List[str] = Field(..., description="List of successfully uploaded chunk IDs")
+    failed_chunk_ids: List[str] = Field(..., description="List of failed chunk IDs")
+    errors: List[str] = Field(..., description="List of error messages")
+
+
 class HealthCheckResult(BaseModel):
     """
     Health check result for system components.

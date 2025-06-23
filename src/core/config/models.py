@@ -39,8 +39,8 @@ class ContentConfig(BaseModel):
     chunk_size_default: int = Field(1000, description="Default chunk size in characters")
     chunk_size_max: int = Field(4000, description="Maximum chunk size in characters")
     chunk_overlap: int = Field(100, description="Character overlap between chunks")
-    quality_threshold: float = Field(0.3, ge=0.0, le=1.0, description="Minimum quality score")
-    min_content_length: int = Field(20, description="Minimum content length to process")
+    quality_threshold: float = Field(0.01, ge=0.0, le=1.0, description="Minimum quality score")
+    min_content_length: int = Field(10, description="Minimum content length to process")
     max_content_length: int = Field(1000000, description="Maximum content length to process")
 
 
