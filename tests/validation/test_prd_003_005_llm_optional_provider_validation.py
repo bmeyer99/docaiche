@@ -1,4 +1,8 @@
+import sys
 import os
+# Only add the project root to sys.path for src.main import to work
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
 import pytest
 from fastapi.testclient import TestClient
 

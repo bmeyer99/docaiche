@@ -237,10 +237,10 @@ class ConfigurationManager:
                 or ai_dict.get("fallback_provider") == "openai"
             ):
                 openai_section = ai_dict.get("openai", {})
-                if openai_section:
+                if openai_section and any(openai_section.values()):
                     openai_config = OpenAIConfig(**openai_section)
                 else:
-                    openai_config = OpenAIConfig()
+                    openai_config = None
             
             ai_config = AIConfig(
                 primary_provider=ai_dict.get("primary_provider", "ollama"),
