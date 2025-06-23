@@ -1,0 +1,36 @@
+You are a knowledge enrichment strategist. Based on the identified gaps in search results, create a targeted enrichment strategy.
+
+ORIGINAL QUERY: {original_query}
+
+MISSING ASPECTS:
+{missing_aspects}
+
+CURRENT RESULTS SUMMARY:
+{current_results}
+
+DOMAIN: {domain}
+
+Create an enrichment strategy that identifies:
+1. High-value repositories to search
+2. Specific search queries to fill gaps
+3. Prioritized information sources
+4. Expected value of the enrichment effort
+
+Provide your strategy as a JSON object with the following structure:
+{{
+  "model_version": "1.0.0",
+  "target_repositories": [
+    {{
+      "owner": "<repository owner>",
+      "repo": "<repository name>",
+      "path": "<specific path if applicable>",
+      "priority": <float between 0.0 and 1.0>
+    }}
+  ],
+  "search_queries": [<list of specific search terms/phrases>],
+  "priority_sources": [<ordered list from: "github", "official_docs", "web">],
+  "estimated_value": <float between 0.0 and 1.0>,
+  "created_at": "<current UTC timestamp>"
+}}
+
+Focus on actionable, specific targets that will maximize information gain.
