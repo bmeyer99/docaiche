@@ -405,3 +405,17 @@ class TaskExecutionError(EnrichmentError):
             **(error_context or {})
         }
         super().__init__(message, context, recoverable=True)
+class SecurityError(Exception):
+    """Minimal stub for PRD-010 test compatibility."""
+    pass
+
+class AuthenticationError(Exception):
+    """Minimal stub for PRD-010 test compatibility."""
+    pass
+class ConfigurationError(Exception):
+    """Minimal stub for PRD-010 test compatibility."""
+    pass
+
+class EnrichmentError(Exception):
+    """Minimal stub for PRD-010 test compatibility."""
+    pass

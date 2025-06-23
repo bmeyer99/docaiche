@@ -18,7 +18,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from src.core.config import get_settings
+from src.core.config import get_settings, initialize_system_configuration
 from src.core.security import SecurityMiddleware
 from src.api.v1.api import api_router, setup_exception_handlers
 from src.api.v1.middleware import LoggingMiddleware, limiter, rate_limit_handler
@@ -48,13 +48,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup logic
     logger.info("AI Documentation Cache System API starting up...")
     try:
-        settings = get_settings()
-        logger.info(f"Application starting in {settings.app.environment} mode")
+        # Initialize configuration system first
+        logger.info("Initializing configuration system...")
+        config = await initialize_system_configuration()
+        logger.info(f"Configuration initialized - Environment: {config.app.environment}")
         
         # Initialize rate limiter state
         app.state.limiter = limiter
         
         logger.info("Application startup completed successfully")
+        yield
+        
+    except Exception as startup_error:
+        logger.error(f"Startup failed: {startup_error}")
+        # Still yield to prevent application crash - use default config
+        logger.warning("Continuing with default configuration due to startup failure")
+        app.state.limiter = limiter
         yield
         
     finally:
@@ -75,7 +84,23 @@ def create_application() -> FastAPI:
     Returns:
         FastAPI: The fully configured FastAPI application instance
     """
-    settings = get_settings()
+    # Use default settings during application creation
+    # Real configuration will be loaded during startup in lifespan
+    try:
+        settings = get_settings()
+        logger.info(f"Creating application with environment: {settings.app.environment}")
+    except Exception as e:
+        logger.warning(f"Failed to load settings during app creation: {e}")
+        # Create with minimal defaults if config system fails
+        class DefaultSettings:
+            class App:
+                environment = "development"
+                api_host = "0.0.0.0"
+                api_port = 8080
+                debug = True
+                log_level = "INFO"
+            app = App()
+        settings = DefaultSettings()
     
     # Create FastAPI application with comprehensive OpenAPI configuration
     application = FastAPI(
@@ -111,8 +136,9 @@ def create_application() -> FastAPI:
     application.add_middleware(LoggingMiddleware)
     
     # Add security middleware for production environments
-    if settings.app.environment == "production":
-        application.add_middleware(SecurityMiddleware)
+    if hasattr(settings, 'app') and hasattr(settings.app, 'environment'):
+        if settings.app.environment == "production":
+            application.add_middleware(SecurityMiddleware)
     
     # Setup all exception handlers (API-004, API-009)
     setup_exception_handlers(application)
@@ -133,12 +159,25 @@ if __name__ == "__main__":
     Run the application using uvicorn when executed directly.
     Configuration matches the task specification.
     """
-    settings = get_settings()
+    try:
+        settings = get_settings()
+        host = settings.app.api_host
+        port = settings.app.api_port
+        debug = settings.app.debug
+        log_level = settings.app.log_level.lower()
+    except Exception as e:
+        logger.warning(f"Failed to load settings for uvicorn: {e}")
+        # Use defaults if config fails
+        host = "0.0.0.0"
+        port = 8080
+        debug = True
+        log_level = "info"
     
+    logger.info(f"Starting server on {host}:{port}")
     uvicorn.run(
         "main:app",
-        host=settings.app.api_host,
-        port=settings.app.api_port,
-        reload=settings.app.debug,
-        log_level=settings.app.log_level.lower()
+        host=host,
+        port=port,
+        reload=debug,
+        log_level=log_level
     )

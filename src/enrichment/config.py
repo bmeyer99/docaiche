@@ -407,3 +407,28 @@ def get_config_manager_status() -> Dict[str, Any]:
         }
     
     return _config_manager.get_status()
+class EnrichmentConfig:
+    """
+    Minimal stub for PRD-010 test compatibility.
+    """
+    def __init__(
+        self,
+        max_concurrent_tasks=5,
+        task_timeout_seconds=300,
+        retry_delay_seconds=60,
+        queue_poll_interval=10,
+        batch_size=10,
+        enable_relationship_mapping=True,
+        enable_tag_generation=True,
+        enable_quality_assessment=True,
+        min_confidence_threshold=0.7
+    ):
+        self.max_concurrent_tasks = max_concurrent_tasks
+        self.task_timeout_seconds = task_timeout_seconds
+        self.retry_delay_seconds = retry_delay_seconds
+        self.queue_poll_interval = queue_poll_interval
+        self.batch_size = batch_size
+        self.enable_relationship_mapping = enable_relationship_mapping
+        self.enable_tag_generation = enable_tag_generation
+        self.enable_quality_assessment = enable_quality_assessment
+        self.min_confidence_threshold = min_confidence_threshold

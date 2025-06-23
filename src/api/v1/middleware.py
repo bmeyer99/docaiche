@@ -203,6 +203,6 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     
     return JSONResponse(
         status_code=429,
-        content=problem_detail.dict(),
+        content=problem_detail.model_dump(),
         headers={"Retry-After": str(exc.retry_after) if exc.retry_after else "60"}
     )

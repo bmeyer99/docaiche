@@ -1,16 +1,13 @@
 """
 API v1 Dependencies - PRD-001: HTTP API Foundation
-FastAPI dependency injection for database, cache, and service integrations
-
-This module provides dependency injection functions for FastAPI endpoints
-to access database managers, cache managers, and integrated services.
+FastAPI dependency injection with graceful degradation for zero-config startup
 """
 
 import logging
-from typing import Optional, AsyncGenerator
+from typing import Optional
 
 from fastapi import Depends, HTTPException
-from src.core.config import get_settings
+from src.core.config import get_system_configuration
 from src.database.connection import DatabaseManager, CacheManager, create_database_manager, create_cache_manager
 from src.clients.anythingllm import AnythingLLMClient
 from src.search.orchestrator import SearchOrchestrator
@@ -19,20 +16,118 @@ logger = logging.getLogger(__name__)
 
 # Global instances (will be initialized on first use)
 _db_manager: Optional[DatabaseManager] = None
-_cache_manager: Optional[CacheManager] = None
+_cache_manager: Optional[CacheManager] = None  
 _anythingllm_client: Optional[AnythingLLMClient] = None
 _search_orchestrator: Optional[SearchOrchestrator] = None
 
 
+class StubDatabaseManager:
+    """Stub database manager for degraded operation"""
+    
+    def __init__(self):
+        self._connected = False
+    
+    async def connect(self) -> None:
+        pass
+    
+    async def disconnect(self) -> None:
+        pass
+    
+    async def health_check(self) -> dict:
+        return {
+            "status": "degraded",
+            "connected": False,
+            "message": "Database unavailable - operating in stub mode"
+        }
+    
+    async def execute(self, query: str, params=()) -> None:
+        logger.warning("Database execute called in stub mode - operation ignored")
+    
+    async def fetch_one(self, query: str, params=()):
+        logger.warning("Database fetch_one called in stub mode - returning None")
+        return None
+    
+    async def fetch_all(self, query: str, params=()):
+        logger.warning("Database fetch_all called in stub mode - returning empty list")
+        return []
+
+
+class StubAnythingLLMClient:
+    """Stub AnythingLLM client for degraded operation"""
+    
+    def __init__(self, config=None):
+        self.config = config
+    
+    async def connect(self) -> None:
+        pass
+    
+    async def disconnect(self) -> None:
+        pass
+    
+    async def health_check(self) -> dict:
+        return {
+            "status": "unavailable",
+            "message": "AnythingLLM service not configured or unavailable"
+        }
+    
+    async def list_workspaces(self):
+        return []
+    
+    async def search_workspace(self, workspace_slug: str, query: str, limit: int = 20):
+        return []
+
+
+class StubCacheManager:
+    """Stub cache manager for degraded operation when Redis is unavailable"""
+    
+    def __init__(self):
+        self._connected = False
+    
+    async def connect(self) -> None:
+        pass
+    
+    async def disconnect(self) -> None:
+        pass
+    
+    async def get(self, key: str):
+        return None
+    
+    async def set(self, key: str, value, ttl: int) -> None:
+        pass
+    
+    async def delete(self, key: str) -> None:
+        pass
+    
+    async def increment(self, key: str) -> int:
+        return 1
+    
+    async def expire(self, key: str, seconds: int) -> None:
+        pass
+    
+    async def health_check(self) -> dict:
+        return {
+            "status": "unavailable",
+            "connected": False,
+            "message": "Cache service unavailable - operating without cache"
+        }
+
+
+class StubSearchOrchestrator:
+    """Stub search orchestrator for degraded operation"""
+    
+    def __init__(self, **kwargs):
+        pass
+    
+    async def health_check(self) -> dict:
+        return {
+            "status": "degraded",
+            "message": "Search orchestrator operating in degraded mode"
+        }
+
+
 async def get_database_manager() -> DatabaseManager:
     """
-    Dependency to get DatabaseManager instance.
-    
-    Returns:
-        DatabaseManager: Shared database manager instance
-        
-    Raises:
-        HTTPException: If database connection fails
+    Dependency to get DatabaseManager instance with graceful degradation
     """
     global _db_manager
     
@@ -42,24 +137,16 @@ async def get_database_manager() -> DatabaseManager:
             await _db_manager.connect()
             logger.info("Database manager initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize database manager: {e}")
-            raise HTTPException(
-                status_code=503,
-                detail="Database service unavailable"
-            )
+            logger.warning(f"Failed to initialize database manager: {e}")
+            logger.info("Using stub database manager for degraded operation")
+            _db_manager = StubDatabaseManager()
     
     return _db_manager
 
 
 async def get_cache_manager() -> CacheManager:
     """
-    Dependency to get CacheManager instance.
-    
-    Returns:
-        CacheManager: Shared cache manager instance
-        
-    Raises:
-        HTTPException: If cache connection fails (degraded mode allowed)
+    Dependency to get CacheManager instance with graceful degradation
     """
     global _cache_manager
     
@@ -70,41 +157,34 @@ async def get_cache_manager() -> CacheManager:
             logger.info("Cache manager initialized successfully")
         except Exception as e:
             logger.warning(f"Failed to initialize cache manager: {e}")
-            # For cache, we allow degraded operation without cache
-            # Create a mock cache manager that does nothing
-            _cache_manager = MockCacheManager()
+            logger.info("Using stub cache manager for degraded operation")
+            _cache_manager = StubCacheManager()
     
     return _cache_manager
 
 
 async def get_anythingllm_client() -> AnythingLLMClient:
     """
-    Dependency to get AnythingLLM client instance.
-    
-    Returns:
-        AnythingLLMClient: Shared AnythingLLM client instance
-        
-    Raises:
-        HTTPException: If AnythingLLM client initialization fails
+    Dependency to get AnythingLLM client instance with graceful degradation
     """
     global _anythingllm_client
     
     if _anythingllm_client is None:
         try:
-            config = get_settings()
-            _anythingllm_client = AnythingLLMClient(
-                endpoint=config.anythingllm.endpoint,
-                api_key=config.anythingllm.api_key
-            )
-            # Test connection
+            config = get_system_configuration()
+            _anythingllm_client = AnythingLLMClient(config.anythingllm)
+            await _anythingllm_client.connect()
+            # Test connection but don't fail hard
             await _anythingllm_client.health_check()
             logger.info("AnythingLLM client initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize AnythingLLM client: {e}")
-            raise HTTPException(
-                status_code=503,
-                detail="Vector database service unavailable"
-            )
+            logger.warning(f"Failed to initialize AnythingLLM client: {e}")
+            logger.info("Using stub AnythingLLM client for degraded operation")
+            try:
+                config = get_system_configuration()
+                _anythingllm_client = StubAnythingLLMClient(config.anythingllm)
+            except Exception:
+                _anythingllm_client = StubAnythingLLMClient()
     
     return _anythingllm_client
 
@@ -115,18 +195,7 @@ async def get_search_orchestrator(
     anythingllm_client: AnythingLLMClient = Depends(get_anythingllm_client)
 ) -> SearchOrchestrator:
     """
-    Dependency to get SearchOrchestrator instance.
-    
-    Args:
-        db_manager: Database manager dependency
-        cache_manager: Cache manager dependency
-        anythingllm_client: AnythingLLM client dependency
-        
-    Returns:
-        SearchOrchestrator: Configured search orchestrator instance
-        
-    Raises:
-        HTTPException: If search orchestrator initialization fails
+    Dependency to get SearchOrchestrator instance with graceful degradation
     """
     global _search_orchestrator
     
@@ -141,70 +210,26 @@ async def get_search_orchestrator(
             )
             logger.info("Search orchestrator initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize search orchestrator: {e}")
-            raise HTTPException(
-                status_code=503,
-                detail="Search service unavailable"
+            logger.warning(f"Failed to initialize search orchestrator: {e}")
+            logger.info("Using stub search orchestrator for degraded operation")
+            _search_orchestrator = StubSearchOrchestrator(
+                db_manager=db_manager,
+                cache_manager=cache_manager,
+                anythingllm_client=anythingllm_client
             )
     
     return _search_orchestrator
 
 
-class MockCacheManager:
-    """
-    Mock cache manager for degraded operation when Redis is unavailable.
-    All operations are no-ops to allow the application to continue functioning.
-    """
-    
-    def __init__(self):
-        self._connected = False
-    
-    async def connect(self) -> None:
-        """Mock connect - does nothing"""
-        pass
-    
-    async def disconnect(self) -> None:
-        """Mock disconnect - does nothing"""
-        pass
-    
-    async def get(self, key: str) -> None:
-        """Mock get - always returns None (cache miss)"""
-        return None
-    
-    async def set(self, key: str, value: any, ttl: int) -> None:
-        """Mock set - does nothing"""
-        pass
-    
-    async def delete(self, key: str) -> None:
-        """Mock delete - does nothing"""
-        pass
-    
-    async def increment(self, key: str) -> int:
-        """Mock increment - always returns 1"""
-        return 1
-    
-    async def expire(self, key: str, seconds: int) -> None:
-        """Mock expire - does nothing"""
-        pass
-    
-    async def health_check(self) -> dict:
-        """Mock health check - returns degraded status"""
-        return {
-            "status": "degraded",
-            "connected": False,
-            "error": "Cache service unavailable - operating in degraded mode"
-        }
-
-
 # Cleanup function for application shutdown
 async def cleanup_dependencies():
     """
-    Cleanup all dependency instances on application shutdown.
+    Cleanup all dependency instances on application shutdown
     """
     global _db_manager, _cache_manager, _anythingllm_client, _search_orchestrator
     
     try:
-        if _db_manager:
+        if _db_manager and hasattr(_db_manager, 'disconnect'):
             await _db_manager.disconnect()
             logger.info("Database manager disconnected")
         
@@ -212,9 +237,9 @@ async def cleanup_dependencies():
             await _cache_manager.disconnect()
             logger.info("Cache manager disconnected")
         
-        if _anythingllm_client and hasattr(_anythingllm_client, 'close'):
-            await _anythingllm_client.close()
-            logger.info("AnythingLLM client closed")
+        if _anythingllm_client and hasattr(_anythingllm_client, 'disconnect'):
+            await _anythingllm_client.disconnect()
+            logger.info("AnythingLLM client disconnected")
         
         # Reset global instances
         _db_manager = None

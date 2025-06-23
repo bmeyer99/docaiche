@@ -481,3 +481,17 @@ async def get_current_configuration() -> SystemConfiguration:
     """
     manager = await get_configuration_manager()
     return manager.get_configuration()
+
+# --- Implementation Engineer: Provide reload_configuration for import compatibility ---
+def reload_configuration():
+    """
+    Compatibility stub for FastAPI and enrichment imports.
+    Calls the async reload_configuration on the ConfigurationManager singleton.
+    """
+    try:
+        manager = ConfigurationManager()
+        import asyncio
+        return asyncio.run(manager.reload_configuration())
+    except Exception as e:
+        logger.warning(f"reload_configuration: failed due to {e}")
+        return None
