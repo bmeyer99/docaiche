@@ -300,26 +300,5 @@ async def delete_document(
         raise HTTPException(status_code=500, detail="Failed to delete document")
 
 
-# Exception handlers for ingestion-specific errors
-@ingestion_router.exception_handler(ValueError)
-async def validation_exception_handler(request, exc: ValueError):
-    """Handle validation errors with structured response"""
-    return JSONResponse(
-        status_code=400,
-        content=IngestionError(
-            error_code="VALIDATION_ERROR",
-            error_message=str(exc)
-        ).dict()
-    )
-
-
-@ingestion_router.exception_handler(RuntimeError)
-async def runtime_exception_handler(request, exc: RuntimeError):
-    """Handle runtime errors with structured response"""
-    return JSONResponse(
-        status_code=500,
-        content=IngestionError(
-            error_code="RUNTIME_ERROR",
-            error_message="Internal processing error"
-        ).dict()
-    )
+# Note: Exception handlers would be added to the main FastAPI app, not the router
+# These are handled through try/catch blocks in the endpoints above

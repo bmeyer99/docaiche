@@ -7,7 +7,7 @@ import logging
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import mimetypes
 
 logger = logging.getLogger(__name__)
@@ -40,13 +40,14 @@ class DocumentUploadRequest(BaseModel):
     title: Optional[str] = Field(None, description="Optional document title")
     source_url: Optional[str] = Field(None, description="Optional source URL reference")
     
-    @validator('content_type')
+    @field_validator('content_type')
+    @classmethod
     def validate_content_type(cls, v):
         """Validate content type is supported"""
         allowed_types = {
             'application/pdf',
             'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'text/plain',
             'text/markdown',
             'text/html',
@@ -56,7 +57,8 @@ class DocumentUploadRequest(BaseModel):
             raise ValueError(f'Unsupported content type: {v}')
         return v
     
-    @validator('filename')
+    @field_validator('filename')
+    @classmethod
     def validate_filename(cls, v):
         """Validate filename and extract format"""
         if not v or len(v.strip()) == 0:
@@ -81,7 +83,8 @@ class BatchUploadRequest(BaseModel):
     technology: str = Field(..., description="Default technology for all documents")
     batch_name: Optional[str] = Field(None, description="Optional batch identifier")
     
-    @validator('documents')
+    @field_validator('documents')
+    @classmethod
     def validate_batch_size(cls, v):
         """Validate batch size limits"""
         if len(v) == 0:

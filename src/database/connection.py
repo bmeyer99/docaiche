@@ -10,6 +10,7 @@ import logging
 import gzip
 import json
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any, List, Tuple, AsyncContextManager, Union
 from datetime import datetime, timedelta
@@ -627,12 +628,17 @@ async def create_database_manager(config: Optional[Dict[str, Any]] = None) -> Da
     else:
         db_path = config.get("db_path", "/app/data/docaiche.db")
     
-    # Fix SQLite URL construction - ensure no double slashes
-    # db_path already includes leading slash, so don't add extra slash
-    if db_path.startswith('/'):
-        database_url = f"sqlite+aiosqlite://{db_path}"
-    else:
-        database_url = f"sqlite+aiosqlite:///{db_path}"
+    # Fix SQLite URL construction for aiosqlite
+    # Convert relative paths to absolute and ensure proper URL format
+    if not os.path.isabs(db_path):
+        db_path = os.path.abspath(db_path)
+    
+    # Ensure database directory exists
+    db_dir = os.path.dirname(db_path)
+    os.makedirs(db_dir, exist_ok=True)
+    
+    # Construct proper SQLite URL for aiosqlite
+    database_url = f"sqlite+aiosqlite:///{db_path}"
     return DatabaseManager(database_url)
 
 

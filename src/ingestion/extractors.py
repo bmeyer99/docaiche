@@ -12,6 +12,28 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Optional dependency imports with availability flags
+try:
+    import PyPDF2
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    logger.warning("PyPDF2 not available - PDF extraction will be disabled")
+
+try:
+    import docx
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+    logger.warning("python-docx not available - Word document extraction will be disabled")
+
+try:
+    from bs4 import BeautifulSoup
+    BS4_AVAILABLE = True
+except ImportError:
+    BS4_AVAILABLE = False
+    logger.warning("BeautifulSoup4 not available - HTML extraction will be disabled")
+
 
 class DocumentExtractor:
     """
@@ -77,9 +99,7 @@ class DocumentExtractor:
     
     async def _extract_pdf(self, file_data: bytes) -> Tuple[str, Dict[str, Any]]:
         """Extract content from PDF file using PyPDF2"""
-        try:
-            import PyPDF2
-        except ImportError:
+        if not PDF_AVAILABLE:
             raise RuntimeError("PyPDF2 not available for PDF extraction")
         
         try:
@@ -123,9 +143,7 @@ class DocumentExtractor:
     
     async def _extract_word(self, file_data: bytes, format_type: str) -> Tuple[str, Dict[str, Any]]:
         """Extract content from Word documents using python-docx"""
-        try:
-            import docx
-        except ImportError:
+        if not DOCX_AVAILABLE:
             raise RuntimeError("python-docx not available for Word document extraction")
         
         try:
@@ -205,9 +223,7 @@ class DocumentExtractor:
     
     async def _extract_html(self, file_data: bytes) -> Tuple[str, Dict[str, Any]]:
         """Extract content from HTML file using BeautifulSoup"""
-        try:
-            from bs4 import BeautifulSoup
-        except ImportError:
+        if not BS4_AVAILABLE:
             raise RuntimeError("BeautifulSoup4 not available for HTML extraction")
         
         try:

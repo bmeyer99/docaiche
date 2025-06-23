@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Create the main API router
 api_router = APIRouter()
 
-# Include component routers
+# Include component routers (they already have their own prefixes)
 api_router.include_router(enrichment_router)
 api_router.include_router(ingestion_router)
 

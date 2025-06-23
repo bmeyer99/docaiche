@@ -27,7 +27,7 @@ class AppConfig(BaseModel):
     environment: Literal["development", "production", "testing"] = "production"
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
-    data_dir: str = "/app/data"
+    data_dir: str = "./data"
     api_host: str = "0.0.0.0"
     api_port: int = Field(8080, ge=1024, le=65535)
     web_port: int = Field(8081, ge=1024, le=65535)
@@ -40,7 +40,7 @@ class ContentConfig(BaseModel):
     chunk_size_max: int = Field(4000, description="Maximum chunk size in characters")
     chunk_overlap: int = Field(100, description="Character overlap between chunks")
     quality_threshold: float = Field(0.3, ge=0.0, le=1.0, description="Minimum quality score")
-    min_content_length: int = Field(50, description="Minimum content length to process")
+    min_content_length: int = Field(20, description="Minimum content length to process")
     max_content_length: int = Field(1000000, description="Maximum content length to process")
 
 
