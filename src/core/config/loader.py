@@ -231,7 +231,17 @@ class ConfigurationLoader:
             # Build AI configuration with nested providers
             ai_dict = config_dict.get("ai", {})
             ollama_config = OllamaConfig(**ai_dict.get("ollama", {}))
-            openai_config = OpenAIConfig(**ai_dict.get("openai", {}))
+            # Only instantiate OpenAIConfig if openai is enabled/selected
+            openai_config = None
+            if (
+                ai_dict.get("primary_provider") == "openai"
+                or ai_dict.get("fallback_provider") == "openai"
+            ):
+                openai_section = ai_dict.get("openai", {})
+                if openai_section:
+                    openai_config = OpenAIConfig(**openai_section)
+                else:
+                    openai_config = OpenAIConfig()
             
             ai_config = AIConfig(
                 primary_provider=ai_dict.get("primary_provider", "ollama"),

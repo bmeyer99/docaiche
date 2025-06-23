@@ -170,7 +170,7 @@ class AIConfig(BaseModel):
     fallback_provider: Optional[Literal["ollama", "openai"]] = Field("openai", description="Fallback LLM provider")
     enable_failover: bool = Field(True, description="Enable automatic failover")
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
-    openai: OpenAIConfig
+    openai: Optional[OpenAIConfig] = None
     cache_ttl_seconds: int = Field(3600, ge=0, description="Cache TTL for LLM responses")
 
 

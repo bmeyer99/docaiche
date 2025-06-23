@@ -169,6 +169,7 @@ def validate_environment_variables() -> Dict[str, str]:
     primary_provider = os.getenv("AI_PRIMARY_PROVIDER", "ollama")
     fallback_provider = os.getenv("AI_FALLBACK_PROVIDER")
     
+    # Only require OpenAI API key if OpenAI is selected as provider
     if primary_provider == "openai" and not os.getenv("OPENAI_API_KEY"):
         missing_vars["OPENAI_API_KEY"] = "Required when OpenAI is primary provider"
     

@@ -49,10 +49,12 @@ class SecretsManager:
             if not config.github.api_token:
                 required_secrets.append("GITHUB_API_TOKEN")
             
-            # Check OpenAI API key if OpenAI is configured
-            if (config.ai.primary_provider == "openai" or 
-                config.ai.fallback_provider == "openai"):
-                if not config.ai.openai.api_key:
+            # Check OpenAI API key only if OpenAI is selected and config is present
+            if (
+                (config.ai.primary_provider == "openai" or config.ai.fallback_provider == "openai")
+                and config.ai.openai is not None
+            ):
+                if not getattr(config.ai.openai, "api_key", None):
                     required_secrets.append("OPENAI_API_KEY")
             
             # Check Redis password in production

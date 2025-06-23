@@ -12,7 +12,77 @@ CRITICAL VALIDATION REQUIREMENTS:
 - Redis caching reducing redundant LLM calls
 - Security assessment passed with no vulnerabilities
 - Integration with PRD-002 and PRD-003 verified functional
+# ================================================================================
+# 0. OPTIONAL PROVIDER SCENARIOS (PRD-005/003)
+# ================================================================================
+
 """
+import pytest
+from src.llm.models import LLMProviderUnavailableError, get_provider_status
+from src.llm.client import LLMProviderClient
+
+class TestOptionalProviderScenarios:
+    """Test system behavior when no LLM providers are configured (PRD-005/003)"""
+
+    def test_client_starts_with_no_providers(self):
+        """System starts and operates with no LLM providers configured"""
+        config = {
+            "ollama": {"enabled": False},
+            "openai": {"enabled": False},
+            "primary_provider": None,
+            "fallback_provider": None,
+            "enable_failover": True,
+        }
+        client = LLMProviderClient(config)
+        status = get_provider_status(config)
+        assert status.any_provider_available is False
+        assert client.status.any_provider_available is False
+        assert client.providers == {}
+
+    @pytest.mark.asyncio
+    async def test_llm_operations_raise_unavailable_error(self):
+        """LLM operations raise LLMProviderUnavailableError when no providers configured"""
+        config = {
+            "ollama": {"enabled": False},
+            "openai": {"enabled": False},
+            "primary_provider": None,
+            "fallback_provider": None,
+            "enable_failover": True,
+        }
+        client = LLMProviderClient(config)
+        with pytest.raises(LLMProviderUnavailableError):
+            await client.generate_structured("prompt", object)
+        with pytest.raises(LLMProviderUnavailableError):
+            await client.evaluate_search_result("query", [])
+        with pytest.raises(LLMProviderUnavailableError):
+            await client.generate_enrichment_strategy("q", [], "", "")
+        with pytest.raises(LLMProviderUnavailableError):
+            await client.assess_content_quality("c", "u", "q", {})
+
+    def test_get_provider_status_function(self):
+        """get_provider_status returns correct status for enabled/disabled providers"""
+        config_enabled = {
+            "ollama": {"enabled": True, "endpoint": "http://localhost:11434", "model": "llama2"},
+            "openai": {"enabled": False},
+            "primary_provider": "ollama",
+            "fallback_provider": None,
+        }
+        status = get_provider_status(config_enabled)
+        assert status.ollama_available is True
+        assert status.openai_available is False
+        assert status.primary_provider == "ollama"
+        assert status.any_provider_available is True
+
+        config_disabled = {
+            "ollama": {"enabled": False},
+            "openai": {"enabled": False},
+            "primary_provider": None,
+            "fallback_provider": None,
+        }
+        status = get_provider_status(config_disabled)
+        assert status.ollama_available is False
+        assert status.openai_available is False
+        assert status.any_provider_available is False
 
 import pytest
 import asyncio

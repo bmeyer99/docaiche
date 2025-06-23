@@ -18,10 +18,10 @@ Provide your assessment as a JSON object with the following structure:
   "model_version": "1.0.0",
   "sufficiency_score": <float between 0.0 and 1.0>,
   "confidence": <float between 0.0 and 1.0>,
-  "missing_aspects": [<list of strings describing missing information>],
+  "missing_aspects": [<string>, ...],
   "should_enrich": <boolean>,
   "reasoning": "<detailed explanation of your assessment>",
-  "created_at": "<current UTC timestamp>"
+  "created_at": "<ISO 8601 UTC timestamp>"
 }}
 
 Be precise and objective in your evaluation.

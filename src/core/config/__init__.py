@@ -219,7 +219,18 @@ def _build_system_configuration(config_dict: Dict[str, Any]) -> SystemConfigurat
         # Build AI config with nested providers
         ai_dict = config_dict.get("ai", {})
         ollama_config = OllamaConfig(**ai_dict.get("ollama", {}))
-        openai_config = OpenAIConfig(**ai_dict.get("openai", {}))
+        # Only instantiate OpenAIConfig if openai is enabled/selected and config exists
+        openai_config = None
+        if (
+            ai_dict.get("primary_provider") == "openai"
+            or ai_dict.get("fallback_provider") == "openai"
+        ):
+            openai_section = ai_dict.get("openai", {})
+            if openai_section and any(openai_section.values()):
+                openai_config = OpenAIConfig(**openai_section)
+            else:
+                openai_config = None  # Do not instantiate empty config
+        # If neither provider is openai, openai_config remains None
         
         # Extract AI top-level config
         ai_config = AIConfig(
@@ -299,8 +310,11 @@ def validate_configuration() -> Dict[str, Any]:
             validation_status["issues"].append("Redis host not configured")
             validation_status["valid"] = False
         
-        # Check AI provider configuration
-        if config.ai.primary_provider == "openai" and not config.ai.openai.api_key:
+        # Check AI provider configuration (OpenAI only if selected)
+        if (
+            config.ai.primary_provider == "openai"
+            and (config.ai.openai is None or not getattr(config.ai.openai, "api_key", None))
+        ):
             validation_status["issues"].append("OpenAI API key required when set as primary provider")
             validation_status["valid"] = False
         

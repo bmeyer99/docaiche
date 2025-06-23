@@ -1,17 +1,19 @@
 # PRD-005: LLM Provider Integration Layer
 
 ## Overview
-Specifies a unified client for interacting with multiple Large Language Model (LLM) providers. Abstracts provider differences, manages structured prompting, parses JSON responses, and handles errors and failover.
+Specifies a unified client for interacting with multiple Large Language Model (LLM) providers. Abstracts provider differences, manages structured prompting, parses JSON responses, and handles errors and failover. **CRITICAL:** All LLM providers are optional user-configurable components, not required system dependencies.
 
 ## Technical Boundaries
-- Called by the AI Decision Engine.
-- Makes outbound HTTP requests to configured LLM providers (Ollama, OpenAI).
+- Called by the AI Decision Engine when LLM providers are configured.
+- Makes outbound HTTP requests to configured LLM providers (Ollama, OpenAI-compatible).
 - Depends on Configuration Management for provider details, API keys, and prompt templates.
+- **MUST** gracefully handle scenarios where no LLM providers are configured.
 
 ## Success Criteria
-- Seamless switching between providers.
+- Seamless switching between configured providers.
 - Reliable JSON parsing from LLM output.
 - Correct failover logic and error handling.
+- **System operates normally when no LLM providers are configured.**
 
 ## Dependencies
 | Component/PRD | Purpose |
@@ -25,6 +27,45 @@ Specifies a unified client for interacting with multiple Large Language Model (L
 - Caches responses using [`CacheManager`](PRD-002_DB_and_Caching_Layer.md) from [Database & Caching Layer](PRD-002_DB_and_Caching_Layer.md).
 - Called by [Search Orchestration Engine](PRD-009_search_orchestration_engine.md) for search evaluation and enrichment.
 - Prompt templates referenced in this PRD are stored as files in the configuration directory.
+
+## Provider Activation Architecture
+
+**FUNDAMENTAL PRINCIPLE:** LLM functionality is enhancement-only, not core system requirement.
+
+### Provider Lifecycle Management
+- **System Startup**: LLM providers initialized only when enabled in configuration
+- **Runtime Checks**: All LLM operations check provider availability before execution  
+- **Graceful Degradation**: System provides basic functionality without LLM providers
+- **Dynamic Configuration**: Providers can be enabled/disabled through configuration updates
+
+### Provider Status Handling
+```python
+class LLMProviderStatus(BaseModel):
+    """Runtime status of LLM provider availability"""
+    ollama_available: bool = False
+    openai_available: bool = False
+    primary_provider: Optional[str] = None
+    fallback_provider: Optional[str] = None
+    any_provider_available: bool = False
+
+def get_provider_status(config: AIConfig) -> LLMProviderStatus:
+    """Check which providers are available at runtime"""
+    status = LLMProviderStatus()
+    
+    if config.ollama.enabled and config.ollama.endpoint and config.ollama.model:
+        status.ollama_available = True
+        
+    if config.openai.enabled and config.openai.api_key and config.openai.model:
+        status.openai_available = True
+    
+    status.any_provider_available = status.ollama_available or status.openai_available
+    
+    if status.any_provider_available:
+        status.primary_provider = config.primary_provider
+        status.fallback_provider = config.fallback_provider
+    
+    return status
+```
 
 ## Prompt Templates
 
@@ -233,32 +274,47 @@ import asyncio
 
 class LLMProviderClient:
     def __init__(self, config: AIConfig):
-        # OpenAI (External API) - Higher tolerance for rate limits and external issues
-        self.openai_circuit_breaker = circuit(
-            failure_threshold=5,
-            recovery_timeout=300,
-            timeout=30,
-            expected_exception=(aiohttp.ClientError, asyncio.TimeoutError)
-        )
+        self.config = config
+        self.status = get_provider_status(config)
         
-        # Ollama (Internal Service) - Lower tolerance for predictable local service
-        self.ollama_circuit_breaker = circuit(
-            failure_threshold=3,
-            recovery_timeout=60,
-            timeout=30,
-            expected_exception=(aiohttp.ClientError)
-        )
+        # Only initialize circuit breakers for enabled providers
+        if self.status.openai_available:
+            # OpenAI (External API) - Higher tolerance for rate limits and external issues
+            self.openai_circuit_breaker = circuit(
+                failure_threshold=config.openai.circuit_breaker.failure_threshold,
+                recovery_timeout=config.openai.circuit_breaker.recovery_timeout,
+                timeout=config.openai.circuit_breaker.timeout_seconds,
+                expected_exception=(aiohttp.ClientError, asyncio.TimeoutError)
+            )
+        
+        if self.status.ollama_available:
+            # Ollama (Internal Service) - Lower tolerance for predictable local service
+            self.ollama_circuit_breaker = circuit(
+                failure_threshold=config.ollama.circuit_breaker.failure_threshold,
+                recovery_timeout=config.ollama.circuit_breaker.recovery_timeout,
+                timeout=config.ollama.circuit_breaker.timeout_seconds,
+                expected_exception=(aiohttp.ClientError)
+            )
     
-    @circuit_breaker
     async def _make_llm_request(self, provider: str, prompt: str, **kwargs):
-        # Protected LLM request with timeout and retry logic
+        """Protected LLM request with provider availability check"""
+        if not self.status.any_provider_available:
+            raise LLMProviderUnavailableError("No LLM providers configured or available")
+        
+        if provider == "ollama" and not self.status.ollama_available:
+            raise LLMProviderUnavailableError("Ollama provider not available")
+            
+        if provider == "openai" and not self.status.openai_available:
+            raise LLMProviderUnavailableError("OpenAI provider not available")
+        
+        # Circuit breaker logic here
         pass
 ```
 
 ## Data Models
 
 ```python
-from typing import List, Dict, Any, Literal
+from typing import List, Dict, Any, Literal, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -294,6 +350,38 @@ class QualityAssessment(BaseModel):
     content_type: Literal["tutorial", "reference", "guide", "example", "api", "other"]
     confidence: float = Field(..., ge=0.0, le=1.0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class LLMProviderUnavailableError(Exception):
+    """Raised when attempting to use LLM functionality without configured providers"""
+    pass
+```
+
+## Graceful Degradation Strategy
+
+When no LLM providers are configured, the system must:
+
+1. **Search Operations**: Return search results without AI-enhanced evaluation
+2. **Content Quality**: Use basic heuristics (length, source reputation) instead of LLM assessment
+3. **Enrichment Strategy**: Skip AI-driven enrichment strategy generation
+4. **User Interface**: Display clear messaging about LLM functionality being unavailable
+5. **API Responses**: Include `llm_enhanced: false` flag in responses when LLM features are disabled
+
+```python
+class SearchResultResponse(BaseModel):
+    """Search response with optional LLM enhancement indicators"""
+    results: List[SearchResult]
+    total_count: int
+    llm_enhanced: bool = Field(default=False, description="Whether LLM analysis was performed")
+    enhancement_reason: Optional[str] = Field(None, description="Reason for no LLM enhancement")
+    
+def create_fallback_response(results: List[SearchResult], reason: str) -> SearchResultResponse:
+    """Create search response when LLM providers unavailable"""
+    return SearchResultResponse(
+        results=results,
+        total_count=len(results),
+        llm_enhanced=False,
+        enhancement_reason=reason
+    )
 ```
 
 ## Implementation Tasks
@@ -301,20 +389,26 @@ class QualityAssessment(BaseModel):
 | Task ID | Description |
 |---------|-------------|
 | LLM-001 | Create BaseLLMProvider abstract class with async generate_structured |
-| LLM-002 | Implement OllamaProvider class (POST to /api/generate) |
-| LLM-003 | Implement OpenAIProvider class (uses openai.ChatCompletion.acreate) |
-| LLM-004 | Implement LLMProviderClient class, instantiates correct provider |
+| LLM-002 | Implement OllamaProvider class (POST to /api/generate) with availability checks |
+| LLM-003 | Implement OpenAIProvider class (uses openai.ChatCompletion.acreate) with availability checks |
+| LLM-004 | Implement LLMProviderClient class with optional provider instantiation |
 | LLM-005 | Create PromptManager utility for loading/formatting templates |
 | LLM-006 | Implement robust JSON parsing utility in BaseLLMProvider |
-| LLM-007 | Implement failover logic in LLMProviderClient |
+| LLM-007 | Implement failover logic in LLMProviderClient with graceful degradation |
 | LLM-008 | Implement Redis-based cache for LLM responses |
 | LLM-009 | Implement structured logging after every LLM interaction |
 | LLM-010 | Write unit tests for JSON parsing logic |
+| LLM-011 | Implement provider availability checking and status reporting |
+| LLM-012 | Add graceful degradation for all LLM-dependent operations |
+| LLM-013 | Create fallback response mechanisms for when no providers are available |
 
 ## Integration Contracts
 - Accepts Python primitives to format into prompt templates.
 - Returns validated Pydantic models parsed from LLM responses.
 - Raises specific errors for parsing or provider failures.
+- **MUST NOT** fail system startup when no LLM providers are configured.
+- **MUST** provide clear fallback behavior when LLM functionality is unavailable.
+- **MUST** validate provider configuration only when provider is enabled.
 
 ## Summary Tables
 
@@ -322,8 +416,8 @@ class QualityAssessment(BaseModel):
 
 | Method | Endpoint/Action         | Description                        |
 |--------|------------------------|------------------------------------|
-| POST   | /api/generate (Ollama) | Generates LLM response             |
-| POST   | OpenAI API             | Generates LLM response             |
+| POST   | /api/generate (Ollama) | Generates LLM response (when enabled) |
+| POST   | OpenAI API             | Generates LLM response (when enabled) |
 
 ### Data Models Table
 
@@ -333,6 +427,7 @@ class QualityAssessment(BaseModel):
 | RepositoryTarget   | Target repo for enrichment         | generate_enrichment_strategy    |
 | EnrichmentStrategy | Enrichment strategy                | generate_enrichment_strategy    |
 | QualityAssessment  | Content quality assessment         | assess_content_quality          |
+| LLMProviderStatus  | Runtime provider availability      | Provider management             |
 
 ### Implementation Tasks Table
 (see Implementation Tasks above)

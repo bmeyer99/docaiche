@@ -21,16 +21,17 @@ Provide your strategy as a JSON object with the following structure:
   "model_version": "1.0.0",
   "target_repositories": [
     {{
+      "model_version": "1.0.0",
       "owner": "<repository owner>",
       "repo": "<repository name>",
-      "path": "<specific path if applicable>",
+      "path": "<specific path within repository>",
       "priority": <float between 0.0 and 1.0>
     }}
   ],
-  "search_queries": [<list of specific search terms/phrases>],
-  "priority_sources": [<ordered list from: "github", "official_docs", "web">],
+  "search_queries": [<string>, ...],
+  "priority_sources": [<"github", "official_docs", "web">, ...],
   "estimated_value": <float between 0.0 and 1.0>,
-  "created_at": "<current UTC timestamp>"
+  "created_at": "<ISO 8601 UTC timestamp>"
 }}
 
 Focus on actionable, specific targets that will maximize information gain.

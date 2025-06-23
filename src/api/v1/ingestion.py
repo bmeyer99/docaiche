@@ -301,4 +301,111 @@ async def delete_document(
 
 
 # Note: Exception handlers would be added to the main FastAPI app, not the router
+# === PRD-006: Document Processing Pipeline Endpoints ===
+
+from src.document_processing.pipeline import DocumentProcessingPipeline
+from src.core.config.manager import ConfigurationManager
+from src.database.manager import DatabaseManager
+from src.cache.manager import CacheManager
+from src.document_processing.models import ProcessingJob
+from fastapi import status
+
+async def get_document_processing_pipeline() -> DocumentProcessingPipeline:
+    """
+    Dependency to provide DocumentProcessingPipeline instance.
+    """
+    try:
+        config_manager = ConfigurationManager()
+        db_manager = DatabaseManager()
+        cache_manager = CacheManager()
+        return DocumentProcessingPipeline(config_manager, db_manager, cache_manager)
+    except Exception as e:
+        logger.error(f"Failed to create DocumentProcessingPipeline: {e}")
+        raise HTTPException(status_code=500, detail="Document processing service unavailable")
+
+@ingestion_router.post(
+    "/v2/upload",
+    response_model=ProcessingJob,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["ingestion"]
+)
+async def upload_document_v2(
+    file: UploadFile = File(..., description="Document file to upload"),
+    pipeline: DocumentProcessingPipeline = Depends(get_document_processing_pipeline)
+) -> ProcessingJob:
+    """
+    Upload and process a document using PRD-006 pipeline.
+    """
+    try:
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No filename provided")
+        file_data = await file.read()
+        job = await pipeline.process_document(file_data, file.filename)
+        return job
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PRD-006 upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Document processing failed")
+
+@ingestion_router.get(
+    "/v2/status/{job_id}",
+    response_model=ProcessingJob,
+    tags=["ingestion"]
+)
+async def get_processing_status_v2(
+    job_id: str,
+    pipeline: DocumentProcessingPipeline = Depends(get_document_processing_pipeline)
+) -> ProcessingJob:
+    """
+    Get processing status for a document job (PRD-006).
+    """
+    try:
+        return await pipeline.get_processing_status(job_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PRD-006 status check failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get job status")
+
+@ingestion_router.post(
+    "/v2/retry/{job_id}",
+    response_model=dict,
+    tags=["ingestion"]
+)
+async def retry_failed_job_v2(
+    job_id: str,
+    pipeline: DocumentProcessingPipeline = Depends(get_document_processing_pipeline)
+) -> dict:
+    """
+    Retry a failed processing job (PRD-006).
+    """
+    try:
+        result = await pipeline.retry_failed_job(job_id)
+        return {"success": result, "job_id": job_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PRD-006 retry failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retry job")
+
+@ingestion_router.get(
+    "/v2/health",
+    response_model=dict,
+    tags=["ingestion"]
+)
+async def document_processing_health_check_v2(
+    pipeline: DocumentProcessingPipeline = Depends(get_document_processing_pipeline)
+) -> dict:
+    """
+    Health check for PRD-006 document processing pipeline.
+    """
+    try:
+        # Simple health check: try to instantiate pipeline and ping DB/cache
+        await pipeline.db_manager.health_check()
+        await pipeline.cache_manager.health_check()
+        return {"status": "healthy"}
+    except Exception as e:
+        logger.error(f"PRD-006 health check failed: {e}")
+        raise HTTPException(status_code=500, detail="Document processing pipeline unhealthy")
 # These are handled through try/catch blocks in the endpoints above

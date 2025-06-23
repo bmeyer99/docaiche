@@ -98,9 +98,10 @@ class RedisConfig(BaseModel):
     ssl_cert_reqs: Optional[str] = Field(None, description="SSL certificate requirements")
 
 class OllamaConfig(BaseModel):
-    """Ollama LLM provider configuration"""
-    endpoint: str = Field("http://localhost:11434", description="Ollama API endpoint")
-    model: str = Field("llama2", description="Default model to use")
+    """Ollama LLM provider configuration - OPTIONAL, user-configurable"""
+    enabled: bool = Field(False, description="Enable Ollama provider")
+    endpoint: Optional[str] = Field(None, description="Ollama API endpoint (e.g., http://localhost:11434)")
+    model: Optional[str] = Field(None, description="Default model to use when enabled")
     temperature: float = Field(0.7, ge=0.0, le=2.0, description="Model temperature")
     max_tokens: int = Field(4096, ge=1, description="Maximum tokens in response")
     timeout_seconds: int = Field(60, ge=1, description="Request timeout")
@@ -109,9 +110,11 @@ class OllamaConfig(BaseModel):
     )
 
 class OpenAIConfig(BaseModel):
-    """OpenAI LLM provider configuration"""
-    api_key: str = Field(..., description="OpenAI API key")
-    model: str = Field("gpt-3.5-turbo", description="Default model to use")
+    """OpenAI-compatible LLM provider configuration - OPTIONAL, user-configurable"""
+    enabled: bool = Field(False, description="Enable OpenAI-compatible provider")
+    api_key: Optional[str] = Field(None, description="API key (required when enabled)")
+    base_url: Optional[str] = Field(None, description="Custom API endpoint (defaults to OpenAI if not set)")
+    model: Optional[str] = Field(None, description="Default model to use when enabled")
     temperature: float = Field(0.7, ge=0.0, le=2.0, description="Model temperature")
     max_tokens: int = Field(4096, ge=1, description="Maximum tokens in response")
     timeout_seconds: int = Field(30, ge=1, description="Request timeout")
@@ -120,12 +123,12 @@ class OpenAIConfig(BaseModel):
     )
 
 class AIConfig(BaseModel):
-    """AI provider configuration with failover support"""
-    primary_provider: Literal["ollama", "openai"] = Field("ollama", description="Primary LLM provider")
-    fallback_provider: Optional[Literal["ollama", "openai"]] = Field("openai", description="Fallback LLM provider")
-    enable_failover: bool = Field(True, description="Enable automatic failover")
-    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
-    openai: OpenAIConfig
+    """AI provider configuration with optional providers and user-driven selection"""
+    primary_provider: Optional[Literal["ollama", "openai"]] = Field(None, description="Primary LLM provider (set when user configures)")
+    fallback_provider: Optional[Literal["ollama", "openai"]] = Field(None, description="Fallback LLM provider")
+    enable_failover: bool = Field(True, description="Enable automatic failover when both providers configured")
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig, description="Ollama provider configuration")
+    openai: OpenAIConfig = Field(default_factory=OpenAIConfig, description="OpenAI-compatible provider configuration")
     cache_ttl_seconds: int = Field(3600, ge=0, description="Cache TTL for LLM responses")
 
 class SystemConfiguration(BaseModel):
@@ -162,6 +165,57 @@ The following environment variables map to RedisConfig fields for containerized 
 
 **Password Handling:** For production deployments, set `REDIS_PASSWORD` in the `.env` file and ensure the Redis container is configured with the same password using Redis AUTH command or configuration file.
 
+## LLM Provider Configuration Architecture
+
+**CRITICAL ARCHITECTURAL PRINCIPLE:** LLM providers are optional, user-configurable components, NOT required system dependencies.
+
+### Provider Activation Model
+- **System Startup**: No LLM providers required for basic operation
+- **User Configuration**: Providers activated only when user configures them
+- **Runtime Validation**: API keys and endpoints validated only when provider is enabled
+- **Graceful Degradation**: System functions without LLM providers configured
+
+### Environment Variable Mapping for LLM Providers
+
+| Environment Variable | Config Field | Required | Description |
+|---------------------|--------------|----------|-------------|
+| `OLLAMA_ENABLED` | `ai.ollama.enabled` | No | Enable Ollama provider (default: false) |
+| `OLLAMA_ENDPOINT` | `ai.ollama.endpoint` | When enabled | Ollama API endpoint |
+| `OLLAMA_MODEL` | `ai.ollama.model` | When enabled | Default Ollama model |
+| `OPENAI_ENABLED` | `ai.openai.enabled` | No | Enable OpenAI provider (default: false) |
+| `OPENAI_API_KEY` | `ai.openai.api_key` | When enabled | API key for OpenAI-compatible endpoint |
+| `OPENAI_BASE_URL` | `ai.openai.base_url` | No | Custom API endpoint (defaults to OpenAI) |
+| `OPENAI_MODEL` | `ai.openai.model` | When enabled | Default model name |
+
+### Configuration Validation Rules
+
+```python
+def validate_ai_config(ai_config: AIConfig) -> None:
+    """Validate AI configuration based on enabled providers"""
+    
+    # Validate Ollama when enabled
+    if ai_config.ollama.enabled:
+        if not ai_config.ollama.endpoint:
+            raise ValueError("Ollama endpoint required when Ollama is enabled")
+        if not ai_config.ollama.model:
+            raise ValueError("Ollama model required when Ollama is enabled")
+    
+    # Validate OpenAI when enabled
+    if ai_config.openai.enabled:
+        if not ai_config.openai.api_key:
+            raise ValueError("OpenAI API key required when OpenAI is enabled")
+        if not ai_config.openai.model:
+            raise ValueError("OpenAI model required when OpenAI is enabled")
+    
+    # Validate primary provider selection
+    if ai_config.primary_provider:
+        provider_config = getattr(ai_config, ai_config.primary_provider)
+        if not provider_config.enabled:
+            raise ValueError(f"Primary provider {ai_config.primary_provider} must be enabled")
+    
+    # No validation required when no providers are enabled - system should work
+```
+
 ## Implementation Tasks
 
 | Task ID | Description |
@@ -177,11 +231,14 @@ The following environment variables map to RedisConfig fields for containerized 
 | CFG-009 | Implement /api/v1/config POST and GET endpoints |
 | CFG-010 | Implement hot-reloading mechanism for config.yaml |
 | CFG-011 | Implement Redis configuration validation against docker-compose.yml settings |
+| CFG-012 | Implement optional LLM provider validation (only when enabled) |
+| CFG-013 | Add user configuration UI for LLM provider setup |
 
 ## Integration Contracts
 - Reads from environment, YAML file, and database.
 - Provides validated SystemConfiguration Pydantic object.
-- Fails to start if config validation fails.
+- **MUST NOT** fail to start if LLM provider configuration is missing.
+- **MUST** validate LLM provider configuration only when provider is enabled.
 - **Redis Configuration Validation:** Validates RedisConfig parameters against [`docker-compose.yml`](PRD-013_operations_and_deployment.md:97-105) Redis service configuration to ensure compatibility.
 - **Production Password Handling:** For production deployments, RedisConfig validates that password authentication is properly configured when Redis service requires AUTH.
 
@@ -195,8 +252,8 @@ The following environment variables map to RedisConfig fields for containerized 
 | AnythingLLMConfig    | AnythingLLM client config          | PRD-004                  |
 | RedisConfig          | Redis cache config                 | PRD-002, PRD-005, etc.   |
 | GitHubConfig         | GitHub API config                  | PRD-006                  |
-| OllamaConfig         | Ollama LLM config                  | PRD-005                  |
-| OpenAIConfig         | OpenAI LLM config                  | PRD-005                  |
+| OllamaConfig         | Ollama LLM config (optional)       | PRD-005                  |
+| OpenAIConfig         | OpenAI LLM config (optional)       | PRD-005                  |
 | AIConfig             | AI provider config                 | PRD-005                  |
 | ScrapingConfig       | Web scraping config                | PRD-007                  |
 | ContentConfig        | Content processing config          | PRD-008                  |

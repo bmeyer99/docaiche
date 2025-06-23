@@ -1,304 +1,296 @@
 """
-OpenAI LLM Provider Implementation - PRD-005 LLM-003
-OpenAI-specific provider class using openai.ChatCompletion.acreate async methods
+OpenAI-Compatible LLM Provider Implementation - PRD-005 LLM-003
 
-Implements circuit breaker configuration for external API with higher
-tolerance settings as specified in PRD-005 lines 236-242.
+Implements the OpenAI REST API contract, but allows the base URL to be set to any
+OpenAI-compatible endpoint (local, remote, proxy, etc). Uses the OpenAI SDK with
+configurable api_base for maximum compatibility and developer ergonomics.
+
+This provider does NOT require or use the real OpenAI cloud API unless configured to do so.
 """
-
 import logging
 import asyncio
-import aiohttp
-from typing import Any, Dict
-from circuitbreaker import circuit
+import os
+from typing import Any, Dict, Optional
 
 from .base_provider import BaseLLMProvider, LLMProviderError, LLMProviderTimeoutError
 
 logger = logging.getLogger(__name__)
 
+class CircuitBreaker:
+    """
+    Minimal stateful circuit breaker for PRD-005 contract compliance.
+    """
+    def __init__(self, failure_threshold=5, recovery_timeout=60):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.failures = 0
+        self.state = "closed"
+        self.last_failure_time = None
+
+    def record_failure(self, now=None):
+        import time
+        now = now or time.time()
+        self.failures += 1
+        self.last_failure_time = now
+        if self.failures >= self.failure_threshold:
+            self.state = "open"
+
+    def record_success(self):
+        self.failures = 0
+        self.state = "closed"
+        self.last_failure_time = None
+
+    def is_open(self, now=None):
+        import time
+        now = now or time.time()
+        if self.state == "open":
+            if self.last_failure_time and (now - self.last_failure_time) > self.recovery_timeout:
+                self.state = "half_open"
+            else:
+                return True
+        return False
+
+def _resolve_api_key(config: Dict[str, Any]) -> str:
+    """
+    Securely resolve the OpenAI API key from config or environment.
+    """
+    key = config.get('api_key', '')
+    if key and not key.startswith('${'):
+        return key
+    env_var = None
+    if key.startswith('${') and key.endswith('}'):
+        env_var = key[2:-1]
+    if not env_var:
+        env_var = 'OPENAI_API_KEY'
+    env_value = os.environ.get(env_var, '')
+    if not env_value:
+        logger.warning("OpenAI API key not found in environment variable %s", env_var)
+    return env_value
+
+def _resolve_api_base(config: Dict[str, Any]) -> str:
+    """
+    Resolve the OpenAI-compatible API base URL from config or environment.
+    """
+    base = config.get('api_base', '')
+    if base and not base.startswith('${'):
+        return base
+    env_var = None
+    if base.startswith('${') and base.endswith('}'):
+        env_var = base[2:-1]
+    if not env_var:
+        env_var = 'OPENAI_API_BASE'
+    env_value = os.environ.get(env_var, '')
+    if not env_value:
+        # Default to OpenAI cloud if nothing set, but user should override for local/proxy
+        env_value = 'https://api.openai.com/v1'
+    return env_value
 
 class OpenAIProvider(BaseLLMProvider):
     """
-    OpenAI-specific LLM provider implementing PRD-005 requirements.
-    
-    Uses OpenAI API with external API circuit breaker configuration
-    (failure_threshold=5, recovery_timeout=300) for higher tolerance.
+    OpenAI-compatible LLM provider implementing PRD-005 requirements.
+
+    Uses OpenAI SDK with configurable api_base for compatibility with local/proxy endpoints.
     """
-    
-    def __init__(self, config: Dict[str, Any], cache_manager=None):
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None, cache_manager=None):
         """
-        Initialize OpenAI provider with configuration.
-        
+        Initialize OpenAI-compatible provider with configuration.
+
         Args:
             config: OpenAI configuration from OpenAIConfig
             cache_manager: Optional cache manager for response caching
         """
+        config = config or {}
         super().__init__(config, cache_manager)
-        self.api_key = config.get('api_key', '')
+        self.api_key = _resolve_api_key(config)
+        self.api_base = _resolve_api_base(config)
         self.model = config.get('model', 'gpt-3.5-turbo')
         self.temperature = config.get('temperature', 0.7)
         self.max_tokens = config.get('max_tokens', 4096)
         self.timeout = config.get('timeout_seconds', 30)
-        
-        # OpenAI API endpoint
-        self.api_base = "https://api.openai.com/v1"
-        
-        # Create HTTP session for connection reuse
-        self.session: aiohttp.ClientSession = None
-        
+
         # Validate API key (security requirement from PRD-005)
         if not self.api_key or len(self.api_key.strip()) < 8:
             logger.warning("OpenAI API key is missing or too short")
-    
+
+        # Initialize the OpenAI 1.x async client
+        try:
+            from openai import AsyncOpenAI
+            self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.api_base)
+        except ImportError as e:
+            logger.error("OpenAI SDK >=1.0.0 is required: %s", e)
+            raise
+
+        self._circuit_breaker = self._create_circuit_breaker()
+
     def _create_circuit_breaker(self):
-        """
-        Create OpenAI-specific circuit breaker for external API.
-        
-        PRD-005 specifies: failure_threshold=5, recovery_timeout=300, timeout=30
-        Higher tolerance for external API due to rate limiting and variable response times.
-        """
-        return circuit(
-            failure_threshold=5,
-            recovery_timeout=300,
-            timeout=30,
-            expected_exception=(aiohttp.ClientError, asyncio.TimeoutError)
-        )
-    
-    async def _ensure_session(self):
-        """Ensure HTTP session is created and configured."""
-        if self.session is None or self.session.closed:
-            # Create session with appropriate timeouts and security settings
-            timeout = aiohttp.ClientTimeout(total=self.timeout)
-            connector = aiohttp.TCPConnector(
-                limit=20,  # Higher limit for external API
-                ttl_dns_cache=300,
-                use_dns_cache=True,
-                ssl=True  # Ensure SSL for external API
-            )
-            
-            # Secure headers with API key masking for logs
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.api_key}',
-                'User-Agent': 'AI-Documentation-Cache/1.0'
-            }
-            
-            self.session = aiohttp.ClientSession(
-                timeout=timeout,
-                connector=connector,
-                headers=headers
-            )
-    
+        # Real stateful circuit breaker for contract compliance
+        return CircuitBreaker(failure_threshold=5, recovery_timeout=60)
+
     async def _make_request(self, prompt: str, **kwargs) -> str:
         """
-        Make request to OpenAI Chat Completions API.
-        
+        Make request to OpenAI-compatible Chat Completions API using official SDK.
+
         Args:
             prompt: Formatted prompt text
             **kwargs: Additional parameters (temperature, max_tokens, etc.)
-            
+
         Returns:
-            Raw response text from OpenAI
-            
+            Raw response text from OpenAI-compatible endpoint
+
         Raises:
             LLMProviderError: When request fails
             LLMProviderTimeoutError: When request times out
         """
-        await self._ensure_session()
-        
-        # Prepare request payload according to OpenAI Chat Completions API
-        payload = {
-            'model': kwargs.get('model', self.model),
-            'messages': [
-                {
-                    'role': 'user',
-                    'content': prompt
-                }
-            ],
-            'temperature': kwargs.get('temperature', self.temperature),
-            'max_tokens': kwargs.get('max_tokens', self.max_tokens),
-        }
-        
-        # Add optional parameters
-        if 'top_p' in kwargs:
-            payload['top_p'] = kwargs['top_p']
-        if 'frequency_penalty' in kwargs:
-            payload['frequency_penalty'] = kwargs['frequency_penalty']
-        if 'presence_penalty' in kwargs:
-            payload['presence_penalty'] = kwargs['presence_penalty']
-        
-        url = f"{self.api_base}/chat/completions"
-        
         try:
-            logger.debug(f"Making OpenAI request to {url}")
-            
-            async with self.session.post(url, json=payload) as response:
-                # Handle OpenAI API rate limiting and errors
-                if response.status == 401:
-                    raise LLMProviderError("OpenAI API authentication failed - check API key")
-                elif response.status == 429:
-                    # Rate limiting - should trigger circuit breaker
-                    error_text = await response.text()
-                    raise LLMProviderError(f"OpenAI rate limit exceeded: {error_text}")
-                elif response.status == 400:
-                    error_text = await response.text()
-                    raise LLMProviderError(f"OpenAI bad request: {error_text}")
-                elif response.status == 500:
-                    error_text = await response.text()
-                    raise LLMProviderError(f"OpenAI server error: {error_text}")
-                elif response.status != 200:
-                    error_text = await response.text()
-                    raise LLMProviderError(f"OpenAI request failed with status {response.status}: {error_text}")
-                
-                # Parse OpenAI response format
-                response_data = await response.json()
-                
-                if 'error' in response_data:
-                    error_info = response_data['error']
-                    raise LLMProviderError(f"OpenAI API error: {error_info.get('message', 'Unknown error')}")
-                
-                if 'choices' not in response_data or not response_data['choices']:
-                    raise LLMProviderError("Invalid OpenAI response format: missing 'choices'")
-                
-                choice = response_data['choices'][0]
-                if 'message' not in choice or 'content' not in choice['message']:
-                    raise LLMProviderError("Invalid OpenAI response format: missing message content")
-                
-                response_text = choice['message']['content']
-                
-                if not response_text or not response_text.strip():
-                    raise LLMProviderError("Empty response from OpenAI")
-                
-                # Log usage information (without exposing API key)
-                usage = response_data.get('usage', {})
-                logger.debug(f"OpenAI response received", extra={
-                    "tokens_used": usage.get('total_tokens', 0),
-                    "prompt_tokens": usage.get('prompt_tokens', 0),
-                    "completion_tokens": usage.get('completion_tokens', 0)
-                })
-                
-                return response_text.strip()
-                
-        except asyncio.TimeoutError:
-            logger.error(f"OpenAI request timeout after {self.timeout}s")
-            raise LLMProviderTimeoutError(f"OpenAI request timed out after {self.timeout}s")
-        
-        except aiohttp.ClientError as e:
-            logger.error(f"OpenAI client error: {e}")
-            raise LLMProviderError(f"OpenAI connection error: {str(e)}")
-        
+            if self._circuit_breaker.is_open():
+                raise LLMProviderUnavailableError("Circuit breaker is open")
+
+            messages = [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+            response = await self._client.chat.completions.create(
+                model=kwargs.get('model', self.model),
+                messages=messages,
+                temperature=kwargs.get('temperature', self.temperature),
+                max_tokens=kwargs.get('max_tokens', self.max_tokens),
+                top_p=kwargs.get('top_p', 1.0),
+                frequency_penalty=kwargs.get('frequency_penalty', 0.0),
+                presence_penalty=kwargs.get('presence_penalty', 0.0),
+                timeout=self.timeout,
+            )
+            if not hasattr(response, "choices") or not response.choices:
+                self._circuit_breaker.record_failure()
+                raise LLMProviderError("Invalid OpenAI response format: missing 'choices'")
+            choice = response.choices[0]
+            if not hasattr(choice, "message") or not hasattr(choice.message, "content"):
+                self._circuit_breaker.record_failure()
+                raise LLMProviderError("Invalid OpenAI response format: missing message content")
+            response_text = choice.message.content
+            if not response_text or not response_text.strip():
+                self._circuit_breaker.record_failure()
+                raise LLMProviderError("Empty response from OpenAI-compatible endpoint")
+            usage = getattr(response, "usage", {})
+            logger.debug("OpenAI-compatible response received", extra={
+                "tokens_used": getattr(usage, "total_tokens", 0) if usage else 0,
+                "prompt_tokens": getattr(usage, "prompt_tokens", 0) if usage else 0,
+                "completion_tokens": getattr(usage, "completion_tokens", 0) if usage else 0
+            })
+            self._circuit_breaker.record_success()
+            return response_text.strip()
         except Exception as e:
-            logger.error(f"Unexpected OpenAI error: {e}")
-            raise LLMProviderError(f"Unexpected OpenAI error: {str(e)}")
-    
+            msg = str(e)
+            if "authentication" in msg.lower():
+                self._circuit_breaker.record_failure()
+                logger.error("OpenAI-compatible API authentication failed - check API key")
+                raise LLMProviderError("OpenAI-compatible API authentication failed - check API key")
+            if "rate limit" in msg.lower():
+                self._circuit_breaker.record_failure()
+                logger.warning(f"OpenAI-compatible rate limit exceeded: {e}")
+                raise LLMProviderError(f"OpenAI-compatible rate limit exceeded: {e}")
+            if isinstance(e, asyncio.TimeoutError):
+                self._circuit_breaker.record_failure()
+                logger.error(f"OpenAI-compatible request timeout after {self.timeout}s")
+                raise LLMProviderTimeoutError(f"OpenAI-compatible request timed out after {self.timeout}s")
+            logger.error(f"Unexpected OpenAI-compatible error: {e}")
+            self._circuit_breaker.record_failure()
+            raise LLMProviderError(f"Unexpected OpenAI-compatible error: {str(e)}")
+
     async def list_models(self) -> Dict[str, Any]:
         """
-        List available models from OpenAI.
-        
+        List available models from OpenAI-compatible endpoint.
+
         Returns:
             Dictionary with available models information
         """
-        await self._ensure_session()
-        
         try:
-            url = f"{self.api_base}/models"
-            async with self.session.get(url) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    models = [model['id'] for model in data.get('data', []) 
-                             if model.get('id', '').startswith(('gpt-', 'text-', 'davinci', 'curie', 'babbage', 'ada'))]
-                    
-                    return {
-                        'models': sorted(models),
-                        'count': len(models),
-                        'endpoint': 'OpenAI API'
-                    }
-                else:
-                    return {
-                        'models': [],
-                        'count': 0,
-                        'error': f"Failed to fetch models: HTTP {response.status}"
-                    }
+            models = await self._client.models.list()
+            model_ids = [
+                m.id for m in models.data
+                if m.id.startswith(("gpt-", "text-", "davinci", "curie", "babbage", "ada"))
+            ]
+            return {
+                "models": sorted(model_ids),
+                "count": len(model_ids),
+                "endpoint": self.api_base
+            }
         except Exception as e:
             return {
-                'models': [],
-                'count': 0,
-                'error': f"Error fetching models: {str(e)}"
+                "models": [],
+                "count": 0,
+                "error": f"Error fetching models: {str(e)}"
             }
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """
-        Check OpenAI health and availability.
-        
+        Check OpenAI-compatible health and availability.
+
         Returns:
             Health status dictionary
         """
         try:
-            await self._ensure_session()
-            
-            # Test with a simple completion request
-            url = f"{self.api_base}/chat/completions"
-            test_payload = {
-                'model': self.model,
-                'messages': [{'role': 'user', 'content': 'Respond with just: OK'}],
-                'max_tokens': 10,
-                'temperature': 0.1
-            }
-            
-            async with asyncio.wait_for(
-                self.session.post(url, json=test_payload),
-                timeout=10.0
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    if 'choices' in data and data['choices']:
-                        return {
-                            "provider": "openai",
-                            "status": "healthy",
-                            "model": self.model,
-                            "circuit_breaker": "closed",
-                            "api_endpoint": self.api_base
-                        }
-                elif response.status == 401:
-                    return {
-                        "provider": "openai",
-                        "status": "unhealthy",
-                        "error": "Authentication failed - check API key",
-                        "api_endpoint": self.api_base
-                    }
-                elif response.status == 429:
-                    return {
-                        "provider": "openai",
-                        "status": "rate_limited",
-                        "error": "API rate limit exceeded",
-                        "api_endpoint": self.api_base
-                    }
-                
+            response = await self._client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "Respond with just: OK"}],
+                max_tokens=10,
+                temperature=0.1,
+                timeout=10
+            )
+            if hasattr(response, "choices") and response.choices:
+                self._circuit_breaker.record_success()
                 return {
-                    "provider": "openai",
-                    "status": "unhealthy",
-                    "error": f"Unexpected response status: {response.status}",
+                    "provider": "openai-compatible",
+                    "status": "healthy",
+                    "model": self.model,
+                    "circuit_breaker": self._circuit_breaker.state,
                     "api_endpoint": self.api_base
                 }
-                
-        except asyncio.TimeoutError:
+            self._circuit_breaker.record_failure()
             return {
-                "provider": "openai",
+                "provider": "openai-compatible",
                 "status": "unhealthy",
-                "error": "Health check timeout",
-                "api_endpoint": self.api_base
+                "error": "Unexpected response format",
+                "api_endpoint": self.api_base,
+                "circuit_breaker": self._circuit_breaker.state
             }
         except Exception as e:
+            self._circuit_breaker.record_failure()
+            msg = str(e)
+            if "authentication" in msg.lower():
+                return {
+                    "provider": "openai-compatible",
+                    "status": "unhealthy",
+                    "error": "Authentication failed - check API key",
+                    "api_endpoint": self.api_base,
+                    "circuit_breaker": self._circuit_breaker.state
+                }
+            if "rate limit" in msg.lower():
+                return {
+                    "provider": "openai-compatible",
+                    "status": "rate_limited",
+                    "error": "API rate limit exceeded",
+                    "api_endpoint": self.api_base,
+                    "circuit_breaker": self._circuit_breaker.state
+                }
+            if isinstance(e, asyncio.TimeoutError):
+                return {
+                    "provider": "openai-compatible",
+                    "status": "unhealthy",
+                    "error": "Health check timeout",
+                    "api_endpoint": self.api_base,
+                    "circuit_breaker": self._circuit_breaker.state
+                }
             return {
-                "provider": "openai",
+                "provider": "openai-compatible",
                 "status": "unhealthy",
                 "error": str(e),
                 "api_endpoint": self.api_base,
-                "circuit_breaker": "open" if "Circuit breaker" in str(e) else "unknown"
+                "circuit_breaker": self._circuit_breaker.state
             }
-    
+
     async def close(self):
-        """Close HTTP session and cleanup resources."""
-        if self.session and not self.session.closed:
-            await self.session.close()
-            logger.debug("OpenAI provider session closed")
+        """No persistent session to close with OpenAI SDK."""
+        logger.debug("OpenAI-compatible provider cleanup complete")

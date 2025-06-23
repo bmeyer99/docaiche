@@ -23,9 +23,9 @@ Classify the content type and provide your assessment as a JSON object:
   "relevance_score": <float between 0.0 and 1.0>,
   "quality_score": <float between 0.0 and 1.0>,
   "should_store": <boolean>,
-  "content_type": "<one of: tutorial, reference, guide, example, api, other>",
+  "content_type": "<tutorial|reference|guide|example|api|other>",
   "confidence": <float between 0.0 and 1.0>,
-  "created_at": "<current UTC timestamp>"
+  "created_at": "<ISO 8601 UTC timestamp>"
 }}
 
 Be objective and consider long-term value for future searches.
