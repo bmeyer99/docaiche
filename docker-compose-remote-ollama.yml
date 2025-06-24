@@ -1,14 +1,13 @@
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
+    image: docaiche/api:latest
     ports:
       - "8000:8000"
     depends_on:
       - redis
       - db
       - anythingllm
+      - ollama
     networks:
       - docaiche
     healthcheck:
@@ -21,9 +20,7 @@ services:
     restart: unless-stopped
 
   web_ui:
-    build:
-      context: .
-      dockerfile: Dockerfile.webui
+    image: docaiche/web_ui:latest
     ports:
       - "8080:8080"
     depends_on:
@@ -69,20 +66,19 @@ services:
     restart: unless-stopped
 
   anythingllm:
-    build:
-      context: .
-      dockerfile: Dockerfile.anythingllm
+    image: mintplexlabs/anythingllm:latest
     ports:
       - "3001:3001"
     networks:
       - docaiche
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 5
     volumes:
-      - anythingllm_data:/data
+      - anythingllm_data:/app/server/storage
+      - anythingllm_exports:/app/server/exports
     restart: unless-stopped
 
 networks:
@@ -92,3 +88,4 @@ volumes:
   redis_data:
   db_data:
   anythingllm_data:
+  anythingllm_exports:
