@@ -7,7 +7,6 @@ services:
       - redis
       - db
       - anythingllm
-      - ollama
     networks:
       - docaiche
     healthcheck:
