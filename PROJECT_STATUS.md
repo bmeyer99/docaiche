@@ -114,8 +114,10 @@ All PRD components (001-013) have been successfully implemented, validated, and 
 | T-018-01 | 🔧 System Debugger | Deployment Fix | Resolve critical Portainer deployment failure - missing Dockerfile files | ✅ DONE | 2025-06-24 14:15 | CRITICAL |
 | T-018-02 | 🔧 System Debugger | Deployment Architecture | Create missing Dockerfiles and fix non-existent image references | ✅ DONE | 2025-06-24 14:23 | CRITICAL |
 | T-018-03 | 🛡️ QA Validator | Deployment Validation | Validate System Debugger's deployment fix for production readiness | ✅ DONE | 2025-06-24 14:26 | CRITICAL |
+| D-020-01 | 🔧 System Debugger | Docker Environment | Fix Docker daemon connectivity issue - URLSchemeUnknown http+docker protocol error | ✅ DONE | 2025-06-24 16:48 | CRITICAL |
+| D-021-01 | 🔧 System Debugger | Container Runtime | Fix sysctl vm.overcommit_memory namespace error in container configuration | 🔧 ASSIGNED | 2025-06-24 16:51 | CRITICAL |
 
-### **NO ACTIVE TASKS - All Development Complete** ✅
+### **ACTIVE TASK - Runtime Configuration Fix** 🔧
 
 All PRD components (001-013) have been successfully implemented, validated, and optimized for production deployment. The system is now fully operational with working Portainer deployment capability, complete environment variable documentation, and QA-validated build-from-source Docker architecture.
 

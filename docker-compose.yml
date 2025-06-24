@@ -4,12 +4,16 @@ services:
       context: .
       dockerfile: src/api/Dockerfile
     ports:
-      - "8000:8000"
+      - "4000:8000"
     depends_on:
-      - redis
-      - db
-      - anythingllm
-      - ollama
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      anythingllm:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
     networks:
       - docaiche
     healthcheck:
@@ -26,7 +30,7 @@ services:
       context: .
       dockerfile: src/web_ui/Dockerfile
     ports:
-      - "8080:8080"
+      - "4080:8080"
     depends_on:
       - api
     networks:
@@ -45,8 +49,7 @@ services:
       - redis_data:/data
     networks:
       - docaiche
-    sysctls:
-      - vm.overcommit_memory=1
+    
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -56,6 +59,7 @@ services:
 
   db:
     image: nouchka/sqlite3:latest
+    command: "tail -f /dev/null"
     environment:
       - SQLITE_DATABASE=app.db
     volumes:
@@ -71,10 +75,8 @@ services:
 
   anythingllm:
     image: mintplexlabs/anythingllm:latest
-    ports:
-      - "3001:3001"
     environment:
-      STORAGE_DIR: ${STORAGE_DIR:-/app/server/storage}
+      STORAGE_DIR: /app/server/storage
     volumes:
       - anythingllm_data:/app/server/storage
       - anythingllm_exports:/app/server/exports
@@ -94,7 +96,7 @@ services:
     networks:
       - docaiche
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/health"]
+      test: ["CMD", "curl", "-f", "http://ollama:11434/api/health"]
       interval: 30s
       timeout: 10s
       retries: 5

@@ -123,3 +123,11 @@ class TaskMetrics(BaseModel):
     average_processing_time_ms: float = Field(default=0.0, description="Average processing time")
     error_rate: float = Field(default=0.0, description="Error rate percentage")
     last_updated: Optional[datetime] = Field(None, description="Last metrics update timestamp")
+class EnrichmentStrategy(BaseModel):
+    """
+    Defines the configuration for a single enrichment strategy.
+    """
+    name: str = Field(..., description="The unique name of the strategy.")
+    description: Optional[str] = Field(None, description="A brief description of what the strategy does.")
+    enabled: bool = Field(True, description="Whether the strategy is currently active.")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Configuration parameters for the strategy.")
