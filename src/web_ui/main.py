@@ -3,6 +3,8 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from src.web_ui.api_gateway.router import api_router
@@ -11,14 +13,18 @@ from src.web_ui.config.settings import WebUISettings
 import logging
 import os
 import httpx
+import secrets
 
 settings = WebUISettings()
+
+# Initialize templates
+templates = Jinja2Templates(directory="src/web_ui/templates")
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self';"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline';"
         return response
 
 def create_app() -> FastAPI:
@@ -26,9 +32,11 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Web UI Service", version="1.0.0")
     
     # Add session middleware for CSRF protection
-
     app.add_middleware(SessionMiddleware, secret_key=os.urandom(24))
     app.add_middleware(SecurityHeadersMiddleware)
+
+    # Mount static files
+    app.mount("/static", StaticFiles(directory="src/web_ui/static"), name="static")
 
     app.include_router(api_router, prefix="/api/v1")
     app.include_router(websocket_router)
@@ -62,34 +70,31 @@ def create_app() -> FastAPI:
         logging.info("Web UI Service shutdown complete.")
 
     @app.get("/", response_class=HTMLResponse)
-    async def serve_dashboard():
-        async with httpx.AsyncClient(base_url="http://localhost:8080/api/v1") as client:
-            stats_resp = await client.get("/stats")
-            content_resp = await client.get("/content")
-            stats = stats_resp.json() if stats_resp.status_code == 200 else {}
-            content = content_resp.json() if content_resp.status_code == 200 else {}
-
-        html = f"""
-        <html>
-        <body>
-            <h1>Dashboard</h1>
-            <h2>Stats</h2>
-            <pre>{stats}</pre>
-            <h2>Content</h2>
-            <pre>{content}</pre>
-        </body>
-        </html>
-        """
-        return html
+    async def serve_dashboard(request: Request):
+        """Serve the main dashboard page."""
+        # Generate CSRF token for session
+        if "csrf" not in request.session:
+            request.session["csrf"] = secrets.token_urlsafe(32)
+        
+        return templates.TemplateResponse("dashboard.html", {"request": request})
 
     @app.get("/config", response_class=HTMLResponse)
     async def serve_config(request: Request):
-        request.session["csrf"] = "dummy_token"
-        return "<html><body>Configuration</body></html>"
+        """Serve the configuration management page."""
+        # Generate CSRF token for session
+        if "csrf" not in request.session:
+            request.session["csrf"] = secrets.token_urlsafe(32)
+        
+        return templates.TemplateResponse("config.html", {"request": request})
 
     @app.get("/content", response_class=HTMLResponse)
-    async def serve_content():
-        return "<html><body>Content</body></html>"
+    async def serve_content(request: Request):
+        """Serve the content management page."""
+        # Generate CSRF token for session
+        if "csrf" not in request.session:
+            request.session["csrf"] = secrets.token_urlsafe(32)
+        
+        return templates.TemplateResponse("content.html", {"request": request})
 
     return app
 
