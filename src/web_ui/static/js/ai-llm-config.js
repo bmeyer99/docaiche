@@ -155,6 +155,7 @@ class AILLMConfigManager {
                     `✓ Found ${response.modelsCount} models`,
                     'success'
                 );
+                // Load models using the existing function but with real data
                 await this.loadModels(provider, baseUrl, apiKey);
             } else {
                 throw new Error(response.error || 'Connection failed');
@@ -182,18 +183,78 @@ class AILLMConfigManager {
     async makeTestRequest(provider, baseUrl, apiKey) {
         const startTime = Date.now();
         
-        // Simulate API call - replace with actual implementation
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const responseTime = Date.now() - startTime;
-                // Mock successful response for demo
-                resolve({
-                    success: true,
-                    responseTime,
-                    modelsCount: Math.floor(Math.random() * 10) + 5
-                });
-            }, 1000 + Math.random() * 2000);
-        });
+        try {
+            console.log(`Testing connection to ${provider} at ${baseUrl}`);
+            
+            // Use backend proxy endpoint to avoid CSP issues
+            const endpoint = '/api/v1/llm/test-connection';
+            
+            const requestData = {
+                provider: provider,
+                base_url: baseUrl,
+                api_key: apiKey || null
+            };
+            
+            console.log(`Making request to: ${endpoint}`);
+            console.log('Request data:', requestData);
+            
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.log('Request timed out');
+                controller.abort();
+            }, 15000);
+            
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            console.log(`Response status: ${response.status}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const responseTime = Date.now() - startTime;
+            console.log('Response data:', data);
+            
+            return {
+                success: data.success || false,
+                responseTime,
+                modelsCount: data.model_count || 0,
+                rawData: data
+            };
+            
+        } catch (error) {
+            const responseTime = Date.now() - startTime;
+            console.error('Connection test failed:', error);
+            
+            let errorMessage = error.message;
+            
+            // Provide more specific error messages
+            if (error.name === 'AbortError') {
+                errorMessage = 'Request timed out after 15 seconds';
+            } else if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'Network error - check if the service is running and accessible';
+            } else if (error.message.includes('NetworkError')) {
+                errorMessage = 'Network error - service may not be accessible from this domain';
+            }
+            
+            return {
+                success: false,
+                responseTime,
+                error: errorMessage
+            };
+        }
     }
 
     async loadModels(provider, baseUrl, apiKey) {
@@ -220,31 +281,160 @@ class AILLMConfigManager {
     }
 
     async fetchModels(provider, baseUrl, apiKey) {
-        // Mock model data - replace with actual API call
-        const mockModels = [
-            {
-                name: 'llama3.2:3b',
-                description: '3.2B parameters, Instruct-tuned',
-                size: '2.0 GB',
-                modified: '2 days ago'
-            },
-            {
-                name: 'llama3.2:7b',
-                description: '7B parameters, Instruct-tuned',
-                size: '4.1 GB',
-                modified: '5 days ago'
-            },
-            {
-                name: 'codellama:13b',
-                description: '13B parameters, Code generation',
-                size: '7.3 GB',
-                modified: '1 week ago'
-            }
-        ];
+        try {
+            // Use backend proxy endpoint to avoid CSP issues
+            const endpoint = '/api/v1/llm/test-connection';
+            
+            const requestData = {
+                provider: provider,
+                base_url: baseUrl,
+                api_key: apiKey || null
+            };
 
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(mockModels), 500);
-        });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message || 'Failed to fetch models');
+            }
+            
+            // Parse backend response format
+            return this.parseBackendModelsResponse(data, provider);
+            
+        } catch (error) {
+            console.error('Failed to fetch models:', error);
+            throw new Error(`Failed to fetch models: ${error.message}`);
+        }
+    }
+
+    parseModelsResponse(data, provider) {
+        const models = [];
+        
+        switch (provider) {
+            case 'ollama':
+                // Ollama returns { models: [...] }
+                if (data.models && Array.isArray(data.models)) {
+                    return data.models.map(model => ({
+                        name: model.name,
+                        description: model.details?.family || 'Ollama model',
+                        size: this.formatSize(model.size),
+                        modified: this.formatDate(model.modified_at)
+                    }));
+                }
+                break;
+                
+            case 'openai':
+            case 'openai-compatible':
+                // OpenAI API returns { data: [...] }
+                if (data.data && Array.isArray(data.data)) {
+                    return data.data.map(model => ({
+                        name: model.id,
+                        description: model.description || 'OpenAI model',
+                        size: 'N/A',
+                        modified: this.formatDate(model.created)
+                    }));
+                }
+                break;
+                
+            default:
+                // Try to handle generic format
+                const modelArray = data.models || data.data || data;
+                if (Array.isArray(modelArray)) {
+                    return modelArray.map(model => ({
+                        name: model.name || model.id || model.model,
+                        description: model.description || model.details?.family || 'Model',
+                        size: this.formatSize(model.size) || 'N/A',
+                        modified: this.formatDate(model.modified_at || model.created) || 'Unknown'
+                    }));
+                }
+        }
+        
+        return [];
+    }
+
+    parseBackendModelsResponse(data, provider) {
+        // Parse models from backend API response format
+        if (!data.models || !Array.isArray(data.models)) {
+            return [];
+        }
+        
+        switch (provider) {
+            case 'ollama':
+                return data.models.map(model => ({
+                    name: model.name || '',
+                    description: 'Ollama model',
+                    size: this.formatSize(model.size) || 'N/A',
+                    modified: this.formatDate(model.modified_at) || 'Unknown'
+                }));
+                
+            case 'openai':
+                return data.models.map(model => ({
+                    name: model.name || model.id || '',
+                    description: 'OpenAI model',
+                    size: 'N/A',
+                    modified: this.formatDate(model.created) || 'Unknown'
+                }));
+                
+            case 'anthropic':
+                return data.models.map(model => ({
+                    name: model.name || '',
+                    description: 'Anthropic model',
+                    size: 'N/A',
+                    modified: 'Unknown'
+                }));
+                
+            default:
+                return data.models.map(model => ({
+                    name: model.name || model.id || 'Unknown',
+                    description: model.description || 'Model',
+                    size: this.formatSize(model.size) || 'N/A',
+                    modified: this.formatDate(model.modified_at || model.created) || 'Unknown'
+                }));
+        }
+    }
+
+    formatSize(bytes) {
+        if (!bytes || bytes === 0) return 'N/A';
+        
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    formatDate(dateString) {
+        if (!dateString) return 'Unknown';
+        
+        try {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return '1 day ago';
+            if (diffDays < 30) return `${diffDays} days ago`;
+            if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+            return `${Math.floor(diffDays / 365)} years ago`;
+        } catch (error) {
+            return 'Unknown';
+        }
     }
 
     populateModels(models) {

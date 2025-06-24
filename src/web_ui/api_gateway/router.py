@@ -9,6 +9,9 @@ from sqlalchemy import text
 from pydantic import BaseModel, ValidationError
 import os
 import logging
+import httpx
+import asyncio
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -194,3 +197,155 @@ async def admin_search_content_post(
     except Exception as e:
         logger.error(f"Failed to search content (POST): {e}")
         raise HTTPException(status_code=500, detail="Failed to search content")
+
+class LLMProviderTestRequest(BaseModel):
+    provider: str
+    base_url: str
+    api_key: Optional[str] = None
+
+@api_router.post("/llm/test-connection")
+async def test_llm_provider_connection(req: LLMProviderTestRequest):
+    """Test connection to LLM provider and return available models."""
+    import httpx
+    import asyncio
+    
+    try:
+        logger.info(f"Testing connection to {req.provider} at {req.base_url}")
+        
+        if req.provider.lower() == "ollama":
+            # Test Ollama connection
+            # Clean up the base_url - remove /api suffix if present and add correct endpoint
+            base_url_clean = req.base_url.rstrip('/').replace('/api', '')
+            endpoint = f"{base_url_clean}/api/tags"
+            
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                headers = {"Content-Type": "application/json"}
+                
+                logger.info(f"Making request to: {endpoint}")
+                response = await client.get(endpoint, headers=headers)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    models = data.get("models", [])
+                    
+                    # Format models for frontend
+                    formatted_models = []
+                    for model in models:
+                        formatted_models.append({
+                            "name": model.get("name", ""),
+                            "size": model.get("size", 0),
+                            "modified_at": model.get("modified_at", "")
+                        })
+                    
+                    logger.info(f"Successfully fetched {len(formatted_models)} models from Ollama")
+                    return {
+                        "success": True,
+                        "message": f"Found {len(formatted_models)} models",
+                        "models": formatted_models,
+                        "model_count": len(formatted_models)
+                    }
+                else:
+                    error_text = response.text
+                    logger.error(f"Ollama API returned status {response.status_code}: {error_text}")
+                    return {
+                        "success": False,
+                        "message": f"Connection failed: HTTP {response.status_code}",
+                        "models": [],
+                        "model_count": 0
+                    }
+                    
+        elif req.provider.lower() == "openai":
+            # Test OpenAI connection
+            endpoint = "https://api.openai.com/v1/models"
+            
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                headers = {
+                    "Authorization": f"Bearer {req.api_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                response = await client.get(endpoint, headers=headers)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    models = data.get("data", [])
+                    
+                    # Format models for frontend
+                    formatted_models = []
+                    for model in models:
+                        formatted_models.append({
+                            "name": model.get("id", ""),
+                            "owned_by": model.get("owned_by", ""),
+                            "created": model.get("created", 0)
+                        })
+                    
+                    return {
+                        "success": True,
+                        "message": f"Found {len(formatted_models)} models",
+                        "models": formatted_models,
+                        "model_count": len(formatted_models)
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "message": f"Connection failed: HTTP {response.status_code}",
+                        "models": [],
+                        "model_count": 0
+                    }
+                    
+        elif req.provider.lower() == "anthropic":
+            # Test Anthropic connection (no models endpoint, just validate key format)
+            if not req.api_key or not req.api_key.startswith("sk-ant-"):
+                return {
+                    "success": False,
+                    "message": "Invalid Anthropic API key format",
+                    "models": [],
+                    "model_count": 0
+                }
+            
+            # Anthropic doesn't have a models endpoint, return common models
+            common_models = [
+                {"name": "claude-3-sonnet-20240229", "max_tokens": 200000},
+                {"name": "claude-3-haiku-20240307", "max_tokens": 200000},
+                {"name": "claude-3-opus-20240229", "max_tokens": 200000}
+            ]
+            
+            return {
+                "success": True,
+                "message": f"API key format valid. Found {len(common_models)} models",
+                "models": common_models,
+                "model_count": len(common_models)
+            }
+        
+        else:
+            return {
+                "success": False,
+                "message": f"Unsupported provider: {req.provider}",
+                "models": [],
+                "model_count": 0
+            }
+            
+    except httpx.TimeoutException:
+        logger.error(f"Connection timeout to {req.provider}")
+        return {
+            "success": False,
+            "message": "Connection timeout",
+            "models": [],
+            "model_count": 0
+        }
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error to {req.provider}: {e}")
+        return {
+            "success": False,
+            "message": f"Cannot reach endpoint at {req.base_url}",
+            "models": [],
+            "model_count": 0
+        }
+    except Exception as e:
+        logger.error(f"LLM provider test failed: {e}")
+        return {
+            "success": False,
+            "message": f"Connection failed: {str(e)}",
+            "models": [],
+            "model_count": 0
+        }
