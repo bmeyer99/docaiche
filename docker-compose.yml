@@ -1,0 +1,123 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+      - anythingllm
+      - ollama
+    networks:
+      - docaiche
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - db_data:/data
+    restart: unless-stopped
+
+  web_ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.webui
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    networks:
+      - docaiche
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - docaiche
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  db:
+    image: nouchka/sqlite3:latest
+    environment:
+      - SQLITE_DATABASE=app.db
+    volumes:
+      - db_data:/data
+    networks:
+      - docaiche
+    healthcheck:
+      test: ["CMD", "sqlite3", "/data/app.db", ".databases"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  anythingllm:
+    build:
+      context: .
+      dockerfile: Dockerfile.anythingllm
+    env_file:
+      - .env
+    ports:
+      - "3001:3001"
+    networks:
+      - docaiche
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - anythingllm_data:/data
+    restart: unless-stopped
+
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    env_file:
+      - .env
+    ports:
+      - "11434:11434"
+    networks:
+      - docaiche
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ollama_models:/models
+    restart: unless-stopped
+
+networks:
+  docaiche:
+
+volumes:
+  redis_data:
+  db_data:
+  anythingllm_data:
+  ollama_models:
