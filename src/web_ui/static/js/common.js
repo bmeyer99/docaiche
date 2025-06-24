@@ -272,14 +272,54 @@ class WebSocketManager {
     constructor() {
         this.ws = null;
         this.reconnectInterval = 5000;
-        this.maxReconnectAttempts = 5;
+        this.maxReconnectAttempts = 3; // Reduced from 5
         this.reconnectAttempts = 0;
         this.listeners = new Map();
+        this.enabled = true;
+        this.connectionFailed = false;
     }
 
     connect() {
+        // Don't attempt connection if disabled or already failed
+        if (!this.enabled || this.connectionFailed) {
+            console.log('WebSocket connection disabled or previously failed');
+            this.updateConnectionStatus(false);
+            return;
+        }
+
+        // Check if WebSocket endpoint exists before connecting
+        this.checkWebSocketEndpoint().then(exists => {
+            if (!exists) {
+                console.log('WebSocket endpoint not available, disabling real-time features');
+                this.connectionFailed = true;
+                this.updateConnectionStatus(false);
+                return;
+            }
+            this.attemptConnection();
+        });
+    }
+
+    async checkWebSocketEndpoint() {
+        try {
+            // Check if the WebSocket endpoint exists by making a HEAD request
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const checkUrl = `${protocol}//${host}/ws/updates`;
+            
+            const response = await fetch(checkUrl, {
+                method: 'HEAD',
+                timeout: 2000
+            });
+            return response.status !== 404;
+        } catch (error) {
+            // If fetch fails, assume WebSocket isn't available
+            return false;
+        }
+    }
+
+    attemptConnection() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const wsUrl = `${protocol}//${window.location.host}/ws/updates`;
 
         try {
             this.ws = new WebSocket(wsUrl);
@@ -287,6 +327,7 @@ class WebSocketManager {
             this.ws.onopen = () => {
                 console.log('WebSocket connected');
                 this.reconnectAttempts = 0;
+                this.connectionFailed = false;
                 this.updateConnectionStatus(true);
             };
 
@@ -299,50 +340,55 @@ class WebSocketManager {
                 }
             };
 
-            this.ws.onclose = () => {
+            this.ws.onclose = (event) => {
                 console.log('WebSocket disconnected');
                 this.updateConnectionStatus(false);
-                // Use setTimeout to prevent blocking the UI thread
-                setTimeout(() => this.attemptReconnect(), 100);
+                
+                // Only attempt reconnect if it wasn't a manual close
+                if (event.code !== 1000 && this.enabled) {
+                    setTimeout(() => this.attemptReconnect(), 1000);
+                }
             };
 
             this.ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
+                console.warn('WebSocket connection failed - real-time features disabled');
                 this.updateConnectionStatus(false);
-                // Prevent rapid error loops from blocking UI
-                setTimeout(() => {
-                    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-                        this.ws.close();
-                    }
-                }, 100);
+                this.connectionFailed = true;
+                
+                // Close the connection to prevent further errors
+                if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+                    this.ws.close();
+                }
             };
         } catch (error) {
-            console.error('Failed to create WebSocket connection:', error);
+            console.warn('WebSocket not supported or failed to initialize');
+            this.connectionFailed = true;
             this.updateConnectionStatus(false);
         }
     }
 
     disconnect() {
+        this.enabled = false;
         if (this.ws) {
-            this.ws.close();
+            this.ws.close(1000, 'Manual disconnect');
             this.ws = null;
         }
     }
 
     attemptReconnect() {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        if (this.reconnectAttempts < this.maxReconnectAttempts && this.enabled && !this.connectionFailed) {
             this.reconnectAttempts++;
             console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-            // Use longer timeout to prevent rapid reconnection attempts that could freeze UI
+            
             setTimeout(() => {
-                // Only attempt reconnect if we don't already have an active connection
                 if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
-                    this.connect();
+                    this.attemptConnection();
                 }
-            }, this.reconnectInterval * this.reconnectAttempts); // Exponential backoff
+            }, this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1)); // Exponential backoff
         } else {
-            console.log('Max reconnection attempts reached. WebSocket will remain disconnected.');
-            // Silently fail instead of showing error to prevent UI disruption
+            console.log('WebSocket reconnection disabled - operating in polling mode');
+            this.connectionFailed = true;
+            this.updateConnectionStatus(false);
         }
     }
 
@@ -355,6 +401,9 @@ class WebSocketManager {
             if (connected) {
                 dot.className = 'w-2 h-2 bg-green-500 rounded-full';
                 text.textContent = 'Connected';
+            } else if (this.connectionFailed) {
+                dot.className = 'w-2 h-2 bg-gray-400 rounded-full';
+                text.textContent = 'Polling Mode';
             } else {
                 dot.className = 'w-2 h-2 bg-red-500 rounded-full';
                 text.textContent = 'Disconnected';
@@ -396,8 +445,10 @@ class WebSocketManager {
 // Global WebSocket manager
 const wsManager = new WebSocketManager();
 
-// Auto-connect WebSocket when page loads
+// Auto-connect WebSocket when page loads (graceful fallback if not available)
 document.addEventListener('DOMContentLoaded', () => {
+    // Only attempt WebSocket connection if explicitly enabled
+    // This prevents console errors when WebSocket server isn't running
     wsManager.connect();
 });
 
