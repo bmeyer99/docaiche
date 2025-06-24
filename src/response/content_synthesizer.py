@@ -107,10 +107,11 @@ class ContentSynthesizer:
                 deduped.sort(key=sort_key, reverse=True)
             # If all items are dicts, require all to have "text" key, else raise
             if all(isinstance(item, dict) for item in deduped):
-                for item in deduped:
-                    if "text" not in item:
-                        self.logger.error("Input dict missing required 'text' key.")
-                        raise ValueError("All dictionary items must contain 'text' key")
+                if not all("text" in item for item in deduped):
+                    for item in deduped:
+                        if "text" not in item:
+                            self.logger.error("Input dict missing required 'text' key.")
+                            raise ValueError("All dictionary items must contain 'text' key")
                 merged_text = " ".join(sanitize_text(item["text"]) for item in deduped)
                 return {"text": merged_text}
             # If all items are strings, merge and sanitize
