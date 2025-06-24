@@ -12,10 +12,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy the application source code
 COPY ./src /app/src
 
-# Set the working directory to the source folder
-WORKDIR /app/src
-
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 # Ensure Python can find the src package by setting PYTHONPATH
 ENV PYTHONPATH=/app
+
+# Command to run the application from the project root
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

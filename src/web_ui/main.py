@@ -25,6 +25,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Web UI Service", version="1.0.0")
     
     # Add session middleware for CSRF protection
+
     app.add_middleware(SessionMiddleware, secret_key=os.urandom(24))
     app.add_middleware(SecurityHeadersMiddleware)
 
