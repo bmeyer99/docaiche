@@ -6,12 +6,11 @@ Implements the exact search orchestration workflow from PRD-009 including
 cache check, vector search, AI evaluation, enrichment decision, and response
 compilation exactly as specified.
 """
-
 import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, List
 
 from fastapi import BackgroundTasks
 
@@ -24,7 +23,6 @@ from src.database.connection import DatabaseManager, CacheManager
 from src.clients.anythingllm import AnythingLLMClient
 
 logger = logging.getLogger(__name__)
-
 
 class SearchOrchestrator:
     """
@@ -39,7 +37,12 @@ class SearchOrchestrator:
     6. Knowledge Enrichment: Call enricher.enrich_knowledge() as background task
     7. Response Compilation & Caching: Format SearchResponse, cache, return
     """
-    
+
+    # Circuit breaker and backoff configuration
+    _CB_FAILURE_THRESHOLD = 3
+    _CB_INITIAL_BACKOFF = 2.0  # seconds
+    _CB_MAX_BACKOFF = 30.0     # seconds
+
     def __init__(
         self,
         db_manager: DatabaseManager,
@@ -72,9 +75,46 @@ class SearchOrchestrator:
         # Performance timeouts from PRD-009
         self.search_timeout = 30.0  # Total search timeout
         self.workspace_timeout = 2.0  # Per-workspace timeout
-        
+
+        # Circuit breaker state for cache
+        self._cache_cb_failures = 0
+        self._cache_cb_open = False
+        self._cache_cb_next_attempt = 0.0
+        self._cache_cb_backoff = self._CB_INITIAL_BACKOFF
+
         logger.info("SearchOrchestrator initialized with all dependencies")
     
+    async def _cache_circuit_allows(self) -> bool:
+        """Check if cache circuit breaker allows cache usage."""
+        if not self._cache_cb_open:
+            return True
+        now = time.time()
+        if now >= self._cache_cb_next_attempt:
+            logger.info("Cache circuit breaker: attempting to close after backoff")
+            return True
+        logger.warning("Cache circuit breaker: open, skipping cache operation")
+        return False
+
+    def _cache_circuit_on_failure(self, context: str, exc: Exception):
+        """Handle a cache failure for circuit breaker logic."""
+        self._cache_cb_failures += 1
+        logger.warning(f"Cache failure in {context}: {exc} (failure count={self._cache_cb_failures})")
+        if self._cache_cb_failures >= self._CB_FAILURE_THRESHOLD and not self._cache_cb_open:
+            self._cache_cb_open = True
+            self._cache_cb_next_attempt = time.time() + self._cache_cb_backoff
+            logger.error(f"Cache circuit breaker OPENED after {self._cache_cb_failures} failures. "
+                         f"Backoff {self._cache_cb_backoff:.1f}s")
+            self._cache_cb_backoff = min(self._cache_cb_backoff * 2, self._CB_MAX_BACKOFF)
+
+    def _cache_circuit_on_success(self):
+        """Reset circuit breaker on successful cache operation."""
+        if self._cache_cb_open:
+            logger.info("Cache circuit breaker CLOSED after successful cache operation")
+        self._cache_cb_failures = 0
+        self._cache_cb_open = False
+        self._cache_cb_backoff = self._CB_INITIAL_BACKOFF
+        self._cache_cb_next_attempt = 0.0
+
     async def execute_search(
         self, 
         query: SearchQuery,
@@ -111,19 +151,26 @@ class SearchOrchestrator:
             logger.info(f"Starting search orchestration for query: {query.query[:100]}...")
             
             # Step 1: Query Normalization
-            normalized_query = self._normalize_query(query)
+            normalized_query = await self._normalize_query(query)
             logger.debug(f"Normalized query: {normalized_query.query}")
             
-            # Step 2: Cache Check with graceful degradation
+            # Step 2: Cache Check with graceful degradation and circuit breaker
             cached_results = None
             try:
-                cached_results = await self.search_cache.get_cached_results(normalized_query)
-                if cached_results:
-                    execution_time = int((time.time() - start_time) * 1000)
-                    cached_results.query_time_ms = execution_time
-                    logger.info(f"Cache hit - returning {len(cached_results.results)} results")
-                    return cached_results, normalized_query
+                if await self._cache_circuit_allows():
+                    cached_results = await self.search_cache.get_cached_results(normalized_query)
+                    if cached_results:
+                        self._cache_circuit_on_success()
+                        execution_time = int((time.time() - start_time) * 1000)
+                        cached_results.query_time_ms = execution_time
+                        logger.info(f"Cache hit - returning {len(cached_results.results)} results")
+                        return cached_results, normalized_query
+                    else:
+                        self._cache_circuit_on_success()
+                else:
+                    logger.info("Bypassing cache check due to circuit breaker open state")
             except Exception as e:
+                self._cache_circuit_on_failure("get_cached_results", e)
                 logger.warning(f"Cache check failed, continuing without cache: {e}")
                 # Continue without caching
             
@@ -170,10 +217,15 @@ class SearchOrchestrator:
                 enrichment_triggered=enrichment_triggered
             )
             
-            # Step 7: Cache Results with graceful degradation
+            # Step 7: Cache Results with graceful degradation and circuit breaker
             try:
-                await self.search_cache.cache_results(normalized_query, final_results)
+                if await self._cache_circuit_allows():
+                    await self.search_cache.cache_results(normalized_query, final_results)
+                    self._cache_circuit_on_success()
+                else:
+                    logger.info("Bypassing cache set due to circuit breaker open state")
             except Exception as e:
+                self._cache_circuit_on_failure("cache_results", e)
                 logger.warning(f"Failed to cache results: {e}")
                 # Continue without caching - this is non-critical
             
@@ -194,7 +246,7 @@ class SearchOrchestrator:
                     "error": str(e)
                 }
             )
-    
+
     async def _execute_multi_workspace_search(self, query: SearchQuery) -> SearchResults:
         """
         Execute multi-workspace search strategy and result aggregation.
@@ -336,34 +388,80 @@ class SearchOrchestrator:
         except Exception as e:
             logger.error(f"Failed to trigger enrichment: {e}")
             return False
-    
-    def _normalize_query(self, query: SearchQuery) -> SearchQuery:
+
+    async def _normalize_query(self, query: "SearchQuery") -> "SearchQuery":
         """
-        Normalize search query for consistent processing.
-        
-        Normalization from PRD-009:
-        - Lowercase
-        - Trim whitespace
-        - Remove extra spaces
-        
+        Normalize search query for consistent processing and caching.
+        Implements PRD-009 requirements:
+        - Input validation and sanitization
+        - Text cleaning (reuse ContentPreprocessor)
+        - Tokenization and stemming
+        - Consistent normalization for cache and all strategies
+
         Args:
             query: Original search query
-            
+
         Returns:
-            Normalized search query
+            Normalized SearchQuery
+
+        Raises:
+            HTTPException: If input is invalid or normalization fails
         """
-        normalized_text = " ".join(query.query.lower().strip().split())
-        
+        import re
+        from fastapi import HTTPException
+        from src.document_processing.preprocessing import ContentPreprocessor
+
+        logger = logging.getLogger(__name__)
+
+        # Input validation
+        raw_query = query.query
+        if not isinstance(raw_query, str) or not raw_query.strip():
+            logger.warning("Empty or non-string search query rejected")
+            raise HTTPException(status_code=422, detail="Query must be a non-empty string")
+        if len(raw_query) < 2 or len(raw_query) > 256:
+            logger.warning("Query length out of bounds")
+            raise HTTPException(status_code=422, detail="Query length must be between 2 and 256 characters")
+        if not re.match(r"^[\w\s\-\.,:;!?()'/@#&]+$", raw_query, re.UNICODE):
+            logger.warning("Query contains invalid characters")
+            raise HTTPException(status_code=422, detail="Query contains invalid characters")
+
+        # Text cleaning (async)
+        preprocessor = ContentPreprocessor()
+        try:
+            cleaned = await preprocessor.clean_text(raw_query)
+        except Exception as e:
+            logger.error(f"Text cleaning failed: {e}")
+            raise HTTPException(status_code=500, detail="Failed to clean query text")
+
+        # Tokenization (split on word boundaries)
+        tokens = re.findall(r"\b\w+\b", cleaned.lower())
+
+        # Simple Porter stemmer (inline, no external deps)
+        def porter_stem(word):
+            # Only basic suffix stripping for production safety
+            for suffix in ["ing", "ed", "ly", "es", "s", "ment"]:
+                if word.endswith(suffix) and len(word) > len(suffix) + 2:
+                    return word[: -len(suffix)]
+            return word
+
+        stemmed_tokens = [porter_stem(token) for token in tokens]
+
+        # Reconstruct normalized query string
+        normalized_text = " ".join(stemmed_tokens)
+
+        # Lowercase technology_hint if present
+        tech_hint = query.technology_hint.lower() if query.technology_hint else None
+
         return SearchQuery(
             query=normalized_text,
             filters=query.filters,
             strategy=query.strategy,
             limit=query.limit,
             offset=query.offset,
-            technology_hint=query.technology_hint.lower() if query.technology_hint else None,
+            technology_hint=tech_hint,
             workspace_slugs=query.workspace_slugs
         )
-    
+
     def _create_evaluation_prompt(self, query: SearchQuery, results: SearchResults) -> str:
         """
         Create evaluation prompt for LLM assessment.
@@ -407,43 +505,139 @@ class SearchOrchestrator:
         Returns:
             Dictionary with health status
         """
-        health_status = {
-            "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
-            "components": {}
-        }
-        
+        from datetime import datetime
+
+        health_statuses: List[Dict[str, Any]] = []
+        overall_status = "healthy"
+        start_time = time.time()
+
+        # Database health
+        db_start = time.time()
+        db_status = "healthy"
+        db_error = None
+        db_details = {}
         try:
-            # Check database health
             db_health = await self.db_manager.health_check()
-            health_status["components"]["database"] = db_health
-            
-            # Check cache health
+            db_status = db_health.get("status", "unknown")
+            db_details = db_health
+            if db_status not in ("healthy", "connected"):
+                overall_status = "degraded"
+        except Exception as e:
+            db_status = "unhealthy"
+            db_error = str(e)
+            db_details = {"error": db_error}
+            overall_status = "degraded"
+            logger.error(f"Database health check failed: {e}", exc_info=True)
+        db_time = int((time.time() - db_start) * 1000)
+        health_statuses.append({
+            "service": "database",
+            "status": db_status,
+            "response_time_ms": db_time,
+            "last_check": datetime.utcnow().isoformat(),
+            "details": db_details
+        })
+
+        # Cache health
+        cache_start = time.time()
+        cache_status = "healthy"
+        cache_error = None
+        cache_details = {}
+        try:
             cache_health = await self.search_cache.get_cache_stats()
-            health_status["components"]["cache"] = cache_health
-            
-            # Check AnythingLLM health
+            cache_status = cache_health.get("cache_status", "unknown")
+            cache_details = cache_health
+            if cache_status != "healthy":
+                overall_status = "degraded"
+        except Exception as e:
+            cache_status = "unhealthy"
+            cache_error = str(e)
+            cache_details = {"error": cache_error}
+            overall_status = "degraded"
+            logger.error(f"Cache health check failed: {e}", exc_info=True)
+        cache_time = int((time.time() - cache_start) * 1000)
+        health_statuses.append({
+            "service": "cache",
+            "status": cache_status,
+            "response_time_ms": cache_time,
+            "last_check": datetime.utcnow().isoformat(),
+            "details": cache_details
+        })
+
+        # AnythingLLM health
+        llm_start = time.time()
+        llm_status = "healthy"
+        llm_error = None
+        llm_details = {}
+        try:
             if self.anythingllm_client:
                 llm_health = await self.anythingllm_client.health_check()
-                health_status["components"]["anythingllm"] = llm_health
-            
-            # Check if any component is unhealthy
-            for component_name, component_health in health_status["components"].items():
-                # Handle different component response formats
-                if component_name == "cache":
-                    # Cache returns cache_status field
-                    component_status = component_health.get("cache_status", "unknown")
-                else:
-                    # Other components return status field
-                    component_status = component_health.get("status", "unknown")
-                
-                # Only mark degraded for truly unhealthy components
-                if component_status in ["unhealthy", "error"]:
-                    health_status["status"] = "degraded"
-                    break
-            
+                llm_status = llm_health.get("status", "unknown")
+                llm_details = llm_health
+                if llm_status != "healthy":
+                    overall_status = "degraded"
+            else:
+                llm_status = "unavailable"
+                llm_details = {"error": "AnythingLLM client not configured"}
+                overall_status = "degraded"
         except Exception as e:
-            health_status["status"] = "unhealthy"
-            health_status["error"] = str(e)
-        
-        return health_status
+            llm_status = "unhealthy"
+            llm_error = str(e)
+            llm_details = {"error": llm_error}
+            overall_status = "degraded"
+            logger.error(f"AnythingLLM health check failed: {e}", exc_info=True)
+        llm_time = int((time.time() - llm_start) * 1000)
+        health_statuses.append({
+            "service": "anythingllm",
+            "status": llm_status,
+            "response_time_ms": llm_time,
+            "last_check": datetime.utcnow().isoformat(),
+            "details": llm_details
+        })
+
+        # Search strategy health
+        strategy_start = time.time()
+        strategy_status = "healthy"
+        strategy_error = None
+        strategy_details = {}
+        try:
+            # Check if at least one workspace is available
+            workspaces = await self.workspace_strategy._get_available_workspaces()
+            if not workspaces:
+                strategy_status = "degraded"
+                strategy_details = {"message": "No workspaces available"}
+                overall_status = "degraded"
+            else:
+                strategy_details = {"workspace_count": len(workspaces)}
+        except Exception as e:
+            strategy_status = "unhealthy"
+            strategy_error = str(e)
+            strategy_details = {"error": strategy_error}
+            overall_status = "degraded"
+            logger.error(f"Search strategy health check failed: {e}", exc_info=True)
+        strategy_time = int((time.time() - strategy_start) * 1000)
+        health_statuses.append({
+            "service": "search_strategy",
+            "status": strategy_status,
+            "response_time_ms": strategy_time,
+            "last_check": datetime.utcnow().isoformat(),
+            "details": strategy_details
+        })
+
+        # Compose response
+        total_time = int((time.time() - start_time) * 1000)
+        if any(s["status"] == "unhealthy" for s in health_statuses):
+            overall_status = "unhealthy"
+
+        # Log degraded/unhealthy status for monitoring
+        if overall_status != "healthy":
+            logger.error(
+                "Search orchestrator health degraded/unhealthy",
+                extra={"health_statuses": health_statuses, "overall_status": overall_status}
+            )
+
+        return {
+            "overall_status": overall_status,
+            "services": health_statuses,
+            "timestamp": datetime.utcnow().isoformat(),
+            "response_time_ms": total_time
+        }

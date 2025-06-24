@@ -1,0 +1,271 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ../../
+      dockerfile: ops/docker/Dockerfile.api
+    env_file:
+      - ../env/api.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+      - anythingllm
+      - ollama
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1024M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    secrets:
+      - api_auth_secret
+      - api_jwt_secret
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+
+  web_ui:
+    build:
+      context: ../../
+      dockerfile: ops/docker/Dockerfile.webui
+    env_file:
+      - ../env/webui.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+    secrets:
+      - webui_session_secret
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.webui.rule=Host(`webui.localhost`)"
+      - "traefik.http.routers.webui.entrypoints=websecure"
+      - "traefik.http.routers.webui.tls.certresolver=letsencrypt"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    labels:
+      - "monitoring=true"
+    # Backup/restore handled by backup-redis sidecar
+
+  db:
+    image: nouchka/sqlite3:latest
+    volumes:
+      - db_data:/data
+    environment:
+      - SQLITE_DATABASE=app.db
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "sqlite3", "/data/app.db", ".databases"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    labels:
+      - "monitoring=true"
+    # Backup/restore handled by backup-db sidecar
+
+  anythingllm:
+    build:
+      context: ../../
+      dockerfile: ops/docker/Dockerfile.anythingllm
+    env_file:
+      - ../env/anythingllm.env
+    ports:
+      - "3001:3001"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 2048M
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+    secrets:
+      - anythingllm_api_key
+      - anythingllm_workspace_secret
+
+  ollama:
+    build:
+      context: ../../
+      dockerfile: ops/docker/Dockerfile.ollama
+    env_file:
+      - ../env/ollama.env
+    ports:
+      - "11434:11434"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.00"
+          memory: 4096M
+        reservations:
+          cpus: "0.50"
+          memory: 1024M
+    secrets:
+      - ollama_api_key
+      - ollama_model_secret
+
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.address=:80"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - traefik_letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    networks:
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 64M
+        reservations:
+          cpus: "0.01"
+          memory: 16M
+
+  backup-db:
+    image: busybox
+    command: sh -c "while true; do sleep 3600; tar czf /backup/db_backup_$(date +%Y%m%d%H%M%S).tar.gz /data; done"
+    volumes:
+      - db_data:/data
+      - db_backup:/backup
+    networks:
+      - backend
+    restart: unless-stopped
+
+  backup-redis:
+    image: busybox
+    command: sh -c "while true; do sleep 3600; tar czf /backup/redis_backup_$(date +%Y%m%d%H%M%S).tar.gz /data; done"
+    volumes:
+      - redis_data:/data
+      - redis_backup:/backup
+    networks:
+      - backend
+    restart: unless-stopped
+
+secrets:
+  api_auth_secret:
+    file: ../secrets/api_auth_secret.txt
+  api_jwt_secret:
+    file: ../secrets/api_jwt_secret.txt
+  webui_session_secret:
+    file: ../secrets/webui_session_secret.txt
+  anythingllm_api_key:
+    file: ../secrets/anythingllm_api_key.txt
+  anythingllm_workspace_secret:
+    file: ../secrets/anythingllm_workspace_secret.txt
+  ollama_api_key:
+    file: ../secrets/ollama_api_key.txt
+  ollama_model_secret:
+    file: ../secrets/ollama_model_secret.txt
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  redis_data:
+  db_data:
+  traefik_letsencrypt:
+  db_backup:
+  redis_backup:
