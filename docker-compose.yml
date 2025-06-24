@@ -1,6 +1,8 @@
 services:
   api:
-    image: docaiche/api:latest
+    build:
+      context: .
+      dockerfile: src/api/Dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -20,7 +22,9 @@ services:
     restart: unless-stopped
 
   web_ui:
-    image: docaiche/web_ui:latest
+    build:
+      context: .
+      dockerfile: src/web_ui/Dockerfile
     ports:
       - "8080:8080"
     depends_on:
