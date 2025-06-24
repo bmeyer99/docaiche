@@ -24,6 +24,7 @@ Specifies the system's configuration management, including the hierarchical stru
 - Uses `DatabaseManager` from PRD-002 for DB overrides.
 - Provides config to all major components (PRD-004, PRD-005, PRD-006, etc.).
 - Exposes endpoints for config management in PRD-001.
+- AI/LLM configuration interface provided by [Configuration Web UI](PRD-012_configuration_web_ui.md) with dynamic provider management and endpoint testing.
 
 ## Configuration Schema
 
