@@ -183,3 +183,58 @@ def create_knowledge_enricher_with_integrated_config(**kwargs) -> KnowledgeEnric
 def create_task_manager_with_integrated_config(**kwargs) -> TaskManager:
     """Create task manager with integrated configuration."""
     return create_task_manager(**kwargs)
+
+async def create_lifecycle_manager(config: Any, **kwargs) -> 'LifecycleManager':
+    """Create lifecycle manager with database manager."""
+    from .lifecycle import LifecycleManager
+    from src.database.manager import create_database_manager
+    from .concurrent import ResourceLimits
+    
+    # Get or create database manager
+    db_manager = kwargs.get('db_manager')
+    if not db_manager:
+        db_manager = await create_database_manager()
+    
+    # Create resource limits
+    resource_limits = kwargs.get('resource_limits') or ResourceLimits()
+    
+    return LifecycleManager(
+        config=config,
+        db_manager=db_manager,
+        resource_limits=resource_limits,
+        shutdown_timeout=kwargs.get('shutdown_timeout', 30.0)
+    )
+
+async def create_complete_enrichment_system(shutdown_timeout: float = 30.0, **kwargs) -> 'LifecycleManager':
+    """Create complete enrichment system with lifecycle management."""
+    from .lifecycle import LifecycleManager
+    from .config import get_enrichment_config
+    from src.database.manager import create_database_manager
+    from .concurrent import ResourceLimits
+    
+    # Get configuration
+    try:
+        config = await get_enrichment_config()
+    except Exception:
+        # Fallback to default configuration
+        from .models import EnrichmentConfig
+        config = EnrichmentConfig()
+    
+    # Create database manager
+    db_manager = await create_database_manager()
+    
+    # Create resource limits
+    resource_limits = ResourceLimits()
+    
+    # Create lifecycle manager
+    lifecycle_manager = LifecycleManager(
+        config=config,
+        db_manager=db_manager,
+        resource_limits=resource_limits,
+        shutdown_timeout=shutdown_timeout
+    )
+    
+    # Initialize components
+    await lifecycle_manager.initialize_components()
+    
+    return lifecycle_manager

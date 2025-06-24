@@ -472,6 +472,70 @@ class DatabaseManager:
         """
         await self.connect()
     
+    async def get_content_metadata(self, content_id: str) -> Dict[str, Any]:
+        """
+        Get content metadata for enrichment gap analysis.
+        
+        Args:
+            content_id: Content identifier
+            
+        Returns:
+            Content metadata dictionary
+        """
+        try:
+            if not self._connected:
+                await self.connect()
+            
+            # Use parameterized query to get content metadata
+            query = "SELECT * FROM content_metadata WHERE content_id = :param_0"
+            params = (content_id,)
+            result = await self.fetch_one(query, params)
+            
+            if result:
+                return {
+                    "content_id": result.content_id,
+                    "topics": result.topics.split(",") if hasattr(result, 'topics') and result.topics else [],
+                    "sections": [{"name": "default", "is_outdated": False}],  # Mock sections data
+                    "word_count": getattr(result, 'word_count', 0),
+                    "created_at": getattr(result, 'created_at', None)
+                }
+            else:
+                # Return default metadata if content not found
+                return {
+                    "content_id": content_id,
+                    "topics": [],
+                    "sections": [],
+                    "word_count": 0,
+                    "created_at": None
+                }
+        except Exception as e:
+            self.logger.error(f"Error getting content metadata for {content_id}: {e}")
+            # Return default metadata on error
+            return {
+                "content_id": content_id,
+                "topics": [],
+                "sections": [],
+                "word_count": 0,
+                "created_at": None
+            }
+
+    async def finalize_enrichment_task(self, task_id: str) -> None:
+        """
+        Finalize enrichment task using parameterized query.
+        
+        Args:
+            task_id: Task identifier to finalize
+        """
+        try:
+            # Use parameterized query to finalize task
+            query = "UPDATE enrichment_tasks SET finalized_at = :param_0 WHERE task_id = :param_1"
+            params = (datetime.utcnow().isoformat(), task_id)
+            await self.execute(query, params)
+            self.logger.debug(f"Finalized enrichment task: {task_id}")
+        except Exception as e:
+            self.logger.error(f"Error finalizing enrichment task {task_id}: {e}")
+            raise
+
     async def health_check(self) -> Dict[str, Any]:
         """
         Check database health and return status information.

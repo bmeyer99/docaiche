@@ -114,6 +114,16 @@ enrichment:
   enable_quality_assessment: true
   min_confidence_threshold: 0.7
 
+# API Response Pipeline Configuration
+api_response_pipeline:
+  cache:
+    ttl: 300                # Default cache TTL in seconds
+    prefix: "api_response:" # Prefix for cache keys
+  default_formatter: "JSONAPIFormatter"  # Default formatter class
+  allowed_formatters:
+    - "JSONAPIFormatter"
+    - "SimpleJSONFormatter"
+
 # Configuration Notes:
 # 
 # 1. Environment Variables Override:

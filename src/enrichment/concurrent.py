@@ -522,30 +522,42 @@ class ConcurrentTaskExecutor:
         """
         # Sort resources by type to ensure consistent ordering (deadlock prevention)
         sorted_resources = sorted(resource_types, key=lambda x: x.value)
-        acquired_resources = []
+        acquired_contexts = []
         
         try:
             # Acquire resources in sorted order
             for resource_type in sorted_resources:
                 pool = self._resource_pools[resource_type]
-                resource_context = pool.acquire(f"{task_id}_{resource_type.value}")
-                acquired_resources.append(resource_context)
+                context = pool.acquire(f"{task_id}_{resource_type.value}")
+                acquired_contexts.append(context)
             
-            # Use all acquired resources
-            async with asyncio.gather(*[r.__aenter__() for r in acquired_resources]):
-                yield
+            # Enter all contexts sequentially
+            entered_contexts = []
+            try:
+                for context in acquired_contexts:
+                    result = await context.__aenter__()
+                    entered_contexts.append((context, result))
                 
+                yield [result for _, result in entered_contexts]
+                
+            finally:
+                # Exit all contexts in reverse order
+                for context, _ in reversed(entered_contexts):
+                    try:
+                        await context.__aexit__(None, None, None)
+                    except Exception as e:
+                        logger.error(f"Resource cleanup error: {e}")
+                        
         except Exception as e:
             logger.error(f"Resource acquisition failed for task {task_id}: {e}")
-            raise
-        
-        finally:
-            # Ensure proper cleanup of all acquired resources
-            for resource_context in reversed(acquired_resources):
+            # Cleanup any partially acquired contexts
+            for context in reversed(acquired_contexts):
                 try:
-                    await resource_context.__aexit__(None, None, None)
-                except Exception as e:
-                    logger.error(f"Resource cleanup error: {e}")
+                    if hasattr(context, '__aexit__'):
+                        await context.__aexit__(None, None, None)
+                except Exception as cleanup_error:
+                    logger.error(f"Cleanup error during exception handling: {cleanup_error}")
+            raise
     
     async def submit_priority_task(
         self,

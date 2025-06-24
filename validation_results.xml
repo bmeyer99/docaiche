@@ -1,37 +1,153 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="4" failures="0" skipped="0" tests="4" time="1.155" timestamp="2025-06-23T20:54:18.931828+00:00" hostname="860ccdba2723"><testcase classname="" name="tests.validation.test_document_ingestion_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_comprehensive_validation.py'.
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="16" failures="0" skipped="0" tests="16" time="1.200" timestamp="2025-06-24T03:59:14.511025+00:00" hostname="860ccdba2723"><testcase classname="" name="tests.validation.test_document_ingestion_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_comprehensive_validation.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/lib/python3.10/importlib/__init__.py:126: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_document_ingestion_comprehensive_validation.py:26: in &lt;module&gt;
-    from src.ingestion.pipeline import IngestionPipeline, create_ingestion_pipeline
-src/ingestion/pipeline.py:15: in &lt;module&gt;
-    from src.processors.content_processor import ContentProcessor, FileContent
-src/processors/__init__.py:6: in &lt;module&gt;
-    from .content_processor import ContentProcessor, FileContent, ScrapedContent
-E   ImportError: cannot import name 'FileContent' from 'src.processors.content_processor' (/home/lab/docaiche/src/processors/content_processor.py)</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_final_production_approval" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_final_production_approval.py'.
+tests/validation/test_document_ingestion_comprehensive_validation.py:34: in &lt;module&gt;
+    from src.main import app
+src/main.py:23: in &lt;module&gt;
+    from src.api.v1.api import api_router, setup_exception_handlers
+src/api/v1/api.py:18: in &lt;module&gt;
+    from .enrichment import enrichment_router
+src/api/v1/enrichment.py:17: in &lt;module&gt;
+    from src.enrichment.models import (
+E   ImportError: cannot import name 'EnrichmentType' from 'src.enrichment.models' (/home/lab/docaiche/src/enrichment/models.py)</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_final_production_approval" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_final_production_approval.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/lib/python3.10/importlib/__init__.py:126: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_document_ingestion_final_production_approval.py:27: in &lt;module&gt;
-    from src.ingestion.pipeline import IngestionPipeline, create_ingestion_pipeline
-src/ingestion/pipeline.py:15: in &lt;module&gt;
-    from src.processors.content_processor import ContentProcessor, FileContent
-E   ImportError: cannot import name 'FileContent' from 'src.processors.content_processor' (/home/lab/docaiche/src/processors/content_processor.py)</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_final_production_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_final_production_validation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/lib/python3.10/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/validation/test_document_ingestion_final_production_validation.py:14: in &lt;module&gt;
-    from src.ingestion.pipeline import IngestionPipeline, create_ingestion_pipeline
-src/ingestion/pipeline.py:15: in &lt;module&gt;
-    from src.processors.content_processor import ContentProcessor, FileContent
-E   ImportError: cannot import name 'FileContent' from 'src.processors.content_processor' (/home/lab/docaiche/src/processors/content_processor.py)</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_production_blocker_assessment" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_production_blocker_assessment.py'.
+tests/validation/test_document_ingestion_final_production_approval.py:29: in &lt;module&gt;
+    from src.api.v1.ingestion import get_ingestion_pipeline, health_check
+E   ImportError: cannot import name 'get_ingestion_pipeline' from 'src.api.v1.ingestion' (/home/lab/docaiche/src/api/v1/ingestion.py)</error></testcase><testcase classname="" name="tests.validation.test_document_ingestion_production_blocker_assessment" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_document_ingestion_production_blocker_assessment.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/lib/python3.10/importlib/__init__.py:126: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
 tests/validation/test_document_ingestion_production_blocker_assessment.py:11: in &lt;module&gt;
     from src.api.v1.ingestion import get_ingestion_pipeline
-E   ImportError: cannot import name 'get_ingestion_pipeline' from 'src.api.v1.ingestion' (/home/lab/docaiche/src/api/v1/ingestion.py)</error></testcase></testsuite></testsuites>
+E   ImportError: cannot import name 'get_ingestion_pipeline' from 'src.api.v1.ingestion' (/home/lab/docaiche/src/api/v1/ingestion.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_001_api_foundation_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_001_api_foundation_comprehensive_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_001_api_foundation_comprehensive_validation.py:36: in &lt;module&gt;
+    from src.main import create_application
+src/main.py:23: in &lt;module&gt;
+    from src.api.v1.api import api_router, setup_exception_handlers
+src/api/v1/api.py:18: in &lt;module&gt;
+    from .enrichment import enrichment_router
+src/api/v1/enrichment.py:17: in &lt;module&gt;
+    from src.enrichment.models import (
+E   ImportError: cannot import name 'EnrichmentType' from 'src.enrichment.models' (/home/lab/docaiche/src/enrichment/models.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_003_005_llm_optional_provider_final_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_003_005_llm_optional_provider_final_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_003_005_llm_optional_provider_final_validation.py:5: in &lt;module&gt;
+    import src.main
+src/main.py:23: in &lt;module&gt;
+    from src.api.v1.api import api_router, setup_exception_handlers
+src/api/v1/api.py:18: in &lt;module&gt;
+    from .enrichment import enrichment_router
+src/api/v1/enrichment.py:17: in &lt;module&gt;
+    from src.enrichment.models import (
+E   ImportError: cannot import name 'EnrichmentType' from 'src.enrichment.models' (/home/lab/docaiche/src/enrichment/models.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_003_005_llm_optional_provider_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_003_005_llm_optional_provider_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_003_005_llm_optional_provider_validation.py:9: in &lt;module&gt;
+    import src.main
+src/main.py:23: in &lt;module&gt;
+    from src.api.v1.api import api_router, setup_exception_handlers
+src/api/v1/api.py:18: in &lt;module&gt;
+    from .enrichment import enrichment_router
+src/api/v1/enrichment.py:17: in &lt;module&gt;
+    from src.enrichment.models import (
+E   ImportError: cannot import name 'EnrichmentType' from 'src.enrichment.models' (/home/lab/docaiche/src/enrichment/models.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_006_document_processing_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_006_document_processing_comprehensive_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_006_document_processing_comprehensive_validation.py:3: in &lt;module&gt;
+    from src.main import app
+src/main.py:23: in &lt;module&gt;
+    from src.api.v1.api import api_router, setup_exception_handlers
+src/api/v1/api.py:18: in &lt;module&gt;
+    from .enrichment import enrichment_router
+src/api/v1/enrichment.py:17: in &lt;module&gt;
+    from src.enrichment.models import (
+E   ImportError: cannot import name 'EnrichmentType' from 'src.enrichment.models' (/home/lab/docaiche/src/enrichment/models.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_006_llm_integration_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_006_llm_integration_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_006_llm_integration_validation.py:4: in &lt;module&gt;
+    from src.main import app
+src/main.py:23: in &lt;module&gt;
+    from src.api.v1.api import api_router, setup_exception_handlers
+src/api/v1/api.py:18: in &lt;module&gt;
+    from .enrichment import enrichment_router
+src/api/v1/enrichment.py:17: in &lt;module&gt;
+    from src.enrichment.models import (
+E   ImportError: cannot import name 'EnrichmentType' from 'src.enrichment.models' (/home/lab/docaiche/src/enrichment/models.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_complete_system_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_complete_system_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_010_complete_system_validation.py:31: in &lt;module&gt;
+    from src.enrichment.tasks import EnrichmentTask, TaskStatus
+E   ImportError: cannot import name 'TaskStatus' from 'src.enrichment.tasks' (/home/lab/docaiche/src/enrichment/tasks.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_complete_system_validation_final" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_complete_system_validation_final.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_010_complete_system_validation_final.py:32: in &lt;module&gt;
+    from src.enrichment.queue import EnrichmentTaskQueue, EnrichmentQueue
+E   ImportError: cannot import name 'EnrichmentQueue' from 'src.enrichment.queue' (/home/lab/docaiche/src/enrichment/queue.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_complete_system_validation_fixed" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_complete_system_validation_fixed.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_010_complete_system_validation_fixed.py:32: in &lt;module&gt;
+    from src.enrichment.queue import EnrichmentTaskQueue, EnrichmentQueue
+E   ImportError: cannot import name 'EnrichmentQueue' from 'src.enrichment.queue' (/home/lab/docaiche/src/enrichment/queue.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_final_production_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_final_production_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_010_final_production_validation.py:33: in &lt;module&gt;
+    from src.enrichment.security import SecureTaskExecutor, TaskSandbox, PrivilegeLevel, get_task_privilege_level
+src/enrichment/security.py:22: in &lt;module&gt;
+    from .exceptions import TaskExecutionError, EnrichmentException
+E   ImportError: cannot import name 'TaskExecutionError' from 'src.enrichment.exceptions' (/home/lab/docaiche/src/enrichment/exceptions.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_knowledge_enrichment_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_knowledge_enrichment_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_010_knowledge_enrichment_validation.py:18: in &lt;module&gt;
+    from src.enrichment import (
+E   ImportError: cannot import name 'EnrichmentQueue' from 'src.enrichment' (/home/lab/docaiche/src/enrichment/__init__.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_performance_benchmarks" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_performance_benchmarks.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_010_performance_benchmarks.py:22: in &lt;module&gt;
+    from src.enrichment.tasks import EnrichmentTask, TaskStatus
+E   ImportError: cannot import name 'TaskStatus' from 'src.enrichment.tasks' (/home/lab/docaiche/src/enrichment/tasks.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_security_fixes_comprehensive_validation" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_security_fixes_comprehensive_validation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_010_security_fixes_comprehensive_validation.py:38: in &lt;module&gt;
+    from src.enrichment.security import SecureTaskExecutor, TaskSandbox, PrivilegeLevel, get_task_privilege_level
+src/enrichment/security.py:22: in &lt;module&gt;
+    from .exceptions import TaskExecutionError, EnrichmentException
+E   ImportError: cannot import name 'TaskExecutionError' from 'src.enrichment.exceptions' (/home/lab/docaiche/src/enrichment/exceptions.py)</error></testcase><testcase classname="" name="tests.validation.test_prd_010_security_penetration" time="0.000"><error message="collection failure">ImportError while importing test module '/home/lab/docaiche/tests/validation/test_prd_010_security_penetration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.10/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/validation/test_prd_010_security_penetration.py:19: in &lt;module&gt;
+    from src.enrichment.exceptions import SecurityError, AuthenticationError
+E   ImportError: cannot import name 'SecurityError' from 'src.enrichment.exceptions' (/home/lab/docaiche/src/enrichment/exceptions.py)</error></testcase></testsuite></testsuites>

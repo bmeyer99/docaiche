@@ -11,18 +11,30 @@ logger = logging.getLogger(__name__)
 class TaskManager:
     """
     Task manager for coordinating enrichment tasks and background processing.
-    Handles task creation, tracking, and lifecycle management.
+    Handles task creation, tracking, and lifecycle management with secure execution.
     """
     
     def __init__(
         self,
+        config: Optional[Any] = None,
         queue: Any = None,
-        config: Optional[Dict[str, Any]] = None
+        db_manager: Any = None
     ):
+        # Handle both old and new parameter styles for backward compatibility
+        if isinstance(config, dict) or config is None:
+            self.config = config or {}
+        else:
+            # New style: config object, queue, db_manager
+            self.config = config.__dict__ if hasattr(config, '__dict__') else {}
+        
         self.queue = queue
-        self.config = config or {}
+        self.db_manager = db_manager
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self._active_tasks: Dict[str, EnrichmentTask] = {}
+        
+        # Initialize secure executor for privilege isolation
+        from .security import SecureTaskExecutor
+        self.secure_executor = SecureTaskExecutor()
     
     async def create_task(self, task_type: str, **kwargs) -> str:
         """Create a new enrichment task and add it to the queue."""
