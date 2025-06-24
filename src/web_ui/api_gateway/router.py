@@ -203,7 +203,7 @@ class LLMProviderTestRequest(BaseModel):
     base_url: str
     api_key: Optional[str] = None
 
-@api_router.post("/v1/llm/test-connection")
+@api_router.post("/llm/test-connection")
 async def test_llm_provider_connection(req: LLMProviderTestRequest):
     """Test connection to LLM provider and return available models."""
     import httpx
@@ -357,7 +357,7 @@ class LLMModelTestRequest(BaseModel):
     model: str
     prompt: Optional[str] = "Hello, this is a test message. Please respond briefly."
 
-@api_router.post("/v1/llm/test-model")
+@api_router.post("/llm/test-model")
 async def test_llm_model_response(req: LLMModelTestRequest):
     """Test a specific model by sending a prompt and getting a response."""
     try:

@@ -379,17 +379,19 @@ class AILLMConfigManager {
             case 'ollama':
                 return data.models.map(model => ({
                     name: model.name || '',
-                    description: 'Ollama model',
+                    description: this.getModelDescription(model.name || '', 'Ollama model'),
                     size: this.formatSize(model.size) || 'N/A',
-                    modified: this.formatDate(model.modified_at) || 'Unknown'
+                    modified: this.formatDate(model.modified_at) || 'Unknown',
+                    type: this.getModelType(model.name || '')
                 }));
                 
             case 'openai':
                 return data.models.map(model => ({
                     name: model.name || model.id || '',
-                    description: 'OpenAI model',
+                    description: this.getModelDescription(model.name || model.id || '', 'OpenAI model'),
                     size: 'N/A',
-                    modified: this.formatDate(model.created) || 'Unknown'
+                    modified: this.formatDate(model.created) || 'Unknown',
+                    type: this.getModelType(model.name || model.id || '')
                 }));
                 
             case 'anthropic':
@@ -397,17 +399,40 @@ class AILLMConfigManager {
                     name: model.name || '',
                     description: 'Anthropic model',
                     size: 'N/A',
-                    modified: 'Unknown'
+                    modified: 'Unknown',
+                    type: 'text-generation'
                 }));
                 
             default:
                 return data.models.map(model => ({
                     name: model.name || model.id || 'Unknown',
-                    description: model.description || 'Model',
+                    description: this.getModelDescription(model.name || model.id || '', model.description || 'Model'),
                     size: this.formatSize(model.size) || 'N/A',
-                    modified: this.formatDate(model.modified_at || model.created) || 'Unknown'
+                    modified: this.formatDate(model.modified_at || model.created) || 'Unknown',
+                    type: this.getModelType(model.name || model.id || '')
                 }));
         }
+    }
+
+    getModelType(modelName) {
+        // Determine model type based on name patterns
+        const embeddingPatterns = [
+            /embed/i,
+            /embedding/i,
+            /nomic-embed/i,
+            /text-embedding/i,
+            /sentence-transformer/i,
+            /bge-/i,
+            /e5-/i
+        ];
+        
+        return embeddingPatterns.some(pattern => pattern.test(modelName)) ? 'embedding' : 'text-generation';
+    }
+
+    getModelDescription(modelName, defaultDescription) {
+        const modelType = this.getModelType(modelName);
+        const typeLabel = modelType === 'embedding' ? '(Embedding)' : '(Text Generation)';
+        return `${defaultDescription} ${typeLabel}`;
     }
 
     formatSize(bytes) {
@@ -470,6 +495,12 @@ class AILLMConfigManager {
         if (selectedOption && selectedOption.value) {
             hiddenInput.value = selectedOption.value;
             
+            // Check if this is an embedding model and auto-sync with AnythingLLM
+            const modelType = this.getModelType(selectedOption.value);
+            if (modelType === 'embedding') {
+                this.syncEmbeddingModelToAnythingLLM(selectedOption.value);
+            }
+            
             // Show model information
             if (modelInfo) {
                 const nameEl = document.getElementById('model-info-name');
@@ -489,6 +520,59 @@ class AILLMConfigManager {
             if (modelInfo) {
                 modelInfo.classList.add('hidden');
             }
+        }
+    }
+
+    syncEmbeddingModelToAnythingLLM(embeddingModel) {
+        // Auto-sync embedding model selection to AnythingLLM configuration
+        const provider = document.getElementById('llm_provider')?.value || 'ollama';
+        
+        // Set AnythingLLM embedding model fields
+        const embeddingModelField = document.getElementById('anythingllm_embedding_model');
+        const embeddingProviderField = document.getElementById('anythingllm_embedding_provider');
+        
+        if (embeddingModelField) {
+            embeddingModelField.value = embeddingModel;
+            console.log(`Auto-synced embedding model to AnythingLLM: ${embeddingModel}`);
+        }
+        
+        if (embeddingProviderField) {
+            embeddingProviderField.value = provider;
+            console.log(`Auto-synced embedding provider to AnythingLLM: ${provider}`);
+        }
+        
+        // Show notification about auto-sync
+        utils.showNotification(`Embedding model ${embeddingModel} auto-synced to AnythingLLM`, 'success');
+        
+        // Trigger AnythingLLM configuration update
+        this.updateAnythingLLMEmbeddingConfig(embeddingModel, provider);
+    }
+
+    async updateAnythingLLMEmbeddingConfig(embeddingModel, provider) {
+        // Update AnythingLLM configuration via API
+        try {
+            const configData = {
+                anythingllm: {
+                    embedding_model: embeddingModel,
+                    embedding_provider: provider
+                }
+            };
+            
+            const response = await fetch('/api/v1/config', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(configData)
+            });
+            
+            if (response.ok) {
+                console.log(`AnythingLLM embedding configuration updated: ${embeddingModel}`);
+            } else {
+                console.warn('Failed to update AnythingLLM embedding configuration');
+            }
+        } catch (error) {
+            console.error('Error updating AnythingLLM embedding configuration:', error);
         }
     }
 
@@ -654,6 +738,12 @@ class AILLMConfigManager {
             return;
         }
 
+        // Check model type and test appropriately
+        const modelType = this.getModelType(model);
+        if (modelType === 'embedding') {
+            return this.testEmbeddingModel(provider, baseUrl, apiKey, model, testButton, originalText);
+        }
+
         const testButton = document.getElementById('test-model-response');
         const originalText = testButton ? testButton.textContent : 'Test Model Response';
         
@@ -662,7 +752,7 @@ class AILLMConfigManager {
             testButton.textContent = 'Testing...';
         }
 
-        this.showModelTestResults('Testing model response...', 'info');
+        this.showModelTestResults('Testing text generation model...', 'info');
         
         try {
             const endpoint = '/api/v1/llm/test-model';
@@ -674,7 +764,7 @@ class AILLMConfigManager {
                 prompt: "Hello, this is a test message. Please respond briefly."
             };
             
-            console.log(`Testing model ${model} on ${provider}`);
+            console.log(`Testing text generation model ${model} on ${provider}`);
             console.log('Request data:', requestData);
             
             // Create AbortController for timeout
@@ -787,7 +877,10 @@ class AILLMConfigManager {
             top_p: parseFloat(document.getElementById('top_p')?.value) || 1.0,
             top_k: parseInt(document.getElementById('top_k')?.value) || 40,
             llm_timeout: parseInt(document.getElementById('llm_timeout')?.value) || 30,
-            llm_retries: parseInt(document.getElementById('llm_retries')?.value) || 3
+            llm_retries: parseInt(document.getElementById('llm_retries')?.value) || 3,
+            // AnythingLLM embedding configuration
+            anythingllm_embedding_model: document.getElementById('anythingllm_embedding_model')?.value || '',
+            anythingllm_embedding_provider: document.getElementById('anythingllm_embedding_provider')?.value || 'ollama'
         };
     }
 
@@ -811,3 +904,98 @@ class AILLMConfigManager {
 
 // Global AI/LLM config manager instance
 window.aiLLMManager = new AILLMConfigManager();
+async testEmbeddingModel(provider, baseUrl, apiKey, model, testButton, originalText) {
+        if (testButton) {
+            testButton.disabled = true;
+            testButton.textContent = 'Testing Embedding...';
+        }
+
+        this.showModelTestResults('Testing embedding model...', 'info');
+        
+        try {
+            const endpoint = '/api/v1/llm/test-embedding';
+            const requestData = {
+                provider: provider,
+                base_url: baseUrl,
+                api_key: apiKey || null,
+                model: model,
+                text: "This is a test sentence for embedding generation."
+            };
+            
+            console.log(`Testing embedding model ${model} on ${provider}`);
+            console.log('Request data:', requestData);
+            
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.log('Embedding test request timed out');
+                controller.abort();
+            }, 30000); // 30 second timeout for embedding testing
+            
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            console.log(`Embedding test response status: ${response.status}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Embedding test error response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('Embedding test response data:', data);
+            
+            if (data.success) {
+                const responseTime = data.response_time ? `${Math.round(data.response_time * 1000)}ms` : 'N/A';
+                const dimensions = data.embedding_dimensions || 'Unknown';
+                this.showModelTestResults(
+                    `✓ Embedding model test successful!<br>` +
+                    `✓ Model: ${data.model}<br>` +
+                    `✓ Response time: ${responseTime}<br>` +
+                    `✓ Embedding dimensions: ${dimensions}<br><br>` +
+                    `<strong>Test Text:</strong><br>${data.text}<br><br>` +
+                    `<strong>Result:</strong><br>Generated ${dimensions}-dimensional embedding vector`,
+                    'success'
+                );
+                utils.showNotification('Embedding model test successful!', 'success');
+            } else {
+                throw new Error(data.message || 'Embedding model test failed');
+            }
+            
+        } catch (error) {
+            console.error('Embedding model test failed:', error);
+            
+            let errorMessage = error.message;
+            
+            // Provide more specific error messages
+            if (error.name === 'AbortError') {
+                errorMessage = 'Embedding test timed out after 30 seconds';
+            } else if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'Network error - check if the service is running and accessible';
+            }
+            
+            this.showModelTestResults(
+                `⚠️ Embedding Model Test Failed<br><br>` +
+                `Model: ${model}<br>` +
+                `Provider: ${provider}<br><br>` +
+                `Error: ${errorMessage}<br><br>` +
+                `Note: If this endpoint is not implemented yet, embedding models can still be used for AnythingLLM vector operations.`,
+                'error'
+            );
+            utils.showNotification('Embedding model test failed: ' + errorMessage, 'error');
+            
+        } finally {
+            if (testButton) {
+                testButton.disabled = false;
+                testButton.textContent = originalText;
+            }
+        }
+    }
