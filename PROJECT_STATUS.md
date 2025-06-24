@@ -106,6 +106,8 @@ All PRD components (001-013) have been successfully implemented, validated, and 
 | T-013-03 | 🛡️ QA Validator | PRD-013 | Validate deployment infrastructure and production readiness | ✅ DONE | 2025-06-24 05:16 | CRITICAL |
 | T-013-04 | ⚡ Implementation | PRD-013 | Portainer optimization - create root-level docker-compose.yml with ultra-simple deployment | ✅ DONE | 2025-06-24 05:26 | CRITICAL |
 | T-DOC-01 | ⚡ Implementation | Documentation | Complete README.md rewrite to reflect production-ready system with all PRD components | ✅ DONE | 2025-06-24 05:30 | HIGH |
+| T-015-01 | 🎯 Orchestrator | Portainer Fix | Remove all env_file references from docker-compose.yml for seamless Portainer deployment | ✅ DONE | 2025-06-24 05:52 | CRITICAL |
+| T-016-01 | ⚡ Implementation | Documentation Fix | Update README.md and ops/README.md to align with Portainer-first deployment model | ✅ DONE | 2025-06-24 05:54 | HIGH |
 
 ### **NO ACTIVE TASKS - All Development Complete** ✅
 

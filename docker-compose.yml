@@ -3,8 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    env_file:
-      - .env
     ports:
       - "8000:8000"
     depends_on:
@@ -27,8 +25,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.webui
-    env_file:
-      - .env
     ports:
       - "8080:8080"
     depends_on:
@@ -77,8 +73,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.anythingllm
-    env_file:
-      - .env
     ports:
       - "3001:3001"
     networks:
@@ -96,8 +90,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ollama
-    env_file:
-      - .env
     ports:
       - "11434:11434"
     networks:

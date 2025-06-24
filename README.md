@@ -81,10 +81,11 @@ The AI Documentation Cache System is a production-ready, microservices-based pla
 ```bash
 git clone https://github.com/your-org/ai-docs-cache.git
 cd ai-docs-cache
-cp .env.example .env   # Edit as needed
+# Set environment variables in your shell or use a docker-compose.override.yml file
 docker-compose up --build -d
 ```
 - All services (API, Web UI, AnythingLLM, Ollama, Redis, SQLite) are started and networked automatically.
+- **Note:** `.env` files are not used for containerized deployment. Set environment variables in your shell or via Portainer.
 
 ### 3. Local Development
 
@@ -96,12 +97,19 @@ cp .env.example .env
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8080
 ```
 - For advanced development, debugging, and testing.
+- **Note:** `.env` files are only used for local development.
 
 ---
 
 ## Configuration
 
-All configuration is managed via environment variables, `.env`, and `config.yaml`. See `.env.example` for all options.
+All configuration is managed via environment variables, `.env` (local development only), and `config.yaml`. See `.env.example` for all options.
+
+**Environment Variable Management:**
+
+- **Portainer Deployment:** Set environment variables directly in the Portainer UI when deploying the stack. `.env` files are ignored.
+- **Docker Compose:** Set environment variables in your shell before running `docker-compose up`, or use a `docker-compose.override.yml` file. Do not use `.env` files for containerized deployment.
+- **Local Development:** Use a `.env` file (copied from `.env.example`) for local runs outside containers.
 
 **Core Environment Variables:**
 
