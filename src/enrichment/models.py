@@ -131,3 +131,43 @@ class EnrichmentStrategy(BaseModel):
     description: Optional[str] = Field(None, description="A brief description of what the strategy does.")
     enabled: bool = Field(True, description="Whether the strategy is currently active.")
     parameters: Dict[str, Any] = Field(default_factory=dict, description="Configuration parameters for the strategy.")
+
+
+class ContentGap(BaseModel):
+    """
+    Model representing a content gap identified by analysis.
+    """
+    query: str = Field(..., description="Query that revealed the gap")
+    gap_type: str = Field(..., description="Type of content gap")
+    confidence: float = Field(..., description="Confidence score for gap identification")
+    suggested_sources: List[str] = Field(default_factory=list, description="Suggested sources to fill the gap")
+    priority: str = Field(..., description="Priority level for addressing the gap")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional gap metadata")
+
+
+class EnrichmentMetrics(BaseModel):
+    """
+    System-wide enrichment performance metrics.
+    """
+    total_tasks_processed: int = Field(default=0, description="Total enrichment tasks processed")
+    tasks_successful: int = Field(default=0, description="Number of successful tasks")
+    tasks_failed: int = Field(default=0, description="Number of failed tasks")
+    average_processing_time_ms: float = Field(default=0.0, description="Average task processing time")
+    current_queue_size: int = Field(default=0, description="Current task queue size")
+    error_rate: float = Field(default=0.0, description="Overall error rate percentage")
+    last_updated: datetime = Field(default_factory=datetime.utcnow, description="Last metrics update timestamp")
+
+
+class EnrichmentAnalytics(BaseModel):
+    """
+    Analytics data for enrichment system performance.
+    """
+    period_start: datetime = Field(..., description="Analytics period start time")
+    period_end: datetime = Field(..., description="Analytics period end time")
+    total_content_enriched: int = Field(..., description="Total content items enriched")
+    tags_generated: int = Field(..., description="Total tags generated")
+    relationships_identified: int = Field(..., description="Total relationships identified")
+    average_quality_improvement: float = Field(..., description="Average quality score improvement")
+    processing_efficiency: float = Field(..., description="Processing efficiency percentage")
+    error_patterns: Dict[str, int] = Field(default_factory=dict, description="Error pattern frequency")
+    performance_trends: Dict[str, List[float]] = Field(default_factory=dict, description="Performance trend data")

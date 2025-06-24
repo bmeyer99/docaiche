@@ -640,7 +640,7 @@ async def create_database_manager(config: Optional[Dict[str, Any]] = None) -> Da
             logger.warning(f"Could not load configuration, using default: {e}")
             db_path = "./data/docaiche.db"
     else:
-        db_path = config.get("db_path", "/app/data/docaiche.db")
+        db_path = config.get("db_path", "/data/docaiche.db")
     
     # Fix SQLite URL construction for aiosqlite
     # Convert relative paths to absolute and ensure proper URL format

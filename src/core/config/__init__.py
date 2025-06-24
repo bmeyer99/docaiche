@@ -13,9 +13,20 @@ def get_settings(*args, **kwargs):
     """Minimal stub for FastAPI app import compatibility."""
     return None
 
-def initialize_system_configuration(*args, **kwargs):
-    """Minimal stub for FastAPI app import compatibility."""
-    pass
+async def initialize_system_configuration(*args, **kwargs):
+    """Initializes the configuration and returns the config object."""
+    from src.core.config.manager import get_current_configuration
+    logger.info("Attempting to initialize system configuration...")
+    try:
+        config = await get_current_configuration()
+        if config:
+            logger.info("System configuration initialized successfully.")
+        else:
+            logger.error("Initialization returned None for configuration.")
+        return config
+    except Exception as e:
+        logger.error(f"Exception during system configuration initialization: {e}", exc_info=True)
+        return None
 
 # --- Implementation Engineer: Provide sync wrapper for system configuration ---
 

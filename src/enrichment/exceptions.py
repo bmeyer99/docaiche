@@ -23,6 +23,14 @@ class BackgroundTaskException(EnrichmentException):
     """Exception raised during background enrichment task failures."""
     pass
 
+class InvalidTaskError(EnrichmentException):
+    """Exception raised for invalid task parameters."""
+    pass
+
+
+class AnalysisError(EnrichmentException):
+    """Exception raised during content analysis failures."""
+    pass
 
 class TaskExecutionError(EnrichmentException):
     """Exception raised when task execution fails."""

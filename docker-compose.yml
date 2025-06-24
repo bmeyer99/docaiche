@@ -58,16 +58,14 @@ services:
     restart: unless-stopped
 
   db:
-    image: nouchka/sqlite3:latest
-    command: "tail -f /dev/null"
-    environment:
-      - SQLITE_DATABASE=app.db
+    image: alpine:3.18
+    command: ["sh", "-c", "mkdir -p /data && touch /data/docaiche.db && tail -f /dev/null"]
     volumes:
       - db_data:/data
     networks:
       - docaiche
     healthcheck:
-      test: ["CMD", "sqlite3", "/data/app.db", ".databases"]
+      test: ["CMD", "test", "-f", "/data/docaiche.db"]
       interval: 30s
       timeout: 10s
       retries: 5
