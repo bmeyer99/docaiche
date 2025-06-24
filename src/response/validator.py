@@ -41,13 +41,16 @@ class ResponseValidator:
             quality_checks: Optional quality check parameters
 
         Returns:
-            True if valid, False if invalid
+            True if valid, False if invalid (but not totally malformed)
 
         Raises:
-            ValueError: On validation failure
+            ValueError: On totally invalid input (e.g., None)
         """
         errors = []
         try:
+            if response is None:
+                self.logger.error("Response is None")
+                raise ValueError("Response is None")
             # Basic structure validation
             if schema:
                 for key, val_type in schema.items():
@@ -64,6 +67,9 @@ class ResponseValidator:
                     if check == "metadata_required":
                         if "metadata" not in response or not response["metadata"]:
                             errors.append("Metadata is missing or empty")
+            # Additional: treat {"data": None} as invalid
+            if isinstance(response, dict) and "data" in response and response["data"] is None:
+                errors.append("Data is None")
             if errors:
                 for err in errors:
                     self.logger.error(f"Response validation error: {err}")

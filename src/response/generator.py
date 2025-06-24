@@ -33,7 +33,7 @@ class ResponseGenerator:
         - PRD-005: Optionally enhances responses with LLMProviderClient
 
     Methods:
-        generate_response: Main async method to generate a response
+        generate: Main async method to generate a response
 
     Raises:
         ResponseGenerationError: On unrecoverable response generation failure
@@ -53,6 +53,44 @@ class ResponseGenerator:
         self.formatter = formatter or ResponseFormatter()
         self.validator = validator or ResponseValidator()
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+
+    async def generate(self,
+        query: str = None,
+        search_results: Any = None,
+        enriched_content: Optional[Any] = None,
+        output_format: str = "json",
+        context: Optional[Dict[str, Any]] = None,
+        data: Any = None,
+        **kwargs
+    ) -> Any:
+        """
+        Asynchronously generate a structured response for a given query.
+        Args:
+            query: User query string
+            search_results: Results from SearchOrchestrator
+            enriched_content: Optional content from KnowledgeEnricher
+            output_format: Desired output format (e.g., 'json', 'markdown')
+            context: Optional additional context
+            data: Alternative to synthesized_content (for test compatibility)
+        Returns:
+            Structured response in the requested format
+        Raises:
+            ResponseGenerationError: On unrecoverable error
+        """
+        try:
+            # If called with only data, treat as synthesized_content
+            if data is not None and search_results is None:
+                search_results = data
+            return await self.generate_response(
+                query=query,
+                search_results=search_results,
+                enriched_content=enriched_content,
+                output_format=output_format,
+                context=context,
+            )
+        except Exception as e:
+            self.logger.error(f"Error in generate: {e}")
+            raise
 
     async def generate_response(
         self,

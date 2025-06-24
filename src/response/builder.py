@@ -30,9 +30,12 @@ class ResponseBuilder:
 
     def build(
         self,
-        synthesized_content: Any,
-        template_name: str,
+        synthesized_content: Any = None,
+        template_name: str = None,
         meta: Optional[Dict[str, Any]] = None,
+        *,
+        data: Any = None,
+        **kwargs
     ) -> Dict[str, Any]:
         """Build a structured response object.
 
@@ -40,6 +43,7 @@ class ResponseBuilder:
             synthesized_content: Content to include in the response
             template_name: Name of the template to use
             meta: Optional meta for the response
+            data: Alternative to synthesized_content (preferred if provided)
 
         Returns:
             Dict representing the response structure
@@ -48,11 +52,19 @@ class ResponseBuilder:
             ValueError: On invalid input
         """
         try:
-            if not synthesized_content or not template_name:
-                raise ValueError("Synthesized content and template name are required.")
+            # Use 'data' if provided, else fallback to synthesized_content
+            content = data if data is not None else synthesized_content
+            # Accept meta as a keyword argument, default to {}
+            meta = meta if meta is not None else kwargs.get("meta", {})
+            # Accept template_name as a keyword argument, default to "default"
+            template_name = template_name if template_name is not None else kwargs.get("template_name", "default")
+            if content is None:
+                raise ValueError("Synthesized content/data is required.")
+            if meta is not None and not isinstance(meta, dict):
+                raise ValueError("Meta must be a dictionary if provided.")
             response = {
                 "template": template_name,
-                "content": synthesized_content,
+                "content": content,
                 "metadata": meta or {},
             }
             # Extensible: allow meta to override/add top-level keys
@@ -60,6 +72,8 @@ class ResponseBuilder:
                 for k, v in meta.items():
                     if k not in response:
                         response[k] = v
+                # --- FIX: Always include top-level "meta" key if meta is provided ---
+                response["meta"] = meta
             return response
         except Exception as e:
             self.logger.error(f"Response assembly error: {e}")

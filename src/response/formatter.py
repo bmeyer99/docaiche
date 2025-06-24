@@ -47,7 +47,15 @@ class ResponseFormatter:
         """
         try:
             if not response or not isinstance(response, dict):
-                raise ValueError("Response must be a non-empty dictionary.")
+                self.logger.warning("Non-dict response input to format(); returning minimal output.")
+                if output_format.lower() == "json":
+                    return json.dumps({"content": str(response)}, ensure_ascii=False, indent=2)
+                elif output_format.lower() == "markdown":
+                    return f"### Content\n{str(response)}\n"
+                elif output_format.lower() == "html":
+                    return f"&lt;div class='response'&gt;&lt;h3&gt;Content&lt;/h3&gt;&lt;p&gt;{str(response)}&lt;/p&gt;&lt;/div&gt;"
+                else:
+                    return str(response)
             if output_format.lower() == "json":
                 result = json.dumps(response, ensure_ascii=False, indent=2)
                 if not result.strip():

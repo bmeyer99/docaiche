@@ -78,8 +78,14 @@ class TemplateEngine:
             TemplateRenderError: On rendering failure
         """
         try:
-            # Simple Python format-based rendering (safe for MVP, replace with Jinja2 if needed)
-            rendered = template.format(**{k: (v if v is not None else "") for k, v in context.items()})
+            # Ensure all required keys in template are present in context, fill with empty string if missing
+            import re
+            required_keys = set(re.findall(r"\{([a-zA-Z0-9_]+)\}", template))
+            safe_context = {k: (v if v is not None else "") for k, v in context.items()}
+            for key in required_keys:
+                if key not in safe_context:
+                    safe_context[key] = ""
+            rendered = template.format(**safe_context)
             return rendered
         except KeyError as e:
             self.logger.error(f"Missing variable in template context: {e}")
@@ -88,9 +94,10 @@ class TemplateEngine:
             self.logger.error(f"Template rendering error: {e}")
             raise TemplateRenderError(f"Template rendering error: {e}")
 
-    def render(self, template_name: str, context: Dict[str, Any], output_format: str = "text") -> str:
+    @staticmethod
+    def render(template_name, context, output_format):
         """
-        Render a template by name with context and output format.
+        Render a template by name with context and output format, with template injection protection.
 
         Args:
             template_name: Name of the template to load and render
@@ -104,5 +111,12 @@ class TemplateEngine:
             TemplateNotFoundError: If template is missing
             TemplateRenderError: On rendering failure
         """
-        template = self.load_template(template_name)
-        return self.render_template(template, context)
+        import re
+        # Template injection protection: allow only safe names
+        if not re.match(r"^[a-zA-Z0-9_\-]+$", template_name):
+            logger.error(f"Unsafe template name: {template_name}")
+            raise TemplateNotFoundError("Unsafe template name.")
+        # Instance needed for load_template and render_template
+        engine = TemplateEngine()
+        template = engine.load_template(template_name)
+        return engine.render_template(template, context)
