@@ -1,3 +1,4 @@
+**DO NOT** USE THIS FILE ANYMORE - IT IS CONSIDERED BUILT
 # AI Documentation Cache System - Project Status Dashboard
 
 **Last Updated:** 2025-06-24 05:27 UTC  
