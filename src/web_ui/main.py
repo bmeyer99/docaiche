@@ -10,6 +10,7 @@ from src.web_ui.real_time_service.websocket import websocket_router
 from src.web_ui.config.settings import WebUISettings
 import logging
 import os
+import httpx
 
 settings = WebUISettings()
 
@@ -60,10 +61,26 @@ def create_app() -> FastAPI:
     async def on_shutdown():
         logging.info("Web UI Service shutdown complete.")
 
-    # --- Frontend Routes ---
     @app.get("/", response_class=HTMLResponse)
     async def serve_dashboard():
-        return "<html><body>Dashboard</body></html>"
+        async with httpx.AsyncClient(base_url="http://localhost:8080/api/v1") as client:
+            stats_resp = await client.get("/stats")
+            content_resp = await client.get("/content")
+            stats = stats_resp.json() if stats_resp.status_code == 200 else {}
+            content = content_resp.json() if content_resp.status_code == 200 else {}
+
+        html = f"""
+        <html>
+        <body>
+            <h1>Dashboard</h1>
+            <h2>Stats</h2>
+            <pre>{stats}</pre>
+            <h2>Content</h2>
+            <pre>{content}</pre>
+        </body>
+        </html>
+        """
+        return html
 
     @app.get("/config", response_class=HTMLResponse)
     async def serve_config(request: Request):

@@ -126,6 +126,7 @@ async def health_check(
         "features": features
     }
 
+
 @router.get("/stats", tags=["health"])
 @limiter.limit("10/minute")
 async def get_stats(

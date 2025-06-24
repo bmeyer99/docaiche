@@ -12,11 +12,8 @@ services:
         condition: service_healthy
       anythingllm:
         condition: service_healthy
-    command: >
-      sh -c "
-        alembic upgrade head &&
-        uvicorn src.main:app --host 0.0.0.0 --port 8000
-      "
+      ollama:
+        condition: service_healthy
     networks:
       - docaiche
     healthcheck:
@@ -90,6 +87,19 @@ services:
       retries: 5
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - docaiche
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://ollama:11434/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
 networks:
   docaiche:
 
@@ -98,3 +108,4 @@ volumes:
   db_data:
   anythingllm_data:
   anythingllm_exports:
+  ollama_models:
