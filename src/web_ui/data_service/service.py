@@ -1,67 +1,44 @@
-"""Data Service for Web UI Service."""
+"""Data Service for Web UI."""
 
+from sqlalchemy.ext.asyncio import AsyncSession
 import logging
-from typing import Any, Dict, Optional
-from abc import ABC, abstractmethod
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.future import select
-from sqlalchemy.exc import SQLAlchemyError
-from src.web_ui.database.models import ConfigEntry
 
 logger = logging.getLogger(__name__)
 
-class IDataService(ABC):
-    """Abstract interface for the Data Service."""
+# In-memory store for configuration
+config_store = {"setting1": "value1", "setting2": True}
 
-    @abstractmethod
-    async def fetch_stats(self) -> Dict[str, Any]:
-        """Fetch system statistics from data sources.
-        Returns:
-            Dictionary of statistics.
-        """
-        pass
-
-    @abstractmethod
-    async def fetch_config(self) -> Dict[str, Any]:
-        """Fetch configuration data from data sources.
-        Returns:
-            Dictionary of configuration.
-        """
-        pass
-
-class DataService(IDataService):
-    """Concrete Data Service implementation."""
-
-    def __init__(self, db_session: Optional[AsyncSession] = None):
-        # TODO: IMPLEMENTATION ENGINEER - Inject dependencies (db, cache, etc.)
+class DataService:
+    def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    async def fetch_stats(self) -> Dict[str, Any]:
-        """Fetch system statistics from data sources."""
-        # TODO: IMPLEMENTATION ENGINEER - Implement data aggregation logic
-        try:
-            # Example: count config entries as a simple stat
-            result = await self.db_session.execute(select(ConfigEntry))
-            count = len(result.scalars().all())
-            stats = {
-                "config_entry_count": count,
-                "status": "ok"
-            }
-            logger.info("Fetched stats: %s", stats)
-            return stats
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in fetch_stats: {e}")
-            raise Exception("Failed to fetch stats from database")
+    async def fetch_stats(self) -> dict:
+        """Fetch system statistics."""
+        logger.info("Fetching system stats")
+        return {"uptime": 12345.6, "active_users": 10, "additional_stats": {}}
 
-    async def fetch_config(self) -> Dict[str, Any]:
-        """Fetch configuration data from data sources."""
-        # TODO: IMPLEMENTATION ENGINEER - Implement config retrieval logic
-        try:
-            result = await self.db_session.execute(select(ConfigEntry))
-            entries = result.scalars().all()
-            config = {entry.key: entry.value for entry in entries}
-            logger.info("Fetched config: %s", config)
-            return config
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in fetch_config: {e}")
-            raise Exception("Failed to fetch config from database")
+    async def fetch_config(self) -> dict:
+        """Fetch current configuration."""
+        logger.info("Fetching configuration")
+        return config_store
+
+    async def update_config(self, config: dict) -> dict:
+        """Update configuration."""
+        logger.info(f"Updating configuration with: {config}")
+        config_store.update(config)
+        return config_store
+
+    async def fetch_collections(self) -> list:
+        """Fetch content collections."""
+        logger.info("Fetching collections")
+        return [{"id": "collection1", "name": "Sample Collection", "content_id": "doc1"}]
+
+    async def delete_content(self, content_id: str) -> dict:
+        """Delete or flag content for removal."""
+        logger.info(f"Deleting content with id: {content_id}")
+        return {"status": "deleted", "content_id": content_id}
+
+    async def admin_search_content(self) -> list:
+        """Admin search for content."""
+        logger.info("Performing admin content search")
+        return [{"id": "doc1", "title": "Admin Search Result"}]

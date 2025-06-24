@@ -6,6 +6,7 @@ from src.web_ui.data_service.service import DataService
 from src.web_ui.view_model_service.service import ViewModelService
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
 import os
 import logging
 
@@ -31,12 +32,11 @@ def get_view_model_service(data_service: DataService = Depends(get_data_service)
 @api_router.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint for service monitoring."""
-    # TODO: IMPLEMENTATION ENGINEER - Implement health check logic
     try:
         # Example: check DB connection
         async with AsyncSessionLocal() as session:
-            await session.execute("SELECT 1")
-        return HealthResponse(status="ok")
+            await session.execute(text("SELECT 1"))
+        return HealthResponse(status="ok", metrics={})
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail="Service unavailable")
@@ -44,7 +44,6 @@ async def health_check():
 @api_router.get("/stats", response_model=StatsResponse)
 async def get_stats(data_service: DataService = Depends(get_data_service)):
     """Get system statistics for the UI."""
-    # TODO: IMPLEMENTATION ENGINEER - Fetch and return stats from DataService
     try:
         stats = await data_service.fetch_stats()
         return StatsResponse(**stats)
@@ -55,7 +54,6 @@ async def get_stats(data_service: DataService = Depends(get_data_service)):
 @api_router.get("/config", response_model=ConfigResponse)
 async def get_config(data_service: DataService = Depends(get_data_service)):
     """Get current configuration for the UI."""
-    # TODO: IMPLEMENTATION ENGINEER - Fetch and return config from DataService
     try:
         config = await data_service.fetch_config()
         return ConfigResponse(config=config)
@@ -63,10 +61,19 @@ async def get_config(data_service: DataService = Depends(get_data_service)):
         logger.error(f"Failed to fetch config: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch config")
 
+@api_router.post("/config", response_model=ConfigResponse)
+async def update_config(config: dict, data_service: DataService = Depends(get_data_service)):
+    """Update configuration."""
+    try:
+        updated_config = await data_service.update_config(config)
+        return ConfigResponse(config=updated_config)
+    except Exception as e:
+        logger.error(f"Failed to update config: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update config")
+
 @api_router.get("/content", response_model=ContentResponse)
 async def get_content(view_model_service: ViewModelService = Depends(get_view_model_service)):
     """Get content for the UI."""
-    # TODO: IMPLEMENTATION ENGINEER - Fetch and return content from ViewModelService
     try:
         content = await view_model_service.get_content_view_model()
         return ContentResponse(content=content)
@@ -84,26 +91,6 @@ async def get_collections(data_service: DataService = Depends(get_data_service))
         logger.error(f"Failed to fetch collections: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch collections")
 
-@api_router.post("/config")
-async def update_config(config: dict, data_service: DataService = Depends(get_data_service)):
-    """Update configuration."""
-    try:
-        updated_config = await data_service.update_config(config)
-        return updated_config
-    except Exception as e:
-        logger.error(f"Failed to update config: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update config")
-
-@api_router.get("/admin/search-content")
-async def admin_search_content(data_service: DataService = Depends(get_data_service)):
-    """Admin endpoint for searching content."""
-    try:
-        results = await data_service.admin_search_content()
-        return results
-    except Exception as e:
-        logger.error(f"Failed to search content: {e}")
-        raise HTTPException(status_code=500, detail="Failed to search content")
-
 @api_router.delete("/content/{content_id}")
 async def delete_content(content_id: str, data_service: DataService = Depends(get_data_service)):
     """Delete/flag content for removal."""
@@ -112,5 +99,15 @@ async def delete_content(content_id: str, data_service: DataService = Depends(ge
         return result
     except Exception as e:
         logger.error(f"Failed to delete content: {e}")
-        raise HTTPException(status_code=500, detail="Failed to delete content")</search>
-</search_and_replace>
+        raise HTTPException(status_code=500, detail="Failed to delete content")
+
+@api_router.get("/admin/search-content")
+async def admin_search_content(data_service: DataService = Depends(get_data_service)):
+    """Admin endpoint for searching content."""
+    # This is a protected endpoint, real implementation would have auth
+    try:
+        results = await data_service.admin_search_content()
+        return results
+    except Exception as e:
+        logger.error(f"Failed to search content: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search content")

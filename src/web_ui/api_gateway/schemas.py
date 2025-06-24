@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 class HealthResponse(BaseModel):
     """Schema for health check response."""
     status: str
+    metrics: Dict[str, Any]
 
 class StatsResponse(BaseModel):
     """Schema for system statistics response."""
