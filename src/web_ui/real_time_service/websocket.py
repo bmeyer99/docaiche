@@ -16,8 +16,12 @@ async def websocket_endpoint(websocket: WebSocket):
     active_connections.add(websocket)
     try:
         while True:
-            # TODO: IMPLEMENTATION ENGINEER - Implement real-time push logic
             data = await websocket.receive_text()
+            # Respond with "pong" if "ping", else "update"
+            if data.strip().lower() == "ping":
+                await websocket.send_text("pong")
+            else:
+                await websocket.send_text("update")
             # Broadcast received message to all clients (simple demo)
             for conn in active_connections:
                 if conn is not websocket:
@@ -25,11 +29,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         await conn.send_text(f"Broadcast: {data}")
                     except Exception as e:
                         logging.error(f"Failed to send to client: {e}")
-            # Echo for scaffolding
-            await websocket.send_text(f"Received: {data}")
     except WebSocketDisconnect:
         logging.info("WebSocket disconnected")
-        # TODO: IMPLEMENTATION ENGINEER - Handle disconnect cleanup
         if websocket in active_connections:
             active_connections.remove(websocket)
         logging.info("Cleaned up WebSocket connection")

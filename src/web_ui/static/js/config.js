@@ -329,19 +329,40 @@ class ConfigManager {
 
         this.isLoading = true;
         this.updateSaveButton();
+        this.showLoadingState();
 
         try {
             const config = this.getCurrentConfig();
-            await api.post('/config', config);
+            const response = await api.post('/config', config);
             
             this.originalConfig = { ...config };
             this.isDirty = false;
             this.updateSaveButton();
+            this.hideLoadingState();
             
             utils.showNotification('Configuration saved successfully', 'success');
         } catch (error) {
             console.error('Failed to save configuration:', error);
-            utils.showNotification('Failed to save configuration', 'error');
+            this.hideLoadingState();
+            
+            // Extract detailed error message from API response
+            let errorMessage = 'Failed to save configuration';
+            if (error.message && error.message.includes('HTTP')) {
+                const statusMatch = error.message.match(/HTTP (\d+)/);
+                if (statusMatch) {
+                    const statusCode = parseInt(statusMatch[1]);
+                    if (statusCode === 422) {
+                        errorMessage = 'Invalid configuration data. Please check your inputs.';
+                    } else if (statusCode === 400) {
+                        errorMessage = 'Bad request. Please verify all required fields are filled correctly.';
+                    } else if (statusCode >= 500) {
+                        errorMessage = 'Server error. Please try again later.';
+                    }
+                }
+            }
+            
+            utils.showNotification(errorMessage, 'error', 10000);
+            this.highlightErrorFields();
         } finally {
             this.isLoading = false;
             this.updateSaveButton();
@@ -381,6 +402,46 @@ class ConfigManager {
         errorMessages.forEach(message => {
             message.classList.add('hidden');
         });
+    }
+
+    showLoadingState() {
+        const saveButton = document.getElementById('save-config');
+        if (saveButton) {
+            const originalText = saveButton.textContent;
+            saveButton.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+            `;
+        }
+    }
+
+    hideLoadingState() {
+        const saveButton = document.getElementById('save-config');
+        if (saveButton) {
+            saveButton.innerHTML = 'Save Configuration';
+        }
+    }
+
+    highlightErrorFields() {
+        // Re-run validation to highlight problematic fields
+        this.validateForm();
+        
+        // Show a visual indicator that there are errors
+        const form = document.getElementById('config-form');
+        if (form) {
+            const errorFields = form.querySelectorAll('.border-red-500');
+            if (errorFields.length > 0) {
+                // Scroll to first error field
+                errorFields[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+                errorFields[0].focus();
+            }
+        }
     }
 }
 

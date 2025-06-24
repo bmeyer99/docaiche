@@ -25,12 +25,29 @@ class APIClient {
             const response = await fetch(`${this.baseURL}${url}`, config);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                let errorDetails = '';
+                try {
+                    const errorData = await response.json();
+                    errorDetails = errorData.detail || errorData.message || response.statusText;
+                } catch {
+                    errorDetails = response.statusText;
+                }
+                
+                const error = new Error(`HTTP ${response.status}: ${errorDetails}`);
+                error.status = response.status;
+                error.response = response;
+                throw error;
             }
             
             return await response.json();
         } catch (error) {
             console.error(`API request failed: ${error.message}`);
+            
+            // If it's a network error or other non-HTTP error
+            if (!error.status) {
+                error.message = 'Network error. Please check your connection.';
+            }
+            
             throw error;
         }
     }
