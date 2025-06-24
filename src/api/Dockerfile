@@ -17,3 +17,5 @@ WORKDIR /app/src
 
 # Command to run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Ensure Python can find the src package by setting PYTHONPATH
+ENV PYTHONPATH=/app
