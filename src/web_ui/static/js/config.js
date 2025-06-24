@@ -18,6 +18,11 @@ class ConfigManager {
             this.setupAccordions();
             this.bindEvents();
             this.setupFormValidation();
+            
+            // Initialize AI/LLM configuration manager
+            if (window.aiLLMManager) {
+                window.aiLLMManager.init();
+            }
         } catch (error) {
             console.error('Configuration initialization failed:', error);
             utils.showNotification('Failed to load configuration', 'error');
@@ -58,11 +63,16 @@ class ConfigManager {
         this.setFieldValue('auto_refresh', config.auto_refresh || true);
         this.setFieldValue('refresh_interval', config.refresh_interval || 300);
 
-        // AI/LLM Settings
-        this.setFieldValue('llm_provider', config.llm_provider || 'ollama');
-        this.setFieldValue('llm_model', config.llm_model || 'llama2');
-        this.setFieldValue('max_tokens', config.max_tokens || 2000);
-        this.setFieldValue('temperature', config.temperature || 0.7);
+        // AI/LLM Settings - delegate to AI/LLM manager
+        if (window.aiLLMManager) {
+            window.aiLLMManager.setAILLMConfig(config);
+        } else {
+            // Fallback if AI/LLM manager not available
+            this.setFieldValue('llm_provider', config.llm_provider || 'ollama');
+            this.setFieldValue('llm_model', config.llm_model || 'llama2');
+            this.setFieldValue('max_tokens', config.max_tokens || 2048);
+            this.setFieldValue('temperature', config.temperature || 0.7);
+        }
     }
 
     setFieldValue(fieldName, value) {
@@ -301,7 +311,7 @@ class ConfigManager {
     }
 
     getCurrentConfig() {
-        return {
+        const baseConfig = {
             environment: this.getFieldValue('environment'),
             debug_mode: this.getFieldValue('debug_mode'),
             log_level: this.getFieldValue('log_level'),
@@ -313,12 +323,20 @@ class ConfigManager {
             cache_ttl: this.getFieldValue('cache_ttl'),
             cache_max_size: this.getFieldValue('cache_max_size'),
             auto_refresh: this.getFieldValue('auto_refresh'),
-            refresh_interval: this.getFieldValue('refresh_interval'),
-            llm_provider: this.getFieldValue('llm_provider'),
-            llm_model: this.getFieldValue('llm_model'),
-            max_tokens: this.getFieldValue('max_tokens'),
-            temperature: this.getFieldValue('temperature')
+            refresh_interval: this.getFieldValue('refresh_interval')
         };
+
+        // Get AI/LLM config from dedicated manager or fallback to basic fields
+        const aiLLMConfig = window.aiLLMManager
+            ? window.aiLLMManager.getAILLMConfig()
+            : {
+                llm_provider: this.getFieldValue('llm_provider'),
+                llm_model: this.getFieldValue('llm_model'),
+                max_tokens: this.getFieldValue('max_tokens'),
+                temperature: this.getFieldValue('temperature')
+            };
+
+        return { ...baseConfig, ...aiLLMConfig };
     }
 
     async saveConfiguration() {

@@ -175,31 +175,170 @@
                     </div>
                 </button>
                 <div class="px-4 py-4 hidden" data-accordion-content="ai-config">
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="llm_provider" class="block text-sm font-medium text-gray-700">LLM Provider</label>
-                            <select id="llm_provider" name="llm_provider" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                <option value="ollama">Ollama</option>
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic</option>
-                            </select>
-                            <p class="mt-1 text-sm text-gray-500">AI service provider</p>
+                    <!-- Provider Configuration Section -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                        <h4 class="text-md font-semibold text-gray-800 mb-4">Provider Configuration</h4>
+                        
+                        <!-- Provider Type and Status -->
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                            <div class="flex-1">
+                                <label for="llm_provider" class="block text-sm font-medium text-gray-700 mb-1">Provider Type</label>
+                                <select id="llm_provider" name="llm_provider" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white">
+                                    <option value="ollama">🦙 Ollama (Local)</option>
+                                    <option value="openai">🤖 OpenAI</option>
+                                    <option value="openai-compatible">🔗 OpenAI Compatible</option>
+                                    <option value="anthropic">🧠 Anthropic Claude</option>
+                                    <option value="custom">⚙️ Custom Endpoint</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center sm:mt-6" role="status" aria-live="polite" aria-label="Connection status">
+                                <span class="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2" id="connection-status-dot"></span>
+                                <span class="text-sm font-medium text-gray-600" id="connection-status-text">Not Configured</span>
+                            </div>
                         </div>
-                        <div>
-                            <label for="llm_model" class="block text-sm font-medium text-gray-700">LLM Model</label>
-                            <input type="text" id="llm_model" name="llm_model" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="llama2">
-                            <p class="mt-1 text-sm text-gray-500">Model name or identifier</p>
+
+                        <!-- Base URL Configuration -->
+                        <div class="mb-4">
+                            <label for="llm_base_url" class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="url" id="llm_base_url" name="llm_base_url"
+                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono text-sm"
+                                       placeholder="http://localhost:11434/api">
+                                <button type="button" id="test-connection"
+                                        class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
+                                    Test Connection
+                                </button>
+                            </div>
+                            <p class="mt-1 text-sm text-gray-500">API endpoint for your LLM provider</p>
                         </div>
-                        <div>
-                            <label for="max_tokens" class="block text-sm font-medium text-gray-700">Max Tokens</label>
-                            <input type="number" id="max_tokens" name="max_tokens" min="100" max="4000" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <p class="mt-1 text-sm text-gray-500">Maximum response tokens</p>
+
+                        <!-- API Key (Optional) -->
+                        <div class="mb-4">
+                            <label for="llm_api_key" class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                            <div class="relative">
+                                <input type="password" id="llm_api_key" name="llm_api_key"
+                                       class="block w-full pr-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                       placeholder="Enter API key (optional for local endpoints)">
+                                <button type="button" id="toggle-api-key" class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="mt-1 text-sm text-gray-500">Required for cloud providers, optional for local endpoints</p>
                         </div>
-                        <div>
-                            <label for="temperature" class="block text-sm font-medium text-gray-700">Temperature</label>
-                            <input type="number" id="temperature" name="temperature" min="0" max="2" step="0.1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <p class="mt-1 text-sm text-gray-500">Response creativity (0-2)</p>
+
+                        <!-- Connection Test Results -->
+                        <div id="connection-test-results" class="hidden mt-4 p-3 rounded-md border">
+                            <!-- Results will be populated by JavaScript -->
                         </div>
+                    </div>
+
+                    <!-- Model Selection Section -->
+                    <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                        <h4 class="text-md font-semibold text-gray-800 mb-4">Model Selection</h4>
+                        
+                        <div class="flex flex-col sm:flex-row gap-2 mb-3">
+                            <div class="flex-1">
+                                <label for="llm_model_dropdown" class="block text-sm font-medium text-gray-700 mb-1">Available Models</label>
+                                <div class="relative">
+                                    <select id="llm_model_dropdown" name="llm_model_dropdown"
+                                            class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                                        <option value="">Configure endpoint first</option>
+                                    </select>
+                                    <!-- Loading spinner -->
+                                    <div id="model-loading" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex sm:items-end">
+                                <button type="button" id="refresh-models"
+                                        class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Model Information Display -->
+                        <div id="model-info" class="hidden bg-white rounded-md p-3 border border-blue-200 transition-all duration-200">
+                            <div class="text-sm">
+                                <div class="font-medium text-gray-900" id="model-info-name"></div>
+                                <div class="text-gray-600 mt-1" id="model-info-description"></div>
+                                <div class="text-gray-500 text-xs mt-2 flex gap-4" id="model-info-details">
+                                    <span id="model-size"></span>
+                                    <span id="model-modified"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden input for actual model value -->
+                        <input type="hidden" id="llm_model" name="llm_model">
+                    </div>
+
+                    <!-- Advanced Parameters Section -->
+                    <div class="mt-6">
+                        <button type="button" class="w-full flex items-center justify-between py-3 text-left font-medium text-gray-700 hover:text-gray-900 focus:outline-none" id="toggle-advanced-settings">
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-2 transform transition-transform duration-200" id="advanced-settings-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                Advanced Settings
+                            </span>
+                        </button>
+                        
+                        <div class="hidden mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200" id="advanced-settings-content">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="max_tokens" class="block text-sm font-medium text-gray-700 mb-1">Max Tokens</label>
+                                    <input type="number" id="max_tokens" name="max_tokens" min="100" max="8000" value="2048"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">Maximum response length</p>
+                                </div>
+                                <div>
+                                    <label for="temperature" class="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
+                                    <input type="number" id="temperature" name="temperature" min="0" max="2" step="0.1" value="0.7"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">Response creativity (0.0 = Focused, 2.0 = Creative)</p>
+                                </div>
+                                <div>
+                                    <label for="top_p" class="block text-sm font-medium text-gray-700 mb-1">Top-P</label>
+                                    <input type="number" id="top_p" name="top_p" min="0" max="1" step="0.1" value="1.0"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">Nucleus sampling threshold</p>
+                                </div>
+                                <div>
+                                    <label for="top_k" class="block text-sm font-medium text-gray-700 mb-1">Top-K</label>
+                                    <input type="number" id="top_k" name="top_k" min="1" max="100" value="40"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">Token sampling limit</p>
+                                </div>
+                                <div>
+                                    <label for="llm_timeout" class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                                    <input type="number" id="llm_timeout" name="llm_timeout" min="5" max="300" value="30"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">Request timeout</p>
+                                </div>
+                                <div>
+                                    <label for="llm_retries" class="block text-sm font-medium text-gray-700 mb-1">Max Retries</label>
+                                    <input type="number" id="llm_retries" name="llm_retries" min="0" max="10" value="3"
+                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">Retry attempts on failure</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-3 mt-6 pt-4 border-t border-gray-200">
+                        <button type="button" id="test-model-response"
+                                class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Test Model Response
+                        </button>
                     </div>
                 </div>
             </div>
@@ -234,5 +373,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', path='/js/ai-llm-config.js') }}"></script>
 <script src="{{ url_for('static', path='/js/config.js') }}"></script>
 {% endblock %}
