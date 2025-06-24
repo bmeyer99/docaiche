@@ -203,7 +203,7 @@ class LLMProviderTestRequest(BaseModel):
     base_url: str
     api_key: Optional[str] = None
 
-@api_router.post("/llm/test-connection")
+@api_router.post("/v1/llm/test-connection")
 async def test_llm_provider_connection(req: LLMProviderTestRequest):
     """Test connection to LLM provider and return available models."""
     import httpx
@@ -348,4 +348,164 @@ async def test_llm_provider_connection(req: LLMProviderTestRequest):
             "message": f"Connection failed: {str(e)}",
             "models": [],
             "model_count": 0
+        }
+
+class LLMModelTestRequest(BaseModel):
+    provider: str
+    base_url: str
+    api_key: Optional[str] = None
+    model: str
+    prompt: Optional[str] = "Hello, this is a test message. Please respond briefly."
+
+@api_router.post("/v1/llm/test-model")
+async def test_llm_model_response(req: LLMModelTestRequest):
+    """Test a specific model by sending a prompt and getting a response."""
+    try:
+        logger.info(f"Testing model {req.model} on {req.provider} at {req.base_url}")
+        
+        if req.provider.lower() == "ollama":
+            # Test Ollama model
+            base_url_clean = req.base_url.rstrip('/').replace('/api', '')
+            endpoint = f"{base_url_clean}/api/generate"
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                headers = {"Content-Type": "application/json"}
+                payload = {
+                    "model": req.model,
+                    "prompt": req.prompt,
+                    "stream": False
+                }
+                
+                logger.info(f"Testing model {req.model} with prompt: {req.prompt[:50]}...")
+                response = await client.post(endpoint, headers=headers, json=payload)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    model_response = data.get("response", "")
+                    
+                    logger.info(f"Model test successful for {req.model}")
+                    return {
+                        "success": True,
+                        "message": "Model test successful",
+                        "model_response": model_response,
+                        "prompt": req.prompt,
+                        "model": req.model,
+                        "response_time": response.elapsed.total_seconds()
+                    }
+                else:
+                    error_text = response.text
+                    logger.error(f"Ollama model test failed: HTTP {response.status_code}: {error_text}")
+                    return {
+                        "success": False,
+                        "message": f"Model test failed: HTTP {response.status_code}",
+                        "model_response": "",
+                        "error": error_text
+                    }
+                    
+        elif req.provider.lower() == "openai":
+            # Test OpenAI model
+            endpoint = "https://api.openai.com/v1/chat/completions"
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                headers = {
+                    "Authorization": f"Bearer {req.api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": req.model,
+                    "messages": [{"role": "user", "content": req.prompt}],
+                    "max_tokens": 100
+                }
+                
+                response = await client.post(endpoint, headers=headers, json=payload)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    model_response = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    
+                    return {
+                        "success": True,
+                        "message": "Model test successful",
+                        "model_response": model_response,
+                        "prompt": req.prompt,
+                        "model": req.model,
+                        "response_time": response.elapsed.total_seconds()
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "message": f"Model test failed: HTTP {response.status_code}",
+                        "model_response": "",
+                        "error": response.text
+                    }
+                    
+        elif req.provider.lower() == "anthropic":
+            # Test Anthropic model
+            endpoint = "https://api.anthropic.com/v1/messages"
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                headers = {
+                    "x-api-key": req.api_key,
+                    "Content-Type": "application/json",
+                    "anthropic-version": "2023-06-01"
+                }
+                payload = {
+                    "model": req.model,
+                    "max_tokens": 100,
+                    "messages": [{"role": "user", "content": req.prompt}]
+                }
+                
+                response = await client.post(endpoint, headers=headers, json=payload)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    model_response = data.get("content", [{}])[0].get("text", "")
+                    
+                    return {
+                        "success": True,
+                        "message": "Model test successful",
+                        "model_response": model_response,
+                        "prompt": req.prompt,
+                        "model": req.model,
+                        "response_time": response.elapsed.total_seconds()
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "message": f"Model test failed: HTTP {response.status_code}",
+                        "model_response": "",
+                        "error": response.text
+                    }
+        
+        else:
+            return {
+                "success": False,
+                "message": f"Unsupported provider for model testing: {req.provider}",
+                "model_response": "",
+                "error": "Provider not supported"
+            }
+            
+    except httpx.TimeoutException:
+        logger.error(f"Model test timeout for {req.model}")
+        return {
+            "success": False,
+            "message": "Model test timeout",
+            "model_response": "",
+            "error": "Request timed out after 30 seconds"
+        }
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error during model test: {e}")
+        return {
+            "success": False,
+            "message": f"Cannot reach endpoint at {req.base_url}",
+            "model_response": "",
+            "error": str(e)
+        }
+    except Exception as e:
+        logger.error(f"Model test failed: {e}")
+        return {
+            "success": False,
+            "message": f"Model test failed: {str(e)}",
+            "model_response": "",
+            "error": str(e)
         }

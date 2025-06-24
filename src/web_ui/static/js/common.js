@@ -302,12 +302,19 @@ class WebSocketManager {
             this.ws.onclose = () => {
                 console.log('WebSocket disconnected');
                 this.updateConnectionStatus(false);
-                this.attemptReconnect();
+                // Use setTimeout to prevent blocking the UI thread
+                setTimeout(() => this.attemptReconnect(), 100);
             };
 
             this.ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
                 this.updateConnectionStatus(false);
+                // Prevent rapid error loops from blocking UI
+                setTimeout(() => {
+                    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+                        this.ws.close();
+                    }
+                }, 100);
             };
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
@@ -326,9 +333,16 @@ class WebSocketManager {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-            setTimeout(() => this.connect(), this.reconnectInterval);
+            // Use longer timeout to prevent rapid reconnection attempts that could freeze UI
+            setTimeout(() => {
+                // Only attempt reconnect if we don't already have an active connection
+                if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+                    this.connect();
+                }
+            }, this.reconnectInterval * this.reconnectAttempts); // Exponential backoff
         } else {
-            console.error('Max reconnection attempts reached');
+            console.log('Max reconnection attempts reached. WebSocket will remain disconnected.');
+            // Silently fail instead of showing error to prevent UI disruption
         }
     }
 

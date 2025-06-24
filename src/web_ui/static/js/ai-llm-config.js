@@ -642,21 +642,138 @@ class AILLMConfigManager {
         const provider = document.getElementById('llm_provider').value;
         const model = document.getElementById('llm_model').value;
         const baseUrl = document.getElementById('llm_base_url').value;
+        const apiKey = document.getElementById('llm_api_key').value;
 
         if (!model) {
             utils.showNotification('Please select a model first', 'warning');
             return;
         }
 
-        utils.showNotification('Testing model response...', 'info');
+        if (!baseUrl) {
+            utils.showNotification('Please configure the base URL first', 'warning');
+            return;
+        }
+
+        const testButton = document.getElementById('test-model-response');
+        const originalText = testButton ? testButton.textContent : 'Test Model Response';
+        
+        if (testButton) {
+            testButton.disabled = true;
+            testButton.textContent = 'Testing...';
+        }
+
+        this.showModelTestResults('Testing model response...', 'info');
         
         try {
-            // Mock test response - replace with actual implementation
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            utils.showNotification('Model test successful!', 'success');
+            const endpoint = '/api/v1/llm/test-model';
+            const requestData = {
+                provider: provider,
+                base_url: baseUrl,
+                api_key: apiKey || null,
+                model: model,
+                prompt: "Hello, this is a test message. Please respond briefly."
+            };
+            
+            console.log(`Testing model ${model} on ${provider}`);
+            console.log('Request data:', requestData);
+            
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.log('Model test request timed out');
+                controller.abort();
+            }, 45000); // 45 second timeout for model testing
+            
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            console.log(`Model test response status: ${response.status}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Model test error response:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('Model test response data:', data);
+            
+            if (data.success) {
+                const responseTime = data.response_time ? `${Math.round(data.response_time * 1000)}ms` : 'N/A';
+                this.showModelTestResults(
+                    `✓ Model test successful!<br>` +
+                    `✓ Model: ${data.model}<br>` +
+                    `✓ Response time: ${responseTime}<br><br>` +
+                    `<strong>Prompt:</strong><br>${data.prompt}<br><br>` +
+                    `<strong>Model Response:</strong><br>${data.model_response}`,
+                    'success'
+                );
+                utils.showNotification('Model test successful!', 'success');
+            } else {
+                throw new Error(data.message || 'Model test failed');
+            }
+            
         } catch (error) {
-            utils.showNotification('Model test failed: ' + error.message, 'error');
+            console.error('Model test failed:', error);
+            
+            let errorMessage = error.message;
+            
+            // Provide more specific error messages
+            if (error.name === 'AbortError') {
+                errorMessage = 'Model test timed out after 45 seconds';
+            } else if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'Network error - check if the service is running and accessible';
+            }
+            
+            this.showModelTestResults(
+                `⚠️ Model Test Failed<br><br>` +
+                `Model: ${model}<br>` +
+                `Provider: ${provider}<br><br>` +
+                `Error: ${errorMessage}`,
+                'error'
+            );
+            utils.showNotification('Model test failed: ' + errorMessage, 'error');
+            
+        } finally {
+            if (testButton) {
+                testButton.disabled = false;
+                testButton.textContent = originalText;
+            }
         }
+    }
+
+    showModelTestResults(message, type) {
+        const resultsContainer = document.getElementById('model-test-results');
+        if (!resultsContainer) {
+            // Create results container if it doesn't exist
+            const container = document.createElement('div');
+            container.id = 'model-test-results';
+            container.className = 'mt-4 p-3 rounded-md border hidden';
+            
+            // Insert after the test button
+            const testButton = document.getElementById('test-model-response');
+            if (testButton && testButton.parentNode) {
+                testButton.parentNode.insertBefore(container, testButton.nextSibling);
+            }
+            return this.showModelTestResults(message, type);
+        }
+
+        const typeClasses = {
+            info: 'bg-blue-50 border-blue-200 text-blue-800',
+            success: 'bg-green-50 border-green-200 text-green-800',
+            error: 'bg-red-50 border-red-200 text-red-800'
+        };
+
+        resultsContainer.className = `mt-4 p-3 rounded-md border ${typeClasses[type] || typeClasses.info}`;
+        resultsContainer.innerHTML = message;
+        resultsContainer.classList.remove('hidden');
     }
 
     getAILLMConfig() {
