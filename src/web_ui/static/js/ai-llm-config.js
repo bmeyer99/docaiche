@@ -63,10 +63,16 @@ class AILLMConfigManager {
             toggleKeyButton.addEventListener('click', () => this.toggleApiKeyVisibility());
         }
 
-        // Model selection handler
-        const modelSelect = document.getElementById('llm_model_dropdown');
-        if (modelSelect) {
-            modelSelect.addEventListener('change', () => this.onModelChange());
+        // Text generation model selection handler
+        const textModelSelect = document.getElementById('llm_text_model_dropdown');
+        if (textModelSelect) {
+            textModelSelect.addEventListener('change', () => this.onTextModelChange());
+        }
+
+        // Embedding model selection handler
+        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
+        if (embeddingModelSelect) {
+            embeddingModelSelect.addEventListener('change', () => this.onEmbeddingModelChange());
         }
 
         // Advanced settings toggle
@@ -463,50 +469,70 @@ class AILLMConfigManager {
     }
 
     populateModels(models) {
-        const modelSelect = document.getElementById('llm_model_dropdown');
-        if (!modelSelect) return;
+        const textModelSelect = document.getElementById('llm_text_model_dropdown');
+        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
+        
+        if (!textModelSelect || !embeddingModelSelect) return;
 
         // Clear existing options
-        modelSelect.innerHTML = '<option value="">Select a model...</option>';
+        textModelSelect.innerHTML = '<option value="">Select a text generation model...</option>';
+        embeddingModelSelect.innerHTML = '<option value="">Select an embedding model...</option>';
 
-        models.forEach(model => {
+        // Separate models by type
+        const textModels = models.filter(model => model.type === 'text-generation');
+        const embeddingModels = models.filter(model => model.type === 'embedding');
+
+        // Populate text generation models
+        textModels.forEach(model => {
             const option = document.createElement('option');
             option.value = model.name;
             option.textContent = model.name;
             option.dataset.description = model.description;
             option.dataset.size = model.size;
             option.dataset.modified = model.modified;
-            modelSelect.appendChild(option);
+            option.dataset.type = model.type;
+            textModelSelect.appendChild(option);
         });
 
-        modelSelect.disabled = false;
+        // Populate embedding models
+        embeddingModels.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.name;
+            option.textContent = model.name;
+            option.dataset.description = model.description;
+            option.dataset.size = model.size;
+            option.dataset.modified = model.modified;
+            option.dataset.type = model.type;
+            embeddingModelSelect.appendChild(option);
+        });
+
+        // Enable dropdowns
+        textModelSelect.disabled = false;
+        embeddingModelSelect.disabled = false;
+        
         const refreshButton = document.getElementById('refresh-models');
         if (refreshButton) {
             refreshButton.disabled = false;
         }
+
+        console.log(`Populated ${textModels.length} text generation models and ${embeddingModels.length} embedding models`);
     }
 
-    onModelChange() {
-        const modelSelect = document.getElementById('llm_model_dropdown');
-        const selectedOption = modelSelect.selectedOptions[0];
+    onTextModelChange() {
+        const textModelSelect = document.getElementById('llm_text_model_dropdown');
+        const selectedOption = textModelSelect.selectedOptions[0];
         const hiddenInput = document.getElementById('llm_model');
-        const modelInfo = document.getElementById('model-info');
+        const modelInfo = document.getElementById('text-model-info');
 
         if (selectedOption && selectedOption.value) {
             hiddenInput.value = selectedOption.value;
             
-            // Check if this is an embedding model and auto-sync with AnythingLLM
-            const modelType = this.getModelType(selectedOption.value);
-            if (modelType === 'embedding') {
-                this.syncEmbeddingModelToAnythingLLM(selectedOption.value);
-            }
-            
-            // Show model information
+            // Show text model information
             if (modelInfo) {
-                const nameEl = document.getElementById('model-info-name');
-                const descEl = document.getElementById('model-info-description');
-                const sizeEl = document.getElementById('model-size');
-                const modifiedEl = document.getElementById('model-modified');
+                const nameEl = document.getElementById('text-model-info-name');
+                const descEl = document.getElementById('text-model-info-description');
+                const sizeEl = document.getElementById('text-model-size');
+                const modifiedEl = document.getElementById('text-model-modified');
 
                 if (nameEl) nameEl.textContent = selectedOption.value;
                 if (descEl) descEl.textContent = selectedOption.dataset.description || '';
@@ -515,6 +541,44 @@ class AILLMConfigManager {
 
                 modelInfo.classList.remove('hidden');
             }
+            
+            console.log(`Selected text generation model: ${selectedOption.value}`);
+        } else {
+            hiddenInput.value = '';
+            if (modelInfo) {
+                modelInfo.classList.add('hidden');
+            }
+        }
+    }
+
+    onEmbeddingModelChange() {
+        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
+        const selectedOption = embeddingModelSelect.selectedOptions[0];
+        const hiddenInput = document.getElementById('llm_embedding_model');
+        const modelInfo = document.getElementById('embedding-model-info');
+
+        if (selectedOption && selectedOption.value) {
+            hiddenInput.value = selectedOption.value;
+            
+            // Auto-sync with AnythingLLM
+            this.syncEmbeddingModelToAnythingLLM(selectedOption.value);
+            
+            // Show embedding model information
+            if (modelInfo) {
+                const nameEl = document.getElementById('embedding-model-info-name');
+                const descEl = document.getElementById('embedding-model-info-description');
+                const sizeEl = document.getElementById('embedding-model-size');
+                const modifiedEl = document.getElementById('embedding-model-modified');
+
+                if (nameEl) nameEl.textContent = selectedOption.value;
+                if (descEl) descEl.textContent = selectedOption.dataset.description || '';
+                if (sizeEl) sizeEl.textContent = selectedOption.dataset.size || '';
+                if (modifiedEl) modifiedEl.textContent = selectedOption.dataset.modified || '';
+
+                modelInfo.classList.remove('hidden');
+            }
+            
+            console.log(`Selected embedding model: ${selectedOption.value}`);
         } else {
             hiddenInput.value = '';
             if (modelInfo) {
@@ -572,21 +636,37 @@ class AILLMConfigManager {
     }
 
     clearModels() {
-        const modelSelect = document.getElementById('llm_model_dropdown');
-        const hiddenInput = document.getElementById('llm_model');
-        const modelInfo = document.getElementById('model-info');
+        const textModelSelect = document.getElementById('llm_text_model_dropdown');
+        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
+        const textHiddenInput = document.getElementById('llm_model');
+        const embeddingHiddenInput = document.getElementById('llm_embedding_model');
+        const textModelInfo = document.getElementById('text-model-info');
+        const embeddingModelInfo = document.getElementById('embedding-model-info');
 
-        if (modelSelect) {
-            modelSelect.innerHTML = '<option value="">Configure endpoint first</option>';
-            modelSelect.disabled = true;
+        if (textModelSelect) {
+            textModelSelect.innerHTML = '<option value="">Configure endpoint first</option>';
+            textModelSelect.disabled = true;
         }
 
-        if (hiddenInput) {
-            hiddenInput.value = '';
+        if (embeddingModelSelect) {
+            embeddingModelSelect.innerHTML = '<option value="">Configure endpoint first</option>';
+            embeddingModelSelect.disabled = true;
         }
 
-        if (modelInfo) {
-            modelInfo.classList.add('hidden');
+        if (textHiddenInput) {
+            textHiddenInput.value = '';
+        }
+
+        if (embeddingHiddenInput) {
+            embeddingHiddenInput.value = '';
+        }
+
+        if (textModelInfo) {
+            textModelInfo.classList.add('hidden');
+        }
+
+        if (embeddingModelInfo) {
+            embeddingModelInfo.classList.add('hidden');
         }
 
         const refreshButton = document.getElementById('refresh-models');
@@ -670,19 +750,33 @@ class AILLMConfigManager {
     }
 
     showModelLoading(show) {
-        const loadingSpinner = document.getElementById('model-loading');
-        const modelSelect = document.getElementById('llm_model_dropdown');
+        const textLoadingSpinner = document.getElementById('text-model-loading');
+        const embeddingLoadingSpinner = document.getElementById('embedding-model-loading');
+        const textModelSelect = document.getElementById('llm_text_model_dropdown');
+        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
 
-        if (loadingSpinner) {
+        if (textLoadingSpinner) {
             if (show) {
-                loadingSpinner.classList.remove('hidden');
+                textLoadingSpinner.classList.remove('hidden');
             } else {
-                loadingSpinner.classList.add('hidden');
+                textLoadingSpinner.classList.add('hidden');
             }
         }
 
-        if (modelSelect) {
-            modelSelect.disabled = show;
+        if (embeddingLoadingSpinner) {
+            if (show) {
+                embeddingLoadingSpinner.classList.remove('hidden');
+            } else {
+                embeddingLoadingSpinner.classList.add('hidden');
+            }
+        }
+
+        if (textModelSelect) {
+            textModelSelect.disabled = show;
+        }
+
+        if (embeddingModelSelect) {
+            embeddingModelSelect.disabled = show;
         }
     }
 
@@ -703,12 +797,22 @@ class AILLMConfigManager {
 
     async testModelResponse() {
         const provider = document.getElementById('llm_provider').value;
-        const model = document.getElementById('llm_model').value;
+        const textModel = document.getElementById('llm_model').value;
+        const embeddingModel = document.getElementById('llm_embedding_model').value;
         const baseUrl = document.getElementById('llm_base_url').value;
         const apiKey = document.getElementById('llm_api_key').value;
 
+        // Determine which model to test based on what's selected
+        let model = textModel;
+        let modelType = 'text-generation';
+        
+        if (!textModel && embeddingModel) {
+            model = embeddingModel;
+            modelType = 'embedding';
+        }
+
         if (!model) {
-            utils.showNotification('Please select a model first', 'warning');
+            utils.showNotification('Please select a text generation or embedding model first', 'warning');
             return;
         }
 
@@ -717,14 +821,13 @@ class AILLMConfigManager {
             return;
         }
 
-        // Check model type and test appropriately
-        const modelType = this.getModelType(model);
+        const testButton = document.getElementById('test-model-response');
+        const originalText = testButton ? testButton.textContent : 'Test Model Response';
+
+        // Test embedding model if that's what's selected
         if (modelType === 'embedding') {
             return this.testEmbeddingModel(provider, baseUrl, apiKey, model, testButton, originalText);
         }
-
-        const testButton = document.getElementById('test-model-response');
-        const originalText = testButton ? testButton.textContent : 'Test Model Response';
         
         if (testButton) {
             testButton.disabled = true;
@@ -851,6 +954,7 @@ class AILLMConfigManager {
             llm_base_url: document.getElementById('llm_base_url')?.value || '',
             llm_api_key: document.getElementById('llm_api_key')?.value || '',
             llm_model: document.getElementById('llm_model')?.value || '',
+            llm_embedding_model: document.getElementById('llm_embedding_model')?.value || '',
             max_tokens: parseInt(document.getElementById('max_tokens')?.value) || 2048,
             temperature: parseFloat(document.getElementById('temperature')?.value) || 0.7,
             top_p: parseFloat(document.getElementById('top_p')?.value) || 1.0,
@@ -865,7 +969,7 @@ class AILLMConfigManager {
 
     setAILLMConfig(config) {
         const fields = [
-            'llm_provider', 'llm_base_url', 'llm_api_key', 'llm_model',
+            'llm_provider', 'llm_base_url', 'llm_api_key', 'llm_model', 'llm_embedding_model',
             'max_tokens', 'temperature', 'top_p', 'top_k', 'llm_timeout', 'llm_retries'
         ];
 
@@ -876,8 +980,18 @@ class AILLMConfigManager {
             }
         });
 
-        // Trigger provider change to set up defaults
-        this.onProviderChange();
+        // Set dropdown selections
+        const textModelDropdown = document.getElementById('llm_text_model_dropdown');
+        const embeddingModelDropdown = document.getElementById('llm_embedding_model_dropdown');
+        
+        if (textModelDropdown && config.llm_model) {
+            textModelDropdown.value = config.llm_model;
+        }
+        
+        if (embeddingModelDropdown && config.llm_embedding_model) {
+            embeddingModelDropdown.value = config.llm_embedding_model;
+        }
+
         // Trigger provider change to set up defaults
         this.onProviderChange();
     }
