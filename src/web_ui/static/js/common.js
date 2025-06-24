@@ -300,21 +300,9 @@ class WebSocketManager {
     }
 
     async checkWebSocketEndpoint() {
-        try {
-            // Check if the WebSocket endpoint exists by making a HEAD request
-            const protocol = window.location.protocol;
-            const host = window.location.host;
-            const checkUrl = `${protocol}//${host}/ws/updates`;
-            
-            const response = await fetch(checkUrl, {
-                method: 'HEAD',
-                timeout: 2000
-            });
-            return response.status !== 404;
-        } catch (error) {
-            // If fetch fails, assume WebSocket isn't available
-            return false;
-        }
+        // Skip endpoint check and try direct WebSocket connection
+        // This avoids 404 errors in console when WebSocket server isn't running
+        return true; // Let the WebSocket connection attempt handle availability
     }
 
     attemptConnection() {

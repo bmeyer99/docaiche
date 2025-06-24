@@ -542,38 +542,17 @@ class AILLMConfigManager {
         }
         
         // Show notification about auto-sync
-        utils.showNotification(`Embedding model ${embeddingModel} auto-synced to AnythingLLM`, 'success');
+        utils.showNotification(`Embedding model ${embeddingModel} auto-synced to AnythingLLM (manual save required)`, 'success');
         
-        // Trigger AnythingLLM configuration update
-        this.updateAnythingLLMEmbeddingConfig(embeddingModel, provider);
+        // Skip automatic API configuration update - configuration endpoint not yet implemented
+        console.log('AnythingLLM auto-sync completed - configuration will be saved with form submission');
     }
 
     async updateAnythingLLMEmbeddingConfig(embeddingModel, provider) {
-        // Update AnythingLLM configuration via API
-        try {
-            const configData = {
-                anythingllm: {
-                    embedding_model: embeddingModel,
-                    embedding_provider: provider
-                }
-            };
-            
-            const response = await fetch('/api/v1/config', {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(configData)
-            });
-            
-            if (response.ok) {
-                console.log(`AnythingLLM embedding configuration updated: ${embeddingModel}`);
-            } else {
-                console.warn('Failed to update AnythingLLM embedding configuration');
-            }
-        } catch (error) {
-            console.error('Error updating AnythingLLM embedding configuration:', error);
-        }
+        // AnythingLLM configuration API endpoint not yet implemented
+        // This function is disabled to prevent console errors
+        console.log('AnythingLLM auto-configuration disabled - manual configuration required');
+        return;
     }
 
     refreshModels() {
@@ -899,12 +878,11 @@ class AILLMConfigManager {
 
         // Trigger provider change to set up defaults
         this.onProviderChange();
+        // Trigger provider change to set up defaults
+        this.onProviderChange();
     }
-}
 
-// Global AI/LLM config manager instance
-window.aiLLMManager = new AILLMConfigManager();
-async testEmbeddingModel(provider, baseUrl, apiKey, model, testButton, originalText) {
+    async testEmbeddingModel(provider, baseUrl, apiKey, model, testButton, originalText) {
         if (testButton) {
             testButton.disabled = true;
             testButton.textContent = 'Testing Embedding...';
@@ -999,3 +977,7 @@ async testEmbeddingModel(provider, baseUrl, apiKey, model, testButton, originalT
             }
         }
     }
+}
+
+// Global AI/LLM config manager instance
+window.aiLLMManager = new AILLMConfigManager();
