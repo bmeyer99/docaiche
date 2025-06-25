@@ -1,7 +1,7 @@
 # Configuration Page Redesign - Task Index
 
 ## Overview
-This document provides the complete breakdown of the Configuration Page Redesign into 18 logical, sequential tasks. Each task builds upon the previous ones, ensuring no task is blocked by future work and maintaining designer focus in specific areas.
+This document provides the complete breakdown of the Configuration Page Redesign into 22 logical, sequential tasks. Each task builds upon the previous ones, ensuring no task is blocked by future work and maintaining designer focus in specific areas.
 
 ## Task Flow & Dependencies
 
@@ -11,17 +11,20 @@ This document provides the complete breakdown of the Configuration Page Redesign
 ### Phase 2: Core Navigation (Tasks 4-5)
 **04. Primary Tab Navigation Implementation** → **05. LLM Providers Secondary Tab Structure**
 
-### Phase 3: Form Components (Tasks 6-10)
-**06. Provider Configuration Card Component** → **07. Form State Management & Dirty Detection** → **08. Advanced Settings Toggle Implementation** → **09. Global Save Bar Implementation** → **10. Embedding Provider Toggle Implementation**
+### Phase 3: Form Components (Tasks 6-12)
+**06. Provider Configuration Card Component** → **07. Form State Management & Dirty Detection** → **08. Form Validation System Implementation** → **09. Toast Notification System Implementation** → **10. Advanced Settings Toggle Implementation** → **11. Global Save Bar Implementation** → **12. Embedding Provider Toggle Implementation**
 
-### Phase 4: Integration & Functionality (Tasks 11-12)
-**11. API Integration & Connection Testing** → **12. Loading States & Error Handling Polish**
+### Phase 4: Content & Infrastructure (Tasks 13-14)
+**13. Content & Copy Integration** → **14. Logging & Monitoring Implementation**
 
-### Phase 5: Quality Assurance (Tasks 13-16)
-**13. Accessibility Implementation & Testing** → **14. Responsive Design Testing & Mobile Optimization** → **15. Cross-Browser Testing & Compatibility** → **16. Performance Optimization & Testing**
+### Phase 5: Integration & Functionality (Tasks 15-16)
+**15. API Integration & Connection Testing** → **16. Loading States & Error Handling Polish**
 
-### Phase 6: Validation & Handoff (Tasks 17-18)
-**17. Final Integration Testing & User Flow Validation** → **18. Documentation & Developer Handoff Preparation**
+### Phase 6: Quality Assurance (Tasks 17-20)
+**17. Accessibility Implementation & Testing** → **18. Responsive Design Testing & Mobile Optimization** → **19. Cross-Browser Testing & Compatibility** → **20. Performance Optimization & Testing**
+
+### Phase 7: Validation & Handoff (Tasks 21-22)
+**21. Final Integration Testing & User Flow Validation** → **22. Documentation & Developer Handoff Preparation**
 
 ## Task Summary
 
