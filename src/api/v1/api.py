@@ -36,6 +36,8 @@ api_router.include_router(config_router)
 api_router.include_router(health_router)
 api_router.include_router(enrichment_router)
 api_router.include_router(ingestion_router)
+from .mcp_endpoints import router as mcp_router
+api_router.include_router(mcp_router)
 
 # Add rate limiter state to router
 api_router.state = type('State', (), {'limiter': limiter})()

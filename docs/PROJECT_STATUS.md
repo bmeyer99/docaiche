@@ -1,3 +1,4 @@
+**DO NOT** use this file any more. The original project is complete.
 # AI Documentation Cache System - Project Status Dashboard
 
 **Last Updated:** 2025-06-24 20:25 UTC
