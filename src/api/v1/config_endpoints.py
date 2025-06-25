@@ -19,12 +19,98 @@ from .schemas import (
 from .middleware import limiter
 from .dependencies import get_anythingllm_client
 from src.clients.anythingllm import AnythingLLMClient
-from src.core.config import get_settings, get_configuration_manager
+from src.core.config import get_settings, get_configuration_manager, get_system_configuration
 
 logger = logging.getLogger(__name__)
 
 # Create router for configuration endpoints
 router = APIRouter()
+
+# Import WebSocket manager for real-time updates
+try:
+    from src.web_ui.real_time_service.websocket import websocket_manager
+    WEBSOCKET_AVAILABLE = True
+except ImportError:
+    WEBSOCKET_AVAILABLE = False
+    logger.warning("WebSocket manager not available - real-time updates disabled")
+
+
+async def broadcast_llm_health_status() -> None:
+    """
+    Check LLM provider health status and broadcast updates via WebSocket.
+    
+    This function performs the same health checks as the health endpoint
+    and broadcasts the status to all connected WebSocket clients.
+    """
+    if not WEBSOCKET_AVAILABLE:
+        return
+        
+    try:
+        config = get_system_configuration()
+        ai_config = getattr(config, "ai", None)
+        healthy_providers = []
+        unhealthy_providers = []
+        llm_provider_messages = []
+        
+        # Check Ollama
+        if ai_config and getattr(ai_config, "ollama", None):
+            from src.llm.ollama_provider import OllamaProvider
+            ollama_provider = OllamaProvider(config=ai_config.ollama.model_dump())
+            ollama_health = await ollama_provider.health_check()
+            if ollama_health.get("status") == "healthy":
+                healthy_providers.append("ollama")
+            else:
+                unhealthy_providers.append("ollama")
+                llm_provider_messages.append(f"Ollama: {ollama_health.get('error', ollama_health.get('status', 'Unavailable'))}")
+        
+        # Check OpenAI
+        if ai_config and getattr(ai_config, "openai", None):
+            from src.llm.openai_provider import OpenAIProvider
+            openai_provider = OpenAIProvider(config=ai_config.openai.model_dump())
+            openai_health = await openai_provider.health_check()
+            if openai_health.get("status") == "healthy":
+                healthy_providers.append("openai")
+            else:
+                unhealthy_providers.append("openai")
+                llm_provider_messages.append(f"OpenAI: {openai_health.get('error', openai_health.get('status', 'Unavailable'))}")
+        
+        # Determine overall LLM provider status
+        if healthy_providers:
+            llm_status = {
+                "status": "configured",
+                "message": f"LLM providers enabled: {', '.join(healthy_providers)}",
+                "healthy_providers": healthy_providers,
+                "unhealthy_providers": unhealthy_providers
+            }
+        elif unhealthy_providers:
+            llm_status = {
+                "status": "unavailable",
+                "message": "No healthy LLM providers. " + "; ".join(llm_provider_messages),
+                "healthy_providers": [],
+                "unhealthy_providers": unhealthy_providers
+            }
+        else:
+            llm_status = {
+                "status": "none_configured",
+                "message": "No LLM providers enabled",
+                "healthy_providers": [],
+                "unhealthy_providers": []
+            }
+        
+        # Broadcast the LLM health status
+        await websocket_manager.broadcast_llm_health(llm_status)
+        logger.debug(f"Broadcast LLM health status: {llm_status['status']}")
+        
+    except Exception as e:
+        logger.error(f"Error broadcasting LLM health status: {e}")
+        # Broadcast error status
+        error_status = {
+            "status": "error",
+            "message": f"Error checking LLM providers: {str(e)}",
+            "healthy_providers": [],
+            "unhealthy_providers": []
+        }
+        await websocket_manager.broadcast_llm_health(error_status)
 
 
 @router.get("/config", response_model=ConfigurationResponse, tags=["config"])
@@ -196,6 +282,17 @@ async def update_configuration(
                 await config_manager.update_in_db(config_request.key, config_request.value)
                 
                 logger.info(f"Configuration updated successfully: {config_request.key}")
+                
+                # Check if this config change affects LLM providers and broadcast health status
+                if config_request.key.startswith(('ai.', 'llm.', 'ollama.', 'openai.')):
+                    await broadcast_llm_health_status()
+                    
+                # Broadcast configuration update
+                if WEBSOCKET_AVAILABLE:
+                    await websocket_manager.broadcast_config_update(
+                        config_request.key,
+                        config_request.value
+                    )
                 
             except Exception as e:
                 logger.error(f"Configuration update failed: {config_request.key} - {e}")

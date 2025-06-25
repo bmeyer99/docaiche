@@ -419,6 +419,61 @@ class WebSocketManager {
                 }
             });
         }
+        
+        // Handle built-in message types
+        if (data.type === 'llm_health') {
+            this.handleLLMHealthUpdate(data);
+        } else if (data.type === 'config_update') {
+            this.handleConfigUpdate(data);
+        }
+    }
+
+    handleLLMHealthUpdate(data) {
+        // Update the global connection status based on LLM health
+        try {
+            const statusElement = document.getElementById('connection-status');
+            if (!statusElement) return;
+
+            const dot = statusElement.querySelector('.w-2');
+            const text = statusElement.querySelector('span');
+            const llmHealth = data.data;
+
+            // Update status based on LLM health
+            if (llmHealth.status === 'configured') {
+                dot.className = 'w-2 h-2 bg-green-500 rounded-full';
+                text.textContent = 'Connected';
+            } else if (llmHealth.status === 'unavailable') {
+                dot.className = 'w-2 h-2 bg-yellow-400 rounded-full';
+                text.textContent = 'LLM Unavailable';
+            } else if (llmHealth.status === 'none_configured') {
+                dot.className = 'w-2 h-2 bg-yellow-400 rounded-full';
+                text.textContent = 'LLM Not Configured';
+            } else if (llmHealth.status === 'error') {
+                dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+                text.textContent = 'LLM Error';
+            }
+
+            console.log('LLM health status updated:', llmHealth.status);
+        } catch (error) {
+            console.error('Error handling LLM health update:', error);
+        }
+    }
+
+    handleConfigUpdate(data) {
+        // Handle configuration updates
+        try {
+            const configData = data.data;
+            console.log('Configuration updated:', configData.key, '=', configData.value);
+            
+            // Show notification for config updates
+            utils.showNotification(
+                `Configuration updated: ${configData.key}`,
+                'success',
+                3000
+            );
+        } catch (error) {
+            console.error('Error handling config update:', error);
+        }
     }
 
     on(messageType, callback) {
@@ -444,49 +499,47 @@ const wsManager = new WebSocketManager();
 
 // Auto-connect WebSocket when page loads (graceful fallback if not available)
 document.addEventListener('DOMContentLoaded', () => {
-    // Only attempt WebSocket connection if explicitly enabled
-    // This prevents console errors when WebSocket server isn't running
+    // Connect WebSocket for real-time updates
     wsManager.connect();
+    
+    // Perform initial health check (fallback for when WebSocket isn't available)
+    performInitialHealthCheck();
 });
-// Health check for backend and LLM provider status
-document.addEventListener('DOMContentLoaded', () => {
-    async function updateGlobalConnectionStatus() {
-        try {
-            const health = await api.get('/health');
-            const statusElement = document.getElementById('connection-status');
-            if (!statusElement) return;
 
+// Initial health check for fallback when WebSocket is not available
+async function performInitialHealthCheck() {
+    try {
+        const health = await api.get('/health');
+        const statusElement = document.getElementById('connection-status');
+        if (!statusElement) return;
+
+        const dot = statusElement.querySelector('.w-2');
+        const text = statusElement.querySelector('span');
+
+        // Check backend and LLM provider status
+        const backendHealthy = (health.status === 'healthy' || health.overall_status === 'healthy');
+        const llmConfigured = health.components && health.components.llm_providers && health.components.llm_providers.status === 'configured';
+
+        if (backendHealthy && llmConfigured) {
+            dot.className = 'w-2 h-2 bg-green-500 rounded-full';
+            text.textContent = 'Connected';
+        } else if (backendHealthy && !llmConfigured) {
+            dot.className = 'w-2 h-2 bg-yellow-400 rounded-full';
+            text.textContent = 'LLM Not Configured';
+        } else {
+            dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+            text.textContent = 'Disconnected';
+        }
+    } catch (e) {
+        const statusElement = document.getElementById('connection-status');
+        if (statusElement) {
             const dot = statusElement.querySelector('.w-2');
             const text = statusElement.querySelector('span');
-
-            // Check backend and LLM provider status
-            const backendHealthy = (health.status === 'healthy' || health.overall_status === 'healthy');
-            const llmConfigured = health.components && health.components.llm_providers && health.components.llm_providers.status === 'configured';
-
-            if (backendHealthy && llmConfigured) {
-                dot.className = 'w-2 h-2 bg-green-500 rounded-full';
-                text.textContent = 'Connected';
-            } else if (backendHealthy && !llmConfigured) {
-                dot.className = 'w-2 h-2 bg-yellow-400 rounded-full';
-                text.textContent = 'LLM Not Configured';
-            } else {
-                dot.className = 'w-2 h-2 bg-red-500 rounded-full';
-                text.textContent = 'Disconnected';
-            }
-        } catch (e) {
-            const statusElement = document.getElementById('connection-status');
-            if (statusElement) {
-                const dot = statusElement.querySelector('.w-2');
-                const text = statusElement.querySelector('span');
-                dot.className = 'w-2 h-2 bg-red-500 rounded-full';
-                text.textContent = 'Disconnected';
-            }
+            dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+            text.textContent = 'Disconnected';
         }
     }
-
-    updateGlobalConnectionStatus();
-    setInterval(updateGlobalConnectionStatus, 10000);
-});
+}
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {

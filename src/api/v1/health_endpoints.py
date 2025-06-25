@@ -4,10 +4,11 @@ Health check and statistics endpoints
 """
 
 import logging
+import asyncio
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, BackgroundTasks
 
 from .middleware import limiter
 from .dependencies import (
@@ -23,8 +24,132 @@ logger = logging.getLogger(__name__)
 # Create router for health endpoints
 router = APIRouter()
 
+# Import WebSocket manager for real-time updates
+try:
+    from src.web_ui.real_time_service.websocket import websocket_manager
+    WEBSOCKET_AVAILABLE = True
+except ImportError:
+    WEBSOCKET_AVAILABLE = False
+    logger.warning("WebSocket manager not available - health broadcasting disabled")
+# Health monitoring state
+_health_monitor_running = False
+_last_llm_health_status = None
+
+
+async def check_llm_providers_status() -> Dict[str, Any]:
+    """
+    Check LLM provider health status and return structured data.
+    
+    Returns:
+        Dictionary containing LLM provider status information
+    """
+    try:
+        config = get_system_configuration()
+        ai_config = getattr(config, "ai", None)
+        healthy_providers = []
+        unhealthy_providers = []
+        llm_provider_messages = []
+
+        # Check Ollama
+        if ai_config and getattr(ai_config, "ollama", None):
+            from src.llm.ollama_provider import OllamaProvider
+            ollama_provider = OllamaProvider(config=ai_config.ollama.model_dump())
+            ollama_health = await ollama_provider.health_check()
+            if ollama_health.get("status") == "healthy":
+                healthy_providers.append("ollama")
+            else:
+                unhealthy_providers.append("ollama")
+                llm_provider_messages.append(f"Ollama: {ollama_health.get('error', ollama_health.get('status', 'Unavailable'))}")
+
+        # Check OpenAI
+        if ai_config and getattr(ai_config, "openai", None):
+            from src.llm.openai_provider import OpenAIProvider
+            openai_provider = OpenAIProvider(config=ai_config.openai.model_dump())
+            openai_health = await openai_provider.health_check()
+            if openai_health.get("status") == "healthy":
+                healthy_providers.append("openai")
+            else:
+                unhealthy_providers.append("openai")
+                llm_provider_messages.append(f"OpenAI: {openai_health.get('error', openai_health.get('status', 'Unavailable'))}")
+
+        if healthy_providers:
+            return {
+                "status": "configured",
+                "message": f"LLM providers enabled: {', '.join(healthy_providers)}",
+                "healthy_providers": healthy_providers,
+                "unhealthy_providers": unhealthy_providers
+            }
+        elif unhealthy_providers:
+            return {
+                "status": "unavailable",
+                "message": "No healthy LLM providers. " + "; ".join(llm_provider_messages),
+                "healthy_providers": [],
+                "unhealthy_providers": unhealthy_providers
+            }
+        else:
+            return {
+                "status": "none_configured",
+                "message": "No LLM providers enabled",
+                "healthy_providers": [],
+                "unhealthy_providers": []
+            }
+    except Exception as e:
+        logger.error(f"Error checking LLM providers: {e}")
+        return {
+            "status": "error",
+            "message": f"Error checking LLM providers: {str(e)}",
+            "healthy_providers": [],
+            "unhealthy_providers": []
+        }
+
+
+async def llm_health_monitor():
+    """
+    Background task that periodically checks LLM health and broadcasts changes.
+    
+    Runs every 30 seconds and broadcasts status changes via WebSocket.
+    """
+    global _last_llm_health_status
+    
+    while _health_monitor_running:
+        try:
+            current_status = await check_llm_providers_status()
+            
+            # Only broadcast if status changed
+            if current_status != _last_llm_health_status:
+                logger.info(f"LLM health status changed: {current_status['status']}")
+                _last_llm_health_status = current_status.copy()
+                
+                if WEBSOCKET_AVAILABLE:
+                    await websocket_manager.broadcast_llm_health(current_status)
+                    
+            await asyncio.sleep(30)  # Check every 30 seconds
+            
+        except Exception as e:
+            logger.error(f"Error in LLM health monitor: {e}")
+            await asyncio.sleep(30)  # Wait before retrying
+
+
+async def start_health_monitor():
+    """Start the background health monitoring task."""
+    global _health_monitor_running
+    
+    if not _health_monitor_running and WEBSOCKET_AVAILABLE:
+        _health_monitor_running = True
+        asyncio.create_task(llm_health_monitor())
+        logger.info("LLM health monitor started")
+
+
+async def stop_health_monitor():
+    """Stop the background health monitoring task."""
+    global _health_monitor_running
+    _health_monitor_running = False
+    logger.info("LLM health monitor stopped")
+
+
 @router.get("/health", tags=["health"])
 async def health_check(
+    background_tasks: BackgroundTasks,
     db_manager: DatabaseManager = Depends(get_database_manager),
     cache_manager: CacheManager = Depends(get_cache_manager),
     anythingllm_client: AnythingLLMClient = Depends(get_anythingllm_client),
@@ -85,59 +210,27 @@ async def health_check(
         components["anythingllm"] = {"status": "unavailable", "message": "Service not configured"}
         features["llm_enhancement"] = "unavailable"
 
-    # LLM Providers (Ollama/OpenAI/etc)
+    # LLM Providers (using centralized check function)
     try:
-        config = get_system_configuration()
-        ai_config = getattr(config, "ai", None)
-        healthy_providers = []
-        unhealthy_providers = []
-        llm_provider_messages = []
-
-        # Check Ollama
-        if ai_config and getattr(ai_config, "ollama", None):
-            from src.llm.ollama_provider import OllamaProvider
-            ollama_provider = OllamaProvider(config=ai_config.ollama.model_dump())
-            ollama_health = await ollama_provider.health_check()
-            if ollama_health.get("status") == "healthy":
-                healthy_providers.append("ollama")
-            else:
-                unhealthy_providers.append("ollama")
-                llm_provider_messages.append(f"Ollama: {ollama_health.get('error', ollama_health.get('status', 'Unavailable'))}")
-
-        # Check OpenAI
-        if ai_config and getattr(ai_config, "openai", None):
-            from src.llm.openai_provider import OpenAIProvider
-            openai_provider = OpenAIProvider(config=ai_config.openai.model_dump())
-            openai_health = await openai_provider.health_check()
-            if openai_health.get("status") == "healthy":
-                healthy_providers.append("openai")
-            else:
-                unhealthy_providers.append("openai")
-                llm_provider_messages.append(f"OpenAI: {openai_health.get('error', openai_health.get('status', 'Unavailable'))}")
-
-        if healthy_providers:
-            components["llm_providers"] = {
-                "status": "configured",
-                "message": f"LLM providers enabled: {', '.join(healthy_providers)}"
-            }
-        elif unhealthy_providers:
-            components["llm_providers"] = {
-                "status": "unavailable",
-                "message": "No healthy LLM providers. " + "; ".join(llm_provider_messages)
-            }
+        llm_status = await check_llm_providers_status()
+        components["llm_providers"] = {
+            "status": llm_status["status"],
+            "message": llm_status["message"]
+        }
+        
+        # Update features based on LLM status
+        if llm_status["status"] not in ["configured"]:
             features["llm_enhancement"] = "unavailable"
-        else:
-            components["llm_providers"] = {
-                "status": "none_configured",
-                "message": "No LLM providers enabled"
-            }
-            features["llm_enhancement"] = "unavailable"
+            
+        # Start health monitor if not already running
+        background_tasks.add_task(start_health_monitor)
+        
     except Exception as e:
         components["llm_providers"] = {
-            "status": "none_configured",
+            "status": "error",
             "message": f"Error checking LLM providers: {str(e)}"
         }
-        features["llm_enhancement"] = "unavailable" 
+        features["llm_enhancement"] = "unavailable"
 
     # Search Orchestrator
     try:
