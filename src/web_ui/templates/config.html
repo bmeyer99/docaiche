@@ -36,99 +36,7 @@
     <!-- Configuration Form -->
     <div class="px-4 py-6 sm:px-6 lg:px-8">
         <form id="config-form" class="space-y-6">
-            <!-- Application Settings Section -->
-            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                <button type="button" class="w-full px-4 py-4 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset rounded-t-lg" data-accordion-trigger="app-settings">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900">Application Settings</h3>
-                        <svg class="h-5 w-5 text-gray-500 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </div>
-                </button>
-                <div class="px-4 py-4" data-accordion-content="app-settings">
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="environment" class="block text-sm font-medium text-gray-700">Environment</label>
-                            <select id="environment" name="environment" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                <option value="development">Development</option>
-                                <option value="staging">Staging</option>
-                                <option value="production">Production</option>
-                            </select>
-                            <p class="mt-1 text-sm text-gray-500">Current deployment environment</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Debug Mode</label>
-                            <div class="mt-1">
-                                <label class="inline-flex items-center">
-                                    <input type="checkbox" id="debug_mode" name="debug_mode" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                                    <span class="ml-2 text-sm text-gray-700">Enable Debug Mode</span>
-                                </label>
-                            </div>
-                            <p class="mt-1 text-sm text-gray-500">For development only</p>
-                        </div>
-                        <div>
-                            <label for="log_level" class="block text-sm font-medium text-gray-700">Log Level</label>
-                            <select id="log_level" name="log_level" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                <option value="DEBUG">DEBUG</option>
-                                <option value="INFO">INFO</option>
-                                <option value="WARNING">WARNING</option>
-                                <option value="ERROR">ERROR</option>
-                            </select>
-                            <p class="mt-1 text-sm text-gray-500">Controls logging verbosity</p>
-                        </div>
-                        <div>
-                            <label for="workers" class="block text-sm font-medium text-gray-700">Worker Processes</label>
-                            <input type="number" id="workers" name="workers" min="1" max="16" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <p class="mt-1 text-sm text-gray-500">Number of worker processes</p>
-                            <div class="mt-1 text-sm text-red-600 hidden" id="workers-error">Must be between 1 and 16</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Cache Management Section -->
-            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                <button type="button" class="w-full px-4 py-4 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset rounded-t-lg" data-accordion-trigger="cache-config">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900">Cache Management</h3>
-                        <svg class="h-5 w-5 text-gray-500 transform transition-transform duration-200 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </div>
-                </button>
-                <div class="px-4 py-4 hidden" data-accordion-content="cache-config">
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="cache_ttl" class="block text-sm font-medium text-gray-700">Cache TTL (seconds)</label>
-                            <input type="number" id="cache_ttl" name="cache_ttl" min="60" max="86400" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <p class="mt-1 text-sm text-gray-500">Time to live for cache entries</p>
-                        </div>
-                        <div>
-                            <label for="cache_max_size" class="block text-sm font-medium text-gray-700">Max Cache Size (MB)</label>
-                            <input type="number" id="cache_max_size" name="cache_max_size" min="100" max="10000" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <p class="mt-1 text-sm text-gray-500">Maximum cache size in megabytes</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Auto-refresh</label>
-                            <div class="mt-1">
-                                <label class="inline-flex items-center">
-                                    <input type="checkbox" id="auto_refresh" name="auto_refresh" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                                    <span class="ml-2 text-sm text-gray-700">Enable auto-refresh</span>
-                                </label>
-                            </div>
-                            <p class="mt-1 text-sm text-gray-500">Automatically refresh cached data</p>
-                        </div>
-                        <div>
-                            <label for="refresh_interval" class="block text-sm font-medium text-gray-700">Refresh Interval (seconds)</label>
-                            <input type="number" id="refresh_interval" name="refresh_interval" min="10" max="3600" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <p class="mt-1 text-sm text-gray-500">Auto-refresh interval</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AI/LLM Settings Section -->
+          <!-- AI/LLM Settings Section -->
             <div class="bg-white shadow-sm rounded-lg border border-gray-200">
                 <button type="button" class="w-full px-4 py-4 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset rounded-t-lg" data-accordion-trigger="ai-config">
                     <div class="flex items-center justify-between">
@@ -480,6 +388,97 @@
                                 class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
                             Test Model Response
                         </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Application Settings Section -->
+            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+                <button type="button" class="w-full px-4 py-4 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset rounded-t-lg" data-accordion-trigger="app-settings">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Application Settings</h3>
+                        <svg class="h-5 w-5 text-gray-500 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </button>
+                <div class="px-4 py-4" data-accordion-content="app-settings">
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div>
+                            <label for="environment" class="block text-sm font-medium text-gray-700">Environment</label>
+                            <select id="environment" name="environment" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                <option value="development">Development</option>
+                                <option value="staging">Staging</option>
+                                <option value="production">Production</option>
+                            </select>
+                            <p class="mt-1 text-sm text-gray-500">Current deployment environment</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Debug Mode</label>
+                            <div class="mt-1">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" id="debug_mode" name="debug_mode" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                                    <span class="ml-2 text-sm text-gray-700">Enable Debug Mode</span>
+                                </label>
+                            </div>
+                            <p class="mt-1 text-sm text-gray-500">For development only</p>
+                        </div>
+                        <div>
+                            <label for="log_level" class="block text-sm font-medium text-gray-700">Log Level</label>
+                            <select id="log_level" name="log_level" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                <option value="DEBUG">DEBUG</option>
+                                <option value="INFO">INFO</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                            </select>
+                            <p class="mt-1 text-sm text-gray-500">Controls logging verbosity</p>
+                        </div>
+                        <div>
+                            <label for="workers" class="block text-sm font-medium text-gray-700">Worker Processes</label>
+                            <input type="number" id="workers" name="workers" min="1" max="16" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <p class="mt-1 text-sm text-gray-500">Number of worker processes</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="workers-error">Must be between 1 and 16</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cache Management Section -->
+            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
+                <button type="button" class="w-full px-4 py-4 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset rounded-t-lg" data-accordion-trigger="cache-config">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Cache Management</h3>
+                        <svg class="h-5 w-5 text-gray-500 transform transition-transform duration-200 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </button>
+                <div class="px-4 py-4 hidden" data-accordion-content="cache-config">
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                        <div>
+                            <label for="cache_ttl" class="block text-sm font-medium text-gray-700">Cache TTL (seconds)</label>
+                            <input type="number" id="cache_ttl" name="cache_ttl" min="60" max="86400" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <p class="mt-1 text-sm text-gray-500">Time to live for cache entries</p>
+                        </div>
+                        <div>
+                            <label for="cache_max_size" class="block text-sm font-medium text-gray-700">Max Cache Size (MB)</label>
+                            <input type="number" id="cache_max_size" name="cache_max_size" min="100" max="10000" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <p class="mt-1 text-sm text-gray-500">Maximum cache size in megabytes</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Auto-refresh</label>
+                            <div class="mt-1">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" id="auto_refresh" name="auto_refresh" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                                    <span class="ml-2 text-sm text-gray-700">Enable auto-refresh</span>
+                                </label>
+                            </div>
+                            <p class="mt-1 text-sm text-gray-500">Automatically refresh cached data</p>
+                        </div>
+                        <div>
+                            <label for="refresh_interval" class="block text-sm font-medium text-gray-700">Refresh Interval (seconds)</label>
+                            <input type="number" id="refresh_interval" name="refresh_interval" min="10" max="3600" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <p class="mt-1 text-sm text-gray-500">Auto-refresh interval</p>
+                        </div>
                     </div>
                 </div>
             </div>
