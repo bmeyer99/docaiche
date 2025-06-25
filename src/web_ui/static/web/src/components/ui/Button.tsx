@@ -46,6 +46,7 @@ export const Button: React.FC<ButtonProps> = ({
       onClick={disabled || loading ? undefined : onClick}
       disabled={disabled || loading}
       tabIndex={0}
+      style={{ minWidth: 44, minHeight: 44 }}
     >
       {loading && (
         <Icon name="loader" size="md" className="animate-spin mr-2" />

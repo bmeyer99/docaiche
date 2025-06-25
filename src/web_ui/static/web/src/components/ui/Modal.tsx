@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import classNames from "classnames";
+import { Logger } from "../../utils/logger";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ export const Modal: React.FC<ModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
   const lastFocusedElement = useRef<HTMLElement | null>(null);
 
-  // Trap focus inside modal
+  // Trap focus inside modal and log accessibility events
   useEffect(() => {
     if (!isOpen) return;
     lastFocusedElement.current = document.activeElement as HTMLElement;
@@ -37,9 +38,22 @@ export const Modal: React.FC<ModalProps> = ({
     );
     focusable?.[0]?.focus();
 
+    Logger.info("Modal opened and focus trap activated", {
+      category: "user",
+      component: "Modal",
+      event: "open",
+      title,
+    });
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        Logger.info("Modal closed via Escape key", {
+          category: "user",
+          component: "Modal",
+          event: "close-escape",
+          title,
+        });
         onClose();
       }
       if (e.key === "Tab" && focusable && focusable.length > 0) {
@@ -49,11 +63,25 @@ export const Modal: React.FC<ModalProps> = ({
           if (document.activeElement === first) {
             e.preventDefault();
             last.focus();
+            Logger.debug("Focus trap cycled to last element (Shift+Tab)", {
+              category: "user",
+              component: "Modal",
+              event: "focus-trap-cycle",
+              direction: "backward",
+              title,
+            });
           }
         } else {
           if (document.activeElement === last) {
             e.preventDefault();
             first.focus();
+            Logger.debug("Focus trap cycled to first element (Tab)", {
+              category: "user",
+              component: "Modal",
+              event: "focus-trap-cycle",
+              direction: "forward",
+              title,
+            });
           }
         }
       }
@@ -64,8 +92,14 @@ export const Modal: React.FC<ModalProps> = ({
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
       lastFocusedElement.current?.focus();
+      Logger.info("Modal closed and focus trap deactivated", {
+        category: "user",
+        component: "Modal",
+        event: "close",
+        title,
+      });
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, title]);
 
   if (!isOpen) return null;
 
@@ -96,6 +130,7 @@ export const Modal: React.FC<ModalProps> = ({
         role="document"
         tabIndex={0}
         onClick={(e) => e.stopPropagation()}
+        aria-labelledby={title ? "modal-title" : undefined}
       >
         {title && (
           <div className="px-6 pt-6 pb-2">

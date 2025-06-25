@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { SkeletonCard } from "../ui/SkeletonCard";
+import ApiErrorDisplay from "../ui/ApiErrorDisplay";
+import { Logger } from "../../utils/logger";
 import { Card } from "../ui/Card";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
@@ -6,6 +9,44 @@ import { Label } from "../ui/Label";
 import { Button } from "../ui/Button";
 import { FormGroup } from "../ui/FormGroup";
 import { FormRow } from "../ui/FormRow";
+interface GeneralSettingsTabLoadingProps {
+  loading: boolean;
+  loadError?: string | null;
+  onRetry?: () => void;
+  correlationId?: string;
+}
+
+const GeneralSettingsTabLoading: React.FC<GeneralSettingsTabLoadingProps> = ({
+  loading,
+  loadError,
+  onRetry,
+  correlationId,
+}) => {
+  React.useEffect(() => {
+    if (loading) {
+      Logger.info("SkeletonCard displayed for GeneralSettingsTab", {
+        category: "state",
+        correlationId,
+        action: "show_skeleton",
+      });
+    }
+  }, [loading, correlationId]);
+
+  if (loading) {
+    return <SkeletonCard lines={6} showHeader className="mb-6" />;
+  }
+  if (loadError && onRetry) {
+    return (
+      <ApiErrorDisplay
+        error={loadError}
+        onRetry={onRetry}
+        correlationId={correlationId}
+        className="mb-6"
+      />
+    );
+  }
+  return null;
+};
 
 export interface GeneralSettingsTabProps {
   className?: string;
@@ -86,6 +127,20 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ classNam
                 error={errors.adminEmail}
                 required
                 aria-required="true"
+/**
+ * Example usage of loading/error state wrapper in GeneralSettingsTab.
+ * Integrate this logic at the top of the component's return or before rendering the form.
+ *
+ * Usage:
+ *   <GeneralSettingsTabLoading
+ *     loading={loading}
+ *     loadError={loadError}
+ *     onRetry={reloadFunction}
+ *     correlationId={correlationId}
+ *   />
+ *
+ * Only render the form if !loading && !loadError.
+ */
                 aria-describedby={errors.adminEmail ? "adminEmail-error" : undefined}
                 autoComplete="off"
               />

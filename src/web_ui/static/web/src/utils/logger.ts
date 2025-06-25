@@ -1,9 +1,10 @@
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
-type LogCategory = 'api' | 'user' | 'state' | 'validation' | 'performance' | 'error';
+type LogCategory = 'api' | 'user' | 'state' | 'validation' | 'performance' | 'error' | 'compatibility';
 
 interface LogOptions {
   category?: LogCategory;
   redactKeys?: string[];
+  fallbackTriggered?: boolean;
   [key: string]: any;
 }
 
@@ -34,13 +35,29 @@ function isProduction() {
   return process.env.NODE_ENV === 'production';
 }
 
+function getUserAgent(): string | undefined {
+  if (typeof navigator !== 'undefined' && navigator.userAgent) {
+    return navigator.userAgent;
+  }
+  return undefined;
+}
+
 export class Logger {
   static log(level: LogLevel, message: string, options: LogOptions = {}) {
-    const { category, redactKeys = [], ...meta } = options;
+    const { category, redactKeys = [], fallbackTriggered, ...meta } = options;
     if (!category) {
       throw new Error('Logger: category is required in LogOptions');
     }
     const safeMeta = redactSensitive(meta, redactKeys);
+    const userAgent = getUserAgent();
+
+    const logMeta = {
+      ...safeMeta,
+      userAgent,
+    };
+    if (typeof fallbackTriggered !== 'undefined') {
+      logMeta.fallbackTriggered = fallbackTriggered;
+    }
 
     if (isProduction()) {
       // Structured JSON for production
@@ -49,13 +66,13 @@ export class Logger {
         level,
         category,
         message,
-        ...safeMeta,
+        ...logMeta,
       };
       // eslint-disable-next-line no-console
       console.log(JSON.stringify(logObj));
     } else {
       // Human-readable for development
-      const formatted = formatMessage(level, category, message, safeMeta);
+      const formatted = formatMessage(level, category, message, logMeta);
       // eslint-disable-next-line no-console
       switch (level) {
         case 'error':
