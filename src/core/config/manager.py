@@ -317,9 +317,76 @@ class ConfigurationManager:
             # Reload configuration to reflect changes
             await self.load_configuration()
             
+            # Notify services of configuration changes
+            await self._notify_configuration_change(config_key, config_value)
+            
         except Exception as e:
             logger.error(f"Failed to update configuration in database: {e}")
             raise
+            
+    async def _notify_configuration_change(self, config_key: str, config_value: Any) -> None:
+        """
+        Notify services of configuration changes for hot-reload
+        
+        Args:
+            config_key: Configuration key that changed
+            config_value: New configuration value
+        """
+        try:
+            # Notify LLM services if AI configuration changed
+            if config_key.startswith("ai."):
+                await self._reload_llm_services()
+                logger.info("LLM services notified of AI configuration changes")
+                
+            # Add additional service notifications as needed
+            # Example: if config_key.startswith("redis."):
+            #     await self._reload_cache_services()
+            
+        except Exception as e:
+            logger.warning(f"Failed to notify services of config change {config_key}: {e}")
+            
+    async def _reload_llm_services(self) -> None:
+        """Reload LLM client with updated configuration."""
+        try:
+            # Get updated AI configuration
+            system_config = self.get_configuration()
+            ai_config_dict = {
+                'text_provider': system_config.ai.text_provider,
+                'text_base_url': system_config.ai.text_base_url,
+                'text_api_key': system_config.ai.text_api_key,
+                'embedding_provider': system_config.ai.embedding_provider,
+                'embedding_base_url': system_config.ai.embedding_base_url,
+                'embedding_api_key': system_config.ai.embedding_api_key,
+                'use_same_provider': system_config.ai.use_same_provider,
+                'llm_model': system_config.ai.llm_model,
+                'llm_embedding_model': system_config.ai.llm_embedding_model,
+                'text_max_tokens': system_config.ai.text_max_tokens,
+                'text_temperature': system_config.ai.text_temperature,
+                'text_top_p': system_config.ai.text_top_p,
+                'text_top_k': system_config.ai.text_top_k,
+                'text_timeout': system_config.ai.text_timeout,
+                'text_retries': system_config.ai.text_retries,
+                'embedding_batch_size': system_config.ai.embedding_batch_size,
+                'embedding_timeout': system_config.ai.embedding_timeout,
+                'embedding_retries': system_config.ai.embedding_retries,
+                'embedding_chunk_size': system_config.ai.embedding_chunk_size,
+                'embedding_overlap': system_config.ai.embedding_overlap,
+                'embedding_normalize': system_config.ai.embedding_normalize,
+                'cache_ttl_seconds': system_config.ai.cache_ttl_seconds
+            }
+            
+            # Notify global LLM client instance to reload
+            # This would be called by any service using LLM functionality
+            from src.llm.client import create_llm_client
+            
+            # Store new config globally for services to pick up
+            global _cached_ai_config
+            _cached_ai_config = ai_config_dict
+            
+            logger.info("LLM configuration cache updated for service reload")
+            
+        except Exception as e:
+            logger.error(f"Failed to reload LLM services: {e}")
     
     async def get_from_db(self, config_key: str) -> Optional[Any]:
         """

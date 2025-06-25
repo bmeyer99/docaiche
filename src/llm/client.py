@@ -75,27 +75,57 @@ class LLMProviderClient:
 
     def _initialize_providers(self):
         """Initialize available LLM providers based on configuration."""
-        # Ollama
-        ollama_cfg = self.config.get('ollama', {})
-        if ollama_cfg.get('enabled') and ollama_cfg.get('endpoint') and ollama_cfg.get('model'):
-            try:
-                self.providers['ollama'] = OllamaProvider(ollama_cfg, self.cache_manager)
-                self.provider_status['ollama'] = ProviderStatus.UNKNOWN
-                logger.info("Ollama provider initialized")
-            except Exception as e:
-                logger.error(f"Failed to initialize Ollama provider: {e}")
-        # OpenAI
-        openai_cfg = self.config.get('openai', {})
-        if openai_cfg.get('enabled') and openai_cfg.get('api_key') and openai_cfg.get('model'):
-            try:
-                self.providers['openai'] = OpenAIProvider(openai_cfg, self.cache_manager)
-                self.provider_status['openai'] = ProviderStatus.UNKNOWN
-                logger.info("OpenAI provider initialized")
-            except Exception as e:
-                logger.error(f"Failed to initialize OpenAI provider: {e}")
+        # Extract provider configs from unified AI config
+        text_provider = self.config.get('text_provider', 'ollama')
+        embedding_provider = self.config.get('embedding_provider', 'ollama')
+        use_same_provider = self.config.get('use_same_provider', True)
+        
+        # Ollama provider initialization
+        if text_provider == 'ollama' or embedding_provider == 'ollama':
+            ollama_cfg = self._build_ollama_config()
+            if ollama_cfg.get('endpoint') and ollama_cfg.get('model'):
+                try:
+                    self.providers['ollama'] = OllamaProvider(ollama_cfg, self.cache_manager)
+                    self.provider_status['ollama'] = ProviderStatus.UNKNOWN
+                    logger.info("Ollama provider initialized")
+                except Exception as e:
+                    logger.error(f"Failed to initialize Ollama provider: {e}")
+                    
+        # OpenAI provider initialization
+        if text_provider == 'openai' or (not use_same_provider and embedding_provider == 'openai'):
+            openai_cfg = self._build_openai_config()
+            if openai_cfg.get('api_key') and openai_cfg.get('model'):
+                try:
+                    self.providers['openai'] = OpenAIProvider(openai_cfg, self.cache_manager)
+                    self.provider_status['openai'] = ProviderStatus.UNKNOWN
+                    logger.info("OpenAI provider initialized")
+                except Exception as e:
+                    logger.error(f"Failed to initialize OpenAI provider: {e}")
 
         if not self.providers:
             logger.warning("No LLM providers were successfully initialized")
+            
+    def _build_ollama_config(self) -> Dict[str, Any]:
+        """Build Ollama provider config from unified AI config."""
+        return {
+            'endpoint': self.config.get('text_base_url', 'http://localhost:11434'),
+            'model': self.config.get('llm_model', 'llama2'),
+            'temperature': self.config.get('text_temperature', 0.7),
+            'max_tokens': self.config.get('text_max_tokens', 4096),
+            'timeout_seconds': self.config.get('text_timeout', 60),
+            'enabled': True  # Always enabled if provider is selected
+        }
+        
+    def _build_openai_config(self) -> Dict[str, Any]:
+        """Build OpenAI provider config from unified AI config."""
+        return {
+            'api_key': self.config.get('text_api_key', ''),
+            'model': self.config.get('llm_model', 'gpt-3.5-turbo'),
+            'temperature': self.config.get('text_temperature', 0.7),
+            'max_tokens': self.config.get('text_max_tokens', 4096),
+            'timeout_seconds': self.config.get('text_timeout', 30),
+            'enabled': True  # Always enabled if provider is selected
+        }
 
     async def generate_structured(
         self,

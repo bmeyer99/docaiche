@@ -77,9 +77,60 @@ async def get_config(data_service: DataService = Depends(get_data_service)):
         raise HTTPException(status_code=500, detail="Failed to fetch config")
 
 class ConfigUpdateModel(BaseModel):
-    # Accept only known config keys for validation
-    setting1: str = None
-    setting2: bool = None
+    """Configuration validation schema for all supported config fields"""
+    
+    # Application Settings
+    environment: Optional[str] = None
+    debug_mode: Optional[bool] = None
+    log_level: Optional[str] = None
+    workers: Optional[int] = None
+    
+    # Service Configuration
+    api_host: Optional[str] = None
+    api_timeout: Optional[int] = None
+    websocket_url: Optional[str] = None
+    max_retries: Optional[int] = None
+    
+    # Cache Management
+    cache_ttl: Optional[int] = None
+    cache_max_size: Optional[int] = None
+    auto_refresh: Optional[bool] = None
+    refresh_interval: Optional[int] = None
+    
+    # Text Generation Provider Settings
+    text_provider: Optional[str] = None
+    text_base_url: Optional[str] = None
+    text_api_key: Optional[str] = None
+    
+    # Embedding Provider Settings
+    use_same_provider: Optional[bool] = None
+    embedding_provider: Optional[str] = None
+    embedding_base_url: Optional[str] = None
+    embedding_api_key: Optional[str] = None
+    
+    # Model Configuration
+    llm_model: Optional[str] = None
+    llm_embedding_model: Optional[str] = None
+    
+    # Text Generation Advanced Parameters
+    text_max_tokens: Optional[int] = None
+    text_temperature: Optional[float] = None
+    text_top_p: Optional[float] = None
+    text_top_k: Optional[int] = None
+    text_timeout: Optional[int] = None
+    text_retries: Optional[int] = None
+    
+    # Embedding Advanced Parameters
+    embedding_batch_size: Optional[int] = None
+    embedding_timeout: Optional[int] = None
+    embedding_retries: Optional[int] = None
+    embedding_chunk_size: Optional[int] = None
+    embedding_overlap: Optional[int] = None
+    embedding_normalize: Optional[bool] = None
+    
+    # Legacy fields for backwards compatibility
+    setting1: Optional[str] = None
+    setting2: Optional[bool] = None
 
 @api_router.post("/config", response_model=ConfigResponse)
 async def update_config(

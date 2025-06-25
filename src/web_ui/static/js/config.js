@@ -349,6 +349,7 @@ class ConfigManager {
 
         try {
             const config = this.getCurrentConfig();
+            console.log('Sending configuration:', config);
             const response = await api.post('/config', config);
             
             this.originalConfig = { ...config };

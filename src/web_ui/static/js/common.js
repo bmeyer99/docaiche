@@ -28,7 +28,16 @@ class APIClient {
                 let errorDetails = '';
                 try {
                     const errorData = await response.json();
-                    errorDetails = errorData.detail || errorData.message || response.statusText;
+                    console.log('Backend error response:', errorData);
+                    
+                    if (errorData.detail && Array.isArray(errorData.detail)) {
+                        // FastAPI validation errors
+                        errorDetails = errorData.detail.map(err =>
+                            `${err.loc ? err.loc.join('.') : 'field'}: ${err.msg}`
+                        ).join(', ');
+                    } else {
+                        errorDetails = errorData.detail || errorData.message || JSON.stringify(errorData);
+                    }
                 } catch {
                     errorDetails = response.statusText;
                 }

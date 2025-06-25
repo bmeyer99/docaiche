@@ -167,10 +167,43 @@ class OpenAIConfig(BaseModel):
 
 
 class AIConfig(BaseModel):
-    """AI provider configuration with failover support"""
+    """AI provider configuration with dual provider support"""
+    # Primary text generation provider
     primary_provider: Literal["ollama", "openai"] = Field("ollama", description="Primary LLM provider")
     fallback_provider: Optional[Literal["ollama", "openai"]] = Field("openai", description="Fallback LLM provider")
     enable_failover: bool = Field(True, description="Enable automatic failover")
+    
+    # Dual provider configuration
+    text_provider: str = Field("ollama", description="Text generation provider")
+    text_base_url: str = Field("http://localhost:11434", description="Text provider base URL")
+    text_api_key: Optional[str] = Field(None, description="Text provider API key")
+    
+    embedding_provider: str = Field("ollama", description="Embedding provider")
+    embedding_base_url: str = Field("http://localhost:11434", description="Embedding provider base URL")
+    embedding_api_key: Optional[str] = Field(None, description="Embedding provider API key")
+    use_same_provider: bool = Field(True, description="Use same provider for text and embeddings")
+    
+    # Model configuration
+    llm_model: str = Field("llama2", description="Text generation model")
+    llm_embedding_model: str = Field("nomic-embed-text:latest", description="Embedding model")
+    
+    # Text generation advanced parameters
+    text_max_tokens: int = Field(2048, ge=1, description="Text generation max tokens")
+    text_temperature: float = Field(0.7, ge=0.0, le=2.0, description="Text generation temperature")
+    text_top_p: float = Field(1.0, ge=0.0, le=1.0, description="Text generation top-p")
+    text_top_k: int = Field(40, ge=1, description="Text generation top-k")
+    text_timeout: int = Field(30, ge=1, description="Text generation timeout")
+    text_retries: int = Field(3, ge=1, description="Text generation retries")
+    
+    # Embedding advanced parameters
+    embedding_batch_size: int = Field(10, ge=1, description="Embedding batch size")
+    embedding_timeout: int = Field(30, ge=1, description="Embedding timeout")
+    embedding_retries: int = Field(3, ge=1, description="Embedding retries")
+    embedding_chunk_size: int = Field(512, ge=1, description="Embedding chunk size")
+    embedding_overlap: int = Field(50, ge=0, description="Embedding chunk overlap")
+    embedding_normalize: bool = Field(True, description="Normalize embeddings")
+    
+    # Provider instances
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     openai: Optional[OpenAIConfig] = None
     cache_ttl_seconds: int = Field(3600, ge=0, description="Cache TTL for LLM responses")
