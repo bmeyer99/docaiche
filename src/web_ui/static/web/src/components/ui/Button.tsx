@@ -12,6 +12,12 @@ interface ButtonProps {
   onClick?: () => void;
   type?: "button" | "submit" | "reset";
   className?: string;
+  // Additional props for compatibility
+  style?: React.CSSProperties;
+  tabIndex?: number;
+  'aria-label'?: string;
+  'aria-busy'?: boolean;
+  'aria-live'?: string;
 }
 
 const sizeMap: Record<NonNullable<ButtonProps["size"]>, string> = {

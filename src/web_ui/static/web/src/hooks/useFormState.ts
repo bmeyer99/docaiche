@@ -1,6 +1,6 @@
 // useFormState.ts
 import { useState, useCallback } from 'react';
-import { SystemConfiguration } from '../types/configuration';
+import type { SystemConfiguration } from '../types/configuration';
 import { Logger } from '../utils/logger';
 
 type ValidationResult = {

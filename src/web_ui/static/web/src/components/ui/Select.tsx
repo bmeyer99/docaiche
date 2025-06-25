@@ -9,15 +9,19 @@ interface SelectOption {
 }
 
 interface SelectProps {
-  options: SelectOption[];
-  value: string;
-  onChange: (value: string) => void;
+  options?: SelectOption[];
+  value?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   error?: string;
   label?: string;
   required?: boolean;
   className?: string;
+  children?: React.ReactNode;
+  // Additional props for compatibility
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -45,7 +49,7 @@ export const Select: React.FC<SelectProps> = ({
       <select
         id={label}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
         required={required}
         className={`${selectClass} ${className}`}
@@ -58,7 +62,7 @@ export const Select: React.FC<SelectProps> = ({
             {placeholder}
           </option>
         )}
-        {options.map((opt) => (
+        {options?.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>

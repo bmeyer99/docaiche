@@ -29,7 +29,7 @@ const validateSessionValue = (value: unknown): boolean =>
 export const AdvancedSettingsToggle: React.FC<AdvancedSettingsToggleProps> = ({
   providerType,
   correlationId,
-  initialOpen = false,
+  initialOpen: _initialOpen = false,
   children,
   label = "Show advanced settings",
   className = "",

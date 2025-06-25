@@ -1,6 +1,7 @@
 // src/context/ToastProvider.tsx
 import React, { createContext, useContext, useReducer, useRef, useCallback } from "react";
-import { ToastType, ToastProps, ToastContainer } from "../components/ui/Toast";
+import type { ToastType, ToastProps } from "../components/ui/Toast";
+import { ToastContainer } from "../components/ui/Toast";
 import { sanitize } from "../utils/sanitize";
 
 // Toast State & Actions
@@ -29,7 +30,11 @@ function logToastDismiss(id: string, type: ToastType, reason: string) {
 function toastReducer(state: ToastState, action: ToastAction): ToastState {
   switch (action.type) {
     case "ADD_TOAST": {
-      let toasts = [...state.toasts, { ...action.toast }];
+      const toastWithDismiss: ToastProps = {
+        ...action.toast,
+        onDismiss: (_id: string) => {} // Will be overridden by provider
+      };
+      let toasts = [...state.toasts, toastWithDismiss];
       if (toasts.length > 3) {
         toasts = toasts.slice(toasts.length - 3);
       }
@@ -82,7 +87,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           id,
           type,
           message: sanitized,
-          onDismiss: (toastId: string) => dismissToast(toastId, type, "manual"),
+          
         },
       });
       // Timer

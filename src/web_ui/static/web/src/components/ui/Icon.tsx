@@ -1,5 +1,5 @@
 // src/components/ui/Icon.tsx
-import { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { 
   CheckCircle, 
   XCircle, 
@@ -59,19 +59,22 @@ const sizeMap: Record<IconSize, string> = {
   lg: 'w-5 h-5',
 };
 
-export const Icon: React.FC<IconProps> = ({ 
-  name, 
-  size = 'md', 
-  className = '', 
-  color 
+export const Icon: React.FC<IconProps> = ({
+  name,
+  size = 'md',
+  className = '',
+  color
 }) => {
   const IconComponent = iconMap[name];
   const sizeClass = sizeMap[size];
   
   return (
-    <IconComponent 
+    <IconComponent
       className={`${sizeClass} ${className}`}
       style={color ? { color } : undefined}
     />
   );
 };
+
+// Default export for compatibility
+export default Icon;

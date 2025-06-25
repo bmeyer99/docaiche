@@ -82,7 +82,7 @@ export const Tabs: React.FC<TabsProps> = ({
         aria-orientation="horizontal"
         ref={tabListRef}
       >
-        {tabs.map((tab, idx) => (
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             id={`tab-${tab.id}`}

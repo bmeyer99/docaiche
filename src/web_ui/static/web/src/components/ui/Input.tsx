@@ -5,8 +5,8 @@ import { Label } from "./Label";
 
 interface InputProps {
   type?: "text" | "password" | "email" | "number";
-  value: string;
-  onChange: (value: string) => void;
+  value?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   error?: string;
@@ -14,6 +14,11 @@ interface InputProps {
   label?: string;
   required?: boolean;
   className?: string;
+  // Additional props for compatibility
+  inputMode?: string;
+  style?: React.CSSProperties;
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -43,7 +48,7 @@ export const Input: React.FC<InputProps> = ({
         id={label}
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
         required={required}

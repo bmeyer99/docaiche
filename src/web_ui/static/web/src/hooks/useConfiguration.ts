@@ -1,6 +1,6 @@
 // useConfiguration.ts
 import { useState, useEffect, useCallback } from 'react';
-import { SystemConfiguration } from '../types/configuration';
+import type { SystemConfiguration } from '../types/configuration';
 import { Logger } from '../utils/logger';
 import { useFormState } from './useFormState';
 import * as configurationApi from '../services/configurationApi';
@@ -52,7 +52,7 @@ export function useConfiguration(options: UseConfigurationOptions) {
     configurationApi.fetchConfiguration()
       .then(cfg => {
         if (!active) return;
-        setInitialConfig(cfg);
+        setInitialConfig(cfg as SystemConfiguration);
         setLoading(false);
         Logger.info('Loaded configuration', {
           category: 'api',

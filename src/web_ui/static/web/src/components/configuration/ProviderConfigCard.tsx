@@ -9,7 +9,7 @@ import { Label } from '../ui/Label';
 import { Button } from '../ui/Button';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Icon } from '../ui/Icon';
-import { Toast } from '../ui/Toast';
+// import { Toast } from '../ui/Toast'; // TODO: Use when implementing toast notifications
 import { Logger } from '../../utils/logger';
 import type { ProviderConfig } from '../../types/configuration';
 
@@ -18,7 +18,7 @@ type ProviderType = 'ollama' | 'openai' | 'custom';
 interface ProviderConfigCardProps {
   value: ProviderConfig;
   onChange: (value: ProviderConfig) => void;
-  onTestConnection: (config: ProviderConfig) => Promise<{ success: boolean; models?: string[]; error?: string }>;
+  onTestConnection?: (config: ProviderConfig) => Promise<{ success: boolean; models?: string[]; error?: string }>;
   disabled?: boolean;
   testInProgress?: boolean;
   testStatus?: 'idle' | 'testing' | 'success' | 'error';
@@ -163,6 +163,8 @@ export const ProviderConfigCard: React.FC<ProviderConfigCardProps> = ({
   }
 
   async function handleTestConnection() {
+    if (!onTestConnection) return;
+    
     setConnectionStatus('testing');
     setConnectionError(undefined);
     Logger.info('Testing provider connection', {
@@ -215,15 +217,14 @@ export const ProviderConfigCard: React.FC<ProviderConfigCardProps> = ({
 
   return (
     <Card className={`card ${className || ''}`} aria-labelledby="provider-config-title">
-      <form autoComplete="off" aria-describedby="provider-config-errors">
-        <h2 id="provider-config-title" className="sr-only">Provider Configuration</h2>
+      <form aria-describedby="provider-config-errors">
+        <h2 className="sr-only">Provider Configuration</h2>
         <FormGroup>
           <FormRow>
             <Label htmlFor="provider-select">Provider</Label>
             <Select
-              id="provider-select"
               value={provider}
-              onChange={e => handleProviderChange(e.target.value)}
+              onChange={handleProviderChange}
               disabled={disabled}
               aria-invalid={!validation.provider}
               aria-describedby={!validation.provider ? 'provider-error' : undefined}
@@ -235,43 +236,38 @@ export const ProviderConfigCard: React.FC<ProviderConfigCardProps> = ({
               ))}
             </Select>
             {!validation.provider && (
-              <span id="provider-error" className="inputError" role="alert">{errors.provider}</span>
+              <span className="inputError" role="alert">{errors.provider}</span>
             )}
           </FormRow>
           <FormRow>
             <Label htmlFor="base-url-input">Base URL</Label>
             <Input
-              id="base-url-input"
-              type="url"
               value={baseUrl}
-              onChange={e => handleBaseUrlChange(e.target.value)}
+              onChange={handleBaseUrlChange}
               placeholder={BASE_URL_PLACEHOLDER}
               disabled={disabled}
               aria-invalid={!validation.baseUrl}
               aria-describedby={!validation.baseUrl ? 'baseurl-error' : undefined}
               className={validation.baseUrl ? '' : 'inputError'}
-              autoComplete="off"
               inputMode="url"
             />
             <span className="helperText">The endpoint for your provider (e.g., Ollama, OpenAI).</span>
             {!validation.baseUrl && (
-              <span id="baseurl-error" className="inputError" role="alert">{errors.baseUrl}</span>
+              <span className="inputError" role="alert">{errors.baseUrl}</span>
             )}
           </FormRow>
           <FormRow>
             <Label htmlFor="api-key-input">API Key</Label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Input
-                id="api-key-input"
                 type={showApiKey ? 'text' : 'password'}
                 value={apiKey}
-                onChange={e => handleApiKeyChange(e.target.value)}
+                onChange={handleApiKeyChange}
                 placeholder="Enter API key"
                 disabled={disabled}
                 aria-invalid={!validation.apiKey}
                 aria-describedby={!validation.apiKey ? 'apikey-error' : undefined}
                 className={validation.apiKey ? '' : 'inputError'}
-                autoComplete="off"
                 inputMode="text"
                 style={{ flex: 1 }}
               />
@@ -282,25 +278,24 @@ export const ProviderConfigCard: React.FC<ProviderConfigCardProps> = ({
                 tabIndex={0}
                 style={{ minWidth: 32 }}
               >
-                <Icon name={showApiKey ? 'eye-off' : 'eye'} />
+                <Icon name={showApiKey ? 'eyeOff' : 'eye'} />
               </Button>
             </div>
             <span className="helperText">Your provider API key (never stored in plaintext).</span>
             {!validation.apiKey && (
-              <span id="apikey-error" className="inputError" role="alert">{errors.apiKey}</span>
+              <span className="inputError" role="alert">{errors.apiKey}</span>
             )}
           </FormRow>
           <FormRow>
             <Label htmlFor="model-select">Model</Label>
             {testInProgress ? (
-              <Select id="model-select" disabled>
+              <Select disabled>
                 <option>Loading models...</option>
               </Select>
             ) : modelOptions.length > 0 ? (
               <Select
-                id="model-select"
                 value={model}
-                onChange={e => handleModelChange(e.target.value)}
+                onChange={handleModelChange}
                 disabled={disabled}
                 aria-invalid={!validation.model}
                 aria-describedby={!validation.model ? 'model-error' : undefined}
@@ -313,22 +308,20 @@ export const ProviderConfigCard: React.FC<ProviderConfigCardProps> = ({
               </Select>
             ) : (
               <Input
-                id="model-input"
                 type="text"
                 value={model}
-                onChange={e => handleModelChange(e.target.value)}
+                onChange={handleModelChange}
                 placeholder="Enter model name"
                 disabled={disabled}
                 aria-invalid={!validation.model}
                 aria-describedby={!validation.model ? 'model-error' : undefined}
                 className={validation.model ? '' : 'inputError'}
-                autoComplete="off"
                 inputMode="text"
               />
             )}
             <span className="helperText">Select or enter the model to use.</span>
             {!validation.model && (
-              <span id="model-error" className="inputError" role="alert">{errors.model}</span>
+              <span className="inputError" role="alert">{errors.model}</span>
             )}
           </FormRow>
         </FormGroup>
@@ -343,15 +336,15 @@ export const ProviderConfigCard: React.FC<ProviderConfigCardProps> = ({
           >
             {connectionStatus === 'testing' ? (
               <>
-                <LoadingSpinner size={16} /> Testing...
+                <LoadingSpinner size="sm" /> Testing...
               </>
             ) : connectionStatus === 'success' ? (
               <>
-                <Icon name="check-circle" color="green" /> Connected
+                <Icon name="checkCircle" color="green" /> Connected
               </>
             ) : connectionStatus === 'error' ? (
               <>
-                <Icon name="x-circle" color="red" /> Failed
+                <Icon name="xCircle" color="red" /> Failed
               </>
             ) : (
               'Test Connection'

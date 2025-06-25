@@ -33,7 +33,6 @@ const AccessibilityEventListener = () => {
     match.addEventListener("change", handleContrastChange);
 
     // Keyboard navigation logging
-    let lastKey: string | null = null;
     let tabCount = 0;
     let arrowCount = 0;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -78,7 +77,6 @@ const AccessibilityEventListener = () => {
           });
         }
       }
-      lastKey = e.key;
     };
 
     window.addEventListener("keydown", handleKeyDown);

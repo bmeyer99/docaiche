@@ -44,7 +44,7 @@ const EmbeddingTab: React.FC<EmbeddingTabProps> = memo((props) => {
   const [embeddingConfig, setEmbeddingConfig] = useState<EmbeddingProviderConfig>(
     props.initialConfig ?? { use_text_generation_config: false }
   );
-  const [dirty, setDirty] = useState(false);
+  const [, setDirty] = useState(false);
   const announceRef = useRef<HTMLDivElement>(null);
 
   // Toggle handler with logging and state validation

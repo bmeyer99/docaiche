@@ -16,7 +16,7 @@ interface GeneralSettingsTabLoadingProps {
   correlationId?: string;
 }
 
-const GeneralSettingsTabLoading: React.FC<GeneralSettingsTabLoadingProps> = ({
+export const GeneralSettingsTabLoading: React.FC<GeneralSettingsTabLoadingProps> = ({
   loading,
   loadError,
   onRetry,
@@ -64,7 +64,7 @@ const monitoringOptions = [
   { value: "disabled", label: "Disabled" }
 ];
 
-export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ className }) => {
+const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ className }) => {
   const [systemName, setSystemName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [loggingLevel, setLoggingLevel] = useState("info");
@@ -105,25 +105,20 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ classNam
             <FormRow>
               <Label htmlFor="systemName">System Name</Label>
               <Input
-                id="systemName"
-                name="systemName"
                 value={systemName}
-                onChange={e => setSystemName(e.target.value)}
+                onChange={setSystemName}
                 error={errors.systemName}
                 required
                 aria-required="true"
                 aria-describedby={errors.systemName ? "systemName-error" : undefined}
-                autoComplete="off"
-              />
+                />
             </FormRow>
             <FormRow>
               <Label htmlFor="adminEmail">Admin Email</Label>
               <Input
-                id="adminEmail"
-                name="adminEmail"
                 type="email"
                 value={adminEmail}
-                onChange={e => setAdminEmail(e.target.value)}
+                onChange={setAdminEmail}
                 error={errors.adminEmail}
                 required
                 aria-required="true"
@@ -142,16 +137,13 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ classNam
  * Only render the form if !loading && !loadError.
  */
                 aria-describedby={errors.adminEmail ? "adminEmail-error" : undefined}
-                autoComplete="off"
-              />
+                />
             </FormRow>
             <FormRow>
               <Label htmlFor="loggingLevel">Logging Level</Label>
               <Select
-                id="loggingLevel"
-                name="loggingLevel"
                 value={loggingLevel}
-                onChange={e => setLoggingLevel(e.target.value)}
+                onChange={setLoggingLevel}
                 options={loggingOptions}
                 aria-label="Logging Level"
               />
@@ -159,10 +151,8 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ classNam
             <FormRow>
               <Label htmlFor="monitoring">Monitoring</Label>
               <Select
-                id="monitoring"
-                name="monitoring"
                 value={monitoring}
-                onChange={e => setMonitoring(e.target.value)}
+                onChange={setMonitoring}
                 options={monitoringOptions}
                 aria-label="Monitoring"
               />
@@ -183,3 +173,5 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ classNam
     </Card>
   );
 };
+
+export default GeneralSettingsTab;

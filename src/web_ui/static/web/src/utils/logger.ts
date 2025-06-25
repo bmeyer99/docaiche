@@ -1,108 +1,152 @@
-type LogLevel = 'error' | 'warn' | 'info' | 'debug';
-type LogCategory = 'api' | 'user' | 'state' | 'validation' | 'performance' | 'error' | 'compatibility';
+// Basic logger utility for the frontend application
+// TODO: Integrate with proper logging service in production
 
-interface LogOptions {
-  category?: LogCategory;
-  redactKeys?: string[];
-  fallbackTriggered?: boolean;
-  [key: string]: any;
+export interface LogEvent {
+  type: string;
+  component?: string;
+  action?: string;
+  data?: any;
+  timestamp?: Date;
+  correlationId?: string;
 }
 
-const REDACTED = '[REDACTED]';
-
-function redactSensitive(obj: any, keys: string[]): any {
-  if (!obj || typeof obj !== 'object') return obj;
-  const clone = Array.isArray(obj) ? [...obj] : { ...obj };
-  for (const key in clone) {
-    if (keys.includes(key)) {
-      clone[key] = REDACTED;
-    } else if (typeof clone[key] === 'object') {
-      clone[key] = redactSensitive(clone[key], keys);
-    }
-  }
-  return clone;
+export interface ValidationFailure {
+  field: string;
+  value: any;
+  rule: string;
+  message: string;
+  correlationId?: string;
 }
 
-function formatMessage(level: LogLevel, category: LogCategory, message: string, meta?: any) {
-  const base = `[${level.toUpperCase()}][${category}] ${message}`;
-  if (meta) {
-    return `${base} | ${JSON.stringify(meta)}`;
-  }
-  return base;
+export interface ApiEvent {
+  method: string;
+  url: string;
+  status?: number;
+  duration?: number;
+  error?: string;
+  correlationId?: string;
 }
 
-function isProduction() {
-  return process.env.NODE_ENV === 'production';
-}
-
-function getUserAgent(): string | undefined {
-  if (typeof navigator !== 'undefined' && navigator.userAgent) {
-    return navigator.userAgent;
-  }
-  return undefined;
-}
-
+// Static Logger class for consistent logging across the application
 export class Logger {
-  static log(level: LogLevel, message: string, options: LogOptions = {}) {
-    const { category, redactKeys = [], fallbackTriggered, ...meta } = options;
-    if (!category) {
-      throw new Error('Logger: category is required in LogOptions');
-    }
-    const safeMeta = redactSensitive(meta, redactKeys);
-    const userAgent = getUserAgent();
+  private static correlationId: string = Math.random().toString(36).substr(2, 9);
 
-    const logMeta = {
-      ...safeMeta,
-      userAgent,
-    };
-    if (typeof fallbackTriggered !== 'undefined') {
-      logMeta.fallbackTriggered = fallbackTriggered;
-    }
+  static setCorrelationId(id: string): void {
+    Logger.correlationId = id;
+  }
 
-    if (isProduction()) {
-      // Structured JSON for production
-      const logObj = {
-        timestamp: new Date().toISOString(),
+  static log(level: 'info' | 'warn' | 'error' | 'debug', message: string, data?: any): void {
+    if (process.env.NODE_ENV === 'development') {
+      const logData = {
         level,
-        category,
         message,
-        ...logMeta,
+        data,
+        correlationId: Logger.correlationId,
+        timestamp: new Date()
       };
-      // eslint-disable-next-line no-console
-      console.log(JSON.stringify(logObj));
-    } else {
-      // Human-readable for development
-      const formatted = formatMessage(level, category, message, logMeta);
-      // eslint-disable-next-line no-console
+      
       switch (level) {
         case 'error':
-          console.error(formatted);
+          console.error('[Logger]', logData);
           break;
         case 'warn':
-          console.warn(formatted);
+          console.warn('[Logger]', logData);
           break;
-        case 'info':
-          console.info(formatted);
+        case 'debug':
+          console.debug('[Logger]', logData);
           break;
         default:
-          console.debug(formatted);
+          console.log('[Logger]', logData);
       }
     }
   }
 
-  static error(message: string, options: LogOptions = {}) {
-    Logger.log('error', message, options);
+  static info(message: string, data?: any): void {
+    Logger.log('info', message, data);
   }
 
-  static warn(message: string, options: LogOptions = {}) {
-    Logger.log('warn', message, options);
+  static warn(message: string, data?: any): void {
+    Logger.log('warn', message, data);
   }
 
-  static info(message: string, options: LogOptions = {}) {
-    Logger.log('info', message, options);
+  static error(message: string, data?: any): void {
+    Logger.log('error', message, data);
   }
 
-  static debug(message: string, options: LogOptions = {}) {
-    Logger.log('debug', message, options);
+  static debug(message: string, data?: any): void {
+    Logger.log('debug', message, data);
   }
+}
+
+// Log application events (supports both single object and legacy two-argument format)
+export function logEvent(eventOrType: LogEvent | string, data?: any): void {
+  let event: LogEvent;
+  
+  if (typeof eventOrType === 'string') {
+    // Legacy format: logEvent('type', { data })
+    event = {
+      type: eventOrType,
+      ...data,
+      timestamp: new Date()
+    };
+  } else {
+    // New format: logEvent({ type: 'type', data: {} })
+    event = {
+      ...eventOrType,
+      timestamp: eventOrType.timestamp || new Date()
+    };
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Event]', event);
+  }
+  // TODO: Send to analytics service in production
+}
+
+// Log validation failures for debugging
+export function logValidationFailure(failure: ValidationFailure): void {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('[Validation]', failure);
+  }
+  // TODO: Send to error tracking service
+}
+
+// Log API events for monitoring (supports both single object and legacy two-argument format)
+export function logApiEvent(eventOrType: ApiEvent | string, data?: any): void {
+  let event: ApiEvent;
+  
+  if (typeof eventOrType === 'string') {
+    // Legacy format: logApiEvent('type', { data })
+    event = {
+      method: 'GET', // default
+      url: eventOrType,
+      ...data
+    };
+  } else {
+    // New format: logApiEvent({ method: 'GET', url: '/api', ... })
+    event = eventOrType;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[API]', event);
+  }
+  // TODO: Send to monitoring service
+}
+
+// Redact sensitive information from objects
+export function redactSecrets(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  const redacted = { ...obj };
+  const sensitiveKeys = ['password', 'apiKey', 'token', 'secret', 'key'];
+  
+  Object.keys(redacted).forEach(key => {
+    if (sensitiveKeys.some(sensitive => key.toLowerCase().includes(sensitive))) {
+      redacted[key] = '[REDACTED]';
+    } else if (typeof redacted[key] === 'object') {
+      redacted[key] = redactSecrets(redacted[key]);
+    }
+  });
+  
+  return redacted;
 }

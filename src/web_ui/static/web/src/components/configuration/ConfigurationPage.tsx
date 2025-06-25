@@ -222,7 +222,7 @@ const ConfigurationPage: React.FC = React.memo(() => {
             ref={tabListRef}
             className={styles.tablist}
           >
-            {TABS.map((tab, idx) => (
+            {TABS.map((tab) => (
               <button
                 key={tab.id}
                 id={`tab-${tab.id}`}

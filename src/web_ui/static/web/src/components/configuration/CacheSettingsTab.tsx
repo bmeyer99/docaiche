@@ -25,7 +25,7 @@ const cacheDurationOptions = [
   { value: "86400", label: "24 hours" }
 ];
 
-export const CacheSettingsTab: React.FC<CacheSettingsTabProps> = ({ className }) => {
+const CacheSettingsTab: React.FC<CacheSettingsTabProps> = ({ className }) => {
   const [cacheStrategy, setCacheStrategy] = useState("memory");
   const [searchCacheDuration, setSearchCacheDuration] = useState("300");
   const [contentCacheDuration, setContentCacheDuration] = useState("3600");
@@ -65,10 +65,8 @@ export const CacheSettingsTab: React.FC<CacheSettingsTabProps> = ({ className })
             <FormRow>
               <Label htmlFor="cacheStrategy">Cache Strategy</Label>
               <Select
-                id="cacheStrategy"
-                name="cacheStrategy"
                 value={cacheStrategy}
-                onChange={e => setCacheStrategy(e.target.value)}
+                onChange={setCacheStrategy}
                 options={cacheStrategyOptions}
                 aria-label="Cache Strategy"
               />
@@ -76,10 +74,8 @@ export const CacheSettingsTab: React.FC<CacheSettingsTabProps> = ({ className })
             <FormRow>
               <Label htmlFor="searchCacheDuration">Search Result Cache Duration</Label>
               <Select
-                id="searchCacheDuration"
-                name="searchCacheDuration"
                 value={searchCacheDuration}
-                onChange={e => setSearchCacheDuration(e.target.value)}
+                onChange={setSearchCacheDuration}
                 options={cacheDurationOptions}
                 aria-label="Search Result Cache Duration"
               />
@@ -87,10 +83,8 @@ export const CacheSettingsTab: React.FC<CacheSettingsTabProps> = ({ className })
             <FormRow>
               <Label htmlFor="contentCacheDuration">Content Cache Duration</Label>
               <Select
-                id="contentCacheDuration"
-                name="contentCacheDuration"
                 value={contentCacheDuration}
-                onChange={e => setContentCacheDuration(e.target.value)}
+                onChange={setContentCacheDuration}
                 options={cacheDurationOptions}
                 aria-label="Content Cache Duration"
               />
@@ -98,16 +92,12 @@ export const CacheSettingsTab: React.FC<CacheSettingsTabProps> = ({ className })
             <FormRow>
               <Label htmlFor="maxCacheSize">Max Cache Size (MB)</Label>
               <Input
-                id="maxCacheSize"
-                name="maxCacheSize"
                 value={maxCacheSize}
-                onChange={e => setMaxCacheSize(e.target.value)}
+                onChange={setMaxCacheSize}
                 error={errors.maxCacheSize}
                 required
                 aria-required="true"
                 aria-describedby={errors.maxCacheSize ? "maxCacheSize-error" : undefined}
-                autoComplete="off"
-                inputMode="numeric"
                 placeholder="e.g. 512"
               />
             </FormRow>
@@ -127,3 +117,5 @@ export const CacheSettingsTab: React.FC<CacheSettingsTabProps> = ({ className })
     </Card>
   );
 };
+
+export default CacheSettingsTab;

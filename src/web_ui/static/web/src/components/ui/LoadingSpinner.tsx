@@ -35,7 +35,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
       color: color,
     }}
   >
-    <Icon name="loader" size={sizePx[size]} color={color} />
+    <Icon name="loader" size={size} color={color} />
     <style>
       {`
       .animate-spin {

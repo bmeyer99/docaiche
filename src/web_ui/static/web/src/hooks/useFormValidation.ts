@@ -195,6 +195,7 @@ export function useFormValidation<T extends Record<string, any>>(
               field: String(field),
               value: redactIfSensitive(String(field), value, sensitiveFields),
               rule: error,
+              message: error,
               correlationId,
             });
           } else {
@@ -224,6 +225,7 @@ export function useFormValidation<T extends Record<string, any>>(
             field: String(field),
             value: redactIfSensitive(String(field), values[field], sensitiveFields),
             rule: error,
+            message: error,
             correlationId,
           });
         } else {
@@ -247,7 +249,7 @@ export function useFormValidation<T extends Record<string, any>>(
       )
     );
     setErrorSummary(
-      Object.entries(newErrors).map(([field, msg]) => `${msg}`)
+      Object.entries(newErrors).map(([, msg]) => `${msg}`)
     );
     setIsValid(Object.keys(newErrors).length === 0);
     // Log all errors
@@ -256,6 +258,7 @@ export function useFormValidation<T extends Record<string, any>>(
         field,
         value: redactIfSensitive(field, values[field], sensitiveFields),
         rule: msg || "",
+        message: msg || "",
         correlationId,
       });
     });
@@ -267,7 +270,7 @@ export function useFormValidation<T extends Record<string, any>>(
   useEffect(() => {
     setIsValid(Object.keys(errors).length === 0);
     setErrorSummary(
-      Object.entries(errors).map(([field, msg]) => `${msg}`)
+      Object.entries(errors).map(([, msg]) => `${msg}`)
     );
   }, [errors]);
 
