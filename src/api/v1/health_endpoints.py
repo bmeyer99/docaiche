@@ -89,14 +89,55 @@ async def health_check(
     try:
         config = get_system_configuration()
         ai_config = getattr(config, "ai", None)
-        if ai_config and (getattr(ai_config, "ollama", None) or getattr(ai_config, "openai", None)):
-            components["llm_providers"] = {"status": "configured", "message": "LLM providers enabled"}
-        else:
-            components["llm_providers"] = {"status": "none_configured", "message": "No LLM providers enabled"}
+        healthy_providers = []
+        unhealthy_providers = []
+        llm_provider_messages = []
+
+        # Check Ollama
+        if ai_config and getattr(ai_config, "ollama", None):
+            from src.llm.ollama_provider import OllamaProvider
+            ollama_provider = OllamaProvider(config=ai_config.ollama.model_dump())
+            ollama_health = await ollama_provider.health_check()
+            if ollama_health.get("status") == "healthy":
+                healthy_providers.append("ollama")
+            else:
+                unhealthy_providers.append("ollama")
+                llm_provider_messages.append(f"Ollama: {ollama_health.get('error', ollama_health.get('status', 'Unavailable'))}")
+
+        # Check OpenAI
+        if ai_config and getattr(ai_config, "openai", None):
+            from src.llm.openai_provider import OpenAIProvider
+            openai_provider = OpenAIProvider(config=ai_config.openai.model_dump())
+            openai_health = await openai_provider.health_check()
+            if openai_health.get("status") == "healthy":
+                healthy_providers.append("openai")
+            else:
+                unhealthy_providers.append("openai")
+                llm_provider_messages.append(f"OpenAI: {openai_health.get('error', openai_health.get('status', 'Unavailable'))}")
+
+        if healthy_providers:
+            components["llm_providers"] = {
+                "status": "configured",
+                "message": f"LLM providers enabled: {', '.join(healthy_providers)}"
+            }
+        elif unhealthy_providers:
+            components["llm_providers"] = {
+                "status": "unavailable",
+                "message": "No healthy LLM providers. " + "; ".join(llm_provider_messages)
+            }
             features["llm_enhancement"] = "unavailable"
-    except Exception:
-        components["llm_providers"] = {"status": "none_configured", "message": "No LLM providers enabled"}
-        features["llm_enhancement"] = "unavailable"
+        else:
+            components["llm_providers"] = {
+                "status": "none_configured",
+                "message": "No LLM providers enabled"
+            }
+            features["llm_enhancement"] = "unavailable"
+    except Exception as e:
+        components["llm_providers"] = {
+            "status": "none_configured",
+            "message": f"Error checking LLM providers: {str(e)}"
+        }
+        features["llm_enhancement"] = "unavailable" 
 
     # Search Orchestrator
     try:

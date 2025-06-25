@@ -448,6 +448,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // This prevents console errors when WebSocket server isn't running
     wsManager.connect();
 });
+// Health check for backend and LLM provider status
+document.addEventListener('DOMContentLoaded', () => {
+    async function updateGlobalConnectionStatus() {
+        try {
+            const health = await api.get('/health');
+            const statusElement = document.getElementById('connection-status');
+            if (!statusElement) return;
+
+            const dot = statusElement.querySelector('.w-2');
+            const text = statusElement.querySelector('span');
+
+            // Check backend and LLM provider status
+            const backendHealthy = (health.status === 'healthy' || health.overall_status === 'healthy');
+            const llmConfigured = health.components && health.components.llm_providers && health.components.llm_providers.status === 'configured';
+
+            if (backendHealthy && llmConfigured) {
+                dot.className = 'w-2 h-2 bg-green-500 rounded-full';
+                text.textContent = 'Connected';
+            } else if (backendHealthy && !llmConfigured) {
+                dot.className = 'w-2 h-2 bg-yellow-400 rounded-full';
+                text.textContent = 'LLM Not Configured';
+            } else {
+                dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+                text.textContent = 'Disconnected';
+            }
+        } catch (e) {
+            const statusElement = document.getElementById('connection-status');
+            if (statusElement) {
+                const dot = statusElement.querySelector('.w-2');
+                const text = statusElement.querySelector('span');
+                dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+                text.textContent = 'Disconnected';
+            }
+        }
+    }
+
+    updateGlobalConnectionStatus();
+    setInterval(updateGlobalConnectionStatus, 10000);
+});
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
