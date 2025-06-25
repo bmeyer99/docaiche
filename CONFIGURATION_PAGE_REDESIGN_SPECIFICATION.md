@@ -786,6 +786,7 @@ const testingRequirements = {
   - [ ] TypeScript interfaces and types defined
   - [ ] Component class specifications implemented
   - [ ] Icon library integrated (Lucide React)
+  - [ ] Logging utility implemented with proper levels and categories
 
 - [ ] **API Layer**
   - [ ] GET /api/v1/config endpoint integration
@@ -793,6 +794,8 @@ const testingRequirements = {
   - [ ] POST /api/v1/config/test-connection endpoint integration
   - [ ] Error handling for all HTTP status codes
   - [ ] Fallback defaults implementation
+  - [ ] API request/response logging with appropriate levels
+  - [ ] API error logging with context and recovery actions
 
 - [ ] **Core Components**
   - [ ] ConfigurationPage with tab navigation
@@ -806,6 +809,8 @@ const testingRequirements = {
   - [ ] useFormState hook with dirty detection
   - [ ] Form validation with debounced execution
   - [ ] Advanced settings toggle state persistence
+  - [ ] State change logging for debugging and monitoring
+  - [ ] User action logging for analytics and debugging
 
 - [ ] **UI/UX Features**
   - [ ] Responsive design for mobile, tablet, desktop
@@ -813,6 +818,8 @@ const testingRequirements = {
   - [ ] Empty states and error handling
   - [ ] Advanced settings toggle with animation
   - [ ] Connection testing with status indicators
+  - [ ] Performance logging for page load and interaction times
+  - [ ] Error recovery logging and fallback behavior
 
 ## Testing Phase
 - [ ] **Unit Tests**
@@ -848,6 +855,13 @@ const testingRequirements = {
   - [ ] Form validation under 100ms
   - [ ] Page load under 2.5s
 
+- [ ] **Logging Verification**
+  - [ ] All required log events implemented and tested
+  - [ ] Sensitive data properly redacted in logs
+  - [ ] Log levels appropriate for each event type
+  - [ ] Performance metrics captured and logged
+  - [ ] Error scenarios logged with proper context
+
 - [ ] **Visual Verification**
   - [ ] All component classes applied correctly
   - [ ] Responsive breakpoints working
@@ -864,7 +878,169 @@ const testingRequirements = {
 
 ---
 
-## 10. Definition of Done
+## 10. Logging & Monitoring Specifications
+
+### 10.1. Logging Requirements
+
+```javascript
+const loggingSpecs = {
+  levels: {
+    error: "Critical failures, API errors, validation failures",
+    warn: "Connection timeouts, fallback usage, recoverable errors", 
+    info: "User actions, successful operations, state changes",
+    debug: "Detailed flow information, API request/response details"
+  },
+  
+  categories: {
+    api: "All API interactions and responses",
+    user: "User actions and interactions", 
+    state: "State changes and form updates",
+    validation: "Form validation events",
+    performance: "Timing and performance metrics",
+    error: "Error conditions and recovery attempts"
+  }
+};
+```
+
+### 10.2. Required Log Events
+
+```javascript
+const logEvents = {
+  // API Interactions
+  apiRequest: {
+    level: "debug",
+    data: ["endpoint", "method", "requestBody", "timestamp"],
+    example: "API Request: POST /api/v1/config/test-connection"
+  },
+  
+  apiResponse: {
+    level: "debug", 
+    data: ["endpoint", "statusCode", "responseTime", "responseSize"],
+    example: "API Response: POST /api/v1/config/test-connection - 200 OK (1.2s)"
+  },
+  
+  apiError: {
+    level: "error",
+    data: ["endpoint", "statusCode", "errorMessage", "requestId"],
+    example: "API Error: POST /api/v1/config - 500 Internal Server Error"
+  },
+  
+  // User Actions
+  userAction: {
+    level: "info",
+    data: ["action", "component", "timestamp", "userId"],
+    examples: [
+      "User clicked Test Connection button",
+      "User changed provider from ollama to openai",
+      "User saved configuration",
+      "User reverted changes"
+    ]
+  },
+  
+  // State Management
+  stateChange: {
+    level: "info",
+    data: ["field", "oldValue", "newValue", "source"],
+    example: "State change: base_url changed from 'http://localhost:11434' to 'http://ollama:11434'"
+  },
+  
+  formValidation: {
+    level: "warn",
+    data: ["field", "validationType", "errorMessage"],
+    example: "Validation error: base_url failed pattern validation - 'Invalid URL format'"
+  },
+  
+  // Performance Monitoring
+  performanceMetric: {
+    level: "info", 
+    data: ["metric", "value", "threshold", "component"],
+    examples: [
+      "Page load time: 1.8s (threshold: 2.5s)",
+      "Form validation time: 45ms (threshold: 100ms)",
+      "Connection test time: 3.2s (threshold: 8s)"
+    ]
+  },
+  
+  // Error Recovery
+  errorRecovery: {
+    level: "warn",
+    data: ["errorType", "recoveryAction", "success"],
+    examples: [
+      "API timeout - fell back to cached data",
+      "Invalid config - loaded fallback defaults", 
+      "Connection failed - retrying with backoff"
+    ]
+  }
+};
+```
+
+### 10.3. Implementation Guidelines
+
+```javascript
+const loggingImplementation = {
+  logger: {
+    library: "Consider winston or custom logging utility",
+    format: "Structured JSON logging for production",
+    console: "Human-readable format for development"
+  },
+  
+  sensitive: {
+    redaction: [
+      "api_key values (show only first 4 characters)",
+      "authentication tokens",
+      "personal user data"
+    ],
+    example: "API key: sk-1234...****"
+  },
+  
+  context: {
+    required: ["timestamp", "level", "category", "sessionId"],
+    optional: ["userId", "requestId", "componentName", "buildVersion"]
+  },
+  
+  sampling: {
+    production: "Sample debug logs at 10% to reduce volume",
+    development: "Log all levels for debugging",
+    error: "Always log error and warn levels"
+  },
+  
+  storage: {
+    local: "Console and browser dev tools for development",
+    production: "Send to centralized logging service (e.g., DataDog, LogRocket)",
+    retention: "30 days for debug logs, 90 days for errors"
+  }
+};
+```
+
+### 10.4. Monitoring & Alerting
+
+```javascript
+const monitoringSpecs = {
+  metrics: {
+    errorRate: "Track API error rates and alert if >5%",
+    responseTime: "Monitor API response times, alert if >3s average",
+    validationErrors: "Track form validation failure rates",
+    userActions: "Monitor configuration save success rates",
+    performanceRegression: "Alert if page load time increases >20%"
+  },
+  
+  dashboards: {
+    operations: "API health, error rates, response times",
+    user: "User actions, form completion rates, abandonment",
+    performance: "Page load times, bundle sizes, render performance"
+  },
+  
+  alerts: {
+    critical: "API down, save failures >10%, performance degradation >50%",
+    warning: "High error rates, slow response times, validation issues",
+    info: "Feature usage patterns, performance improvements"
+  }
+};
+```
+
+---
+
+## 11. Definition of Done
 
 The Configuration Page Redesign is considered **complete** when:
 
@@ -873,8 +1049,9 @@ The Configuration Page Redesign is considered **complete** when:
 3. **Manual accessibility testing** confirms WCAG 2.1 AA compliance ✅
 4. **Cross-browser compatibility** verified on all supported browsers ✅
 5. **Performance metrics meet specified targets** (LCP < 2.5s, bundle < 250kB) ✅
-6. **Code review completed** with no blocking issues ✅
-7. **QA sign-off** after manual testing of all user flows ✅
-8. **Product owner approval** after reviewing against original requirements ✅
+6. **Logging implementation verified** with all required events and proper data redaction ✅
+7. **Code review completed** with no blocking issues ✅
+8. **QA sign-off** after manual testing of all user flows ✅
+9. **Product owner approval** after reviewing against original requirements ✅
 
 **Final Validation:** The feature must be manually verified against every section of this specification document to ensure no requirements were missed or misimplemented.
