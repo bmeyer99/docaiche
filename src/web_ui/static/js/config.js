@@ -5,10 +5,9 @@ class ConfigManager {
         this.isDirty = false;
         this.isLoading = false;
         this.accordionState = {
-            'app-settings': true,  // Expanded by default
-            'service-config': false,
+            'app-settings': false,
             'cache-config': false,
-            'ai-config': false
+            'ai-config': true
         };
     }
 
