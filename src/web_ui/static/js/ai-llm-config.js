@@ -1046,51 +1046,50 @@ class AILLMConfigManager {
         this.setupProviderDefaults();
         this.onProviderSharingChange();
     }
-}
 
-validateAILLMConfig() {
-    let isValid = true;
-    
-    // Validate text generation configuration
-    const textProvider = document.getElementById('text_provider')?.value;
-    const textBaseUrl = document.getElementById('text_base_url')?.value;
-    const textModel = document.getElementById('llm_model')?.value;
-    
-    if (textProvider && textBaseUrl && !textModel) {
-        utils.showNotification('Please select a text generation model', 'error');
-        isValid = false;
-    }
-    
-    // Validate embedding configuration
-    const embeddingModel = document.getElementById('llm_embedding_model')?.value;
-    const sharingCheckbox = document.getElementById('use_same_provider');
-    
-    if (!sharingCheckbox?.checked) {
-        const embeddingProvider = document.getElementById('embedding_provider')?.value;
-        const embeddingBaseUrl = document.getElementById('embedding_base_url')?.value;
+    validateAILLMConfig() {
+        let isValid = true;
         
-        if (embeddingProvider && embeddingBaseUrl && !embeddingModel) {
-            utils.showNotification('Please select an embedding model', 'error');
+        // Validate text generation configuration
+        const textProvider = document.getElementById('text_provider')?.value;
+        const textBaseUrl = document.getElementById('text_base_url')?.value;
+        const textModel = document.getElementById('llm_model')?.value;
+        
+        if (textProvider && textBaseUrl && !textModel) {
+            utils.showNotification('Please select a text generation model', 'error');
             isValid = false;
         }
+        
+        // Validate embedding configuration
+        const embeddingModel = document.getElementById('llm_embedding_model')?.value;
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        
+        if (!sharingCheckbox?.checked) {
+            const embeddingProvider = document.getElementById('embedding_provider')?.value;
+            const embeddingBaseUrl = document.getElementById('embedding_base_url')?.value;
+            
+            if (embeddingProvider && embeddingBaseUrl && !embeddingModel) {
+                utils.showNotification('Please select an embedding model', 'error');
+                isValid = false;
+            }
+        }
+        
+        // Validate advanced parameters
+        const textMaxTokens = document.getElementById('text_max_tokens')?.value;
+        const textTemperature = document.getElementById('text_temperature')?.value;
+        
+        if (textMaxTokens && (parseInt(textMaxTokens) < 100 || parseInt(textMaxTokens) > 8000)) {
+            utils.showNotification('Text max tokens must be between 100 and 8000', 'error');
+            isValid = false;
+        }
+        
+        if (textTemperature && (parseFloat(textTemperature) < 0 || parseFloat(textTemperature) > 2)) {
+            utils.showNotification('Text temperature must be between 0.0 and 2.0', 'error');
+            isValid = false;
+        }
+        
+        return isValid;
     }
-    
-    // Validate advanced parameters
-    const textMaxTokens = document.getElementById('text_max_tokens')?.value;
-    const textTemperature = document.getElementById('text_temperature')?.value;
-    
-    if (textMaxTokens && (parseInt(textMaxTokens) < 100 || parseInt(textMaxTokens) > 8000)) {
-        utils.showNotification('Text max tokens must be between 100 and 8000', 'error');
-        isValid = false;
-    }
-    
-    if (textTemperature && (parseFloat(textTemperature) < 0 || parseFloat(textTemperature) > 2)) {
-        utils.showNotification('Text temperature must be between 0.0 and 2.0', 'error');
-        isValid = false;
-    }
-    
-    return isValid;
-}
 }
 
 // Global AI/LLM config manager instance
