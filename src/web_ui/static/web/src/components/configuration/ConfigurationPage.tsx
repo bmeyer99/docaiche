@@ -78,10 +78,24 @@ const ConfigurationPage: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const tabListRef = useRef<HTMLDivElement>(null);
 
-  // Parse tab from URL (e.g., /configuration/:tabId)
-  const urlTabId = useMemo(() => {
-    const match = location.pathname.match(/\/configuration\/([a-z-]+)/);
-    return match && validateTabId(match[1]) ? (match[1] as TabId) : 'llm-providers';
+  // Parse tab from URL (e.g., /config/:tabId or /configuration/:tabId)
+  const { basePath, urlTabId } = useMemo(() => {
+    const configMatch = location.pathname.match(/\/(config|configuration)\/([a-z-]+)/);
+    const baseMatch = location.pathname.match(/\/(config|configuration)(?:\/|$)/);
+    
+    if (configMatch && validateTabId(configMatch[2])) {
+      return {
+        basePath: `/${configMatch[1]}`,
+        urlTabId: configMatch[2] as TabId
+      };
+    }
+    
+    // Default to base path if no tab specified
+    const detectedBasePath = baseMatch ? `/${baseMatch[1]}` : '/config';
+    return {
+      basePath: detectedBasePath,
+      urlTabId: 'llm-providers' as TabId
+    };
   }, [location.pathname]);
 
   const [activeTab, setActiveTab] = useState<TabId>(urlTabId);
@@ -96,10 +110,10 @@ const ConfigurationPage: React.FC = React.memo(() => {
     (tabId: TabId) => {
       if (!validateTabId(tabId)) return;
       setActiveTab(tabId);
-      navigate(`/configuration/${tabId}`, { replace: true });
-      logEvent('tab_change', { tab: tabId });
+      navigate(`${basePath}/${tabId}`, { replace: true });
+      logEvent('tab_change', { tab: tabId, basePath });
     },
-    [navigate]
+    [navigate, basePath]
   );
 
   // Keyboard navigation for tabs

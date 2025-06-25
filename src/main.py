@@ -9,10 +9,14 @@ components: middleware, exception handlers, rate limiting, and complete API endp
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+import os
+from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -146,6 +150,40 @@ def create_application() -> FastAPI:
     
     # Include API router with v1 prefix
     application.include_router(api_router, prefix="/api/v1")
+    
+    # Serve React static files
+    static_dir = Path(__file__).parent / "web_ui" / "static"
+    if static_dir.exists():
+        # Mount static files
+        application.mount("/static", StaticFiles(directory=static_dir), name="static")
+        logger.info(f"Static files mounted from {static_dir}")
+        
+        # Build path for React app
+        react_build_dir = static_dir / "web" / "dist"
+        if react_build_dir.exists():
+            # Serve React app for non-API routes (SPA fallback)
+            @application.get("/{full_path:path}")
+            async def serve_react_app(request: Request, full_path: str):
+                """
+                Serve React app for all non-API routes to support client-side routing.
+                This acts as a fallback for React Router.
+                """
+                # Don't interfere with API routes
+                if full_path.startswith("api/"):
+                    return {"error": "API route not found"}
+                
+                # Serve index.html for all other routes
+                index_file = react_build_dir / "index.html"
+                if index_file.exists():
+                    return FileResponse(index_file)
+                else:
+                    return {"error": "React app not built"}
+            
+            logger.info(f"React SPA fallback configured for {react_build_dir}")
+        else:
+            logger.warning(f"React build directory not found: {react_build_dir}")
+    else:
+        logger.warning(f"Static directory not found: {static_dir}")
     
     logger.info("FastAPI application created and configured successfully")
     return application
