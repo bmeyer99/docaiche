@@ -98,13 +98,13 @@ class AILLMConfigManager {
             refreshEmbeddingBtn.addEventListener('click', () => this.refreshEmbeddingModels());
         }
 
-        // Advanced settings toggles
-        const textAdvancedToggle = document.getElementById('toggle-text-advanced-settings');
+        // Advanced settings toggles (gear icons)
+        const textAdvancedToggle = document.getElementById('toggle-text-advanced');
         if (textAdvancedToggle) {
             textAdvancedToggle.addEventListener('click', () => this.toggleAdvancedSettings('text'));
         }
 
-        const embeddingAdvancedToggle = document.getElementById('toggle-embedding-advanced-settings');
+        const embeddingAdvancedToggle = document.getElementById('toggle-embedding-advanced');
         if (embeddingAdvancedToggle) {
             embeddingAdvancedToggle.addEventListener('click', () => this.toggleAdvancedSettings('embedding'));
         }
@@ -269,6 +269,13 @@ class AILLMConfigManager {
                 );
                 // Load models for this provider type
                 await this.loadModels(providerType, provider, baseUrl, apiKey);
+                
+                // If using same provider and this is a text connection test, also refresh embedding models
+                const sharingCheckbox = document.getElementById('use_same_provider');
+                if (sharingCheckbox?.checked && providerType === 'text') {
+                    console.log('Auto-refreshing embedding models since same provider is enabled');
+                    await this.loadModels('embedding', provider, baseUrl, apiKey);
+                }
             } else {
                 throw new Error(response.error || 'Connection failed');
             }
@@ -697,18 +704,15 @@ class AILLMConfigManager {
     }
 
     toggleAdvancedSettings(settingsType) {
-        const content = document.getElementById(`${settingsType}-advanced-settings-content`);
-        const arrow = document.getElementById(`${settingsType}-advanced-settings-arrow`);
-
-        if (content && arrow) {
+        const content = document.getElementById(`${settingsType}-advanced-settings`);
+        
+        if (content) {
             const isHidden = content.classList.contains('hidden');
             
             if (isHidden) {
                 content.classList.remove('hidden');
-                arrow.style.transform = 'rotate(90deg)';
             } else {
                 content.classList.add('hidden');
-                arrow.style.transform = 'rotate(0deg)';
             }
         }
     }
