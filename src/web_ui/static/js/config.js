@@ -52,7 +52,7 @@ class ConfigManager {
         this.setFieldValue('workers', config.workers || 4);
 
         // Service Configuration
-        this.setFieldValue('api_host', config.api_host || 'http://localhost:8080');
+        this.setFieldValue('api_host', config.api_host || 'http://api:8000');
         this.setFieldValue('api_timeout', config.api_timeout || 30);
         this.setFieldValue('websocket_url', config.websocket_url || 'ws://localhost:4080/ws/updates');
         this.setFieldValue('max_retries', config.max_retries || 3);
