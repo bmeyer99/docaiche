@@ -398,6 +398,118 @@
                         </div>
                     </div>
 
+                    <!-- Text Generation Advanced Settings -->
+                    <div class="mt-6">
+                        <button type="button" class="w-full flex items-center justify-between py-3 text-left font-medium text-gray-700 hover:text-gray-900 focus:outline-none" id="toggle-text-advanced-settings">
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-2 transform transition-transform duration-200" id="text-advanced-settings-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                <span class="text-sm font-medium text-gray-700">Text Generation Advanced Settings</span>
+                            </span>
+                        </button>
+                        
+                        <div class="hidden mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200" id="text-advanced-settings-content">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="text_max_tokens" class="block text-sm font-medium text-blue-700 mb-1">Max Tokens</label>
+                                    <input type="number" id="text_max_tokens" name="text_max_tokens" min="100" max="8000" value="2048"
+                                           class="block w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-blue-600">Maximum response length for text generation</p>
+                                </div>
+                                <div>
+                                    <label for="text_temperature" class="block text-sm font-medium text-blue-700 mb-1">Temperature</label>
+                                    <input type="number" id="text_temperature" name="text_temperature" min="0" max="2" step="0.1" value="0.7"
+                                           class="block w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-blue-600">Response creativity (0.0 = Focused, 2.0 = Creative)</p>
+                                </div>
+                                <div>
+                                    <label for="text_top_p" class="block text-sm font-medium text-blue-700 mb-1">Top-P</label>
+                                    <input type="number" id="text_top_p" name="text_top_p" min="0" max="1" step="0.1" value="1.0"
+                                           class="block w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-blue-600">Nucleus sampling threshold</p>
+                                </div>
+                                <div>
+                                    <label for="text_top_k" class="block text-sm font-medium text-blue-700 mb-1">Top-K</label>
+                                    <input type="number" id="text_top_k" name="text_top_k" min="1" max="100" value="40"
+                                           class="block w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-blue-600">Token sampling limit</p>
+                                </div>
+                                <div>
+                                    <label for="text_timeout" class="block text-sm font-medium text-blue-700 mb-1">Timeout (seconds)</label>
+                                    <input type="number" id="text_timeout" name="text_timeout" min="5" max="300" value="30"
+                                           class="block w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-blue-600">Request timeout for text generation</p>
+                                </div>
+                                <div>
+                                    <label for="text_retries" class="block text-sm font-medium text-blue-700 mb-1">Max Retries</label>
+                                    <input type="number" id="text_retries" name="text_retries" min="0" max="10" value="3"
+                                           class="block w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-blue-600">Retry attempts on failure</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Embedding Advanced Settings -->
+                    <div class="bg-green-50 border-l-4 border-green-400 rounded-lg p-4 mb-6">
+                        <button type="button" class="w-full flex items-center justify-between py-3 text-left font-medium text-green-700 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-inset rounded-md mb-4" id="toggle-embedding-advanced-settings">
+                            <span class="flex items-center">
+                                <span class="text-green-600 text-xl mr-2">⚙️</span>
+                                <span class="text-md font-semibold text-green-800">Embedding Advanced Settings</span>
+                            </span>
+                            <svg class="w-4 h-4 transform transition-transform duration-200" id="embedding-advanced-settings-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                        
+                        <div class="hidden mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200" id="embedding-advanced-settings-content">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="embedding_batch_size" class="block text-sm font-medium text-green-700 mb-1">Batch Size</label>
+                                    <input type="number" id="embedding_batch_size" name="embedding_batch_size" min="1" max="100" value="10"
+                                           class="block w-full px-3 py-2 border border-green-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-green-600">Number of texts to process simultaneously</p>
+                                </div>
+                                <div>
+                                    <label for="embedding_timeout" class="block text-sm font-medium text-green-700 mb-1">Timeout (seconds)</label>
+                                    <input type="number" id="embedding_timeout" name="embedding_timeout" min="5" max="300" value="30"
+                                           class="block w-full px-3 py-2 border border-green-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-green-600">Request timeout for embedding generation</p>
+                                </div>
+                                <div>
+                                    <label for="embedding_retries" class="block text-sm font-medium text-green-700 mb-1">Max Retries</label>
+                                    <input type="number" id="embedding_retries" name="embedding_retries" min="0" max="10" value="3"
+                                           class="block w-full px-3 py-2 border border-green-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-green-600">Retry attempts on failure</p>
+                                </div>
+                                <div>
+                                    <label for="embedding_chunk_size" class="block text-sm font-medium text-green-700 mb-1">Chunk Size</label>
+                                    <input type="number" id="embedding_chunk_size" name="embedding_chunk_size" min="100" max="2000" value="512"
+                                           class="block w-full px-3 py-2 border border-green-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-green-600">Text chunk size for embedding</p>
+                                </div>
+                                <div>
+                                    <label for="embedding_overlap" class="block text-sm font-medium text-green-700 mb-1">Chunk Overlap</label>
+                                    <input type="number" id="embedding_overlap" name="embedding_overlap" min="0" max="200" value="50"
+                                           class="block w-full px-3 py-2 border border-green-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                                    <p class="mt-1 text-xs text-green-600">Overlap between text chunks</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-green-700 mb-1">Normalize Embeddings</label>
+                                    <div class="mt-1">
+                                        <label class="inline-flex items-center">
+                                            <input type="checkbox" id="embedding_normalize" name="embedding_normalize" checked
+                                                   class="rounded border-green-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50">
+                                            <span class="ml-2 text-sm text-green-700">Enable normalization</span>
+                                        </label>
+                                    </div>
+                                    <p class="mt-1 text-xs text-green-600">Normalize embedding vectors to unit length</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Hidden inputs for actual model values -->
                     <input type="hidden" id="llm_model" name="llm_model">
                     <input type="hidden" id="llm_embedding_model" name="llm_embedding_model">
@@ -405,59 +517,13 @@
                     <input type="hidden" id="llm_provider" name="llm_provider">
                     <input type="hidden" id="llm_base_url" name="llm_base_url">
                     <input type="hidden" id="llm_api_key" name="llm_api_key">
-
-                    <!-- Advanced Parameters Section -->
-                    <div class="mt-6">
-                        <button type="button" class="w-full flex items-center justify-between py-3 text-left font-medium text-gray-700 hover:text-gray-900 focus:outline-none" id="toggle-advanced-settings">
-                            <span class="flex items-center">
-                                <svg class="w-4 h-4 mr-2 transform transition-transform duration-200" id="advanced-settings-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                                Advanced Settings
-                            </span>
-                        </button>
-                        
-                        <div class="hidden mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200" id="advanced-settings-content">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="max_tokens" class="block text-sm font-medium text-gray-700 mb-1">Max Tokens</label>
-                                    <input type="number" id="max_tokens" name="max_tokens" min="100" max="8000" value="2048"
-                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    <p class="mt-1 text-xs text-gray-500">Maximum response length</p>
-                                </div>
-                                <div>
-                                    <label for="temperature" class="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
-                                    <input type="number" id="temperature" name="temperature" min="0" max="2" step="0.1" value="0.7"
-                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    <p class="mt-1 text-xs text-gray-500">Response creativity (0.0 = Focused, 2.0 = Creative)</p>
-                                </div>
-                                <div>
-                                    <label for="top_p" class="block text-sm font-medium text-gray-700 mb-1">Top-P</label>
-                                    <input type="number" id="top_p" name="top_p" min="0" max="1" step="0.1" value="1.0"
-                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    <p class="mt-1 text-xs text-gray-500">Nucleus sampling threshold</p>
-                                </div>
-                                <div>
-                                    <label for="top_k" class="block text-sm font-medium text-gray-700 mb-1">Top-K</label>
-                                    <input type="number" id="top_k" name="top_k" min="1" max="100" value="40"
-                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    <p class="mt-1 text-xs text-gray-500">Token sampling limit</p>
-                                </div>
-                                <div>
-                                    <label for="llm_timeout" class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
-                                    <input type="number" id="llm_timeout" name="llm_timeout" min="5" max="300" value="30"
-                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    <p class="mt-1 text-xs text-gray-500">Request timeout</p>
-                                </div>
-                                <div>
-                                    <label for="llm_retries" class="block text-sm font-medium text-gray-700 mb-1">Max Retries</label>
-                                    <input type="number" id="llm_retries" name="llm_retries" min="0" max="10" value="3"
-                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    <p class="mt-1 text-xs text-gray-500">Retry attempts on failure</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Legacy advanced settings -->
+                    <input type="hidden" id="max_tokens" name="max_tokens">
+                    <input type="hidden" id="temperature" name="temperature">
+                    <input type="hidden" id="top_p" name="top_p">
+                    <input type="hidden" id="top_k" name="top_k">
+                    <input type="hidden" id="llm_timeout" name="llm_timeout">
+                    <input type="hidden" id="llm_retries" name="llm_retries">
 
                     <!-- Action Buttons -->
                     <div class="flex flex-col sm:flex-row gap-3 mt-6 pt-4 border-t border-gray-200">

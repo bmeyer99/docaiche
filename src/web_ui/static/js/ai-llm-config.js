@@ -98,10 +98,15 @@ class AILLMConfigManager {
             refreshEmbeddingBtn.addEventListener('click', () => this.refreshEmbeddingModels());
         }
 
-        // Advanced settings toggle
-        const advancedToggle = document.getElementById('toggle-advanced-settings');
-        if (advancedToggle) {
-            advancedToggle.addEventListener('click', () => this.toggleAdvancedSettings());
+        // Advanced settings toggles
+        const textAdvancedToggle = document.getElementById('toggle-text-advanced-settings');
+        if (textAdvancedToggle) {
+            textAdvancedToggle.addEventListener('click', () => this.toggleAdvancedSettings('text'));
+        }
+
+        const embeddingAdvancedToggle = document.getElementById('toggle-embedding-advanced-settings');
+        if (embeddingAdvancedToggle) {
+            embeddingAdvancedToggle.addEventListener('click', () => this.toggleAdvancedSettings('embedding'));
         }
 
         // Test model response button
@@ -691,9 +696,9 @@ class AILLMConfigManager {
         }
     }
 
-    toggleAdvancedSettings() {
-        const content = document.getElementById('advanced-settings-content');
-        const arrow = document.getElementById('advanced-settings-arrow');
+    toggleAdvancedSettings(settingsType) {
+        const content = document.getElementById(`${settingsType}-advanced-settings-content`);
+        const arrow = document.getElementById(`${settingsType}-advanced-settings-arrow`);
 
         if (content && arrow) {
             const isHidden = content.classList.contains('hidden');
@@ -952,13 +957,29 @@ class AILLMConfigManager {
             llm_model: document.getElementById('llm_model')?.value || '',
             llm_embedding_model: document.getElementById('llm_embedding_model')?.value || '',
             
-            // Advanced parameters
-            max_tokens: parseInt(document.getElementById('max_tokens')?.value) || 2048,
-            temperature: parseFloat(document.getElementById('temperature')?.value) || 0.7,
-            top_p: parseFloat(document.getElementById('top_p')?.value) || 1.0,
-            top_k: parseInt(document.getElementById('top_k')?.value) || 40,
-            llm_timeout: parseInt(document.getElementById('llm_timeout')?.value) || 30,
-            llm_retries: parseInt(document.getElementById('llm_retries')?.value) || 3,
+            // Text generation advanced parameters
+            text_max_tokens: parseInt(document.getElementById('text_max_tokens')?.value) || 2048,
+            text_temperature: parseFloat(document.getElementById('text_temperature')?.value) || 0.7,
+            text_top_p: parseFloat(document.getElementById('text_top_p')?.value) || 1.0,
+            text_top_k: parseInt(document.getElementById('text_top_k')?.value) || 40,
+            text_timeout: parseInt(document.getElementById('text_timeout')?.value) || 30,
+            text_retries: parseInt(document.getElementById('text_retries')?.value) || 3,
+            
+            // Embedding advanced parameters
+            embedding_batch_size: parseInt(document.getElementById('embedding_batch_size')?.value) || 10,
+            embedding_timeout: parseInt(document.getElementById('embedding_timeout')?.value) || 30,
+            embedding_retries: parseInt(document.getElementById('embedding_retries')?.value) || 3,
+            embedding_chunk_size: parseInt(document.getElementById('embedding_chunk_size')?.value) || 512,
+            embedding_overlap: parseInt(document.getElementById('embedding_overlap')?.value) || 50,
+            embedding_normalize: document.getElementById('embedding_normalize')?.checked || true,
+            
+            // Legacy compatibility
+            max_tokens: parseInt(document.getElementById('text_max_tokens')?.value) || 2048,
+            temperature: parseFloat(document.getElementById('text_temperature')?.value) || 0.7,
+            top_p: parseFloat(document.getElementById('text_top_p')?.value) || 1.0,
+            top_k: parseInt(document.getElementById('text_top_k')?.value) || 40,
+            llm_timeout: parseInt(document.getElementById('text_timeout')?.value) || 30,
+            llm_retries: parseInt(document.getElementById('text_retries')?.value) || 3,
             
             // Legacy compatibility
             llm_provider: document.getElementById('text_provider')?.value || '',
