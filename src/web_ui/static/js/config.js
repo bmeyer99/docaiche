@@ -1,4 +1,4 @@
-// Configuration Management Class
+// Configuration Management Class - SystemConfiguration Integration
 class ConfigManager {
     constructor() {
         this.originalConfig = {};
@@ -14,7 +14,7 @@ class ConfigManager {
 
     async init() {
         try {
-            await this.loadConfiguration();
+            await this.loadSystemConfiguration();
             this.setupAccordions();
             this.bindEvents();
             this.setupFormValidation();
@@ -25,53 +25,100 @@ class ConfigManager {
             }
         } catch (error) {
             console.error('Configuration initialization failed:', error);
-            utils.showNotification('Failed to load configuration', 'error');
+            utils.showNotification('Failed to load system configuration', 'error');
         }
     }
 
-    async loadConfiguration() {
+    async loadSystemConfiguration() {
         this.isLoading = true;
         try {
-            const config = await api.get('/config');
-            this.originalConfig = { ...config };
-            this.populateForm(config);
+            console.log('Loading system configuration from /api/v1/config');
+            const systemConfig = await api.get('/config');
+            console.log('Loaded system configuration:', systemConfig);
+            
+            this.originalConfig = JSON.parse(JSON.stringify(systemConfig));
+            this.populateSystemConfigForm(systemConfig);
         } catch (error) {
-            console.error('Failed to load configuration:', error);
-            utils.showNotification('Failed to load configuration data', 'error');
+            console.error('Failed to load system configuration:', error);
+            utils.showNotification('Failed to load system configuration data', 'error');
             throw error;
         } finally {
             this.isLoading = false;
         }
     }
 
-    populateForm(config) {
-        // Application Settings
-        this.setFieldValue('environment', config.environment || 'development');
-        this.setFieldValue('debug_mode', config.debug_mode || false);
-        this.setFieldValue('log_level', config.log_level || 'INFO');
-        this.setFieldValue('workers', config.workers || 4);
+    async loadConfiguration() {
+        // Legacy method - delegates to new system config loader
+        return this.loadSystemConfiguration();
+    }
 
-        // Service Configuration
-        this.setFieldValue('api_host', config.api_host || 'http://localhost:8080');
-        this.setFieldValue('api_timeout', config.api_timeout || 30);
-        this.setFieldValue('websocket_url', config.websocket_url || 'ws://localhost:4080/ws/updates');
-        this.setFieldValue('max_retries', config.max_retries || 3);
+    populateSystemConfigForm(systemConfig) {
+        console.log('Populating form with SystemConfiguration:', systemConfig);
+        
+        // Application Settings (app section)
+        const app = systemConfig.app || {};
+        this.setFieldValue('environment', app.environment || 'production');
+        this.setFieldValue('debug_mode', app.debug || false);
+        this.setFieldValue('log_level', app.log_level || 'INFO');
+        this.setFieldValue('workers', app.workers || 4);
 
-        // Cache Management
-        this.setFieldValue('cache_ttl', config.cache_ttl || 3600);
-        this.setFieldValue('cache_max_size', config.cache_max_size || 1000);
-        this.setFieldValue('auto_refresh', config.auto_refresh || true);
-        this.setFieldValue('refresh_interval', config.refresh_interval || 300);
+        // Service Configuration (using app section for API settings)
+        const apiHost = `http://${app.api_host || '0.0.0.0'}:${app.api_port || 8080}`;
+        this.setFieldValue('api_host', apiHost);
+        this.setFieldValue('api_timeout', 30); // Default timeout
+        this.setFieldValue('websocket_url', `ws://${app.api_host || '0.0.0.0'}:${app.web_port || 8081}/ws/updates`);
+        this.setFieldValue('max_retries', 3); // Default retries
 
-        // AI/LLM Settings - delegate to AI/LLM manager
+        // Cache Management (redis section)
+        const redis = systemConfig.redis || {};
+        this.setFieldValue('cache_ttl', systemConfig.ai?.cache_ttl_seconds || 3600);
+        this.setFieldValue('cache_max_size', 1000); // Default size
+        this.setFieldValue('auto_refresh', true); // Default enabled
+        this.setFieldValue('refresh_interval', 300); // Default interval
+
+        // AI/LLM Settings - delegate to AI/LLM manager with full SystemConfiguration
         if (window.aiLLMManager) {
-            window.aiLLMManager.setAILLMConfig(config);
+            window.aiLLMManager.setSystemConfig(systemConfig);
         } else {
             // Fallback if AI/LLM manager not available
-            this.setFieldValue('llm_provider', config.llm_provider || 'ollama');
-            this.setFieldValue('llm_model', config.llm_model || 'llama2');
-            this.setFieldValue('max_tokens', config.max_tokens || 2048);
-            this.setFieldValue('temperature', config.temperature || 0.7);
+            const ai = systemConfig.ai || {};
+            const ollama = ai.ollama || {};
+            this.setFieldValue('llm_provider', ai.primary_provider || 'ollama');
+            this.setFieldValue('llm_model', ollama.model || 'llama2');
+            this.setFieldValue('max_tokens', ollama.max_tokens || 4096);
+            this.setFieldValue('temperature', ollama.temperature || 0.7);
+        }
+    }
+
+    populateForm(config) {
+        // Legacy method - check if this is SystemConfiguration or legacy format
+        if (config.app && config.ai && config.redis) {
+            // This is SystemConfiguration format
+            return this.populateSystemConfigForm(config);
+        } else {
+            // This is legacy format - convert to SystemConfiguration-like structure
+            const systemConfig = {
+                app: {
+                    environment: config.environment || 'production',
+                    debug: config.debug_mode || false,
+                    log_level: config.log_level || 'INFO',
+                    workers: config.workers || 4,
+                    api_host: '0.0.0.0',
+                    api_port: 8080,
+                    web_port: 8081
+                },
+                ai: {
+                    primary_provider: config.llm_provider || 'ollama',
+                    cache_ttl_seconds: config.cache_ttl || 3600,
+                    ollama: {
+                        model: config.llm_model || 'llama2',
+                        max_tokens: config.max_tokens || 4096,
+                        temperature: config.temperature || 0.7
+                    }
+                },
+                redis: {}
+            };
+            return this.populateSystemConfigForm(systemConfig);
         }
     }
 
@@ -213,28 +260,50 @@ class ConfigManager {
     validateWorkers() {
         const field = document.getElementById('workers');
         const errorElement = document.getElementById('workers-error');
+        
+        if (!field) {
+            console.error('❌ Workers field not found');
+            return false;
+        }
+        
         const value = parseInt(field.value);
+        console.log(`🔢 Validating workers: value="${field.value}", parsed=${value}`);
 
         if (value < 1 || value > 16) {
+            console.log(`❌ Workers validation failed: ${value} not between 1-16`);
             field.classList.add('border-red-500');
-            errorElement.classList.remove('hidden');
+            if (errorElement) errorElement.classList.remove('hidden');
             return false;
         } else {
+            console.log(`✅ Workers validation passed: ${value}`);
             field.classList.remove('border-red-500');
-            errorElement.classList.add('hidden');
+            if (errorElement) errorElement.classList.add('hidden');
             return true;
         }
     }
 
     validateUrl(fieldId) {
         const field = document.getElementById(fieldId);
-        if (!field) return true;
+        if (!field) {
+            console.error(`❌ URL field not found: ${fieldId}`);
+            return false;
+        }
+
+        console.log(`🔗 Validating URL field "${fieldId}": value="${field.value}"`);
+        
+        if (!field.value) {
+            console.log(`❌ URL validation failed for ${fieldId}: empty value`);
+            field.classList.add('border-red-500');
+            return false;
+        }
 
         try {
             new URL(field.value);
+            console.log(`✅ URL validation passed for ${fieldId}: ${field.value}`);
             field.classList.remove('border-red-500');
             return true;
-        } catch {
+        } catch (error) {
+            console.log(`❌ URL validation failed for ${fieldId}: invalid URL - ${error.message}`);
             field.classList.add('border-red-500');
             return false;
         }
@@ -242,16 +311,29 @@ class ConfigManager {
 
     validateNumber(fieldId) {
         const field = document.getElementById(fieldId);
-        if (!field) return true;
+        if (!field) {
+            console.error(`❌ Number field not found: ${fieldId}`);
+            return false;
+        }
 
         const value = parseFloat(field.value);
         const min = parseFloat(field.getAttribute('min')) || 0;
         const max = parseFloat(field.getAttribute('max')) || Infinity;
+        
+        console.log(`🔢 Validating number field "${fieldId}": value="${field.value}", parsed=${value}, min=${min}, max=${max}`);
+
+        if (!field.value) {
+            console.log(`❌ Number validation failed for ${fieldId}: empty value`);
+            field.classList.add('border-red-500');
+            return false;
+        }
 
         if (isNaN(value) || value < min || value > max) {
+            console.log(`❌ Number validation failed for ${fieldId}: ${value} not between ${min}-${max}`);
             field.classList.add('border-red-500');
             return false;
         } else {
+            console.log(`✅ Number validation passed for ${fieldId}: ${value}`);
             field.classList.remove('border-red-500');
             return true;
         }
@@ -271,18 +353,79 @@ class ConfigManager {
     }
 
     validateForm() {
+        console.log('🔍 Starting form validation...');
         let isValid = true;
+        const validationResults = {};
 
-        isValid &= this.validateWorkers();
-        isValid &= this.validateUrl('api_host');
-        isValid &= this.validateUrl('websocket_url');
-        isValid &= this.validateNumber('api_timeout');
-        isValid &= this.validateNumber('max_retries');
-        isValid &= this.validateNumber('cache_ttl');
-        isValid &= this.validateNumber('cache_max_size');
-        isValid &= this.validateNumber('refresh_interval');
-        isValid &= this.validateNumber('max_tokens');
-        isValid &= this.validateTemperature();
+        // Clear previous global error
+        this.hideGlobalError();
+
+        // Validate basic config fields
+        console.log('📋 Validating basic configuration fields...');
+        
+        validationResults.workers = this.validateWorkers();
+        console.log(`  - Workers: ${validationResults.workers}`);
+        isValid &= validationResults.workers;
+        
+        validationResults.api_host = this.validateUrl('api_host');
+        console.log(`  - API Host: ${validationResults.api_host}`);
+        isValid &= validationResults.api_host;
+        
+        validationResults.websocket_url = this.validateUrl('websocket_url');
+        console.log(`  - WebSocket URL: ${validationResults.websocket_url}`);
+        isValid &= validationResults.websocket_url;
+        
+        validationResults.api_timeout = this.validateNumber('api_timeout');
+        console.log(`  - API Timeout: ${validationResults.api_timeout}`);
+        isValid &= validationResults.api_timeout;
+        
+        validationResults.max_retries = this.validateNumber('max_retries');
+        console.log(`  - Max Retries: ${validationResults.max_retries}`);
+        isValid &= validationResults.max_retries;
+        
+        validationResults.cache_ttl = this.validateNumber('cache_ttl');
+        console.log(`  - Cache TTL: ${validationResults.cache_ttl}`);
+        isValid &= validationResults.cache_ttl;
+        
+        validationResults.cache_max_size = this.validateNumber('cache_max_size');
+        console.log(`  - Cache Max Size: ${validationResults.cache_max_size}`);
+        isValid &= validationResults.cache_max_size;
+        
+        validationResults.refresh_interval = this.validateNumber('refresh_interval');
+        console.log(`  - Refresh Interval: ${validationResults.refresh_interval}`);
+        isValid &= validationResults.refresh_interval;
+        
+        validationResults.max_tokens = this.validateNumber('max_tokens');
+        console.log(`  - Max Tokens: ${validationResults.max_tokens}`);
+        isValid &= validationResults.max_tokens;
+        
+        validationResults.temperature = this.validateTemperature();
+        console.log(`  - Temperature: ${validationResults.temperature}`);
+        isValid &= validationResults.temperature;
+
+        console.log('📊 Basic validation results:', validationResults);
+        console.log(`📋 Basic validation overall: ${Boolean(isValid)}`);
+
+        // Validate AI/LLM configuration if manager is available
+        if (window.aiLLMManager) {
+            console.log('🤖 Validating AI/LLM configuration...');
+            const aiLLMValid = window.aiLLMManager.validateConfiguration();
+            console.log(`🤖 AI/LLM validation result: ${aiLLMValid}`);
+            isValid &= aiLLMValid;
+        } else {
+            console.warn('⚠️ AI/LLM manager not available - skipping AI/LLM validation');
+        }
+
+        console.log(`🎯 Final validation result: ${Boolean(isValid)}`);
+
+        // Show global error if any validation failed
+        if (!isValid) {
+            console.log('❌ Validation failed - showing global error');
+            this.showGlobalError();
+            this.logFailedFields();
+        } else {
+            console.log('✅ All validation passed');
+        }
 
         return Boolean(isValid);
     }
@@ -310,7 +453,51 @@ class ConfigManager {
         }
     }
 
+    getCurrentSystemConfig() {
+        console.log('Building SystemConfiguration from form values');
+        
+        // Start with original config and update changed values
+        const currentConfig = JSON.parse(JSON.stringify(this.originalConfig));
+        
+        // Update app section
+        const app = currentConfig.app || {};
+        app.environment = this.getFieldValue('environment') || 'production';
+        app.debug = this.getFieldValue('debug_mode') || false;
+        app.log_level = this.getFieldValue('log_level') || 'INFO';
+        app.workers = this.getFieldValue('workers') || 4;
+        currentConfig.app = app;
+
+        // Update AI/LLM config from dedicated manager
+        if (window.aiLLMManager) {
+            const aiConfig = window.aiLLMManager.getSystemConfigUpdate();
+            if (aiConfig) {
+                currentConfig.ai = { ...currentConfig.ai, ...aiConfig };
+            }
+        } else {
+            // Fallback for basic AI settings
+            const ai = currentConfig.ai || {};
+            const ollama = ai.ollama || {};
+            
+            ai.primary_provider = this.getFieldValue('llm_provider') || 'ollama';
+            ollama.model = this.getFieldValue('llm_model') || 'llama2';
+            ollama.max_tokens = this.getFieldValue('max_tokens') || 4096;
+            ollama.temperature = this.getFieldValue('temperature') || 0.7;
+            
+            ai.ollama = ollama;
+            currentConfig.ai = ai;
+        }
+
+        console.log('Built SystemConfiguration:', currentConfig);
+        return currentConfig;
+    }
+
     getCurrentConfig() {
+        // Try to get full SystemConfiguration first
+        if (this.originalConfig.app || this.originalConfig.ai) {
+            return this.getCurrentSystemConfig();
+        }
+        
+        // Legacy fallback
         const baseConfig = {
             environment: this.getFieldValue('environment'),
             debug_mode: this.getFieldValue('debug_mode'),
@@ -460,6 +647,53 @@ class ConfigManager {
                 errorFields[0].focus();
             }
         }
+    }
+
+    showGlobalError() {
+        const errorAlert = document.getElementById('validation-error-alert');
+        if (errorAlert) {
+            errorAlert.classList.remove('hidden');
+        }
+    }
+
+    hideGlobalError() {
+        const errorAlert = document.getElementById('validation-error-alert');
+        if (errorAlert) {
+            errorAlert.classList.add('hidden');
+        }
+    }
+
+    logFailedFields() {
+        console.log('🔍 Analyzing failed validation fields...');
+        const form = document.getElementById('config-form');
+        if (!form) {
+            console.error('❌ Config form not found');
+            return;
+        }
+
+        const failedFields = form.querySelectorAll('.border-red-500');
+        console.log(`📊 Found ${failedFields.length} fields with validation errors:`);
+        
+        failedFields.forEach((field, index) => {
+            const fieldName = field.id || field.name || 'unknown';
+            const fieldValue = field.value || '';
+            const fieldType = field.type || 'unknown';
+            console.log(`  ${index + 1}. Field: "${fieldName}" (${fieldType}) = "${fieldValue}"`);
+            
+            // Check if there's an associated error message
+            const errorElement = document.getElementById(`${fieldName}-error`);
+            if (errorElement && !errorElement.classList.contains('hidden')) {
+                console.log(`     Error message: "${errorElement.textContent}"`);
+            }
+        });
+
+        // Also log any visible error messages
+        const visibleErrors = form.querySelectorAll('.text-red-600:not(.hidden)');
+        console.log(`📋 Found ${visibleErrors.length} visible error messages:`);
+        
+        visibleErrors.forEach((error, index) => {
+            console.log(`  ${index + 1}. "${error.textContent}"`);
+        });
     }
 }
 

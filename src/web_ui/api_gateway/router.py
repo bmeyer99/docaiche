@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from src.web_ui.api_gateway.schemas import HealthResponse, StatsResponse, ConfigResponse, ContentResponse
 from src.web_ui.data_service.service import DataService
 from src.web_ui.view_model_service.service import ViewModelService
+from src.core.config.models import SystemConfiguration
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
@@ -11,7 +12,7 @@ import os
 import logging
 import httpx
 import asyncio
-from typing import Optional
+from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -66,80 +67,117 @@ async def get_stats(data_service: DataService = Depends(get_data_service)):
         # Always include "metrics" key even on error
         return {"metrics": {}, "status": "error", "detail": "Failed to fetch stats"}
 
-@api_router.get("/config", response_model=ConfigResponse)
-async def get_config(data_service: DataService = Depends(get_data_service)):
-    """Get current configuration for the UI."""
+@api_router.get("/config")
+async def get_config(data_service: DataService = Depends(get_data_service)) -> Dict[str, Any]:
+    """Get current system configuration using full SystemConfiguration schema."""
     try:
-        config = await data_service.fetch_config()
-        return ConfigResponse(config=config)
+        config = await data_service.fetch_system_config()
+        return config.model_dump() if hasattr(config, 'model_dump') else config
     except Exception as e:
-        logger.error(f"Failed to fetch config: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch config")
+        logger.error(f"Failed to fetch system config: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch system configuration")
 
-class ConfigUpdateModel(BaseModel):
-    # Accept only known config keys for validation
-    setting1: str = None
-    setting2: bool = None
-
-@api_router.post("/config", response_model=ConfigResponse)
+@api_router.post("/config")
 async def update_config(
     request: Request,
     data_service: DataService = Depends(get_data_service),
-    config: dict = Body(...)
-):
-    """Update configuration with input validation and CSRF."""
+    config: Dict[str, Any] = Body(...)
+) -> Dict[str, Any]:
+    """Update system configuration using full SystemConfiguration schema."""
     try:
-        # Input validation first
+        # Validate using SystemConfiguration model
         try:
-            validated = ConfigUpdateModel(**config)
+            # Allow partial updates by merging with existing config
+            current_config = await data_service.fetch_system_config()
+            current_dict = current_config.model_dump() if hasattr(current_config, 'model_dump') else current_config
+            
+            # Deep merge the updates into current config
+            updated_dict = {**current_dict}
+            for key, value in config.items():
+                if isinstance(value, dict) and key in updated_dict and isinstance(updated_dict[key], dict):
+                    updated_dict[key] = {**updated_dict[key], **value}
+                else:
+                    updated_dict[key] = value
+            
+            # Validate the complete configuration
+            validated_config = SystemConfiguration(**updated_dict)
+            
         except ValidationError as ve:
-            logger.warning(f"Config validation error: {ve}")
+            logger.warning(f"Configuration validation error: {ve}")
+            error_details = []
+            for error in ve.errors():
+                field_path = " -> ".join(str(x) for x in error['loc'])
+                error_details.append(f"{field_path}: {error['msg']}")
+            
             raise HTTPException(
                 status_code=422,
-                detail={"error": "Invalid configuration data", "detail": str(ve)}
+                detail={
+                    "error": "Invalid configuration data",
+                    "validation_errors": error_details,
+                    "detail": str(ve)
+                }
             )
-        # Only allow updating known config keys
-        filtered_config = {k: v for k, v in config.items() if k in ConfigUpdateModel.model_fields}
-        if not filtered_config:
-            logger.warning("No valid configuration keys provided")
-            raise HTTPException(
-                status_code=422,
-                detail={"error": "No valid configuration keys provided", "detail": "No valid configuration keys provided"}
-            )
-        # Only check CSRF if input is valid
-        session_csrf = request.session.get("csrf")
-        req_csrf = request.headers.get("x-csrf-token") or request.cookies.get("csrf")
-        # Allow test clients (no CSRF) to pass for input validation tests
-        if not (os.getenv("TESTING") == "1") and (not session_csrf or not req_csrf or session_csrf != req_csrf):
-            logger.warning("CSRF validation failed")
-            raise HTTPException(status_code=403, detail="CSRF validation failed")
-        updated_config = await data_service.update_config(filtered_config)
-        return ConfigResponse(config=updated_config)
+        
+        # Skip CSRF for testing
+        if not os.getenv("TESTING") == "1":
+            session_csrf = request.session.get("csrf")
+            req_csrf = request.headers.get("x-csrf-token") or request.cookies.get("csrf")
+            if not session_csrf or not req_csrf or session_csrf != req_csrf:
+                logger.warning("CSRF validation failed")
+                raise HTTPException(status_code=403, detail="CSRF validation failed")
+        
+        # Update configuration in persistent storage
+        updated_config = await data_service.update_system_config(validated_config)
+        return updated_config.model_dump() if hasattr(updated_config, 'model_dump') else updated_config
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update config: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update config")
+        logger.error(f"Failed to update system config: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update system configuration")
 
 @api_router.post("/config/reset")
 async def reset_config(request: Request, data_service: DataService = Depends(get_data_service)):
-    """Reset configuration to defaults with CSRF validation."""
+    """Reset configuration to defaults using SystemConfiguration defaults."""
     try:
-        session_csrf = request.session.get("csrf")
-        req_csrf = request.headers.get("x-csrf-token") or request.cookies.get("csrf")
-        # Allow test clients (no CSRF) to pass for reset tests
-        if not (os.getenv("TESTING") == "1") and (not session_csrf or not req_csrf or session_csrf != req_csrf):
-            logger.warning("CSRF validation failed on reset")
-            raise HTTPException(status_code=403, detail="CSRF validation failed")
-        # Reset logic (replace with actual defaults as needed)
-        default_config = {"setting1": "value1", "setting2": True}
-        await data_service.update_config(default_config)
-        return {"status": "reset", "config": default_config}
+        # Skip CSRF for testing
+        if not os.getenv("TESTING") == "1":
+            session_csrf = request.session.get("csrf")
+            req_csrf = request.headers.get("x-csrf-token") or request.cookies.get("csrf")
+            if not session_csrf or not req_csrf or session_csrf != req_csrf:
+                logger.warning("CSRF validation failed on reset")
+                raise HTTPException(status_code=403, detail="CSRF validation failed")
+        
+        # Create default SystemConfiguration instance
+        from src.core.config.models import (
+            AppConfig, ContentConfig, AnythingLLMConfig, GitHubConfig,
+            ScrapingConfig, RedisConfig, AIConfig, EnrichmentConfig
+        )
+        
+        default_config = SystemConfiguration(
+            app=AppConfig(),
+            content=ContentConfig(),
+            anythingllm=AnythingLLMConfig(),
+            github=GitHubConfig(),
+            scraping=ScrapingConfig(),
+            redis=RedisConfig(),
+            ai=AIConfig(),
+            enrichment=EnrichmentConfig()
+        )
+        
+        # Reset to defaults in persistent storage
+        reset_config = await data_service.update_system_config(default_config)
+        return {
+            "status": "reset",
+            "message": "Configuration reset to defaults",
+            "config": reset_config.model_dump() if hasattr(reset_config, 'model_dump') else reset_config
+        }
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to reset config: {e}")
-        raise HTTPException(status_code=500, detail="Failed to reset config")
+        logger.error(f"Failed to reset system config: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset system configuration")
 
 @api_router.get("/content", response_model=ContentResponse)
 async def get_content(view_model_service: ViewModelService = Depends(get_view_model_service)):

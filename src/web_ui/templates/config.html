@@ -35,6 +35,35 @@
 
     <!-- Configuration Form -->
     <div class="px-4 py-6 sm:px-6 lg:px-8">
+        <!-- Validation Error Alert -->
+        <div id="validation-error-alert" class="mb-6 p-4 border border-red-300 rounded-md bg-red-50 hidden">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">
+                        Please fix validation errors before saving
+                    </h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <p>Some required fields are missing or invalid. Please check the fields highlighted in red and correct them before saving.</p>
+                    </div>
+                </div>
+                <div class="ml-auto pl-3">
+                    <div class="-mx-1.5 -my-1.5">
+                        <button type="button" onclick="document.getElementById('validation-error-alert').classList.add('hidden')" class="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600">
+                            <span class="sr-only">Dismiss</span>
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <form id="config-form" class="space-y-6">
             <!-- Application Settings Section -->
             <div class="bg-white shadow-sm rounded-lg border border-gray-200">
@@ -50,22 +79,24 @@
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
                             <label for="environment" class="block text-sm font-medium text-gray-700">Environment</label>
-                            <select id="environment" name="environment" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <select id="environment" name="environment" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
                                 <option value="development">Development</option>
                                 <option value="staging">Staging</option>
                                 <option value="production">Production</option>
                             </select>
                             <p class="mt-1 text-sm text-gray-500">Current deployment environment</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="environment-error"></div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Debug Mode</label>
                             <div class="mt-1">
                                 <label class="inline-flex items-center">
-                                    <input type="checkbox" id="debug_mode" name="debug_mode" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                                    <input type="checkbox" id="debug_mode" name="debug_mode" class="rounded border border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                                     <span class="ml-2 text-sm text-gray-700">Enable Debug Mode</span>
                                 </label>
                             </div>
                             <p class="mt-1 text-sm text-gray-500">For development only</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="debug_mode-error"></div>
                         </div>
                         <div>
                             <label for="log_level" class="block text-sm font-medium text-gray-700">Log Level</label>
@@ -79,7 +110,7 @@
                         </div>
                         <div>
                             <label for="workers" class="block text-sm font-medium text-gray-700">Worker Processes</label>
-                            <input type="number" id="workers" name="workers" min="1" max="16" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="number" id="workers" name="workers" min="1" max="16" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <p class="mt-1 text-sm text-gray-500">Number of worker processes</p>
                             <div class="mt-1 text-sm text-red-600 hidden" id="workers-error">Must be between 1 and 16</div>
                         </div>
@@ -101,23 +132,27 @@
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
                             <label for="api_host" class="block text-sm font-medium text-gray-700">API Host</label>
-                            <input type="url" id="api_host" name="api_host" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="http://localhost:8080">
+                            <input type="url" id="api_host" name="api_host" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="http://localhost:8080">
                             <p class="mt-1 text-sm text-gray-500">Main API service endpoint</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="api_host-error"></div>
                         </div>
                         <div>
                             <label for="api_timeout" class="block text-sm font-medium text-gray-700">API Timeout (seconds)</label>
-                            <input type="number" id="api_timeout" name="api_timeout" min="1" max="300" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="number" id="api_timeout" name="api_timeout" min="1" max="300" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <p class="mt-1 text-sm text-gray-500">Request timeout in seconds</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="api_timeout-error"></div>
                         </div>
                         <div>
                             <label for="websocket_url" class="block text-sm font-medium text-gray-700">WebSocket URL</label>
-                            <input type="url" id="websocket_url" name="websocket_url" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="ws://localhost:8080/ws">
+                            <input type="url" id="websocket_url" name="websocket_url" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="ws://localhost:8080/ws">
                             <p class="mt-1 text-sm text-gray-500">Real-time updates endpoint</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="websocket_url-error"></div>
                         </div>
                         <div>
                             <label for="max_retries" class="block text-sm font-medium text-gray-700">Max Retries</label>
-                            <input type="number" id="max_retries" name="max_retries" min="0" max="10" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="number" id="max_retries" name="max_retries" min="0" max="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <p class="mt-1 text-sm text-gray-500">Maximum retry attempts</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="max_retries-error"></div>
                         </div>
                     </div>
                 </div>
@@ -137,28 +172,32 @@
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
                             <label for="cache_ttl" class="block text-sm font-medium text-gray-700">Cache TTL (seconds)</label>
-                            <input type="number" id="cache_ttl" name="cache_ttl" min="60" max="86400" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="number" id="cache_ttl" name="cache_ttl" min="60" max="86400" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <p class="mt-1 text-sm text-gray-500">Time to live for cache entries</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="cache_ttl-error"></div>
                         </div>
                         <div>
                             <label for="cache_max_size" class="block text-sm font-medium text-gray-700">Max Cache Size (MB)</label>
-                            <input type="number" id="cache_max_size" name="cache_max_size" min="100" max="10000" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="number" id="cache_max_size" name="cache_max_size" min="100" max="10000" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <p class="mt-1 text-sm text-gray-500">Maximum cache size in megabytes</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="cache_max_size-error"></div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Auto-refresh</label>
                             <div class="mt-1">
                                 <label class="inline-flex items-center">
-                                    <input type="checkbox" id="auto_refresh" name="auto_refresh" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                                    <input type="checkbox" id="auto_refresh" name="auto_refresh" class="rounded border border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                                     <span class="ml-2 text-sm text-gray-700">Enable auto-refresh</span>
                                 </label>
                             </div>
                             <p class="mt-1 text-sm text-gray-500">Automatically refresh cached data</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="auto_refresh-error"></div>
                         </div>
                         <div>
                             <label for="refresh_interval" class="block text-sm font-medium text-gray-700">Refresh Interval (seconds)</label>
-                            <input type="number" id="refresh_interval" name="refresh_interval" min="10" max="3600" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="number" id="refresh_interval" name="refresh_interval" min="10" max="3600" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <p class="mt-1 text-sm text-gray-500">Auto-refresh interval</p>
+                            <div class="mt-1 text-sm text-red-600 hidden" id="refresh_interval-error"></div>
                         </div>
                     </div>
                 </div>

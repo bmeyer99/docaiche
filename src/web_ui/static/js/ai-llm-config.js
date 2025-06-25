@@ -935,9 +935,56 @@ class AILLMConfigManager {
         resultsContainer.classList.remove('hidden');
     }
 
+    getSystemConfigUpdate() {
+        console.log('Building AI SystemConfiguration update from form values');
+        
+        const textProvider = document.getElementById('text_provider')?.value || 'ollama';
+        const textBaseUrl = document.getElementById('text_base_url')?.value || '';
+        const textApiKey = document.getElementById('text_api_key')?.value || '';
+        const textModel = document.getElementById('llm_model')?.value || '';
+        
+        // Get advanced parameters
+        const maxTokens = parseInt(document.getElementById('text_max_tokens')?.value) || 4096;
+        const temperature = parseFloat(document.getElementById('text_temperature')?.value) || 0.7;
+        const timeout = parseInt(document.getElementById('text_timeout')?.value) || 30;
+        
+        // Build AI configuration in SystemConfiguration format
+        const aiUpdate = {
+            primary_provider: textProvider,
+            cache_ttl_seconds: 3600, // Default cache TTL
+            enable_failover: true
+        };
+        
+        // Add provider-specific configuration
+        if (textProvider === 'ollama') {
+            aiUpdate.ollama = {
+                endpoint: textBaseUrl || 'http://localhost:11434',
+                model: textModel || 'llama2',
+                temperature: temperature,
+                max_tokens: maxTokens,
+                timeout_seconds: timeout
+            };
+        } else if (textProvider === 'openai') {
+            aiUpdate.openai = {
+                api_key: textApiKey,
+                model: textModel || 'gpt-3.5-turbo',
+                temperature: temperature,
+                max_tokens: maxTokens,
+                timeout_seconds: timeout
+            };
+            aiUpdate.fallback_provider = 'ollama'; // Set fallback
+        }
+        
+        console.log('Built AI SystemConfiguration update:', aiUpdate);
+        return aiUpdate;
+    }
+
     getAILLMConfig() {
         const sharingCheckbox = document.getElementById('use_same_provider');
         const useSameProvider = sharingCheckbox?.checked || false;
+        
+        // Sync advanced settings to legacy hidden fields for validation
+        this.syncAdvancedSettingsToLegacyFields();
         
         return {
             // Text generation provider
@@ -947,14 +994,14 @@ class AILLMConfigManager {
             
             // Embedding provider
             use_same_provider: useSameProvider,
-            embedding_provider: useSameProvider ? 
-                (document.getElementById('text_provider')?.value || '') : 
+            embedding_provider: useSameProvider ?
+                (document.getElementById('text_provider')?.value || '') :
                 (document.getElementById('embedding_provider')?.value || ''),
-            embedding_base_url: useSameProvider ? 
-                (document.getElementById('text_base_url')?.value || '') : 
+            embedding_base_url: useSameProvider ?
+                (document.getElementById('text_base_url')?.value || '') :
                 (document.getElementById('embedding_base_url')?.value || ''),
-            embedding_api_key: useSameProvider ? 
-                (document.getElementById('text_api_key')?.value || '') : 
+            embedding_api_key: useSameProvider ?
+                (document.getElementById('text_api_key')?.value || '') :
                 (document.getElementById('embedding_api_key')?.value || ''),
             
             // Models
@@ -992,7 +1039,138 @@ class AILLMConfigManager {
         };
     }
 
+    syncAdvancedSettingsToLegacyFields() {
+        console.log('🔄 Syncing advanced settings to legacy hidden fields...');
+        
+        // Sync max_tokens
+        const textMaxTokens = document.getElementById('text_max_tokens')?.value || '2048';
+        const legacyMaxTokens = document.getElementById('max_tokens');
+        if (legacyMaxTokens) {
+            legacyMaxTokens.value = textMaxTokens;
+            console.log(`  ✅ Synced max_tokens: ${textMaxTokens}`);
+        }
+        
+        // Sync temperature
+        const textTemperature = document.getElementById('text_temperature')?.value || '0.7';
+        const legacyTemperature = document.getElementById('temperature');
+        if (legacyTemperature) {
+            legacyTemperature.value = textTemperature;
+            console.log(`  ✅ Synced temperature: ${textTemperature}`);
+        }
+        
+        // Sync other legacy fields
+        const textTopP = document.getElementById('text_top_p')?.value || '1.0';
+        const legacyTopP = document.getElementById('top_p');
+        if (legacyTopP) {
+            legacyTopP.value = textTopP;
+            console.log(`  ✅ Synced top_p: ${textTopP}`);
+        }
+        
+        const textTopK = document.getElementById('text_top_k')?.value || '40';
+        const legacyTopK = document.getElementById('top_k');
+        if (legacyTopK) {
+            legacyTopK.value = textTopK;
+            console.log(`  ✅ Synced top_k: ${textTopK}`);
+        }
+        
+        const textTimeout = document.getElementById('text_timeout')?.value || '30';
+        const legacyTimeout = document.getElementById('llm_timeout');
+        if (legacyTimeout) {
+            legacyTimeout.value = textTimeout;
+            console.log(`  ✅ Synced llm_timeout: ${textTimeout}`);
+        }
+        
+        const textRetries = document.getElementById('text_retries')?.value || '3';
+        const legacyRetries = document.getElementById('llm_retries');
+        if (legacyRetries) {
+            legacyRetries.value = textRetries;
+            console.log(`  ✅ Synced llm_retries: ${textRetries}`);
+        }
+    }
+
+    setSystemConfig(systemConfig) {
+        console.log('Setting AI/LLM configuration from SystemConfiguration:', systemConfig);
+        
+        const ai = systemConfig.ai || {};
+        const ollama = ai.ollama || {};
+        const openai = ai.openai || {};
+        
+        // Set text provider from AI configuration
+        const textProvider = document.getElementById('text_provider');
+        if (textProvider) {
+            textProvider.value = ai.primary_provider || 'ollama';
+        }
+        
+        // Set provider-specific settings based on primary provider
+        if (ai.primary_provider === 'ollama') {
+            const textBaseUrl = document.getElementById('text_base_url');
+            const textApiKey = document.getElementById('text_api_key');
+            
+            if (textBaseUrl) textBaseUrl.value = ollama.endpoint || 'http://localhost:11434';
+            if (textApiKey) textApiKey.value = ''; // Ollama typically doesn't need API key
+            
+            // Set Ollama-specific model settings
+            const textModel = document.getElementById('llm_model');
+            if (textModel) textModel.value = ollama.model || 'llama2';
+            
+            // Set advanced parameters
+            const textMaxTokens = document.getElementById('text_max_tokens');
+            const textTemperature = document.getElementById('text_temperature');
+            const textTimeout = document.getElementById('text_timeout');
+            
+            if (textMaxTokens) textMaxTokens.value = ollama.max_tokens || 4096;
+            if (textTemperature) textTemperature.value = ollama.temperature || 0.7;
+            if (textTimeout) textTimeout.value = ollama.timeout_seconds || 60;
+            
+        } else if (ai.primary_provider === 'openai' && openai) {
+            const textBaseUrl = document.getElementById('text_base_url');
+            const textApiKey = document.getElementById('text_api_key');
+            
+            if (textBaseUrl) textBaseUrl.value = 'https://api.openai.com/v1';
+            if (textApiKey) textApiKey.value = openai.api_key || '';
+            
+            // Set OpenAI-specific model settings
+            const textModel = document.getElementById('llm_model');
+            if (textModel) textModel.value = openai.model || 'gpt-3.5-turbo';
+            
+            // Set advanced parameters
+            const textMaxTokens = document.getElementById('text_max_tokens');
+            const textTemperature = document.getElementById('text_temperature');
+            const textTimeout = document.getElementById('text_timeout');
+            
+            if (textMaxTokens) textMaxTokens.value = openai.max_tokens || 4096;
+            if (textTemperature) textTemperature.value = openai.temperature || 0.7;
+            if (textTimeout) textTimeout.value = openai.timeout_seconds || 30;
+        }
+        
+        // Set embedding provider (for now, use same as text generation)
+        const embeddingProvider = document.getElementById('embedding_provider');
+        if (embeddingProvider) {
+            embeddingProvider.value = ai.primary_provider || 'ollama';
+        }
+        
+        // Set provider sharing to true by default
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        if (sharingCheckbox) {
+            sharingCheckbox.checked = true;
+        }
+        
+        // Trigger provider setup
+        this.setupProviderDefaults();
+        this.onProviderSharingChange();
+        
+        console.log('SystemConfiguration applied to AI/LLM settings');
+    }
+
     setAILLMConfig(config) {
+        // Check if this is SystemConfiguration format
+        if (config.ai || config.app) {
+            return this.setSystemConfig(config);
+        }
+        
+        // Legacy format handling
+        console.log('Setting AI/LLM configuration from legacy format:', config);
+        
         // Set text provider fields
         const textProviderFields = ['text_provider', 'text_base_url', 'text_api_key'];
         textProviderFields.forEach(field => {
@@ -1054,6 +1232,167 @@ class AILLMConfigManager {
         // Trigger provider setup
         this.setupProviderDefaults();
         this.onProviderSharingChange();
+    }
+
+    validateConfiguration() {
+        console.log('🤖 Starting AI/LLM configuration validation...');
+        let isValid = true;
+        const validationResults = {};
+
+        // Validate text generation provider fields
+        const textProvider = document.getElementById('text_provider')?.value;
+        const textBaseUrl = document.getElementById('text_base_url')?.value;
+        const textModel = document.getElementById('llm_model')?.value;
+
+        console.log('📋 Text generation provider validation:');
+        console.log(`  - Provider: "${textProvider}"`);
+        console.log(`  - Base URL: "${textBaseUrl}"`);
+        console.log(`  - Model: "${textModel}"`);
+
+        if (!textProvider) {
+            console.log('❌ Text provider validation failed: empty value');
+            this.showFieldError('text_provider', 'Text generation provider is required');
+            validationResults.text_provider = false;
+            isValid = false;
+        } else {
+            console.log('✅ Text provider validation passed');
+            this.hideFieldError('text_provider');
+            validationResults.text_provider = true;
+        }
+
+        if (!textBaseUrl) {
+            console.log('❌ Text base URL validation failed: empty value');
+            this.showFieldError('text_base_url', 'Base URL is required');
+            validationResults.text_base_url = false;
+            isValid = false;
+        } else if (!this.isValidUrl(textBaseUrl)) {
+            console.log('❌ Text base URL validation failed: invalid URL format');
+            this.showFieldError('text_base_url', 'Please enter a valid URL');
+            validationResults.text_base_url = false;
+            isValid = false;
+        } else {
+            console.log('✅ Text base URL validation passed');
+            this.hideFieldError('text_base_url');
+            validationResults.text_base_url = true;
+        }
+
+        if (!textModel) {
+            console.log('❌ Text model validation failed: empty value');
+            this.showFieldError('llm_model', 'Text model is required');
+            validationResults.llm_model = false;
+            isValid = false;
+        } else {
+            console.log('✅ Text model validation passed');
+            this.hideFieldError('llm_model');
+            validationResults.llm_model = true;
+        }
+
+        // Validate embedding configuration if not using same provider
+        const useSameProvider = document.getElementById('use_same_provider')?.checked;
+        console.log(`🔄 Use same provider for embedding: ${useSameProvider}`);
+
+        if (!useSameProvider) {
+            console.log('📋 Embedding provider validation (separate provider):');
+            const embeddingProvider = document.getElementById('embedding_provider')?.value;
+            const embeddingBaseUrl = document.getElementById('embedding_base_url')?.value;
+            const embeddingModel = document.getElementById('llm_embedding_model')?.value;
+
+            console.log(`  - Provider: "${embeddingProvider}"`);
+            console.log(`  - Base URL: "${embeddingBaseUrl}"`);
+            console.log(`  - Model: "${embeddingModel}"`);
+
+            if (!embeddingProvider) {
+                console.log('❌ Embedding provider validation failed: empty value');
+                this.showFieldError('embedding_provider', 'Embedding provider is required');
+                validationResults.embedding_provider = false;
+                isValid = false;
+            } else {
+                console.log('✅ Embedding provider validation passed');
+                this.hideFieldError('embedding_provider');
+                validationResults.embedding_provider = true;
+            }
+
+            if (!embeddingBaseUrl) {
+                console.log('❌ Embedding base URL validation failed: empty value');
+                this.showFieldError('embedding_base_url', 'Base URL is required');
+                validationResults.embedding_base_url = false;
+                isValid = false;
+            } else if (!this.isValidUrl(embeddingBaseUrl)) {
+                console.log('❌ Embedding base URL validation failed: invalid URL format');
+                this.showFieldError('embedding_base_url', 'Please enter a valid URL');
+                validationResults.embedding_base_url = false;
+                isValid = false;
+            } else {
+                console.log('✅ Embedding base URL validation passed');
+                this.hideFieldError('embedding_base_url');
+                validationResults.embedding_base_url = true;
+            }
+
+            if (!embeddingModel) {
+                console.log('❌ Embedding model validation failed: empty value');
+                this.showFieldError('llm_embedding_model', 'Embedding model is required');
+                validationResults.llm_embedding_model = false;
+                isValid = false;
+            } else {
+                console.log('✅ Embedding model validation passed');
+                this.hideFieldError('llm_embedding_model');
+                validationResults.llm_embedding_model = true;
+            }
+        } else {
+            console.log('📋 Embedding validation skipped (using same provider as text generation)');
+            validationResults.embedding_provider = 'same-as-text';
+            validationResults.embedding_base_url = 'same-as-text';
+            validationResults.llm_embedding_model = textModel ? true : false; // Embedding model still needs to be selected
+            
+            if (!textModel) {
+                console.log('❌ Since using same provider, embedding model validation failed because text model is empty');
+            }
+        }
+
+        console.log('📊 AI/LLM validation results:', validationResults);
+        console.log(`🎯 AI/LLM validation overall result: ${isValid}`);
+
+        return isValid;
+    }
+
+    isValidUrl(string) {
+        try {
+            new URL(string);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    showFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.classList.add('border-red-500');
+            
+            // Find or create error message element
+            let errorElement = document.getElementById(`${fieldId}-error`);
+            if (!errorElement) {
+                errorElement = document.createElement('div');
+                errorElement.id = `${fieldId}-error`;
+                errorElement.className = 'text-red-600 text-sm mt-1';
+                field.parentNode.appendChild(errorElement);
+            }
+            
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+    }
+
+    hideFieldError(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.classList.remove('border-red-500');
+            
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            if (errorElement) {
+                errorElement.classList.add('hidden');
+            }
+        }
     }
 }
 
