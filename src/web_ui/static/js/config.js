@@ -31,7 +31,16 @@ class ConfigManager {
     async loadConfiguration() {
         this.isLoading = true;
         try {
-            const config = await api.get('/config');
+            const response = await api.get('/config');
+            // Map config.items (array of {key, value}) to flat object
+            const config = {};
+            if (response && Array.isArray(response.items)) {
+                response.items.forEach(item => {
+                    // Convert dot.notation keys to flat keys for form fields
+                    const key = item.key.replace(/^app\./, '').replace(/^ai\./, '').replace(/^redis\./, '').replace(/^content\./, '').replace(/^anythingllm\./, '');
+                    config[key] = item.value;
+                });
+            }
             this.originalConfig = { ...config };
             this.populateForm(config);
         } catch (error) {
@@ -142,6 +151,18 @@ class ConfigManager {
         const resetButton = document.getElementById('reset-config');
         if (resetButton) {
             resetButton.addEventListener('click', () => this.showResetModal());
+        }
+
+        // Refresh button
+        const refreshButton = document.getElementById('refresh-config');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', async () => {
+                await this.loadConfiguration();
+                this.isDirty = false;
+                this.updateSaveButton();
+                this.clearValidationErrors();
+                utils.showNotification('Configuration refreshed from server', 'info');
+            });
         }
 
         // Reset modal events
@@ -348,19 +369,43 @@ class ConfigManager {
 
         try {
             const config = this.getCurrentConfig();
-            console.log('Sending configuration:', config);
-            const response = await api.post('/config', config);
-            
+            // Map config keys to backend dot.notation keys
+            const keyMap = {
+                environment: "app.environment",
+                debug_mode: "app.debug",
+                log_level: "app.log_level",
+                workers: "app.workers",
+                api_host: "app.api_host",
+                api_timeout: "app.api_timeout",
+                websocket_url: "app.websocket_url",
+                max_retries: "app.max_retries",
+                cache_ttl: "ai.cache_ttl_seconds",
+                cache_max_size: "redis.max_connections",
+                auto_refresh: "app.auto_refresh",
+                refresh_interval: "app.refresh_interval",
+                llm_provider: "ai.primary_provider",
+                llm_model: "ai.llm_model",
+                max_tokens: "ai.max_tokens",
+                temperature: "ai.temperature"
+                // Add more mappings as needed
+            };
+            const items = Object.entries(config).map(([k, v]) => ({
+                key: keyMap[k] || k,
+                value: v
+            }));
+            console.log('Sending bulk configuration:', items);
+            const response = await api.post('/config/bulk', items);
+
             this.originalConfig = { ...config };
             this.isDirty = false;
             this.updateSaveButton();
             this.hideLoadingState();
-            
+
             utils.showNotification('Configuration saved successfully', 'success');
         } catch (error) {
             console.error('Failed to save configuration:', error);
             this.hideLoadingState();
-            
+
             // Extract detailed error message from API response
             let errorMessage = 'Failed to save configuration';
             if (error.message && error.message.includes('HTTP')) {
@@ -376,7 +421,7 @@ class ConfigManager {
                     }
                 }
             }
-            
+
             utils.showNotification(errorMessage, 'error', 10000);
             this.highlightErrorFields();
         } finally {
@@ -468,6 +513,17 @@ let configManager;
 document.addEventListener('DOMContentLoaded', () => {
     configManager = new ConfigManager();
     configManager.init();
+
+    // Listen for config_update events from WebSocket and reload config
+    if (window.wsManager) {
+        window.wsManager.on('config_update', async () => {
+            await configManager.loadConfiguration();
+            configManager.isDirty = false;
+            configManager.updateSaveButton();
+            configManager.clearValidationErrors();
+            utils.showNotification('Configuration updated from server', 'info');
+        });
+    }
 });
 
 // Warn about unsaved changes before leaving

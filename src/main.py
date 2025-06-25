@@ -7,8 +7,15 @@ components: middleware, exception handlers, rate limiting, and complete API endp
 """
 
 import logging
+import sys
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+
+# Add project root to the Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 import uvicorn
 from fastapi import FastAPI
@@ -18,7 +25,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from src.core.config import get_settings
+from src.core.config import get_system_configuration
 from src.core.config.manager import get_current_configuration
 from src.core.security import SecurityMiddleware
 from src.api.v1.api import api_router, setup_exception_handlers
@@ -88,7 +95,7 @@ def create_application() -> FastAPI:
     # Use default settings during application creation
     # Real configuration will be loaded during startup in lifespan
     try:
-        settings = get_settings()
+        settings = get_system_configuration()
         logger.info(f"Creating application with environment: {settings.app.environment}")
     except Exception as e:
         logger.warning(f"Failed to load settings during app creation: {e}")
@@ -161,7 +168,7 @@ if __name__ == "__main__":
     Configuration matches the task specification.
     """
     try:
-        settings = get_settings()
+        settings = get_system_configuration()
         host = settings.app.api_host
         port = settings.app.api_port
         debug = settings.app.debug

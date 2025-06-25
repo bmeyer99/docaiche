@@ -1,11 +1,6 @@
 """
 Configuration management for AI Documentation Cache System
 PRD-003: Configuration Management System - CFG-001 Implementation
-
-DEPRECATED: This module is deprecated. Use src.core.config package directly.
-All functionality has been moved to src.core.config.__init__.py to resolve circular imports.
-
-For compatibility, this module now imports and re-exports from the config package.
 """
 
 import logging
@@ -24,7 +19,7 @@ from src.core.config import *
 # Explicit re-exports for IDE support
 __all__ = [
     "SystemConfiguration",
-    "AppConfig", 
+    "AppConfig",
     "ContentConfig",
     "AnythingLLMConfig",
     "GitHubConfig",
@@ -36,15 +31,14 @@ __all__ = [
     "CircuitBreakerConfig",
     "ConfigurationValidators",
     "get_environment_overrides",
-    "apply_nested_override", 
+    "apply_nested_override",
     "SecretsManager",
     "get_system_configuration",
     "validate_configuration",
     "reload_configuration",
     "get_api_host",
     "get_api_port",
-    "get_log_level", 
+    "get_log_level",
     "is_debug_mode",
     "get_environment",
-    "get_settings",
 ]

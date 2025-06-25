@@ -496,15 +496,78 @@ class WebSocketManager {
 
 // Global WebSocket manager
 const wsManager = new WebSocketManager();
+window.wsManager = wsManager;
 
 // Auto-connect WebSocket when page loads (graceful fallback if not available)
+function updateStatusIndicator(connected, llmStatus) {
+    const statusElement = document.getElementById('connection-status');
+    if (!statusElement) return;
+    const dot = statusElement.querySelector('.w-2');
+    const text = statusElement.querySelector('span');
+    if (connected) {
+        dot.className = 'w-2 h-2 bg-green-500 rounded-full';
+        text.textContent = llmStatus || 'Connected';
+    } else if (wsManager.connectionFailed) {
+        dot.className = 'w-2 h-2 bg-gray-400 rounded-full';
+        text.textContent = 'Polling Mode';
+    } else {
+        dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+        text.textContent = 'Disconnected';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Always reset status indicator on load
+    updateStatusIndicator(false, 'Disconnected');
     // Connect WebSocket for real-time updates
     wsManager.connect();
-    
+
     // Perform initial health check (fallback for when WebSocket isn't available)
     performInitialHealthCheck();
+
+    // Listen for navigation events (SPA or reload)
+    window.addEventListener('pageshow', () => {
+        updateStatusIndicator(false, 'Disconnected');
+        performInitialHealthCheck();
+    });
 });
+
+// Patch wsManager to always update status indicator
+wsManager.updateConnectionStatus = function(connected) {
+    let llmStatus = 'Connected';
+    if (!connected) llmStatus = 'Disconnected';
+    updateStatusIndicator(connected, llmStatus);
+};
+wsManager.handleLLMHealthUpdate = function(data) {
+    try {
+        const llmHealth = data.data;
+        let statusText = 'Connected';
+        let color = 'bg-green-500';
+        if (llmHealth.status === 'configured') {
+            statusText = 'Connected';
+            color = 'bg-green-500';
+        } else if (llmHealth.status === 'unavailable') {
+            statusText = 'LLM Unavailable';
+            color = 'bg-yellow-400';
+        } else if (llmHealth.status === 'none_configured') {
+            statusText = 'LLM Not Configured';
+            color = 'bg-yellow-400';
+        } else if (llmHealth.status === 'error') {
+            statusText = 'LLM Error';
+            color = 'bg-red-500';
+        }
+        const statusElement = document.getElementById('connection-status');
+        if (statusElement) {
+            const dot = statusElement.querySelector('.w-2');
+            const text = statusElement.querySelector('span');
+            dot.className = `w-2 h-2 ${color} rounded-full`;
+            text.textContent = statusText;
+        }
+        console.log('LLM health status updated:', llmHealth.status);
+    } catch (error) {
+        console.error('Error handling LLM health update:', error);
+    }
+};
 
 // Initial health check for fallback when WebSocket is not available
 async function performInitialHealthCheck() {
