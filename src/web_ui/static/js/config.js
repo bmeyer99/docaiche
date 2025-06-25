@@ -66,12 +66,6 @@ class ConfigManager {
         // AI/LLM Settings - delegate to AI/LLM manager
         if (window.aiLLMManager) {
             window.aiLLMManager.setAILLMConfig(config);
-        } else {
-            // Fallback if AI/LLM manager not available
-            this.setFieldValue('llm_provider', config.llm_provider || 'ollama');
-            this.setFieldValue('llm_model', config.llm_model || 'llama2');
-            this.setFieldValue('max_tokens', config.max_tokens || 2048);
-            this.setFieldValue('temperature', config.temperature || 0.7);
         }
     }
 
@@ -273,6 +267,7 @@ class ConfigManager {
     validateForm() {
         let isValid = true;
 
+        // Basic form validation
         isValid &= this.validateWorkers();
         isValid &= this.validateUrl('api_host');
         isValid &= this.validateUrl('websocket_url');
@@ -281,8 +276,11 @@ class ConfigManager {
         isValid &= this.validateNumber('cache_ttl');
         isValid &= this.validateNumber('cache_max_size');
         isValid &= this.validateNumber('refresh_interval');
-        isValid &= this.validateNumber('max_tokens');
-        isValid &= this.validateTemperature();
+
+        // AI/LLM validation - delegate to AI manager
+        if (window.aiLLMManager) {
+            isValid &= window.aiLLMManager.validateAILLMConfig();
+        }
 
         return Boolean(isValid);
     }

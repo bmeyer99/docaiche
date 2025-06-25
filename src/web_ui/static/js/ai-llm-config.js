@@ -977,18 +977,6 @@ class AILLMConfigManager {
             embedding_overlap: parseInt(document.getElementById('embedding_overlap')?.value) || 50,
             embedding_normalize: document.getElementById('embedding_normalize')?.checked || true,
             
-            // Legacy compatibility
-            max_tokens: parseInt(document.getElementById('text_max_tokens')?.value) || 2048,
-            temperature: parseFloat(document.getElementById('text_temperature')?.value) || 0.7,
-            top_p: parseFloat(document.getElementById('text_top_p')?.value) || 1.0,
-            top_k: parseInt(document.getElementById('text_top_k')?.value) || 40,
-            llm_timeout: parseInt(document.getElementById('text_timeout')?.value) || 30,
-            llm_retries: parseInt(document.getElementById('text_retries')?.value) || 3,
-            
-            // Legacy compatibility
-            llm_provider: document.getElementById('text_provider')?.value || '',
-            llm_base_url: document.getElementById('text_base_url')?.value || '',
-            llm_api_key: document.getElementById('text_api_key')?.value || ''
         };
     }
 
@@ -1026,35 +1014,83 @@ class AILLMConfigManager {
             }
         });
 
-        // Set advanced parameters
-        const advancedFields = ['max_tokens', 'temperature', 'top_p', 'top_k', 'llm_timeout', 'llm_retries'];
-        advancedFields.forEach(field => {
+        // Set text generation advanced parameters
+        const textAdvancedFields = [
+            'text_max_tokens', 'text_temperature', 'text_top_p', 'text_top_k', 'text_timeout', 'text_retries'
+        ];
+        textAdvancedFields.forEach(field => {
             const element = document.getElementById(field);
             if (element && config[field] !== undefined) {
                 element.value = config[field];
             }
         });
 
-        // Handle legacy compatibility
-        if (config.llm_provider && !config.text_provider) {
-            const textProvider = document.getElementById('text_provider');
-            if (textProvider) textProvider.value = config.llm_provider;
-        }
+        // Set embedding advanced parameters
+        const embeddingAdvancedFields = [
+            'embedding_batch_size', 'embedding_timeout', 'embedding_retries',
+            'embedding_chunk_size', 'embedding_overlap', 'embedding_normalize'
+        ];
+        embeddingAdvancedFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element && config[field] !== undefined) {
+                if (field === 'embedding_normalize') {
+                    element.checked = config[field];
+                } else {
+                    element.value = config[field];
+                }
+            }
+        });
 
-        if (config.llm_base_url && !config.text_base_url) {
-            const textBaseUrl = document.getElementById('text_base_url');
-            if (textBaseUrl) textBaseUrl.value = config.llm_base_url;
-        }
-
-        if (config.llm_api_key && !config.text_api_key) {
-            const textApiKey = document.getElementById('text_api_key');
-            if (textApiKey) textApiKey.value = config.llm_api_key;
-        }
 
         // Trigger provider setup
         this.setupProviderDefaults();
         this.onProviderSharingChange();
     }
+}
+
+validateAILLMConfig() {
+    let isValid = true;
+    
+    // Validate text generation configuration
+    const textProvider = document.getElementById('text_provider')?.value;
+    const textBaseUrl = document.getElementById('text_base_url')?.value;
+    const textModel = document.getElementById('llm_model')?.value;
+    
+    if (textProvider && textBaseUrl && !textModel) {
+        utils.showNotification('Please select a text generation model', 'error');
+        isValid = false;
+    }
+    
+    // Validate embedding configuration
+    const embeddingModel = document.getElementById('llm_embedding_model')?.value;
+    const sharingCheckbox = document.getElementById('use_same_provider');
+    
+    if (!sharingCheckbox?.checked) {
+        const embeddingProvider = document.getElementById('embedding_provider')?.value;
+        const embeddingBaseUrl = document.getElementById('embedding_base_url')?.value;
+        
+        if (embeddingProvider && embeddingBaseUrl && !embeddingModel) {
+            utils.showNotification('Please select an embedding model', 'error');
+            isValid = false;
+        }
+    }
+    
+    // Validate advanced parameters
+    const textMaxTokens = document.getElementById('text_max_tokens')?.value;
+    const textTemperature = document.getElementById('text_temperature')?.value;
+    
+    if (textMaxTokens && (parseInt(textMaxTokens) < 100 || parseInt(textMaxTokens) > 8000)) {
+        utils.showNotification('Text max tokens must be between 100 and 8000', 'error');
+        isValid = false;
+    }
+    
+    if (textTemperature && (parseFloat(textTemperature) < 0 || parseFloat(textTemperature) > 2)) {
+        utils.showNotification('Text temperature must be between 0.0 and 2.0', 'error');
+        isValid = false;
+    }
+    
+    return isValid;
+}
 }
 
 // Global AI/LLM config manager instance
