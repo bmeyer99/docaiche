@@ -85,12 +85,6 @@ class ConfigUpdateModel(BaseModel):
     log_level: Optional[str] = None
     workers: Optional[int] = None
     
-    # Service Configuration
-    api_host: Optional[str] = None
-    api_timeout: Optional[int] = None
-    websocket_url: Optional[str] = None
-    max_retries: Optional[int] = None
-    
     # Cache Management
     cache_ttl: Optional[int] = None
     cache_max_size: Optional[int] = None

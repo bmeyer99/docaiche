@@ -10,6 +10,15 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from src.web_ui.api_gateway.router import api_router
 from src.web_ui.real_time_service.websocket import websocket_router
 from src.web_ui.config.settings import WebUISettings
+from fastapi import APIRouter
+
+# Placeholder MCP router for future endpoint support
+mcp_router = APIRouter()
+
+@mcp_router.get("/status")
+async def mcp_status():
+    return {"status": "MCP endpoint ready"}
+
 import logging
 import os
 import httpx
@@ -30,7 +39,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 def create_app() -> FastAPI:
     """Create and configure FastAPI app for the Web UI Service."""
     app = FastAPI(title="Web UI Service", version="1.0.0")
-    
+
     # Add session middleware for CSRF protection
     app.add_middleware(SessionMiddleware, secret_key=os.urandom(24))
     app.add_middleware(SecurityHeadersMiddleware)
@@ -40,6 +49,7 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix="/api/v1")
     app.include_router(websocket_router)
+    app.include_router(mcp_router, prefix="/mcp")
 
     # CORS middleware for web UI integration
     app.add_middleware(

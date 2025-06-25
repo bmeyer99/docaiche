@@ -28,7 +28,7 @@ class AppConfig(BaseModel):
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     data_dir: str = "./data"
-    api_host: str = "0.0.0.0"
+    api_host: str = "http://api:8000"
     api_port: int = Field(8080, ge=1024, le=65535)
     web_port: int = Field(8081, ge=1024, le=65535)
     workers: int = Field(4, ge=1, le=16)

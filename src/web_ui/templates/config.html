@@ -87,42 +87,6 @@
                 </div>
             </div>
 
-            <!-- Service Configuration Section -->
-            <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                <button type="button" class="w-full px-4 py-4 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset rounded-t-lg" data-accordion-trigger="service-config">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900">Service Configuration</h3>
-                        <svg class="h-5 w-5 text-gray-500 transform transition-transform duration-200 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </div>
-                </button>
-                <div class="px-4 py-4 hidden" data-accordion-content="service-config">
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="api_host" class="block text-sm font-medium text-gray-700">API Host</label>
-                            <input type="url" id="api_host" name="api_host" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="http://api:8000">
-                            <p class="mt-1 text-sm text-gray-500">Main API service endpoint</p>
-                        </div>
-                        <div>
-                            <label for="api_timeout" class="block text-sm font-medium text-gray-700">API Timeout (seconds)</label>
-                            <input type="number" id="api_timeout" name="api_timeout" min="1" max="300" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <p class="mt-1 text-sm text-gray-500">Request timeout in seconds</p>
-                        </div>
-                        <div>
-                            <label for="websocket_url" class="block text-sm font-medium text-gray-700">WebSocket URL</label>
-                            <input type="url" id="websocket_url" name="websocket_url" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="ws://localhost:8080/ws">
-                            <p class="mt-1 text-sm text-gray-500">Real-time updates endpoint</p>
-                        </div>
-                        <div>
-                            <label for="max_retries" class="block text-sm font-medium text-gray-700">Max Retries</label>
-                            <input type="number" id="max_retries" name="max_retries" min="0" max="10" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <p class="mt-1 text-sm text-gray-500">Maximum retry attempts</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Cache Management Section -->
             <div class="bg-white shadow-sm rounded-lg border border-gray-200">
                 <button type="button" class="w-full px-4 py-4 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset rounded-t-lg" data-accordion-trigger="cache-config">

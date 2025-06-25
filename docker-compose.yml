@@ -3,8 +3,6 @@ services:
     build:
       context: .
       dockerfile: src/api/Dockerfile
-    ports:
-      - "4000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -53,7 +51,6 @@ services:
       - redis_data:/data
     networks:
       - docaiche
-    
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
