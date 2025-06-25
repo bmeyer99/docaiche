@@ -175,15 +175,18 @@
                     </div>
                 </button>
                 <div class="px-4 py-4 hidden" data-accordion-content="ai-config">
-                    <!-- Provider Configuration Section -->
-                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                        <h4 class="text-md font-semibold text-gray-800 mb-4">Provider Configuration</h4>
+                    <!-- Text Generation Provider Section -->
+                    <div class="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-4 mb-6">
+                        <div class="flex items-center mb-4">
+                            <span class="text-blue-600 text-xl mr-2">🤖</span>
+                            <h4 class="text-md font-semibold text-blue-800">Text Generation Provider</h4>
+                        </div>
                         
                         <!-- Provider Type and Status -->
                         <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                             <div class="flex-1">
-                                <label for="llm_provider" class="block text-sm font-medium text-gray-700 mb-1">Provider Type</label>
-                                <select id="llm_provider" name="llm_provider" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white">
+                                <label for="text_provider" class="block text-sm font-medium text-blue-700 mb-1">Provider Type</label>
+                                <select id="text_provider" name="text_provider" class="block w-full pl-3 pr-10 py-2 text-base border-blue-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white">
                                     <option value="ollama">🦙 Ollama (Local)</option>
                                     <option value="openai">🤖 OpenAI</option>
                                     <option value="openai-compatible">🔗 OpenAI Compatible</option>
@@ -191,108 +194,70 @@
                                     <option value="custom">⚙️ Custom Endpoint</option>
                                 </select>
                             </div>
-                            <div class="flex items-center sm:mt-6" role="status" aria-live="polite" aria-label="Connection status">
-                                <span class="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2" id="connection-status-dot"></span>
-                                <span class="text-sm font-medium text-gray-600" id="connection-status-text">Not Configured</span>
+                            <div class="flex items-center sm:mt-6" role="status" aria-live="polite" aria-label="Text generation connection status">
+                                <span class="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2" id="text-connection-status-dot"></span>
+                                <span class="text-sm font-medium text-blue-600" id="text-connection-status-text">Not Configured</span>
                             </div>
                         </div>
 
                         <!-- Base URL Configuration -->
                         <div class="mb-4">
-                            <label for="llm_base_url" class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
+                            <label for="text_base_url" class="block text-sm font-medium text-blue-700 mb-1">Base URL</label>
                             <div class="flex flex-col sm:flex-row gap-2">
-                                <input type="url" id="llm_base_url" name="llm_base_url"
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono text-sm"
+                                <input type="url" id="text_base_url" name="text_base_url"
+                                       class="flex-1 px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono text-sm"
                                        placeholder="http://localhost:11434/api">
-                                <button type="button" id="test-connection"
+                                <button type="button" id="test-text-connection"
                                         class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
                                     Test Connection
                                 </button>
                             </div>
-                            <p class="mt-1 text-sm text-gray-500">API endpoint for your LLM provider</p>
+                            <p class="mt-1 text-sm text-blue-600">API endpoint for text generation provider</p>
                         </div>
 
                         <!-- API Key (Optional) -->
                         <div class="mb-4">
-                            <label for="llm_api_key" class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                            <label for="text_api_key" class="block text-sm font-medium text-blue-700 mb-1">API Key</label>
                             <div class="relative">
-                                <input type="password" id="llm_api_key" name="llm_api_key"
-                                       class="block w-full pr-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                <input type="password" id="text_api_key" name="text_api_key"
+                                       class="block w-full pr-10 px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                        placeholder="Enter API key (optional for local endpoints)">
-                                <button type="button" id="toggle-api-key" class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600">
-                                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <button type="button" id="toggle-text-api-key" class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-blue-600">
+                                    <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
                                 </button>
                             </div>
-                            <p class="mt-1 text-sm text-gray-500">Required for cloud providers, optional for local endpoints</p>
+                            <p class="mt-1 text-sm text-blue-600">Required for cloud providers, optional for local endpoints</p>
                         </div>
 
-                        <!-- Connection Test Results -->
-                        <div id="connection-test-results" class="hidden mt-4 p-3 rounded-md border">
+                        <!-- Text Generation Model Selection -->
+                        <div class="mb-4">
+                            <label for="text_model_dropdown" class="block text-sm font-medium text-blue-700 mb-1">Text Generation Model</label>
+                            <div class="relative">
+                                <select id="text_model_dropdown" name="text_model_dropdown"
+                                        class="block w-full pl-3 pr-10 py-2 text-base border border-blue-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                                    <option value="">Configure provider first</option>
+                                </select>
+                                <!-- Loading spinner -->
+                                <div id="text-model-loading" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <svg class="animate-spin h-4 w-4 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-blue-600">Model for text generation and chat responses</p>
+                        </div>
+
+                        <!-- Connection Test Results for Text Provider -->
+                        <div id="text-connection-test-results" class="hidden mt-4 p-3 rounded-md border border-blue-200 bg-blue-50">
                             <!-- Results will be populated by JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- Model Selection Section -->
-                    <div class="bg-blue-50 rounded-lg p-4 mb-6">
-                        <h4 class="text-md font-semibold text-gray-800 mb-4">Model Selection</h4>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                            <!-- Text Generation Model -->
-                            <div>
-                                <label for="llm_text_model_dropdown" class="block text-sm font-medium text-gray-700 mb-1">
-                                    🤖 Text Generation Model
-                                </label>
-                                <div class="relative">
-                                    <select id="llm_text_model_dropdown" name="llm_text_model_dropdown"
-                                            class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                                        <option value="">Configure endpoint first</option>
-                                    </select>
-                                    <!-- Loading spinner -->
-                                    <div id="text-model-loading" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    </div>
-                                </div>
-                                <p class="mt-1 text-xs text-gray-500">Model for text generation and chat</p>
-                            </div>
-
-                            <!-- Embedding Model -->
-                            <div>
-                                <label for="llm_embedding_model_dropdown" class="block text-sm font-medium text-gray-700 mb-1">
-                                    🔍 Embedding Model
-                                </label>
-                                <div class="relative">
-                                    <select id="llm_embedding_model_dropdown" name="llm_embedding_model_dropdown"
-                                            class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                                        <option value="">Configure endpoint first</option>
-                                    </select>
-                                    <!-- Loading spinner -->
-                                    <div id="embedding-model-loading" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    </div>
-                                </div>
-                                <p class="mt-1 text-xs text-gray-500">Model for vector embeddings and semantic search</p>
-                            </div>
-                        </div>
-
-                        <!-- Refresh Models Button -->
-                        <div class="flex justify-center mb-4">
-                            <button type="button" id="refresh-models"
-                                    class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                                🔄 Refresh Models
-                            </button>
                         </div>
 
                         <!-- Text Generation Model Information Display -->
-                        <div id="text-model-info" class="hidden bg-white rounded-md p-3 border border-blue-200 transition-all duration-200 mb-3">
+                        <div id="text-model-info" class="hidden bg-white rounded-md p-3 border border-blue-200 transition-all duration-200 mt-4">
                             <div class="text-sm">
                                 <div class="flex items-center mb-1">
                                     <span class="text-blue-600 mr-2">🤖</span>
@@ -304,6 +269,114 @@
                                     <span id="text-model-modified"></span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Provider Sharing Option -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="use_same_provider" name="use_same_provider" checked
+                                   class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3">
+                            <label for="use_same_provider" class="text-sm font-medium text-gray-700">
+                                Use same provider for embedding models
+                            </label>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500 ml-6">When checked, embedding models will use the same provider configuration as text generation</p>
+                    </div>
+
+                    <!-- Embedding Provider Section (Hidden by default) -->
+                    <div id="embedding_provider_section" class="bg-green-50 border-l-4 border-green-400 rounded-lg p-4 mb-6 hidden">
+                        <div class="flex items-center mb-4">
+                            <span class="text-green-600 text-xl mr-2">🔍</span>
+                            <h4 class="text-md font-semibold text-green-800">Embedding Provider</h4>
+                        </div>
+                        
+                        <!-- Provider Type and Status -->
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                            <div class="flex-1">
+                                <label for="embedding_provider" class="block text-sm font-medium text-green-700 mb-1">Provider Type</label>
+                                <select id="embedding_provider" name="embedding_provider" class="block w-full pl-3 pr-10 py-2 text-base border-green-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md bg-white">
+                                    <option value="ollama">🦙 Ollama (Local)</option>
+                                    <option value="openai">🤖 OpenAI</option>
+                                    <option value="openai-compatible">🔗 OpenAI Compatible</option>
+                                    <option value="anthropic">🧠 Anthropic Claude</option>
+                                    <option value="custom">⚙️ Custom Endpoint</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center sm:mt-6" role="status" aria-live="polite" aria-label="Embedding connection status">
+                                <span class="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2" id="embedding-connection-status-dot"></span>
+                                <span class="text-sm font-medium text-green-600" id="embedding-connection-status-text">Not Configured</span>
+                            </div>
+                        </div>
+
+                        <!-- Base URL Configuration -->
+                        <div class="mb-4">
+                            <label for="embedding_base_url" class="block text-sm font-medium text-green-700 mb-1">Base URL</label>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="url" id="embedding_base_url" name="embedding_base_url"
+                                       class="flex-1 px-3 py-2 border border-green-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm font-mono text-sm"
+                                       placeholder="http://localhost:11434/api">
+                                <button type="button" id="test-embedding-connection"
+                                        class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto">
+                                    Test Connection
+                                </button>
+                            </div>
+                            <p class="mt-1 text-sm text-green-600">API endpoint for embedding provider</p>
+                        </div>
+
+                        <!-- API Key (Optional) -->
+                        <div class="mb-4">
+                            <label for="embedding_api_key" class="block text-sm font-medium text-green-700 mb-1">API Key</label>
+                            <div class="relative">
+                                <input type="password" id="embedding_api_key" name="embedding_api_key"
+                                       class="block w-full pr-10 px-3 py-2 border border-green-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                                       placeholder="Enter API key (optional for local endpoints)">
+                                <button type="button" id="toggle-embedding-api-key" class="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-green-600">
+                                    <svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="mt-1 text-sm text-green-600">Required for cloud providers, optional for local endpoints</p>
+                        </div>
+
+                        <!-- Connection Test Results for Embedding Provider -->
+                        <div id="embedding-connection-test-results" class="hidden mt-4 p-3 rounded-md border border-green-200 bg-green-50">
+                            <!-- Results will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Embedding Model Selection Section -->
+                    <div class="bg-green-50 border-l-4 border-green-400 rounded-lg p-4 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="text-green-600 text-xl mr-2">🔍</span>
+                                <h4 class="text-md font-semibold text-green-800">Embedding Model Selection</h4>
+                            </div>
+                            <button type="button" id="refresh-embedding-models"
+                                    class="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-md hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                        
+                        <!-- Embedding Model -->
+                        <div class="mb-4">
+                            <label for="embedding_model_dropdown" class="block text-sm font-medium text-green-700 mb-1">Embedding Model</label>
+                            <div class="relative">
+                                <select id="embedding_model_dropdown" name="embedding_model_dropdown"
+                                        class="block w-full pl-3 pr-10 py-2 text-base border border-green-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                                    <option value="">Configure provider first</option>
+                                </select>
+                                <!-- Loading spinner -->
+                                <div id="embedding-model-loading" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <svg class="animate-spin h-4 w-4 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-green-600">Model for vector embeddings and semantic search</p>
                         </div>
 
                         <!-- Embedding Model Information Display -->
@@ -323,11 +396,15 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Hidden inputs for actual model values -->
-                        <input type="hidden" id="llm_model" name="llm_model">
-                        <input type="hidden" id="llm_embedding_model" name="llm_embedding_model">
                     </div>
+
+                    <!-- Hidden inputs for actual model values -->
+                    <input type="hidden" id="llm_model" name="llm_model">
+                    <input type="hidden" id="llm_embedding_model" name="llm_embedding_model">
+                    <!-- Legacy compatibility -->
+                    <input type="hidden" id="llm_provider" name="llm_provider">
+                    <input type="hidden" id="llm_base_url" name="llm_base_url">
+                    <input type="hidden" id="llm_api_key" name="llm_api_key">
 
                     <!-- Advanced Parameters Section -->
                     <div class="mt-6">

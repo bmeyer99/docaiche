@@ -1,4 +1,4 @@
-// AI/LLM Configuration Management Module
+// AI/LLM Configuration Management Module - Dual Provider Support
 class AILLMConfigManager {
     constructor() {
         this.modelCache = new Map();
@@ -30,49 +30,72 @@ class AILLMConfigManager {
                 requiresKey: false
             }
         };
-        this.isConnecting = false;
+        this.isConnecting = {
+            text: false,
+            embedding: false
+        };
     }
 
     init() {
-        this.bindAILLMEvents();
+        this.bindDualProviderEvents();
         this.setupProviderDefaults();
+        this.initializeProviderSharing();
     }
 
-    bindAILLMEvents() {
-        // Provider change handler
-        const providerSelect = document.getElementById('llm_provider');
-        if (providerSelect) {
-            providerSelect.addEventListener('change', () => this.onProviderChange());
+    bindDualProviderEvents() {
+        // Provider sharing checkbox
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        if (sharingCheckbox) {
+            sharingCheckbox.addEventListener('change', () => this.onProviderSharingChange());
         }
 
-        // Test connection button
-        const testButton = document.getElementById('test-connection');
-        if (testButton) {
-            testButton.addEventListener('click', () => this.testConnection());
+        // Text provider events
+        const textProviderSelect = document.getElementById('text_provider');
+        if (textProviderSelect) {
+            textProviderSelect.addEventListener('change', () => this.onTextProviderChange());
         }
 
-        // Refresh models button
-        const refreshButton = document.getElementById('refresh-models');
-        if (refreshButton) {
-            refreshButton.addEventListener('click', () => this.refreshModels());
+        const testTextConnectionBtn = document.getElementById('test-text-connection');
+        if (testTextConnectionBtn) {
+            testTextConnectionBtn.addEventListener('click', () => this.testTextConnection());
         }
 
-        // API key toggle visibility
-        const toggleKeyButton = document.getElementById('toggle-api-key');
-        if (toggleKeyButton) {
-            toggleKeyButton.addEventListener('click', () => this.toggleApiKeyVisibility());
+        const toggleTextKeyBtn = document.getElementById('toggle-text-api-key');
+        if (toggleTextKeyBtn) {
+            toggleTextKeyBtn.addEventListener('click', () => this.toggleApiKeyVisibility('text'));
         }
 
-        // Text generation model selection handler
-        const textModelSelect = document.getElementById('llm_text_model_dropdown');
+        // Embedding provider events
+        const embeddingProviderSelect = document.getElementById('embedding_provider');
+        if (embeddingProviderSelect) {
+            embeddingProviderSelect.addEventListener('change', () => this.onEmbeddingProviderChange());
+        }
+
+        const testEmbeddingConnectionBtn = document.getElementById('test-embedding-connection');
+        if (testEmbeddingConnectionBtn) {
+            testEmbeddingConnectionBtn.addEventListener('click', () => this.testEmbeddingConnection());
+        }
+
+        const toggleEmbeddingKeyBtn = document.getElementById('toggle-embedding-api-key');
+        if (toggleEmbeddingKeyBtn) {
+            toggleEmbeddingKeyBtn.addEventListener('click', () => this.toggleApiKeyVisibility('embedding'));
+        }
+
+        // Model selection events
+        const textModelSelect = document.getElementById('text_model_dropdown');
         if (textModelSelect) {
             textModelSelect.addEventListener('change', () => this.onTextModelChange());
         }
 
-        // Embedding model selection handler
-        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
+        const embeddingModelSelect = document.getElementById('embedding_model_dropdown');
         if (embeddingModelSelect) {
             embeddingModelSelect.addEventListener('change', () => this.onEmbeddingModelChange());
+        }
+
+        // Refresh models buttons
+        const refreshEmbeddingBtn = document.getElementById('refresh-embedding-models');
+        if (refreshEmbeddingBtn) {
+            refreshEmbeddingBtn.addEventListener('click', () => this.refreshEmbeddingModels());
         }
 
         // Advanced settings toggle
@@ -89,24 +112,92 @@ class AILLMConfigManager {
     }
 
     setupProviderDefaults() {
-        const provider = document.getElementById('llm_provider')?.value || 'ollama';
-        this.updateProviderDefaults(provider);
+        const textProvider = document.getElementById('text_provider')?.value || 'ollama';
+        const embeddingProvider = document.getElementById('embedding_provider')?.value || 'ollama';
+        
+        this.updateProviderDefaults('text', textProvider);
+        this.updateProviderDefaults('embedding', embeddingProvider);
     }
 
-    onProviderChange() {
-        const provider = document.getElementById('llm_provider').value;
-        this.updateProviderDefaults(provider);
-        this.clearModels();
-        this.updateConnectionStatus('disconnected', 'Not Configured');
+    initializeProviderSharing() {
+        const checkbox = document.getElementById('use_same_provider');
+        if (checkbox) {
+            this.onProviderSharingChange();
+        }
     }
 
-    updateProviderDefaults(provider) {
+    onProviderSharingChange() {
+        const checkbox = document.getElementById('use_same_provider');
+        const embeddingSection = document.getElementById('embedding_provider_section');
+        
+        if (!checkbox || !embeddingSection) return;
+
+        if (checkbox.checked) {
+            // Hide embedding provider section
+            embeddingSection.classList.add('hidden');
+            // Copy text provider settings to embedding
+            this.copyTextToEmbeddingProvider();
+        } else {
+            // Show embedding provider section
+            embeddingSection.classList.remove('hidden');
+        }
+    }
+
+    copyTextToEmbeddingProvider() {
+        const textProvider = document.getElementById('text_provider')?.value;
+        const textBaseUrl = document.getElementById('text_base_url')?.value;
+        const textApiKey = document.getElementById('text_api_key')?.value;
+
+        const embeddingProvider = document.getElementById('embedding_provider');
+        const embeddingBaseUrl = document.getElementById('embedding_base_url');
+        const embeddingApiKey = document.getElementById('embedding_api_key');
+
+        if (embeddingProvider && textProvider) {
+            embeddingProvider.value = textProvider;
+        }
+        if (embeddingBaseUrl && textBaseUrl) {
+            embeddingBaseUrl.value = textBaseUrl;
+        }
+        if (embeddingApiKey && textApiKey) {
+            embeddingApiKey.value = textApiKey;
+        }
+
+        // Update embedding provider defaults
+        if (textProvider) {
+            this.updateProviderDefaults('embedding', textProvider);
+        }
+    }
+
+    onTextProviderChange() {
+        const provider = document.getElementById('text_provider').value;
+        this.updateProviderDefaults('text', provider);
+        this.clearModels('text');
+        this.updateConnectionStatus('text', 'disconnected', 'Not Configured');
+
+        // If using same provider, update embedding too
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        if (sharingCheckbox?.checked) {
+            this.copyTextToEmbeddingProvider();
+            this.clearModels('embedding');
+            this.updateConnectionStatus('embedding', 'disconnected', 'Not Configured');
+        }
+    }
+
+    onEmbeddingProviderChange() {
+        const provider = document.getElementById('embedding_provider').value;
+        this.updateProviderDefaults('embedding', provider);
+        this.clearModels('embedding');
+        this.updateConnectionStatus('embedding', 'disconnected', 'Not Configured');
+    }
+
+    updateProviderDefaults(providerType, provider) {
         const defaults = this.providerDefaults[provider];
         if (!defaults) return;
 
-        const baseUrlField = document.getElementById('llm_base_url');
-        const apiKeyField = document.getElementById('llm_api_key');
-        const testButton = document.getElementById('test-connection');
+        const prefix = providerType === 'text' ? 'text' : 'embedding';
+        const baseUrlField = document.getElementById(`${prefix}_base_url`);
+        const apiKeyField = document.getElementById(`${prefix}_api_key`);
+        const testButton = document.getElementById(`test-${prefix}-connection`);
 
         if (baseUrlField && defaults.baseUrl) {
             baseUrlField.value = defaults.baseUrl;
@@ -128,23 +219,32 @@ class AILLMConfigManager {
         }
     }
 
-    async testConnection() {
-        if (this.isConnecting) return;
+    async testTextConnection() {
+        await this.testConnection('text');
+    }
 
-        const provider = document.getElementById('llm_provider').value;
-        const baseUrl = document.getElementById('llm_base_url').value;
-        const apiKey = document.getElementById('llm_api_key').value;
+    async testEmbeddingConnection() {
+        await this.testConnection('embedding');
+    }
+
+    async testConnection(providerType) {
+        if (this.isConnecting[providerType]) return;
+
+        const prefix = providerType === 'text' ? 'text' : 'embedding';
+        const provider = document.getElementById(`${prefix}_provider`).value;
+        const baseUrl = document.getElementById(`${prefix}_base_url`).value;
+        const apiKey = document.getElementById(`${prefix}_api_key`).value;
 
         if (!baseUrl) {
             utils.showNotification('Please enter a base URL', 'error');
             return;
         }
 
-        this.isConnecting = true;
-        this.updateConnectionStatus('testing', 'Testing...');
-        this.showConnectionResults('Testing connection to ' + baseUrl, 'info');
+        this.isConnecting[providerType] = true;
+        this.updateConnectionStatus(providerType, 'testing', 'Testing...');
+        this.showConnectionResults(providerType, `Testing connection to ${baseUrl}`, 'info');
 
-        const testButton = document.getElementById('test-connection');
+        const testButton = document.getElementById(`test-${prefix}-connection`);
         if (testButton) {
             testButton.disabled = true;
             testButton.innerHTML = 'Testing...';
@@ -154,21 +254,23 @@ class AILLMConfigManager {
             const response = await this.makeTestRequest(provider, baseUrl, apiKey);
             
             if (response.success) {
-                this.updateConnectionStatus('connected', 'Connected');
+                this.updateConnectionStatus(providerType, 'connected', 'Connected');
                 this.showConnectionResults(
+                    providerType,
                     `✓ Connection successful!<br>` +
                     `✓ Response time: ${response.responseTime}ms<br>` +
                     `✓ Found ${response.modelsCount} models`,
                     'success'
                 );
-                // Load models using the existing function but with real data
-                await this.loadModels(provider, baseUrl, apiKey);
+                // Load models for this provider type
+                await this.loadModels(providerType, provider, baseUrl, apiKey);
             } else {
                 throw new Error(response.error || 'Connection failed');
             }
         } catch (error) {
-            this.updateConnectionStatus('error', 'Connection Failed');
+            this.updateConnectionStatus(providerType, 'error', 'Connection Failed');
             this.showConnectionResults(
+                providerType,
                 `⚠️ Connection Failed<br><br>` +
                 `Cannot reach endpoint at ${baseUrl}<br><br>` +
                 `Details:<br>` +
@@ -178,7 +280,7 @@ class AILLMConfigManager {
                 'error'
             );
         } finally {
-            this.isConnecting = false;
+            this.isConnecting[providerType] = false;
             if (testButton) {
                 testButton.disabled = false;
                 testButton.innerHTML = 'Test Connection';
@@ -192,9 +294,7 @@ class AILLMConfigManager {
         try {
             console.log(`Testing connection to ${provider} at ${baseUrl}`);
             
-            // Use backend proxy endpoint to avoid CSP issues
             const endpoint = '/api/v1/llm/test-connection';
-            
             const requestData = {
                 provider: provider,
                 base_url: baseUrl,
@@ -204,7 +304,6 @@ class AILLMConfigManager {
             console.log(`Making request to: ${endpoint}`);
             console.log('Request data:', requestData);
             
-            // Create AbortController for timeout
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
                 console.log('Request timed out');
@@ -246,7 +345,6 @@ class AILLMConfigManager {
             
             let errorMessage = error.message;
             
-            // Provide more specific error messages
             if (error.name === 'AbortError') {
                 errorMessage = 'Request timed out after 15 seconds';
             } else if (error.message.includes('Failed to fetch')) {
@@ -263,34 +361,32 @@ class AILLMConfigManager {
         }
     }
 
-    async loadModels(provider, baseUrl, apiKey) {
-        const cacheKey = `${provider}:${baseUrl}`;
+    async loadModels(providerType, provider, baseUrl, apiKey) {
+        const cacheKey = `${providerType}:${provider}:${baseUrl}`;
         const cached = this.getModelsFromCache(cacheKey);
         
         if (cached) {
-            this.populateModels(cached);
+            this.populateModels(providerType, cached);
             return;
         }
 
-        this.showModelLoading(true);
+        this.showModelLoading(providerType, true);
 
         try {
             const models = await this.fetchModels(provider, baseUrl, apiKey);
             this.setModelsCache(cacheKey, models);
-            this.populateModels(models);
+            this.populateModels(providerType, models);
         } catch (error) {
             console.error('Failed to load models:', error);
             utils.showNotification('Failed to load models', 'error');
         } finally {
-            this.showModelLoading(false);
+            this.showModelLoading(providerType, false);
         }
     }
 
     async fetchModels(provider, baseUrl, apiKey) {
         try {
-            // Use backend proxy endpoint to avoid CSP issues
             const endpoint = '/api/v1/llm/test-connection';
-            
             const requestData = {
                 provider: provider,
                 base_url: baseUrl,
@@ -321,7 +417,6 @@ class AILLMConfigManager {
                 throw new Error(data.message || 'Failed to fetch models');
             }
             
-            // Parse backend response format
             return this.parseBackendModelsResponse(data, provider);
             
         } catch (error) {
@@ -330,53 +425,7 @@ class AILLMConfigManager {
         }
     }
 
-    parseModelsResponse(data, provider) {
-        const models = [];
-        
-        switch (provider) {
-            case 'ollama':
-                // Ollama returns { models: [...] }
-                if (data.models && Array.isArray(data.models)) {
-                    return data.models.map(model => ({
-                        name: model.name,
-                        description: model.details?.family || 'Ollama model',
-                        size: this.formatSize(model.size),
-                        modified: this.formatDate(model.modified_at)
-                    }));
-                }
-                break;
-                
-            case 'openai':
-            case 'openai-compatible':
-                // OpenAI API returns { data: [...] }
-                if (data.data && Array.isArray(data.data)) {
-                    return data.data.map(model => ({
-                        name: model.id,
-                        description: model.description || 'OpenAI model',
-                        size: 'N/A',
-                        modified: this.formatDate(model.created)
-                    }));
-                }
-                break;
-                
-            default:
-                // Try to handle generic format
-                const modelArray = data.models || data.data || data;
-                if (Array.isArray(modelArray)) {
-                    return modelArray.map(model => ({
-                        name: model.name || model.id || model.model,
-                        description: model.description || model.details?.family || 'Model',
-                        size: this.formatSize(model.size) || 'N/A',
-                        modified: this.formatDate(model.modified_at || model.created) || 'Unknown'
-                    }));
-                }
-        }
-        
-        return [];
-    }
-
     parseBackendModelsResponse(data, provider) {
-        // Parse models from backend API response format
         if (!data.models || !Array.isArray(data.models)) {
             return [];
         }
@@ -421,7 +470,6 @@ class AILLMConfigManager {
     }
 
     getModelType(modelName) {
-        // Determine model type based on name patterns
         const embeddingPatterns = [
             /embed/i,
             /embedding/i,
@@ -468,22 +516,24 @@ class AILLMConfigManager {
         }
     }
 
-    populateModels(models) {
-        const textModelSelect = document.getElementById('llm_text_model_dropdown');
-        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
-        
-        if (!textModelSelect || !embeddingModelSelect) return;
+    populateModels(providerType, models) {
+        const modelSelect = document.getElementById(`${providerType}_model_dropdown`);
+        if (!modelSelect) return;
+
+        // Filter models by type
+        const filteredModels = models.filter(model => {
+            if (providerType === 'text') {
+                return model.type === 'text-generation';
+            } else {
+                return model.type === 'embedding';
+            }
+        });
 
         // Clear existing options
-        textModelSelect.innerHTML = '<option value="">Select a text generation model...</option>';
-        embeddingModelSelect.innerHTML = '<option value="">Select an embedding model...</option>';
+        modelSelect.innerHTML = `<option value="">Select a ${providerType} model...</option>`;
 
-        // Separate models by type
-        const textModels = models.filter(model => model.type === 'text-generation');
-        const embeddingModels = models.filter(model => model.type === 'embedding');
-
-        // Populate text generation models
-        textModels.forEach(model => {
+        // Populate models
+        filteredModels.forEach(model => {
             const option = document.createElement('option');
             option.value = model.name;
             option.textContent = model.name;
@@ -491,84 +541,47 @@ class AILLMConfigManager {
             option.dataset.size = model.size;
             option.dataset.modified = model.modified;
             option.dataset.type = model.type;
-            textModelSelect.appendChild(option);
+            modelSelect.appendChild(option);
         });
 
-        // Populate embedding models
-        embeddingModels.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.name;
-            option.textContent = model.name;
-            option.dataset.description = model.description;
-            option.dataset.size = model.size;
-            option.dataset.modified = model.modified;
-            option.dataset.type = model.type;
-            embeddingModelSelect.appendChild(option);
-        });
-
-        // Enable dropdowns
-        textModelSelect.disabled = false;
-        embeddingModelSelect.disabled = false;
+        // Enable dropdown
+        modelSelect.disabled = false;
         
-        const refreshButton = document.getElementById('refresh-models');
-        if (refreshButton) {
-            refreshButton.disabled = false;
-        }
-
-        console.log(`Populated ${textModels.length} text generation models and ${embeddingModels.length} embedding models`);
+        console.log(`Populated ${filteredModels.length} ${providerType} models`);
     }
 
     onTextModelChange() {
-        const textModelSelect = document.getElementById('llm_text_model_dropdown');
-        const selectedOption = textModelSelect.selectedOptions[0];
-        const hiddenInput = document.getElementById('llm_model');
-        const modelInfo = document.getElementById('text-model-info');
-
-        if (selectedOption && selectedOption.value) {
-            hiddenInput.value = selectedOption.value;
-            
-            // Show text model information
-            if (modelInfo) {
-                const nameEl = document.getElementById('text-model-info-name');
-                const descEl = document.getElementById('text-model-info-description');
-                const sizeEl = document.getElementById('text-model-size');
-                const modifiedEl = document.getElementById('text-model-modified');
-
-                if (nameEl) nameEl.textContent = selectedOption.value;
-                if (descEl) descEl.textContent = selectedOption.dataset.description || '';
-                if (sizeEl) sizeEl.textContent = selectedOption.dataset.size || '';
-                if (modifiedEl) modifiedEl.textContent = selectedOption.dataset.modified || '';
-
-                modelInfo.classList.remove('hidden');
-            }
-            
-            console.log(`Selected text generation model: ${selectedOption.value}`);
-        } else {
-            hiddenInput.value = '';
-            if (modelInfo) {
-                modelInfo.classList.add('hidden');
-            }
-        }
+        this.onModelChange('text');
     }
 
     onEmbeddingModelChange() {
-        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
-        const selectedOption = embeddingModelSelect.selectedOptions[0];
-        const hiddenInput = document.getElementById('llm_embedding_model');
-        const modelInfo = document.getElementById('embedding-model-info');
+        this.onModelChange('embedding');
+        
+        // Auto-sync with AnythingLLM
+        const embeddingModelSelect = document.getElementById('embedding_model_dropdown');
+        const selectedOption = embeddingModelSelect?.selectedOptions[0];
+        if (selectedOption?.value) {
+            this.syncEmbeddingModelToAnythingLLM(selectedOption.value);
+        }
+    }
+
+    onModelChange(modelType) {
+        const modelSelect = document.getElementById(`${modelType}_model_dropdown`);
+        const selectedOption = modelSelect?.selectedOptions[0];
+        const hiddenInput = document.getElementById(modelType === 'text' ? 'llm_model' : 'llm_embedding_model');
+        const modelInfo = document.getElementById(`${modelType}-model-info`);
 
         if (selectedOption && selectedOption.value) {
-            hiddenInput.value = selectedOption.value;
+            if (hiddenInput) {
+                hiddenInput.value = selectedOption.value;
+            }
             
-            // Auto-sync with AnythingLLM
-            this.syncEmbeddingModelToAnythingLLM(selectedOption.value);
-            
-            // Show embedding model information
+            // Show model information
             if (modelInfo) {
-                const nameEl = document.getElementById('embedding-model-info-name');
-                const descEl = document.getElementById('embedding-model-info-description');
-                const sizeEl = document.getElementById('embedding-model-size');
-                const modifiedEl = document.getElementById('embedding-model-modified');
+                const nameEl = document.getElementById(`${modelType}-model-info-name`);
+                const descEl = document.getElementById(`${modelType}-model-info-description`);
+                const sizeEl = document.getElementById(`${modelType}-model-size`);
+                const modifiedEl = document.getElementById(`${modelType}-model-modified`);
 
                 if (nameEl) nameEl.textContent = selectedOption.value;
                 if (descEl) descEl.textContent = selectedOption.dataset.description || '';
@@ -578,9 +591,11 @@ class AILLMConfigManager {
                 modelInfo.classList.remove('hidden');
             }
             
-            console.log(`Selected embedding model: ${selectedOption.value}`);
+            console.log(`Selected ${modelType} model: ${selectedOption.value}`);
         } else {
-            hiddenInput.value = '';
+            if (hiddenInput) {
+                hiddenInput.value = '';
+            }
             if (modelInfo) {
                 modelInfo.classList.add('hidden');
             }
@@ -588,8 +603,14 @@ class AILLMConfigManager {
     }
 
     syncEmbeddingModelToAnythingLLM(embeddingModel) {
-        // Auto-sync embedding model selection to AnythingLLM configuration
-        const provider = document.getElementById('llm_provider')?.value || 'ollama';
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        let provider;
+        
+        if (sharingCheckbox?.checked) {
+            provider = document.getElementById('text_provider')?.value || 'ollama';
+        } else {
+            provider = document.getElementById('embedding_provider')?.value || 'ollama';
+        }
         
         // Set AnythingLLM embedding model fields
         const embeddingModelField = document.getElementById('anythingllm_embedding_model');
@@ -608,76 +629,56 @@ class AILLMConfigManager {
         // Show notification about auto-sync
         utils.showNotification(`Embedding model ${embeddingModel} auto-synced to AnythingLLM (manual save required)`, 'success');
         
-        // Skip automatic API configuration update - configuration endpoint not yet implemented
         console.log('AnythingLLM auto-sync completed - configuration will be saved with form submission');
     }
 
-    async updateAnythingLLMEmbeddingConfig(embeddingModel, provider) {
-        // AnythingLLM configuration API endpoint not yet implemented
-        // This function is disabled to prevent console errors
-        console.log('AnythingLLM auto-configuration disabled - manual configuration required');
-        return;
-    }
-
-    refreshModels() {
-        const provider = document.getElementById('llm_provider').value;
-        const baseUrl = document.getElementById('llm_base_url').value;
-        const apiKey = document.getElementById('llm_api_key').value;
+    refreshEmbeddingModels() {
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        let provider, baseUrl, apiKey;
+        
+        if (sharingCheckbox?.checked) {
+            provider = document.getElementById('text_provider')?.value;
+            baseUrl = document.getElementById('text_base_url')?.value;
+            apiKey = document.getElementById('text_api_key')?.value;
+        } else {
+            provider = document.getElementById('embedding_provider')?.value;
+            baseUrl = document.getElementById('embedding_base_url')?.value;
+            apiKey = document.getElementById('embedding_api_key')?.value;
+        }
 
         if (!baseUrl) {
-            utils.showNotification('Please configure endpoint first', 'warning');
+            utils.showNotification('Please configure provider first', 'warning');
             return;
         }
 
         // Clear cache and reload
-        const cacheKey = `${provider}:${baseUrl}`;
+        const cacheKey = `embedding:${provider}:${baseUrl}`;
         this.modelCache.delete(cacheKey);
-        this.loadModels(provider, baseUrl, apiKey);
+        this.loadModels('embedding', provider, baseUrl, apiKey);
     }
 
-    clearModels() {
-        const textModelSelect = document.getElementById('llm_text_model_dropdown');
-        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
-        const textHiddenInput = document.getElementById('llm_model');
-        const embeddingHiddenInput = document.getElementById('llm_embedding_model');
-        const textModelInfo = document.getElementById('text-model-info');
-        const embeddingModelInfo = document.getElementById('embedding-model-info');
+    clearModels(providerType) {
+        const modelSelect = document.getElementById(`${providerType}_model_dropdown`);
+        const hiddenInput = document.getElementById(providerType === 'text' ? 'llm_model' : 'llm_embedding_model');
+        const modelInfo = document.getElementById(`${providerType}-model-info`);
 
-        if (textModelSelect) {
-            textModelSelect.innerHTML = '<option value="">Configure endpoint first</option>';
-            textModelSelect.disabled = true;
+        if (modelSelect) {
+            modelSelect.innerHTML = '<option value="">Configure provider first</option>';
+            modelSelect.disabled = true;
         }
 
-        if (embeddingModelSelect) {
-            embeddingModelSelect.innerHTML = '<option value="">Configure endpoint first</option>';
-            embeddingModelSelect.disabled = true;
+        if (hiddenInput) {
+            hiddenInput.value = '';
         }
 
-        if (textHiddenInput) {
-            textHiddenInput.value = '';
-        }
-
-        if (embeddingHiddenInput) {
-            embeddingHiddenInput.value = '';
-        }
-
-        if (textModelInfo) {
-            textModelInfo.classList.add('hidden');
-        }
-
-        if (embeddingModelInfo) {
-            embeddingModelInfo.classList.add('hidden');
-        }
-
-        const refreshButton = document.getElementById('refresh-models');
-        if (refreshButton) {
-            refreshButton.disabled = true;
+        if (modelInfo) {
+            modelInfo.classList.add('hidden');
         }
     }
 
-    toggleApiKeyVisibility() {
-        const apiKeyField = document.getElementById('llm_api_key');
-        const toggleButton = document.getElementById('toggle-api-key');
+    toggleApiKeyVisibility(providerType) {
+        const apiKeyField = document.getElementById(`${providerType}_api_key`);
+        const toggleButton = document.getElementById(`toggle-${providerType}-api-key`);
         
         if (apiKeyField && toggleButton) {
             const isPassword = apiKeyField.type === 'password';
@@ -685,7 +686,6 @@ class AILLMConfigManager {
             
             const svg = toggleButton.querySelector('svg');
             if (svg) {
-                // Toggle eye icon state (you might want to change the SVG)
                 svg.classList.toggle('text-gray-600');
             }
         }
@@ -708,9 +708,10 @@ class AILLMConfigManager {
         }
     }
 
-    updateConnectionStatus(status, text) {
-        const statusDot = document.getElementById('connection-status-dot');
-        const statusText = document.getElementById('connection-status-text');
+    updateConnectionStatus(providerType, status, text) {
+        const prefix = providerType === 'text' ? 'text' : 'embedding';
+        const statusDot = document.getElementById(`${prefix}-connection-status-dot`);
+        const statusText = document.getElementById(`${prefix}-connection-status-text`);
 
         if (statusDot) {
             statusDot.className = `inline-block w-2 h-2 rounded-full mr-2`;
@@ -734,8 +735,9 @@ class AILLMConfigManager {
         }
     }
 
-    showConnectionResults(message, type) {
-        const resultsContainer = document.getElementById('connection-test-results');
+    showConnectionResults(providerType, message, type) {
+        const prefix = providerType === 'text' ? 'text' : 'embedding';
+        const resultsContainer = document.getElementById(`${prefix}-connection-test-results`);
         if (!resultsContainer) return;
 
         const typeClasses = {
@@ -749,34 +751,20 @@ class AILLMConfigManager {
         resultsContainer.classList.remove('hidden');
     }
 
-    showModelLoading(show) {
-        const textLoadingSpinner = document.getElementById('text-model-loading');
-        const embeddingLoadingSpinner = document.getElementById('embedding-model-loading');
-        const textModelSelect = document.getElementById('llm_text_model_dropdown');
-        const embeddingModelSelect = document.getElementById('llm_embedding_model_dropdown');
+    showModelLoading(providerType, show) {
+        const loadingSpinner = document.getElementById(`${providerType}-model-loading`);
+        const modelSelect = document.getElementById(`${providerType}_model_dropdown`);
 
-        if (textLoadingSpinner) {
+        if (loadingSpinner) {
             if (show) {
-                textLoadingSpinner.classList.remove('hidden');
+                loadingSpinner.classList.remove('hidden');
             } else {
-                textLoadingSpinner.classList.add('hidden');
+                loadingSpinner.classList.add('hidden');
             }
         }
 
-        if (embeddingLoadingSpinner) {
-            if (show) {
-                embeddingLoadingSpinner.classList.remove('hidden');
-            } else {
-                embeddingLoadingSpinner.classList.add('hidden');
-            }
-        }
-
-        if (textModelSelect) {
-            textModelSelect.disabled = show;
-        }
-
-        if (embeddingModelSelect) {
-            embeddingModelSelect.disabled = show;
+        if (modelSelect) {
+            modelSelect.disabled = show;
         }
     }
 
@@ -796,39 +784,43 @@ class AILLMConfigManager {
     }
 
     async testModelResponse() {
-        const provider = document.getElementById('llm_provider').value;
         const textModel = document.getElementById('llm_model').value;
         const embeddingModel = document.getElementById('llm_embedding_model').value;
-        const baseUrl = document.getElementById('llm_base_url').value;
-        const apiKey = document.getElementById('llm_api_key').value;
 
-        // Determine which model to test based on what's selected
-        let model = textModel;
-        let modelType = 'text-generation';
+        // Test text generation model if available
+        if (textModel) {
+            await this.testTextGenerationModel();
+        } else if (embeddingModel) {
+            await this.testEmbeddingModel();
+        } else {
+            utils.showNotification('Please select a model first', 'warning');
+        }
+    }
+
+    async testTextGenerationModel() {
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        let provider, baseUrl, apiKey;
         
-        if (!textModel && embeddingModel) {
-            model = embeddingModel;
-            modelType = 'embedding';
+        if (sharingCheckbox?.checked) {
+            provider = document.getElementById('text_provider')?.value;
+            baseUrl = document.getElementById('text_base_url')?.value;
+            apiKey = document.getElementById('text_api_key')?.value;
+        } else {
+            provider = document.getElementById('text_provider')?.value;
+            baseUrl = document.getElementById('text_base_url')?.value;
+            apiKey = document.getElementById('text_api_key')?.value;
         }
 
-        if (!model) {
-            utils.showNotification('Please select a text generation or embedding model first', 'warning');
-            return;
-        }
+        const model = document.getElementById('llm_model').value;
 
-        if (!baseUrl) {
-            utils.showNotification('Please configure the base URL first', 'warning');
+        if (!model || !baseUrl) {
+            utils.showNotification('Please configure provider and select a model first', 'warning');
             return;
         }
 
         const testButton = document.getElementById('test-model-response');
         const originalText = testButton ? testButton.textContent : 'Test Model Response';
 
-        // Test embedding model if that's what's selected
-        if (modelType === 'embedding') {
-            return this.testEmbeddingModel(provider, baseUrl, apiKey, model, testButton, originalText);
-        }
-        
         if (testButton) {
             testButton.disabled = true;
             testButton.textContent = 'Testing...';
@@ -847,14 +839,9 @@ class AILLMConfigManager {
             };
             
             console.log(`Testing text generation model ${model} on ${provider}`);
-            console.log('Request data:', requestData);
             
-            // Create AbortController for timeout
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => {
-                console.log('Model test request timed out');
-                controller.abort();
-            }, 45000); // 45 second timeout for model testing
+            const timeoutId = setTimeout(() => controller.abort(), 45000);
             
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -866,16 +853,13 @@ class AILLMConfigManager {
             });
             
             clearTimeout(timeoutId);
-            console.log(`Model test response status: ${response.status}`);
             
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Model test error response:', errorText);
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
-            console.log('Model test response data:', data);
             
             if (data.success) {
                 const responseTime = data.response_time ? `${Math.round(data.response_time * 1000)}ms` : 'N/A';
@@ -896,12 +880,8 @@ class AILLMConfigManager {
             console.error('Model test failed:', error);
             
             let errorMessage = error.message;
-            
-            // Provide more specific error messages
             if (error.name === 'AbortError') {
                 errorMessage = 'Model test timed out after 45 seconds';
-            } else if (error.message.includes('Failed to fetch')) {
-                errorMessage = 'Network error - check if the service is running and accessible';
             }
             
             this.showModelTestResults(
@@ -924,14 +904,12 @@ class AILLMConfigManager {
     showModelTestResults(message, type) {
         const resultsContainer = document.getElementById('model-test-results');
         if (!resultsContainer) {
-            // Create results container if it doesn't exist
             const container = document.createElement('div');
             container.id = 'model-test-results';
             container.className = 'mt-4 p-3 rounded-md border hidden';
             
-            // Insert after the test button
             const testButton = document.getElementById('test-model-response');
-            if (testButton && testButton.parentNode) {
+            if (testButton?.parentNode) {
                 testButton.parentNode.insertBefore(container, testButton.nextSibling);
             }
             return this.showModelTestResults(message, type);
@@ -949,147 +927,108 @@ class AILLMConfigManager {
     }
 
     getAILLMConfig() {
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        const useSameProvider = sharingCheckbox?.checked || false;
+        
         return {
-            llm_provider: document.getElementById('llm_provider')?.value || '',
-            llm_base_url: document.getElementById('llm_base_url')?.value || '',
-            llm_api_key: document.getElementById('llm_api_key')?.value || '',
+            // Text generation provider
+            text_provider: document.getElementById('text_provider')?.value || '',
+            text_base_url: document.getElementById('text_base_url')?.value || '',
+            text_api_key: document.getElementById('text_api_key')?.value || '',
+            
+            // Embedding provider
+            use_same_provider: useSameProvider,
+            embedding_provider: useSameProvider ? 
+                (document.getElementById('text_provider')?.value || '') : 
+                (document.getElementById('embedding_provider')?.value || ''),
+            embedding_base_url: useSameProvider ? 
+                (document.getElementById('text_base_url')?.value || '') : 
+                (document.getElementById('embedding_base_url')?.value || ''),
+            embedding_api_key: useSameProvider ? 
+                (document.getElementById('text_api_key')?.value || '') : 
+                (document.getElementById('embedding_api_key')?.value || ''),
+            
+            // Models
             llm_model: document.getElementById('llm_model')?.value || '',
             llm_embedding_model: document.getElementById('llm_embedding_model')?.value || '',
+            
+            // Advanced parameters
             max_tokens: parseInt(document.getElementById('max_tokens')?.value) || 2048,
             temperature: parseFloat(document.getElementById('temperature')?.value) || 0.7,
             top_p: parseFloat(document.getElementById('top_p')?.value) || 1.0,
             top_k: parseInt(document.getElementById('top_k')?.value) || 40,
             llm_timeout: parseInt(document.getElementById('llm_timeout')?.value) || 30,
             llm_retries: parseInt(document.getElementById('llm_retries')?.value) || 3,
-            // AnythingLLM embedding configuration
-            anythingllm_embedding_model: document.getElementById('anythingllm_embedding_model')?.value || '',
-            anythingllm_embedding_provider: document.getElementById('anythingllm_embedding_provider')?.value || 'ollama'
+            
+            // Legacy compatibility
+            llm_provider: document.getElementById('text_provider')?.value || '',
+            llm_base_url: document.getElementById('text_base_url')?.value || '',
+            llm_api_key: document.getElementById('text_api_key')?.value || ''
         };
     }
 
     setAILLMConfig(config) {
-        const fields = [
-            'llm_provider', 'llm_base_url', 'llm_api_key', 'llm_model', 'llm_embedding_model',
-            'max_tokens', 'temperature', 'top_p', 'top_k', 'llm_timeout', 'llm_retries'
-        ];
-
-        fields.forEach(field => {
+        // Set text provider fields
+        const textProviderFields = ['text_provider', 'text_base_url', 'text_api_key'];
+        textProviderFields.forEach(field => {
             const element = document.getElementById(field);
             if (element && config[field] !== undefined) {
                 element.value = config[field];
             }
         });
 
-        // Set dropdown selections
-        const textModelDropdown = document.getElementById('llm_text_model_dropdown');
-        const embeddingModelDropdown = document.getElementById('llm_embedding_model_dropdown');
-        
-        if (textModelDropdown && config.llm_model) {
-            textModelDropdown.value = config.llm_model;
-        }
-        
-        if (embeddingModelDropdown && config.llm_embedding_model) {
-            embeddingModelDropdown.value = config.llm_embedding_model;
+        // Set embedding provider fields
+        const embeddingProviderFields = ['embedding_provider', 'embedding_base_url', 'embedding_api_key'];
+        embeddingProviderFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element && config[field] !== undefined) {
+                element.value = config[field];
+            }
+        });
+
+        // Set provider sharing checkbox
+        const sharingCheckbox = document.getElementById('use_same_provider');
+        if (sharingCheckbox && config.use_same_provider !== undefined) {
+            sharingCheckbox.checked = config.use_same_provider;
         }
 
-        // Trigger provider change to set up defaults
-        this.onProviderChange();
-    }
+        // Set models
+        const modelFields = ['llm_model', 'llm_embedding_model'];
+        modelFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element && config[field] !== undefined) {
+                element.value = config[field];
+            }
+        });
 
-    async testEmbeddingModel(provider, baseUrl, apiKey, model, testButton, originalText) {
-        if (testButton) {
-            testButton.disabled = true;
-            testButton.textContent = 'Testing Embedding...';
+        // Set advanced parameters
+        const advancedFields = ['max_tokens', 'temperature', 'top_p', 'top_k', 'llm_timeout', 'llm_retries'];
+        advancedFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element && config[field] !== undefined) {
+                element.value = config[field];
+            }
+        });
+
+        // Handle legacy compatibility
+        if (config.llm_provider && !config.text_provider) {
+            const textProvider = document.getElementById('text_provider');
+            if (textProvider) textProvider.value = config.llm_provider;
         }
 
-        this.showModelTestResults('Testing embedding model...', 'info');
-        
-        try {
-            const endpoint = '/api/v1/llm/test-embedding';
-            const requestData = {
-                provider: provider,
-                base_url: baseUrl,
-                api_key: apiKey || null,
-                model: model,
-                text: "This is a test sentence for embedding generation."
-            };
-            
-            console.log(`Testing embedding model ${model} on ${provider}`);
-            console.log('Request data:', requestData);
-            
-            // Create AbortController for timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => {
-                console.log('Embedding test request timed out');
-                controller.abort();
-            }, 30000); // 30 second timeout for embedding testing
-            
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestData),
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            console.log(`Embedding test response status: ${response.status}`);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Embedding test error response:', errorText);
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log('Embedding test response data:', data);
-            
-            if (data.success) {
-                const responseTime = data.response_time ? `${Math.round(data.response_time * 1000)}ms` : 'N/A';
-                const dimensions = data.embedding_dimensions || 'Unknown';
-                this.showModelTestResults(
-                    `✓ Embedding model test successful!<br>` +
-                    `✓ Model: ${data.model}<br>` +
-                    `✓ Response time: ${responseTime}<br>` +
-                    `✓ Embedding dimensions: ${dimensions}<br><br>` +
-                    `<strong>Test Text:</strong><br>${data.text}<br><br>` +
-                    `<strong>Result:</strong><br>Generated ${dimensions}-dimensional embedding vector`,
-                    'success'
-                );
-                utils.showNotification('Embedding model test successful!', 'success');
-            } else {
-                throw new Error(data.message || 'Embedding model test failed');
-            }
-            
-        } catch (error) {
-            console.error('Embedding model test failed:', error);
-            
-            let errorMessage = error.message;
-            
-            // Provide more specific error messages
-            if (error.name === 'AbortError') {
-                errorMessage = 'Embedding test timed out after 30 seconds';
-            } else if (error.message.includes('Failed to fetch')) {
-                errorMessage = 'Network error - check if the service is running and accessible';
-            }
-            
-            this.showModelTestResults(
-                `⚠️ Embedding Model Test Failed<br><br>` +
-                `Model: ${model}<br>` +
-                `Provider: ${provider}<br><br>` +
-                `Error: ${errorMessage}<br><br>` +
-                `Note: If this endpoint is not implemented yet, embedding models can still be used for AnythingLLM vector operations.`,
-                'error'
-            );
-            utils.showNotification('Embedding model test failed: ' + errorMessage, 'error');
-            
-        } finally {
-            if (testButton) {
-                testButton.disabled = false;
-                testButton.textContent = originalText;
-            }
+        if (config.llm_base_url && !config.text_base_url) {
+            const textBaseUrl = document.getElementById('text_base_url');
+            if (textBaseUrl) textBaseUrl.value = config.llm_base_url;
         }
+
+        if (config.llm_api_key && !config.text_api_key) {
+            const textApiKey = document.getElementById('text_api_key');
+            if (textApiKey) textApiKey.value = config.llm_api_key;
+        }
+
+        // Trigger provider setup
+        this.setupProviderDefaults();
+        this.onProviderSharingChange();
     }
 }
 
