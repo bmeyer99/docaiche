@@ -2,6 +2,7 @@
 class ConfigManager {
     constructor() {
         this.isLoading = false;
+        this.isInitializing = true; // Prevent saves during initialization
         this.accordionState = {
             'app-settings': false,
             'cache-config': false,
@@ -14,10 +15,6 @@ class ConfigManager {
             debug_mode: "app.debug",
             log_level: "app.log_level",
             workers: "app.workers",
-            api_host: "app.api_host",
-            api_timeout: "app.api_timeout",
-            websocket_url: "app.websocket_url",
-            max_retries: "app.max_retries",
             auto_refresh: "app.auto_refresh",
             refresh_interval: "app.refresh_interval",
             cache_ttl: "ai.cache_ttl_seconds",
@@ -52,14 +49,34 @@ class ConfigManager {
 
     async init() {
         try {
+            // Step 1: Initialize AI LLM Manager with dependency injection
+            if (window.aiLLMManager) {
+                window.aiLLMManager.init(this);
+            }
+
+            // Step 2: Load existing configuration from backend
             await this.loadConfiguration();
+            
+            // Step 3: Setup UI components
             this.setupAccordions();
             this.bindSaveOnChangeEvents();
             this.setupFormValidation();
-            
+
+            // Step 4: Now that config is loaded, finalize AI manager setup
             if (window.aiLLMManager) {
-                window.aiLLMManager.init(this); // Pass configManager instance
+                window.aiLLMManager.setupProviderDefaults();
+                const sharingCheckbox = document.getElementById('use_same_provider');
+                if(sharingCheckbox) {
+                    window.aiLLMManager.onProviderSharingChange(sharingCheckbox);
+                }
+                
+                // Mark AI manager initialization as complete
+                window.aiLLMManager.isInitializing = false;
             }
+            
+            // Step 5: Mark configuration manager initialization as complete - saves now allowed
+            this.isInitializing = false;
+            
         } catch (error) {
             console.error('Configuration initialization failed:', error);
             utils.showNotification('Failed to load configuration', 'error');
@@ -168,7 +185,14 @@ class ConfigManager {
         const inputs = form.querySelectorAll('input, select');
         inputs.forEach(input => {
             const eventType = (input.type === 'checkbox' || input.tagName === 'SELECT') ? 'change' : 'blur';
-            input.addEventListener(eventType, () => this.saveField(input));
+            input.addEventListener(eventType, () => {
+                // Double-check initialization status at event time
+                if (!this.isInitializing) {
+                    this.saveField(input);
+                } else {
+                    console.log(`Event fired during initialization for ${input.id} - ignoring`);
+                }
+            });
         });
 
         // Refresh button
@@ -184,6 +208,12 @@ class ConfigManager {
 
     async saveField(fieldElement) {
         if (!fieldElement || !fieldElement.id) return;
+
+        // CRITICAL: Prevent saves during initialization to avoid 422 errors
+        if (this.isInitializing) {
+            console.log(`Skipping save for ${fieldElement.id} - still initializing`);
+            return;
+        }
 
         const fieldName = fieldElement.id;
         const backendKey = this.keyMap[fieldName];
@@ -202,8 +232,10 @@ class ConfigManager {
         const value = this.getFieldValue(fieldName);
 
         try {
-            const response = await api.post('/config', { key: backendKey, value: value });
-            if (response.status === 'success') {
+            // Send field name directly as expected by API gateway
+            const payload = { [fieldName]: value };
+            const response = await api.post('/config', payload);
+            if (response.config) {
                 this.showSaveConfirmation(fieldElement);
             } else {
                 throw new Error(response.detail || 'Save failed');

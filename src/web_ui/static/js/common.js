@@ -35,6 +35,8 @@ class APIClient {
                         errorDetails = errorData.detail.map(err =>
                             `${err.loc ? err.loc.join('.') : 'field'}: ${err.msg}`
                         ).join(', ');
+                    } else if (typeof errorData.detail === 'object') {
+                        errorDetails = JSON.stringify(errorData.detail);
                     } else {
                         errorDetails = errorData.detail || errorData.message || JSON.stringify(errorData);
                     }

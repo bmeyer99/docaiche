@@ -12,6 +12,7 @@ class AILLMConfigManager {
         };
         this.isConnecting = { text: false, embedding: false };
         this.configManager = null; // Will be set on init
+        this.isInitializing = true; // Prevent saves during initialization
     }
 
     init(configManager) {
@@ -89,7 +90,11 @@ class AILLMConfigManager {
         } else {
             embeddingSection.classList.remove('hidden');
         }
-        this.configManager.saveField(checkbox);
+        
+        // ONLY save if this is user-driven, not during initialization
+        if (this.configManager && !this.isInitializing) {
+            this.configManager.saveField(checkbox);
+        }
     }
 
     copyTextToEmbeddingProvider() {
@@ -107,10 +112,12 @@ class AILLMConfigManager {
 
         this.updateProviderDefaults('embedding', textProvider.value);
         
-        // Atomically save the copied values
-        if (embeddingProvider) this.configManager.saveField(embeddingProvider);
-        if (embeddingBaseUrl) this.configManager.saveField(embeddingBaseUrl);
-        if (embeddingApiKey) this.configManager.saveField(embeddingApiKey);
+        // ONLY save if this is user-driven, not during initialization
+        if (this.configManager && !this.isInitializing) {
+            if (embeddingProvider) this.configManager.saveField(embeddingProvider);
+            if (embeddingBaseUrl) this.configManager.saveField(embeddingBaseUrl);
+            if (embeddingApiKey) this.configManager.saveField(embeddingApiKey);
+        }
     }
 
     onTextProviderChange(selectElement) {
@@ -118,7 +125,11 @@ class AILLMConfigManager {
         this.updateProviderDefaults('text', provider);
         this.clearModels('text');
         this.updateConnectionStatus('text', 'disconnected', 'Not Configured');
-        this.configManager.saveField(selectElement);
+        
+        // ONLY save if this is user-driven, not during initialization
+        if (this.configManager && !this.isInitializing) {
+            this.configManager.saveField(selectElement);
+        }
 
         if (document.getElementById('use_same_provider')?.checked) {
             this.copyTextToEmbeddingProvider();
@@ -132,7 +143,11 @@ class AILLMConfigManager {
         this.updateProviderDefaults('embedding', provider);
         this.clearModels('embedding');
         this.updateConnectionStatus('embedding', 'disconnected', 'Not Configured');
-        this.configManager.saveField(selectElement);
+        
+        // ONLY save if this is user-driven, not during initialization
+        if (this.configManager && !this.isInitializing) {
+            this.configManager.saveField(selectElement);
+        }
     }
 
     updateProviderDefaults(providerType, provider) {
@@ -144,9 +159,10 @@ class AILLMConfigManager {
         const apiKeyField = document.getElementById(`${prefix}_api_key`);
         const testButton = document.getElementById(`test-${prefix}-connection`);
 
-        if (baseUrlField && defaults.baseUrl) {
+        // DO NOT SAVE ON CHANGE HERE. This causes initialization errors.
+        // The main config manager will handle saving when the user blurs the field.
+        if (baseUrlField && defaults.baseUrl && !baseUrlField.value) {
             baseUrlField.value = defaults.baseUrl;
-            this.configManager.saveField(baseUrlField);
         }
 
         const apiKeyContainer = apiKeyField?.closest('.mb-4');
@@ -160,12 +176,15 @@ class AILLMConfigManager {
     }
 
     async testConnection(providerType) {
+        console.log(`testConnection called for: ${providerType}`);
         if (this.isConnecting[providerType]) return;
 
         const prefix = providerType;
         const provider = document.getElementById(`${prefix}_provider`).value;
         const baseUrl = document.getElementById(`${prefix}_base_url`).value;
         const apiKey = document.getElementById(`${prefix}_api_key`).value;
+
+        console.log(`Testing with: provider=${provider}, baseUrl=${baseUrl}`);
 
         if (!baseUrl) {
             utils.showNotification('Please enter a base URL', 'error');
@@ -184,10 +203,11 @@ class AILLMConfigManager {
 
         try {
             const response = await this.makeTestRequest(provider, baseUrl, apiKey);
+            console.log('Test request response:', response);
             
             if (response.success) {
                 this.updateConnectionStatus(providerType, 'connected', 'Connected');
-                this.showConnectionResults(providerType, `✓ Connection successful! Found ${response.modelsCount} models.`, 'success');
+                this.showConnectionResults(providerType, `✓ Connection successful!`, 'success');
                 await this.loadModels(providerType, provider, baseUrl, apiKey);
                 
                 if (document.getElementById('use_same_provider')?.checked && providerType === 'text') {
@@ -210,10 +230,10 @@ class AILLMConfigManager {
 
     async makeTestRequest(provider, baseUrl, apiKey) {
         try {
+            // This now correctly calls the dedicated test endpoint
             const response = await api.post('/llm/test-connection', { provider, base_url: baseUrl, api_key: apiKey });
             return {
                 success: response.success || false,
-                modelsCount: response.model_count || 0,
                 error: response.message
             };
         } catch (error) {
@@ -242,7 +262,8 @@ class AILLMConfigManager {
     }
 
     async fetchModels(provider, baseUrl, apiKey) {
-        const data = await api.post('/llm/test-connection', { provider, base_url: baseUrl, api_key: apiKey });
+        // This now correctly calls the dedicated list-models endpoint
+        const data = await api.post('/llm/list-models', { provider, base_url: baseUrl, api_key: apiKey });
         if (!data.success) {
             throw new Error(data.message || 'Failed to fetch models');
         }
@@ -402,8 +423,13 @@ class AILLMConfigManager {
         const statusText = document.getElementById(`${providerType}-connection-status-text`);
         if (dot) {
             dot.className = 'inline-block w-2 h-2 rounded-full mr-2';
-            const colors = { connected: 'bg-green-500', testing: 'bg-yellow-500 animate-pulse', error: 'bg-red-500' };
-            dot.classList.add(colors[status] || 'bg-gray-400');
+            const colors = {
+                connected: ['bg-green-500'],
+                testing: ['bg-yellow-500', 'animate-pulse'],
+                error: ['bg-red-500']
+            };
+            const statusClasses = colors[status] || ['bg-gray-400'];
+            statusClasses.forEach(cls => dot.classList.add(cls));
         }
         if (statusText) statusText.textContent = text;
     }
@@ -490,9 +516,8 @@ class AILLMConfigManager {
             sharingCheckbox.checked = config.use_same_provider;
         }
 
-        // Trigger provider setup after initial population
-        this.setupProviderDefaults();
-        this.onProviderSharingChange(sharingCheckbox);
+        // Defer provider setup until after main config is initialized
+        // This prevents race conditions where configManager is null.
     }
 }
 

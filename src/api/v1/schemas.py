@@ -153,3 +153,8 @@ class AdminSearchResponse(BaseModel):
     page: int = Field(..., description="Current page number (1-based).")
     page_size: int = Field(..., description="Number of items per page.")
     has_more: bool = Field(..., description="Whether there are more pages available.")
+
+class LLMProviderTestRequest(BaseModel):
+    provider: str
+    base_url: str
+    api_key: Optional[str] = None

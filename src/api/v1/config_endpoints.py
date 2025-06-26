@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, R
 
 from .schemas import (
     ConfigurationResponse, ConfigurationItem, ConfigurationUpdateRequest,
-    Collection, CollectionsResponse
+    Collection, CollectionsResponse, LLMProviderTestRequest
 )
 from .middleware import limiter
 from .dependencies import get_anythingllm_client
@@ -113,7 +113,7 @@ async def broadcast_llm_health_status() -> None:
         await websocket_manager.broadcast_llm_health(error_status)
 
 
-@router.get("/config", response_model=ConfigurationResponse)
+@router.get("/", response_model=ConfigurationResponse)
 @limiter.limit("10/minute")
 async def get_configuration(
     request: Request
@@ -270,3 +270,94 @@ async def get_collections(
     except Exception as e:
         logger.error(f"Collections retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Collections unavailable")
+
+
+@router.post("/llm/test-connection")
+async def test_llm_provider_connection(req: LLMProviderTestRequest):
+    """Test connection to a given LLM provider."""
+    import httpx
+    
+    try:
+        logger.info(f"Testing connection to {req.provider} at {req.base_url}")
+        
+        # Use a HEAD request for a lightweight connection test
+        endpoint = req.base_url.rstrip('/')
+        headers = {"Content-Type": "application/json"}
+        if req.api_key:
+            headers["Authorization"] = f"Bearer {req.api_key}"
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.head(endpoint, headers=headers)
+            
+            # Consider any 2xx or 3xx status as a successful connection
+            if 200 <= response.status_code < 400:
+                logger.info(f"Connection to {req.provider} successful with status {response.status_code}")
+                return {"success": True, "message": "Connection successful"}
+            else:
+                logger.warning(f"Connection test to {req.provider} failed with status {response.status_code}")
+                return {"success": False, "message": f"Connection failed: HTTP {response.status_code}"}
+
+    except httpx.TimeoutException:
+        logger.error(f"Connection timeout to {req.provider}")
+        return {"success": False, "message": "Connection timeout"}
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error to {req.provider}: {e}")
+        return {"success": False, "message": f"Cannot reach endpoint at {req.base_url}"}
+    except Exception as e:
+        logger.error(f"LLM provider test failed: {e}")
+        return {"success": False, "message": f"An unexpected error occurred: {str(e)}"}
+
+
+@router.post("/llm/list-models")
+async def list_llm_provider_models(req: LLMProviderTestRequest):
+    """Fetches a list of available models from the specified LLM provider."""
+    import httpx
+
+    try:
+        logger.info(f"Fetching models from {req.provider} at {req.base_url}")
+
+        if req.provider.lower() == "ollama":
+            base_url_clean = req.base_url.rstrip('/').replace('/api', '')
+            endpoint = f"{base_url_clean}/api/tags"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(endpoint, headers={"Content-Type": "application/json"})
+                if response.status_code == 200:
+                    models = response.json().get("models", [])
+                    formatted_models = [{"name": m.get("name", ""), "size": m.get("size", 0), "modified_at": m.get("modified_at", "")} for m in models]
+                    return {"success": True, "models": formatted_models, "model_count": len(formatted_models)}
+                else:
+                    return {"success": False, "message": f"Failed to fetch models: HTTP {response.status_code}", "models": []}
+
+        elif req.provider.lower() == "openai":
+            endpoint = "https://api.openai.com/v1/models"
+            headers = {"Authorization": f"Bearer {req.api_key}", "Content-Type": "application/json"}
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(endpoint, headers=headers)
+                if response.status_code == 200:
+                    models = response.json().get("data", [])
+                    formatted_models = [{"name": m.get("id", ""), "owned_by": m.get("owned_by", ""), "created": m.get("created", 0)} for m in models]
+                    return {"success": True, "models": formatted_models, "model_count": len(formatted_models)}
+                else:
+                    return {"success": False, "message": f"Failed to fetch models: HTTP {response.status_code}", "models": []}
+
+        elif req.provider.lower() == "anthropic":
+            common_models = [
+                {"name": "claude-3-sonnet-20240229"},
+                {"name": "claude-3-haiku-20240307"},
+                {"name": "claude-3-opus-20240229"}
+            ]
+            return {"success": True, "models": common_models, "model_count": len(common_models)}
+
+        else:
+            return {"success": False, "message": f"Unsupported provider: {req.provider}", "models": []}
+
+    except httpx.TimeoutException:
+        logger.error(f"Timeout fetching models from {req.provider}")
+        return {"success": False, "message": "Connection timeout", "models": []}
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error fetching models from {req.provider}: {e}")
+        return {"success": False, "message": f"Cannot reach endpoint at {req.base_url}", "models": []}
+    except Exception as e:
+        logger.error(f"Failed to list LLM models: {e}")
+        return {"success": False, "message": f"An unexpected error occurred: {str(e)}", "models": []}
+
