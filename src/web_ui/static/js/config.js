@@ -24,6 +24,8 @@ class ConfigManager {
             text_base_url: "ai.text_base_url",
             text_api_key: "ai.text_api_key",
             llm_model: "ai.llm_model",
+            text_model_dropdown: "ai.llm_model",
+            embedding_model_dropdown: "ai.llm_embedding_model",
             embedding_provider: "ai.embedding_provider",
             embedding_base_url: "ai.embedding_base_url",
             embedding_api_key: "ai.embedding_api_key",
@@ -181,9 +183,19 @@ class ConfigManager {
         const form = document.getElementById('config-form');
         if (!form) return;
 
-        // Bind events to all relevant form elements
+        // Bind events to all relevant form elements (except those handled by AI/LLM manager)
         const inputs = form.querySelectorAll('input, select');
+        const aiHandledElements = [
+            'text_provider', 'embedding_provider', 'use_same_provider',
+            'text_model_dropdown', 'embedding_model_dropdown'
+        ];
+        
         inputs.forEach(input => {
+            // Skip elements that have specific AI/LLM handlers to avoid conflicts
+            if (aiHandledElements.includes(input.id)) {
+                return;
+            }
+            
             const eventType = (input.type === 'checkbox' || input.tagName === 'SELECT') ? 'change' : 'blur';
             input.addEventListener(eventType, () => {
                 // Double-check initialization status at event time

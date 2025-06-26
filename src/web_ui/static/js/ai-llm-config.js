@@ -350,10 +350,16 @@ class AILLMConfigManager {
                 this.configManager.saveField(hiddenInput);
             }
             if (modelInfo) {
-                modelInfo.querySelector('[data-role="name"]').textContent = selectedOption.value;
-                modelInfo.querySelector('[data-role="description"]').textContent = selectedOption.dataset.description || '';
-                modelInfo.querySelector('[data-role="size"]').textContent = selectedOption.dataset.size || '';
-                modelInfo.querySelector('[data-role="modified"]').textContent = selectedOption.dataset.modified || '';
+                const nameEl = document.getElementById(`${modelType}-model-info-name`);
+                const descEl = document.getElementById(`${modelType}-model-info-description`);
+                const sizeEl = document.getElementById(`${modelType}-model-size`);
+                const modifiedEl = document.getElementById(`${modelType}-model-modified`);
+                
+                if (nameEl) nameEl.textContent = selectedOption.value;
+                if (descEl) descEl.textContent = selectedOption.dataset.description || '';
+                if (sizeEl) sizeEl.textContent = selectedOption.dataset.size || '';
+                if (modifiedEl) modifiedEl.textContent = selectedOption.dataset.modified || '';
+                
                 modelInfo.classList.remove('hidden');
             }
         } else if (modelInfo) {
@@ -485,12 +491,26 @@ class AILLMConfigManager {
 
             if (data.success) {
                 const time = data.response_time ? `${Math.round(data.response_time * 1000)}ms` : 'N/A';
-                this.showModelTestResults(`✓ Success!<br>Response: ${data.model_response}<br>Time: ${time}`, 'success');
+                const formattedMessage = `
+                    <div class="space-y-2">
+                        <div class="font-semibold text-green-800">✓ Success!</div>
+                        <div><span class="font-medium">Response:</span></div>
+                        <div class="bg-white bg-opacity-50 p-2 rounded border text-sm font-mono whitespace-pre-wrap">${data.model_response}</div>
+                        <div class="text-sm"><span class="font-medium">Time:</span> ${time}</div>
+                    </div>
+                `;
+                this.showModelTestResults(formattedMessage, 'success');
             } else {
                 throw new Error(data.message || 'Model test failed');
             }
         } catch (error) {
-            this.showModelTestResults(`⚠️ Test Failed: ${error.message}`, 'error');
+            const errorMessage = `
+                <div class="space-y-2">
+                    <div class="font-semibold text-red-800">⚠️ Test Failed</div>
+                    <div class="bg-white bg-opacity-50 p-2 rounded border text-sm">${error.message}</div>
+                </div>
+            `;
+            this.showModelTestResults(errorMessage, 'error');
         } finally {
             if (testButton) {
                 testButton.disabled = false;

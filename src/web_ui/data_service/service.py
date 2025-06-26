@@ -97,3 +97,59 @@ class DataService:
         """Admin search for content."""
         logger.info("Performing admin content search")
         return [{"id": "doc1", "title": "Admin Search Result"}]
+
+    async def update_config(self, config_updates: dict) -> dict:
+        """Update configuration using the core config system."""
+        logger.info(f"Updating configuration: {config_updates}")
+        try:
+            from src.core.config.manager import get_configuration_manager
+            manager = await get_configuration_manager()
+            
+            # Map frontend field names to backend keys
+            field_to_key_map = {
+                "environment": "app.environment",
+                "debug_mode": "app.debug",
+                "log_level": "app.log_level",
+                "workers": "app.workers",
+                "cache_ttl": "ai.cache_ttl_seconds",
+                "cache_max_size": "redis.max_connections",
+                "use_same_provider": "ai.use_same_provider",
+                "text_provider": "ai.text_provider",
+                "text_base_url": "ai.text_base_url",
+                "text_api_key": "ai.text_api_key",
+                "llm_model": "ai.llm_model",
+                "embedding_provider": "ai.embedding_provider",
+                "embedding_base_url": "ai.embedding_base_url",
+                "embedding_api_key": "ai.embedding_api_key",
+                "llm_embedding_model": "ai.llm_embedding_model",
+                "text_max_tokens": "ai.text_max_tokens",
+                "text_temperature": "ai.text_temperature",
+                "text_top_p": "ai.text_top_p",
+                "text_top_k": "ai.text_top_k",
+                "text_timeout": "ai.text_timeout",
+                "text_retries": "ai.text_retries",
+                "embedding_batch_size": "ai.embedding_batch_size",
+                "embedding_timeout": "ai.embedding_timeout",
+                "embedding_retries": "ai.embedding_retries",
+                "embedding_chunk_size": "ai.embedding_chunk_size",
+                "embedding_overlap": "ai.embedding_overlap",
+                "embedding_normalize": "ai.embedding_normalize",
+                "anythingllm_embedding_model": "anythingllm.embedding_model",
+                "anythingllm_embedding_provider": "anythingllm.embedding_provider",
+            }
+            
+            # Update each configuration field
+            for field_name, value in config_updates.items():
+                if field_name in field_to_key_map:
+                    backend_key = field_to_key_map[field_name]
+                    await manager.update_in_db(backend_key, value, user="web_ui")
+                    logger.info(f"Updated {backend_key} = {value}")
+                else:
+                    logger.warning(f"Unknown config field: {field_name}")
+            
+            # Return updated configuration
+            return await self.fetch_config()
+            
+        except Exception as e:
+            logger.error(f"Failed to update configuration: {e}")
+            raise

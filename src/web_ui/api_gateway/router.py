@@ -107,6 +107,10 @@ class ConfigUpdateModel(BaseModel):
     llm_model: Optional[str] = None
     llm_embedding_model: Optional[str] = None
     
+    # AnythingLLM Integration
+    anythingllm_embedding_model: Optional[str] = None
+    anythingllm_embedding_provider: Optional[str] = None
+    
     # Text Generation Advanced Parameters
     text_max_tokens: Optional[int] = None
     text_temperature: Optional[float] = None
@@ -186,6 +190,121 @@ async def reset_config(request: Request, data_service: DataService = Depends(get
     except Exception as e:
         logger.error(f"Failed to reset config: {e}")
         raise HTTPException(status_code=500, detail="Failed to reset config")
+
+
+@api_router.post("/llm/test-connection")
+async def test_llm_provider_connection(request: Request, test_request: dict = Body(...)):
+    """Test connection to a given LLM provider."""
+    import httpx
+    
+    try:
+        provider = test_request.get("provider")
+        base_url = test_request.get("base_url")
+        api_key = test_request.get("api_key")
+        
+        logger.info(f"Testing connection to {provider} at {base_url}")
+        
+        # Use provider-specific endpoints for better connectivity testing
+        if provider.lower() == "ollama":
+            # For Ollama, test the /api/tags endpoint which is reliable
+            base_url_clean = base_url.rstrip('/').replace('/api', '')
+            endpoint = f"{base_url_clean}/api/tags"
+            headers = {"Content-Type": "application/json"}
+            
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(endpoint, headers=headers)
+                
+                if response.status_code == 200:
+                    logger.info(f"Ollama connection successful with {len(response.json().get('models', []))} models available")
+                    return {"success": True, "message": "Connection successful"}
+                else:
+                    logger.warning(f"Ollama connection test failed with status {response.status_code}")
+                    return {"success": False, "message": f"Connection failed: HTTP {response.status_code}"}
+        else:
+            # For other providers, use a HEAD request for a lightweight test
+            endpoint = base_url.rstrip('/')
+            headers = {"Content-Type": "application/json"}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.head(endpoint, headers=headers)
+                
+                # Consider any 2xx or 3xx status as a successful connection
+                if 200 <= response.status_code < 400:
+                    logger.info(f"Connection to {provider} successful with status {response.status_code}")
+                    return {"success": True, "message": "Connection successful"}
+                else:
+                    logger.warning(f"Connection test to {provider} failed with status {response.status_code}")
+                    return {"success": False, "message": f"Connection failed: HTTP {response.status_code}"}
+
+    except httpx.TimeoutException:
+        logger.error(f"Connection timeout to {provider}")
+        return {"success": False, "message": "Connection timeout"}
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error to {provider}: {e}")
+        return {"success": False, "message": f"Cannot reach endpoint at {base_url}"}
+    except Exception as e:
+        logger.error(f"LLM provider test failed: {e}")
+        return {"success": False, "message": f"An unexpected error occurred: {str(e)}"}
+
+
+@api_router.post("/llm/list-models")
+async def list_llm_provider_models(request: Request, test_request: dict = Body(...)):
+    """Fetches a list of available models from the specified LLM provider."""
+    import httpx
+
+    try:
+        provider = test_request.get("provider")
+        base_url = test_request.get("base_url")
+        api_key = test_request.get("api_key")
+        
+        logger.info(f"Fetching models from {provider} at {base_url}")
+
+        if provider.lower() == "ollama":
+            base_url_clean = base_url.rstrip('/').replace('/api', '')
+            endpoint = f"{base_url_clean}/api/tags"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(endpoint, headers={"Content-Type": "application/json"})
+                if response.status_code == 200:
+                    models = response.json().get("models", [])
+                    formatted_models = [{"name": m.get("name", ""), "size": m.get("size", 0), "modified_at": m.get("modified_at", "")} for m in models]
+                    return {"success": True, "models": formatted_models, "model_count": len(formatted_models)}
+                else:
+                    return {"success": False, "message": f"Failed to fetch models: HTTP {response.status_code}", "models": []}
+
+        elif provider.lower() == "openai":
+            endpoint = "https://api.openai.com/v1/models"
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(endpoint, headers=headers)
+                if response.status_code == 200:
+                    models = response.json().get("data", [])
+                    formatted_models = [{"name": m.get("id", ""), "owned_by": m.get("owned_by", ""), "created": m.get("created", 0)} for m in models]
+                    return {"success": True, "models": formatted_models, "model_count": len(formatted_models)}
+                else:
+                    return {"success": False, "message": f"Failed to fetch models: HTTP {response.status_code}", "models": []}
+
+        elif provider.lower() == "anthropic":
+            common_models = [
+                {"name": "claude-3-sonnet-20240229"},
+                {"name": "claude-3-haiku-20240307"},
+                {"name": "claude-3-opus-20240229"}
+            ]
+            return {"success": True, "models": common_models, "model_count": len(common_models)}
+
+        else:
+            return {"success": False, "message": f"Unsupported provider: {provider}", "models": []}
+
+    except httpx.TimeoutException:
+        logger.error(f"Timeout fetching models from {provider}")
+        return {"success": False, "message": "Connection timeout", "models": []}
+    except httpx.ConnectError as e:
+        logger.error(f"Connection error fetching models from {provider}: {e}")
+        return {"success": False, "message": f"Cannot reach endpoint at {base_url}", "models": []}
+    except Exception as e:
+        logger.error(f"Failed to list LLM models: {e}")
+        return {"success": False, "message": f"An unexpected error occurred: {str(e)}", "models": []}
 
 @api_router.get("/content", response_model=ContentResponse)
 async def get_content(view_model_service: ViewModelService = Depends(get_view_model_service)):

@@ -280,22 +280,39 @@ async def test_llm_provider_connection(req: LLMProviderTestRequest):
     try:
         logger.info(f"Testing connection to {req.provider} at {req.base_url}")
         
-        # Use a HEAD request for a lightweight connection test
-        endpoint = req.base_url.rstrip('/')
-        headers = {"Content-Type": "application/json"}
-        if req.api_key:
-            headers["Authorization"] = f"Bearer {req.api_key}"
-
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.head(endpoint, headers=headers)
+        # Use provider-specific endpoints for better connectivity testing
+        if req.provider.lower() == "ollama":
+            # For Ollama, test the /api/tags endpoint which is reliable
+            base_url_clean = req.base_url.rstrip('/').replace('/api', '')
+            endpoint = f"{base_url_clean}/api/tags"
+            headers = {"Content-Type": "application/json"}
             
-            # Consider any 2xx or 3xx status as a successful connection
-            if 200 <= response.status_code < 400:
-                logger.info(f"Connection to {req.provider} successful with status {response.status_code}")
-                return {"success": True, "message": "Connection successful"}
-            else:
-                logger.warning(f"Connection test to {req.provider} failed with status {response.status_code}")
-                return {"success": False, "message": f"Connection failed: HTTP {response.status_code}"}
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(endpoint, headers=headers)
+                
+                if response.status_code == 200:
+                    logger.info(f"Ollama connection successful with {len(response.json().get('models', []))} models available")
+                    return {"success": True, "message": "Connection successful"}
+                else:
+                    logger.warning(f"Ollama connection test failed with status {response.status_code}")
+                    return {"success": False, "message": f"Connection failed: HTTP {response.status_code}"}
+        else:
+            # For other providers, use a HEAD request for a lightweight test
+            endpoint = req.base_url.rstrip('/')
+            headers = {"Content-Type": "application/json"}
+            if req.api_key:
+                headers["Authorization"] = f"Bearer {req.api_key}"
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.head(endpoint, headers=headers)
+                
+                # Consider any 2xx or 3xx status as a successful connection
+                if 200 <= response.status_code < 400:
+                    logger.info(f"Connection to {req.provider} successful with status {response.status_code}")
+                    return {"success": True, "message": "Connection successful"}
+                else:
+                    logger.warning(f"Connection test to {req.provider} failed with status {response.status_code}")
+                    return {"success": False, "message": f"Connection failed: HTTP {response.status_code}"}
 
     except httpx.TimeoutException:
         logger.error(f"Connection timeout to {req.provider}")

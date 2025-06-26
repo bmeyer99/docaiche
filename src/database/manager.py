@@ -577,17 +577,9 @@ async def create_database_manager(config: Optional[Dict[str, Any]] = None) -> Da
         Configured DatabaseManager instance
     """
     if config is None:
-        # Integrate with PRD-003 configuration system
-        try:
-            from src.core.config import get_system_configuration
-            if get_system_configuration is not None:
-                system_config = get_system_configuration()
-                db_path = f"{system_config.app.data_dir}/docaiche.db"
-            else:
-                db_path = "./data/docaiche.db"
-        except ImportError:
-            logger.warning("Could not load configuration, using default")
-            db_path = "./data/docaiche.db"
+        # Use default path to avoid circular dependency and event loop issues
+        # Configuration manager will handle its own database initialization
+        db_path = os.getenv("DATABASE_PATH", "./data/docaiche.db")
     else:
         db_path = config.get("db_path", "/app/data/docaiche.db")
     
