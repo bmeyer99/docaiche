@@ -3,7 +3,12 @@ Unified configuration access for the AI Documentation Cache System.
 This package provides a centralized, hierarchical configuration system.
 """
 
-from .manager import get_configuration_manager, get_system_configuration, reload_configuration
+from .manager import (
+    get_configuration_manager,
+    get_system_configuration,
+    reload_configuration,
+    get_current_configuration
+)
 from .models import (
     SystemConfiguration,
     AppConfig,
@@ -24,6 +29,7 @@ __all__ = [
     "get_configuration_manager",
     "get_system_configuration",
     "reload_configuration",
+    "get_current_configuration",
     "SystemConfiguration",
     "AppConfig",
     "ContentConfig",

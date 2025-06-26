@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request, Body
 
 from .schemas import (
     ConfigurationResponse, ConfigurationItem, ConfigurationUpdateRequest,
@@ -113,7 +113,7 @@ async def broadcast_llm_health_status() -> None:
         await websocket_manager.broadcast_llm_health(error_status)
 
 
-@router.get("/config", response_model=ConfigurationResponse, tags=["config"])
+@router.get("/config", response_model=ConfigurationResponse)
 @limiter.limit("10/minute")
 async def get_configuration(
     request: Request
@@ -242,12 +242,12 @@ async def get_configuration(
         raise HTTPException(status_code=500, detail="Configuration unavailable")
 
 
-@router.post("/config/bulk", status_code=202, tags=["config"])
+@router.post("/bulk", status_code=202)
 @limiter.limit("2/minute")
 async def bulk_update_configuration(
     request: Request,
-    config_items: list,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    config_items: list = Body(...)
 ) -> Dict[str, str]:
     """
     POST /api/v1/config/bulk - Updates multiple configuration items at once.
@@ -285,7 +285,7 @@ async def bulk_update_configuration(
         raise HTTPException(status_code=500, detail="Bulk configuration update failed")
 
 
-@router.post("/config", status_code=202, tags=["config"])
+@router.post("/", status_code=202)
 @limiter.limit("5/minute")
 async def update_configuration(
     request: Request,
@@ -355,7 +355,7 @@ async def update_configuration(
         raise HTTPException(status_code=500, detail="Configuration update failed")
 
 
-@router.get("/collections", response_model=CollectionsResponse, tags=["search"])
+@router.get("/collections", response_model=CollectionsResponse)
 @limiter.limit("30/minute")
 async def get_collections(
     request: Request,

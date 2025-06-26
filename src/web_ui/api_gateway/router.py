@@ -1,5 +1,6 @@
 """API Gateway router for Web UI Service."""
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
+from fastapi.responses import JSONResponse
 from src.web_ui.api_gateway.schemas import HealthResponse, StatsResponse, ConfigResponse, ContentResponse
 from src.web_ui.data_service.service import DataService
 from src.web_ui.view_model_service.service import ViewModelService
@@ -554,3 +555,43 @@ async def test_llm_model_response(req: LLMModelTestRequest):
             "model_response": "",
             "error": str(e)
         }
+
+# Catch-all proxy for any unhandled /api/v1/* requests
+@api_router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def proxy_to_api_service(request: Request, path: str):
+    """Proxy all unhandled API requests to the main API service."""
+    try:
+        api_url = os.getenv("API_SERVICE_URL", "http://api:8000")
+        
+        # Reconstruct the full path including query parameters
+        query_string = str(request.url.query)
+        full_path = f"/api/v1/{path}"
+        if query_string:
+            full_path += f"?{query_string}"
+        
+        # Get request body if present
+        body = None
+        if request.method in ["POST", "PUT", "PATCH"]:
+            body = await request.body()
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.request(
+                method=request.method,
+                url=f"{api_url}{full_path}",
+                headers=dict(request.headers),
+                content=body
+            )
+            
+            # Return the response from the API service
+            return JSONResponse(
+                content=response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text,
+                status_code=response.status_code,
+                headers=dict(response.headers)
+            )
+            
+    except httpx.TimeoutException:
+        logger.error(f"Timeout proxying request to {path}")
+        raise HTTPException(status_code=504, detail="API service timeout")
+    except Exception as e:
+        logger.error(f"Failed to proxy request to {path}: {e}")
+        raise HTTPException(status_code=502, detail="Bad gateway")

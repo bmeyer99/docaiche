@@ -147,7 +147,7 @@ async def stop_health_monitor():
     logger.info("LLM health monitor stopped")
 
 
-@router.get("/health", tags=["health"])
+@router.get("/", tags=["health"])
 async def health_check(
     background_tasks: BackgroundTasks,
     db_manager: DatabaseManager = Depends(get_database_manager),

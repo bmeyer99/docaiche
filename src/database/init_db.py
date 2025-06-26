@@ -63,8 +63,19 @@ class DatabaseInitializer:
         Args:
             force_recreate: If True, drop existing database and recreate
         """
-        # Create data directory if it doesn't exist
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        # Create data directory if it doesn't exist - critical for containerized deployments
+        try:
+            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Ensured data directory exists: {Path(self.db_path).parent}")
+        except PermissionError as e:
+            logger.error(f"Permission denied creating data directory: {e}")
+            # Try alternative path if /app is not writable
+            if "/app/" in self.db_path:
+                self.db_path = self.db_path.replace("/app/", "./")
+                Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Using alternative data directory: {Path(self.db_path).parent}")
+            else:
+                raise
         
         if force_recreate and os.path.exists(self.db_path):
             os.remove(self.db_path)
@@ -92,13 +103,14 @@ class DatabaseInitializer:
     def _create_tables(self, conn: sqlite3.Connection) -> None:
         """Create all database tables exactly as specified in task requirements"""
         
-        # System configuration table
+        # System configuration table - FIXED SCHEMA to match config manager expectations
         conn.execute("""
             CREATE TABLE IF NOT EXISTS system_config (
-                key TEXT PRIMARY KEY NOT NULL,
-                value JSON NOT NULL,
+                config_key TEXT PRIMARY KEY NOT NULL,
+                config_value TEXT NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
                 schema_version TEXT NOT NULL DEFAULT '1.0',
-                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_by TEXT NOT NULL DEFAULT 'system'
             )
         """)
@@ -241,6 +253,10 @@ class DatabaseInitializer:
         """Create all performance indexes exactly as specified in task requirements"""
         
         indexes = [
+            # System config indexes
+            "CREATE INDEX IF NOT EXISTS idx_system_config_active ON system_config(is_active) WHERE is_active = TRUE",
+            "CREATE INDEX IF NOT EXISTS idx_system_config_updated_at ON system_config(updated_at)",
+            
             # Search cache indexes
             "CREATE INDEX IF NOT EXISTS idx_search_cache_expires_at ON search_cache(expires_at)",
             "CREATE INDEX IF NOT EXISTS idx_search_cache_technology_hint ON search_cache(technology_hint)",
@@ -292,7 +308,7 @@ class DatabaseInitializer:
         conn.execute("""
             INSERT OR REPLACE INTO schema_versions (version_id, description)
             VALUES (?, ?)
-        """, (self.schema_version, "Initial database schema"))
+        """, (self.schema_version, "Initial database schema with config manager compatibility"))
     
     def _insert_default_mappings(self, conn: sqlite3.Connection) -> None:
         """Insert default technology-to-repository mappings"""

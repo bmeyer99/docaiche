@@ -26,7 +26,6 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from src.core.config import get_system_configuration
-from src.core.config.manager import get_current_configuration
 from src.core.security import SecurityMiddleware
 from src.api.v1.api import api_router, setup_exception_handlers
 from src.api.v1.middleware import LoggingMiddleware, limiter, rate_limit_handler
@@ -58,7 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         # Initialize configuration system first
         logger.info("Initializing configuration system...")
-        config = await get_current_configuration()
+        config = get_system_configuration()
         logger.info(f"Configuration initialized - Environment: {config.app.environment}")
         
         # Initialize rate limiter state

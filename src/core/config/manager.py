@@ -549,6 +549,19 @@ async def get_current_configuration() -> SystemConfiguration:
     manager = await get_configuration_manager()
     return manager.get_configuration()
 
+
+def get_system_configuration() -> SystemConfiguration:
+    """
+    Synchronously retrieves the system configuration.
+    If the configuration is not initialized, it will be loaded using a new event loop.
+    This is intended for use in synchronous application startup code before uvicorn's loop starts.
+    """
+    manager = ConfigurationManager()
+    if manager._config is None:
+        return asyncio.run(get_current_configuration())
+    return manager.get_configuration()
+
+
 # --- Implementation Engineer: Provide reload_configuration for import compatibility ---
 def reload_configuration():
     """

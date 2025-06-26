@@ -29,13 +29,13 @@ logger = logging.getLogger(__name__)
 # Create the main API router
 api_router = APIRouter()
 
-# Include all endpoint routers
-api_router.include_router(search_router)
-api_router.include_router(admin_router)
-api_router.include_router(config_router)
-api_router.include_router(health_router)
-api_router.include_router(enrichment_router)
-api_router.include_router(ingestion_router)
+# Include all endpoint routers with proper prefixes
+api_router.include_router(search_router, prefix="/search", tags=["search"])
+api_router.include_router(admin_router, prefix="/admin", tags=["admin"])
+api_router.include_router(config_router, prefix="/config", tags=["config"])
+api_router.include_router(health_router, prefix="/health", tags=["health"])
+api_router.include_router(enrichment_router, prefix="/enrichment", tags=["enrichment"])
+api_router.include_router(ingestion_router, prefix="/ingestion", tags=["ingestion"])
 from .mcp_endpoints import router as mcp_router
 api_router.include_router(mcp_router)
 
