@@ -119,195 +119,58 @@ async def get_configuration(
     request: Request
 ) -> ConfigurationResponse:
     """
-    GET /api/v1/config - Retrieves the current system configuration
+    GET /api/v1/config - Retrieves the current system configuration dynamically from the database.
     
-    CFG-009: API Endpoints Integration
-    Integrates with ConfigurationManager for comprehensive configuration access
+    This endpoint provides comprehensive configuration access by loading all items
+    directly from the ConfigurationManager.
     
     Args:
         request: FastAPI request object (required for rate limiting)
         
     Returns:
-        ConfigurationResponse with current configuration items
+        ConfigurationResponse with all current configuration items
     """
     try:
-        # Use ConfigurationManager for hierarchical configuration access
-        try:
-            config_manager = await get_configuration_manager()
-            config = config_manager.get_configuration()
-        except Exception:
-            # Fall back to legacy method for compatibility
-            config = get_system_configuration()
+        config_manager = await get_configuration_manager()
+        # Dynamically load all configuration items from the database
+        all_items = await config_manager.get_all_from_db()
         
-        # Return non-sensitive configuration items with comprehensive coverage
-        items = [
-            # Application configuration
-            ConfigurationItem(
-                key="app.environment",
-                value=config.app.environment,
-                description="Application environment (development/production/testing)"
-            ),
-            ConfigurationItem(
-                key="app.debug",
-                value=config.app.debug,
-                description="Debug mode enabled"
-            ),
-            ConfigurationItem(
-                key="app.log_level",
-                value=config.app.log_level,
-                description="Logging level"
-            ),
-            ConfigurationItem(
-                key="app.api_port",
-                value=config.app.api_port,
-                description="API service port"
-            ),
-            ConfigurationItem(
-                key="app.workers",
-                value=config.app.workers,
-                description="Number of worker processes"
-            ),
-            
-            # Content processing configuration
-            ConfigurationItem(
-                key="content.chunk_size_default",
-                value=config.content.chunk_size_default,
-                description="Default content chunk size in characters"
-            ),
-            ConfigurationItem(
-                key="content.chunk_size_max",
-                value=config.content.chunk_size_max,
-                description="Maximum content chunk size in characters"
-            ),
-            ConfigurationItem(
-                key="content.quality_threshold",
-                value=config.content.quality_threshold,
-                description="Minimum quality score for content processing"
-            ),
-            
-            # Redis configuration (non-sensitive)
-            ConfigurationItem(
-                key="redis.host",
-                value=config.redis.host,
-                description="Redis cache server host"
-            ),
-            ConfigurationItem(
-                key="redis.port",
-                value=config.redis.port,
-                description="Redis cache server port"
-            ),
-            ConfigurationItem(
-                key="redis.db",
-                value=config.redis.db,
-                description="Redis database number"
-            ),
-            ConfigurationItem(
-                key="redis.max_connections",
-                value=config.redis.max_connections,
-                description="Maximum Redis connections in pool"
-            ),
-            
-            # AI configuration (non-sensitive)
-            ConfigurationItem(
-                key="ai.primary_provider",
-                value=config.ai.primary_provider,
-                description="Primary AI/LLM provider"
-            ),
-            ConfigurationItem(
-                key="ai.enable_failover",
-                value=config.ai.enable_failover,
-                description="Enable AI provider failover"
-            ),
-            ConfigurationItem(
-                key="ai.cache_ttl_seconds",
-                value=config.ai.cache_ttl_seconds,
-                description="AI response cache TTL in seconds"
-            ),
-            
-            # Service endpoints (non-sensitive)
-            ConfigurationItem(
-                key="anythingllm.endpoint",
-                value=config.anythingllm.endpoint,
-                description="AnythingLLM service endpoint"
-            ),
+        # Convert database models to response items
+        response_items = [
+            ConfigurationItem(key=item.key, value=item.value, description=item.description)
+            for item in all_items
         ]
         
         return ConfigurationResponse(
-            items=items,
+            items=response_items,
             timestamp=datetime.utcnow()
         )
         
     except Exception as e:
-        logger.error(f"Configuration retrieval failed: {e}")
+        logger.error(f"Dynamic configuration retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Configuration unavailable")
 
 
-@router.post("/bulk", status_code=202)
-@limiter.limit("2/minute")
-async def bulk_update_configuration(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    config_items: list = Body(...)
-) -> Dict[str, str]:
-    """
-    POST /api/v1/config/bulk - Updates multiple configuration items at once.
-    Accepts a list of {"key": ..., "value": ...} and applies all updates atomically.
-    """
-    try:
-        logger.info(f"Bulk configuration update request: {config_items}")
-        if not isinstance(config_items, list):
-            raise HTTPException(status_code=400, detail="Payload must be a list of {key, value} objects")
-        for item in config_items:
-            if not isinstance(item, dict) or "key" not in item or "value" not in item:
-                raise HTTPException(status_code=400, detail="Each item must have 'key' and 'value'")
-        async def update_all():
-            try:
-                config_manager = await get_configuration_manager()
-                for item in config_items:
-                    await config_manager.update_in_db(item["key"], item["value"])
-                # Broadcast health/config updates if any AI/LLM keys changed
-                if any(i["key"].startswith(('ai.', 'llm.', 'ollama.', 'openai.')) for i in config_items):
-                    await broadcast_llm_health_status()
-                if WEBSOCKET_AVAILABLE:
-                    for item in config_items:
-                        await websocket_manager.broadcast_config_update(item["key"], item["value"])
-            except Exception as e:
-                logger.error(f"Bulk configuration update failed: {e}")
-        background_tasks.add_task(update_all)
-        return {
-            "message": f"Bulk configuration update for {len(config_items)} items queued",
-            "status": "accepted"
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Bulk configuration update failed: {e}")
-        raise HTTPException(status_code=500, detail="Bulk configuration update failed")
-
-
-@router.post("/", status_code=202)
-@limiter.limit("5/minute")
+@router.post("/", status_code=200)
+@limiter.limit("30/minute") # Increased limit for real-time saving
 async def update_configuration(
     request: Request,
-    config_request: ConfigurationUpdateRequest,
-    background_tasks: BackgroundTasks
-) -> Dict[str, str]:
+    config_request: ConfigurationUpdateRequest
+) -> Dict[str, Any]:
     """
-    POST /api/v1/config - Updates a specific part of the system configuration
+    POST /api/v1/config - Updates a single configuration item and returns the saved value.
     
-    CFG-009: API Endpoints Integration
-    Updates configuration using ConfigurationManager with database persistence
+    This endpoint provides a synchronous, atomic update mechanism for individual settings.
     
     Args:
-        request: FastAPI request object (required for rate limiting)
-        config_request: Configuration update request
-        background_tasks: FastAPI background tasks for processing
+        request: FastAPI request object (for rate limiting and user auditing)
+        config_request: The configuration key and value to update.
         
     Returns:
-        Confirmation message with HTTP 202
+        A confirmation dictionary with the saved key-value pair.
     """
     try:
-        logger.info(f"Configuration update request: {config_request.key} = {config_request.value}")
+        logger.info(f"Sync configuration update: {config_request.key} = {config_request.value}")
         
         # Validate configuration key format
         if not config_request.key or '.' not in config_request.key:
@@ -316,43 +179,42 @@ async def update_configuration(
                 detail="Configuration key must be in dot notation format (e.g., 'app.debug')"
             )
         
-        # Add background task to update configuration using ConfigurationManager
-        async def update_config():
-            try:
-                config_manager = await get_configuration_manager()
-                
-                # Update configuration in database with runtime reload
-                await config_manager.update_in_db(config_request.key, config_request.value)
-                
-                logger.info(f"Configuration updated successfully: {config_request.key}")
-                
-                # Check if this config change affects LLM providers and broadcast health status
-                if config_request.key.startswith(('ai.', 'llm.', 'ollama.', 'openai.')):
-                    await broadcast_llm_health_status()
-                    
-                # Broadcast configuration update
-                if WEBSOCKET_AVAILABLE:
-                    await websocket_manager.broadcast_config_update(
-                        config_request.key,
-                        config_request.value
-                    )
-                
-            except Exception as e:
-                logger.error(f"Configuration update failed: {config_request.key} - {e}")
+        # Extract user from request for auditing
+        user = "anonymous"
+        if hasattr(request, "user") and getattr(request.user, "username", None):
+            user = request.user.username
+        elif request.headers.get("x-user"):
+            user = request.headers.get("x-user")
+
+        # Perform synchronous update in the database
+        config_manager = await get_configuration_manager()
+        await config_manager.update_in_db(config_request.key, config_request.value, user=user)
         
-        background_tasks.add_task(update_config)
+        logger.info(f"Configuration saved successfully: {config_request.key}")
         
+        # Broadcast updates for relevant configuration changes
+        if config_request.key.startswith(('ai.', 'llm.', 'ollama.', 'openai.')):
+            await broadcast_llm_health_status()
+            
+        if WEBSOCKET_AVAILABLE:
+            await websocket_manager.broadcast_config_update(
+                config_request.key,
+                config_request.value
+            )
+            
+        # Return the successfully saved data
         return {
-            "message": f"Configuration update for '{config_request.key}' queued",
+            "message": "Configuration updated successfully",
             "key": config_request.key,
-            "status": "accepted"
+            "value": config_request.value,
+            "status": "success"
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Configuration update failed: {e}")
-        raise HTTPException(status_code=500, detail="Configuration update failed")
+        logger.error(f"Configuration update failed for key '{config_request.key}': {e}")
+        raise HTTPException(status_code=500, detail=f"Update failed for {config_request.key}")
 
 
 @router.get("/collections", response_model=CollectionsResponse)

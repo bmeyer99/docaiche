@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def create_database_schema(db_path: str) -> None:
     """
-    Create SQLite database with all tables and indexes from PRD-002.
+    Create SQLite database with all tables and indexes from PRD-002, plus config_audit audit log.
     
     Args:
         db_path: Path to SQLite database file
@@ -29,6 +29,8 @@ def create_database_schema(db_path: str) -> None:
     Also creates additional tables for test validation compatibility:
     document_metadata, document_chunks, processed_documents, search_queries,
     cache_entries, system_metrics, users.
+
+    Adds config_audit table for configuration audit logging.
     """
     # Ensure database directory exists
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -45,6 +47,9 @@ def create_database_schema(db_path: str) -> None:
         _create_usage_signals_table(conn)
         _create_source_metadata_table(conn)
         _create_technology_mappings_table(conn)
+
+        # Create config_audit table for audit logging
+        _create_config_audit_table(conn)
         
         # Create additional tables for test validation compatibility
         _create_test_validation_tables(conn)
@@ -76,6 +81,20 @@ async def create_database_schema_async(database_url: str) -> None:
 # Remove destructive alias - keep both functions separate
 # create_database_schema = create_database_schema_async
 
+
+def _create_config_audit_table(conn: sqlite3.Connection) -> None:
+    """Create config_audit table for configuration change audit logging."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS config_audit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            user TEXT,
+            config_key TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT NOT NULL,
+            status TEXT NOT NULL
+        )
+    """)
 
 def _create_system_config_table(conn: sqlite3.Connection) -> None:
     """Create system_config table - PRD-002 lines 34-40"""

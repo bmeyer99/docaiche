@@ -282,9 +282,9 @@ class ConfigurationManager:
             else:
                 base[key] = value
     
-    async def update_in_db(self, config_key: str, config_value: Any) -> None:
+    async def update_in_db(self, config_key: str, config_value: Any, user: Optional[str] = None) -> None:
         """
-        Update configuration value in database
+        Update configuration value in database and audit to DB (no file logging).
         
         CFG-005: Database Integration
         Uses PRD-002 DatabaseManager for config updates
@@ -292,37 +292,149 @@ class ConfigurationManager:
         Args:
             config_key: Configuration key in dot notation (e.g., "redis.host")
             config_value: Configuration value to store
+            user: The user performing the action, for audit purposes.
         """
         if not self._db_manager:
             raise ValueError("Database manager not available for configuration updates")
-            
+
+        old_value_str = None
+        status = "failure"
+        
         try:
-            # Serialize value as JSON if it's not a string
+            # Get old value for audit
+            row = await self._db_manager.fetch_one(
+                "SELECT config_value FROM system_config WHERE config_key = :param_0", (config_key,)
+            )
+            if row:
+                old_value_str = row.config_value
+
+            # Serialize new value
             if isinstance(config_value, (dict, list, bool, int, float)):
-                serialized_value = json.dumps(config_value)
+                new_value_str = json.dumps(config_value)
             else:
-                serialized_value = str(config_value)
-            
+                new_value_str = str(config_value)
+
             # Upsert configuration value
             await self._db_manager.execute(
                 """
                 INSERT OR REPLACE INTO system_config (config_key, config_value, is_active, updated_at)
                 VALUES (:param_0, :param_1, :param_2, :param_3)
                 """,
-                (config_key, serialized_value, True, int(time.time()))
+                (config_key, new_value_str, True, int(time.time()))
             )
             
-            logger.info(f"Configuration updated in database: {config_key}")
+            status = "success"
+            logger.info(f"Configuration updated in database: {config_key} by user: {user}")
             
             # Reload configuration to reflect changes
             await self.load_configuration()
             
             # Notify services of configuration changes
             await self._notify_configuration_change(config_key, config_value)
-            
+
         except Exception as e:
             logger.error(f"Failed to update configuration in database: {e}")
+            # The status is already 'failure'
             raise
+        finally:
+            # Audit log for both success and failure
+            try:
+                new_value_for_audit = str(config_value)
+                if isinstance(config_value, (dict, list, bool, int, float)):
+                     new_value_for_audit = json.dumps(config_value)
+
+                await self._db_manager.execute(
+                    "INSERT INTO config_audit (user, config_key, old_value, new_value, status) VALUES (:param_0, :param_1, :param_2, :param_3, :param_4)",
+                    (user, config_key, old_value_str, new_value_for_audit, status)
+                )
+            except Exception as audit_exc:
+                logger.error(f"CRITICAL: Failed to write audit log for config change: {audit_exc}")
+
+    async def bulk_update_in_db(self, config_updates: Dict[str, Any], user: Optional[str] = None) -> None:
+        """
+        Atomically update multiple configuration values in database using single transaction and audit to DB.
+        
+        CFG-005: Database Integration with Atomic Transactions
+        Ensures all configuration updates succeed or fail together (ACID compliance)
+        
+        Args:
+            config_updates: Dictionary mapping config keys to values
+            user: The user performing the action, for audit purposes.
+            
+        Raises:
+            ValueError: If database manager not available
+            Exception: If any update fails (all changes are rolled back)
+        """
+        if not self._db_manager:
+            raise ValueError("Database manager not available for bulk configuration updates")
+            
+        if not config_updates:
+            logger.info("No configuration updates to process")
+            return
+
+        old_values = {}
+        status = "failure"
+        
+        try:
+            # 1. Fetch all old values first
+            for config_key in config_updates.keys():
+                row = await self._db_manager.fetch_one(
+                    "SELECT config_value FROM system_config WHERE config_key = :param_0", (config_key,)
+                )
+                old_values[config_key] = row.config_value if row else None
+
+            # 2. Perform the bulk update in a transaction
+            update_queries = []
+            current_timestamp = int(time.time())
+            for config_key, config_value in config_updates.items():
+                if isinstance(config_value, (dict, list, bool, int, float)):
+                    serialized_value = json.dumps(config_value)
+                else:
+                    serialized_value = str(config_value)
+                
+                query = """
+                INSERT OR REPLACE INTO system_config (config_key, config_value, is_active, updated_at)
+                VALUES (:param_0, :param_1, :param_2, :param_3)
+                """
+                params = (config_key, serialized_value, True, current_timestamp)
+                update_queries.append((query, params))
+
+            success = await self._db_manager.execute_transaction(update_queries)
+            if not success:
+                raise Exception("Bulk configuration update transaction failed")
+
+            status = "success"
+            logger.info(f"Bulk configuration update completed successfully: {len(config_updates)} items by user: {user}")
+
+            # 3. Reload and notify
+            await self.load_configuration()
+            for config_key, config_value in config_updates.items():
+                try:
+                    await self._notify_configuration_change(config_key, config_value)
+                except Exception as e:
+                    logger.warning(f"Failed to notify service of config change {config_key}: {e}")
+
+        except Exception as e:
+            logger.error(f"Failed to perform bulk configuration update: {e}")
+            raise  # Re-raise the exception after setting status
+        finally:
+            # 4. Audit all changes, regardless of success or failure
+            audit_queries = []
+            for config_key, config_value in config_updates.items():
+                new_value_for_audit = str(config_value)
+                if isinstance(config_value, (dict, list, bool, int, float)):
+                     new_value_for_audit = json.dumps(config_value)
+
+                audit_query = "INSERT INTO config_audit (user, config_key, old_value, new_value, status) VALUES (:param_0, :param_1, :param_2, :param_3, :param_4)"
+                audit_params = (user, config_key, old_values.get(config_key), new_value_for_audit, status)
+                audit_queries.append((audit_query, audit_params))
+            
+            try:
+                # This should not be part of the main transaction
+                for query, params in audit_queries:
+                    await self._db_manager.execute(query, params)
+            except Exception as audit_exc:
+                logger.error(f"CRITICAL: Failed to write bulk audit log for config change: {audit_exc}")
             
     async def _notify_configuration_change(self, config_key: str, config_value: Any) -> None:
         """

@@ -105,105 +105,125 @@ class DataService:
         }
 
     async def _save_frontend_config_to_core(self, manager, frontend_config: dict):
-        """Map frontend configuration to core config structure and save."""
+        """
+        Atomically map frontend configuration to core config structure and save.
+        
+        Uses single database transaction to ensure all configuration updates
+        succeed or fail together (no partial updates).
+        
+        Args:
+            manager: ConfigurationManager instance
+            frontend_config: Dictionary containing frontend configuration values
+            
+        Raises:
+            Exception: If atomic transaction fails (no changes committed)
+        """
+        # Build atomic configuration updates dictionary
+        config_updates = {}
+        
         # Map basic application settings
         if "environment" in frontend_config:
-            await manager.update_in_db("app.environment", frontend_config["environment"])
+            config_updates["app.environment"] = frontend_config["environment"]
         if "debug_mode" in frontend_config:
-            await manager.update_in_db("app.debug", frontend_config["debug_mode"])
+            config_updates["app.debug"] = frontend_config["debug_mode"]
         if "log_level" in frontend_config:
-            await manager.update_in_db("app.log_level", frontend_config["log_level"])
+            config_updates["app.log_level"] = frontend_config["log_level"]
         if "workers" in frontend_config:
-            await manager.update_in_db("app.workers", frontend_config["workers"])
+            config_updates["app.workers"] = frontend_config["workers"]
         if "api_host" in frontend_config:
-            await manager.update_in_db("app.api_host", frontend_config["api_host"])
+            config_updates["app.api_host"] = frontend_config["api_host"]
             
         # Map dual provider AI/LLM settings
         if "text_provider" in frontend_config:
-            await manager.update_in_db("ai.text_provider", frontend_config["text_provider"])
-            await manager.update_in_db("ai.primary_provider", frontend_config["text_provider"])
+            config_updates["ai.text_provider"] = frontend_config["text_provider"]
+            config_updates["ai.primary_provider"] = frontend_config["text_provider"]
         if "text_base_url" in frontend_config:
-            await manager.update_in_db("ai.text_base_url", frontend_config["text_base_url"])
+            config_updates["ai.text_base_url"] = frontend_config["text_base_url"]
         if "text_api_key" in frontend_config:
-            await manager.update_in_db("ai.text_api_key", frontend_config["text_api_key"])
+            config_updates["ai.text_api_key"] = frontend_config["text_api_key"]
             
         if "embedding_provider" in frontend_config:
-            await manager.update_in_db("ai.embedding_provider", frontend_config["embedding_provider"])
+            config_updates["ai.embedding_provider"] = frontend_config["embedding_provider"]
         if "embedding_base_url" in frontend_config:
-            await manager.update_in_db("ai.embedding_base_url", frontend_config["embedding_base_url"])
+            config_updates["ai.embedding_base_url"] = frontend_config["embedding_base_url"]
         if "embedding_api_key" in frontend_config:
-            await manager.update_in_db("ai.embedding_api_key", frontend_config["embedding_api_key"])
+            config_updates["ai.embedding_api_key"] = frontend_config["embedding_api_key"]
         if "use_same_provider" in frontend_config:
-            await manager.update_in_db("ai.use_same_provider", frontend_config["use_same_provider"])
+            config_updates["ai.use_same_provider"] = frontend_config["use_same_provider"]
             
         # Map model configuration
         if "llm_model" in frontend_config:
-            await manager.update_in_db("ai.llm_model", frontend_config["llm_model"])
+            config_updates["ai.llm_model"] = frontend_config["llm_model"]
         if "llm_embedding_model" in frontend_config:
-            await manager.update_in_db("ai.llm_embedding_model", frontend_config["llm_embedding_model"])
+            config_updates["ai.llm_embedding_model"] = frontend_config["llm_embedding_model"]
             
         # Map text generation advanced parameters
         if "text_max_tokens" in frontend_config:
-            await manager.update_in_db("ai.text_max_tokens", frontend_config["text_max_tokens"])
+            config_updates["ai.text_max_tokens"] = frontend_config["text_max_tokens"]
         if "text_temperature" in frontend_config:
-            await manager.update_in_db("ai.text_temperature", frontend_config["text_temperature"])
+            config_updates["ai.text_temperature"] = frontend_config["text_temperature"]
         if "text_top_p" in frontend_config:
-            await manager.update_in_db("ai.text_top_p", frontend_config["text_top_p"])
+            config_updates["ai.text_top_p"] = frontend_config["text_top_p"]
         if "text_top_k" in frontend_config:
-            await manager.update_in_db("ai.text_top_k", frontend_config["text_top_k"])
+            config_updates["ai.text_top_k"] = frontend_config["text_top_k"]
         if "text_timeout" in frontend_config:
-            await manager.update_in_db("ai.text_timeout", frontend_config["text_timeout"])
+            config_updates["ai.text_timeout"] = frontend_config["text_timeout"]
         if "text_retries" in frontend_config:
-            await manager.update_in_db("ai.text_retries", frontend_config["text_retries"])
+            config_updates["ai.text_retries"] = frontend_config["text_retries"]
             
         # Map embedding advanced parameters
         if "embedding_batch_size" in frontend_config:
-            await manager.update_in_db("ai.embedding_batch_size", frontend_config["embedding_batch_size"])
+            config_updates["ai.embedding_batch_size"] = frontend_config["embedding_batch_size"]
         if "embedding_timeout" in frontend_config:
-            await manager.update_in_db("ai.embedding_timeout", frontend_config["embedding_timeout"])
+            config_updates["ai.embedding_timeout"] = frontend_config["embedding_timeout"]
         if "embedding_retries" in frontend_config:
-            await manager.update_in_db("ai.embedding_retries", frontend_config["embedding_retries"])
+            config_updates["ai.embedding_retries"] = frontend_config["embedding_retries"]
         if "embedding_chunk_size" in frontend_config:
-            await manager.update_in_db("ai.embedding_chunk_size", frontend_config["embedding_chunk_size"])
+            config_updates["ai.embedding_chunk_size"] = frontend_config["embedding_chunk_size"]
         if "embedding_overlap" in frontend_config:
-            await manager.update_in_db("ai.embedding_overlap", frontend_config["embedding_overlap"])
+            config_updates["ai.embedding_overlap"] = frontend_config["embedding_overlap"]
         if "embedding_normalize" in frontend_config:
-            await manager.update_in_db("ai.embedding_normalize", frontend_config["embedding_normalize"])
+            config_updates["ai.embedding_normalize"] = frontend_config["embedding_normalize"]
             
         # Map provider-specific settings for backward compatibility
         if frontend_config.get("text_provider") == "ollama":
             if "text_base_url" in frontend_config:
-                await manager.update_in_db("ai.ollama.endpoint", frontend_config["text_base_url"])
+                config_updates["ai.ollama.endpoint"] = frontend_config["text_base_url"]
             if "llm_model" in frontend_config:
-                await manager.update_in_db("ai.ollama.model", frontend_config["llm_model"])
+                config_updates["ai.ollama.model"] = frontend_config["llm_model"]
             if "text_max_tokens" in frontend_config:
-                await manager.update_in_db("ai.ollama.max_tokens", frontend_config["text_max_tokens"])
+                config_updates["ai.ollama.max_tokens"] = frontend_config["text_max_tokens"]
             if "text_temperature" in frontend_config:
-                await manager.update_in_db("ai.ollama.temperature", frontend_config["text_temperature"])
+                config_updates["ai.ollama.temperature"] = frontend_config["text_temperature"]
             if "text_timeout" in frontend_config:
-                await manager.update_in_db("ai.ollama.timeout_seconds", frontend_config["text_timeout"])
+                config_updates["ai.ollama.timeout_seconds"] = frontend_config["text_timeout"]
                 
         elif frontend_config.get("text_provider") == "openai":
             if "text_api_key" in frontend_config:
-                await manager.update_in_db("ai.openai.api_key", frontend_config["text_api_key"])
+                config_updates["ai.openai.api_key"] = frontend_config["text_api_key"]
             if "llm_model" in frontend_config:
-                await manager.update_in_db("ai.openai.model", frontend_config["llm_model"])
+                config_updates["ai.openai.model"] = frontend_config["llm_model"]
             if "text_max_tokens" in frontend_config:
-                await manager.update_in_db("ai.openai.max_tokens", frontend_config["text_max_tokens"])
+                config_updates["ai.openai.max_tokens"] = frontend_config["text_max_tokens"]
             if "text_temperature" in frontend_config:
-                await manager.update_in_db("ai.openai.temperature", frontend_config["text_temperature"])
+                config_updates["ai.openai.temperature"] = frontend_config["text_temperature"]
                 
         # Map embedding settings to AnythingLLM config
         if "llm_embedding_model" in frontend_config:
-            await manager.update_in_db("anythingllm.embedding_model", frontend_config["llm_embedding_model"])
+            config_updates["anythingllm.embedding_model"] = frontend_config["llm_embedding_model"]
         if "embedding_provider" in frontend_config:
-            await manager.update_in_db("anythingllm.embedding_provider", frontend_config["embedding_provider"])
+            config_updates["anythingllm.embedding_provider"] = frontend_config["embedding_provider"]
             
         # Map cache settings
         if "cache_ttl" in frontend_config:
-            await manager.update_in_db("ai.cache_ttl_seconds", frontend_config["cache_ttl"])
-            
-        logger.info("Configuration successfully mapped and saved to core config system")
+            config_updates["ai.cache_ttl_seconds"] = frontend_config["cache_ttl"]
+        
+        # Perform atomic bulk update using single transaction and audit
+        if config_updates:
+            await manager.bulk_update_in_db(config_updates, user="WebUI")
+            logger.info(f"Frontend configuration mapped and saved atomically: {len(config_updates)} items")
+        else:
+            logger.info("No configuration updates to apply from frontend")
 
     async def fetch_collections(self) -> list:
         """Fetch content collections."""

@@ -36,3 +36,30 @@ def setup_logging():
     # TODO: IMPLEMENTATION ENGINEER - Add correlation ID, JSON formatting, and external log sinks as needed
 
 setup_logging()
+import subprocess
+
+class DBWriteAlertHandler(logging.Handler):
+    """
+    Custom log handler to trigger alert script on DB write failures.
+    """
+    def emit(self, record):
+        msg = self.format(record)
+        if (
+            record.levelno >= logging.ERROR and (
+                "Failed to update configuration" in msg or
+                "Failed to write audit log" in msg or
+                "Failed to perform bulk configuration update" in msg or
+                "CRITICAL: Failed to write bulk audit log" in msg
+            )
+        ):
+            try:
+                subprocess.Popen(
+                    ["bash", "ops/scripts/db_write_alert.sh", msg],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+            except Exception:
+                pass  # Avoid recursion on logging failure
+
+# Attach handler to root logger if not already present
+if not any(isinstance(h, DBWriteAlertHandler) for h in logging.getLogger().handlers):
+    logging.getLogger().addHandler(DBWriteAlertHandler())

@@ -1,26 +1,64 @@
-// Configuration Management Class
+// Configuration Management Class - Refactored for "Save-on-Change"
 class ConfigManager {
     constructor() {
-        this.originalConfig = {};
-        this.isDirty = false;
         this.isLoading = false;
         this.accordionState = {
             'app-settings': false,
             'cache-config': false,
             'ai-config': true
         };
+
+        // Centralized key map for frontend-backend alignment
+        this.keyMap = {
+            environment: "app.environment",
+            debug_mode: "app.debug",
+            log_level: "app.log_level",
+            workers: "app.workers",
+            api_host: "app.api_host",
+            api_timeout: "app.api_timeout",
+            websocket_url: "app.websocket_url",
+            max_retries: "app.max_retries",
+            auto_refresh: "app.auto_refresh",
+            refresh_interval: "app.refresh_interval",
+            cache_ttl: "ai.cache_ttl_seconds",
+            cache_max_size: "redis.max_connections",
+            use_same_provider: "ai.use_same_provider",
+            text_provider: "ai.text_provider",
+            text_base_url: "ai.text_base_url",
+            text_api_key: "ai.text_api_key",
+            llm_model: "ai.llm_model",
+            embedding_provider: "ai.embedding_provider",
+            embedding_base_url: "ai.embedding_base_url",
+            embedding_api_key: "ai.embedding_api_key",
+            llm_embedding_model: "ai.llm_embedding_model",
+            text_max_tokens: "ai.text_max_tokens",
+            text_temperature: "ai.text_temperature",
+            text_top_p: "ai.text_top_p",
+            text_top_k: "ai.text_top_k",
+            text_timeout: "ai.text_timeout",
+            text_retries: "ai.text_retries",
+            embedding_batch_size: "ai.embedding_batch_size",
+            embedding_timeout: "ai.embedding_timeout",
+            embedding_retries: "ai.embedding_retries",
+            embedding_chunk_size: "ai.embedding_chunk_size",
+            embedding_overlap: "ai.embedding_overlap",
+            embedding_normalize: "ai.embedding_normalize",
+            anythingllm_embedding_model: "anythingllm.embedding_model",
+            anythingllm_embedding_provider: "anythingllm.embedding_provider"
+        };
+        
+        this.invertedKeyMap = Object.fromEntries(Object.entries(this.keyMap).map(([k, v]) => [v, k]));
     }
 
     async init() {
         try {
             await this.loadConfiguration();
             this.setupAccordions();
-            this.bindEvents();
+            this.bindSaveOnChangeEvents();
             this.setupFormValidation();
             
-            // Initialize AI/LLM configuration manager
             if (window.aiLLMManager) {
-                window.aiLLMManager.init();
+                window.aiLLMManager.init(this); // Pass configManager instance
             }
         } catch (error) {
             console.error('Configuration initialization failed:', error);
@@ -32,16 +70,17 @@ class ConfigManager {
         this.isLoading = true;
         try {
             const response = await api.get('/config');
-            // Map config.items (array of {key, value}) to flat object
             const config = {};
             if (response && Array.isArray(response.items)) {
                 response.items.forEach(item => {
-                    // Convert dot.notation keys to flat keys for form fields
-                    const key = item.key.replace(/^app\./, '').replace(/^ai\./, '').replace(/^redis\./, '').replace(/^content\./, '').replace(/^anythingllm\./, '');
-                    config[key] = item.value;
+                    const frontendKey = this.invertedKeyMap[item.key];
+                    if (frontendKey) {
+                        config[frontendKey] = item.value;
+                    } else {
+                        console.warn(`Unmapped configuration key from backend: ${item.key}`);
+                    }
                 });
             }
-            this.originalConfig = { ...config };
             this.populateForm(config);
         } catch (error) {
             console.error('Failed to load configuration:', error);
@@ -53,25 +92,12 @@ class ConfigManager {
     }
 
     populateForm(config) {
-        // Application Settings
-        this.setFieldValue('environment', config.environment || 'development');
-        this.setFieldValue('debug_mode', config.debug_mode || false);
-        this.setFieldValue('log_level', config.log_level || 'INFO');
-        this.setFieldValue('workers', config.workers || 4);
+        Object.keys(this.keyMap).forEach(fieldName => {
+            if (config[fieldName] !== undefined) {
+                this.setFieldValue(fieldName, config[fieldName]);
+            }
+        });
 
-        // Service Configuration
-        this.setFieldValue('api_host', config.api_host || 'http://api:8000');
-        this.setFieldValue('api_timeout', config.api_timeout || 30);
-        this.setFieldValue('websocket_url', config.websocket_url || 'ws://localhost:4080/ws/updates');
-        this.setFieldValue('max_retries', config.max_retries || 3);
-
-        // Cache Management
-        this.setFieldValue('cache_ttl', config.cache_ttl || 3600);
-        this.setFieldValue('cache_max_size', config.cache_max_size || 1000);
-        this.setFieldValue('auto_refresh', config.auto_refresh || true);
-        this.setFieldValue('refresh_interval', config.refresh_interval || 300);
-
-        // AI/LLM Settings - delegate to AI/LLM manager
         if (window.aiLLMManager) {
             window.aiLLMManager.setAILLMConfig(config);
         }
@@ -103,15 +129,12 @@ class ConfigManager {
 
     setupAccordions() {
         const triggers = document.querySelectorAll('[data-accordion-trigger]');
-        
         triggers.forEach(trigger => {
             const sectionId = trigger.getAttribute('data-accordion-trigger');
             const content = document.querySelector(`[data-accordion-content="${sectionId}"]`);
             const icon = trigger.querySelector('svg');
-            
             if (!content || !icon) return;
 
-            // Set initial state
             if (this.accordionState[sectionId]) {
                 content.classList.remove('hidden');
                 icon.classList.remove('rotate-180');
@@ -120,15 +143,12 @@ class ConfigManager {
                 icon.classList.add('rotate-180');
             }
 
-            trigger.addEventListener('click', () => {
-                this.toggleAccordion(sectionId, content, icon);
-            });
+            trigger.addEventListener('click', () => this.toggleAccordion(sectionId, content, icon));
         });
     }
 
     toggleAccordion(sectionId, content, icon) {
         const isExpanded = !content.classList.contains('hidden');
-        
         if (isExpanded) {
             content.classList.add('hidden');
             icon.classList.add('rotate-180');
@@ -140,87 +160,125 @@ class ConfigManager {
         }
     }
 
-    bindEvents() {
-        // Save button
-        const saveButton = document.getElementById('save-config');
-        if (saveButton) {
-            saveButton.addEventListener('click', () => this.saveConfiguration());
-        }
+    bindSaveOnChangeEvents() {
+        const form = document.getElementById('config-form');
+        if (!form) return;
 
-        // Reset button
-        const resetButton = document.getElementById('reset-config');
-        if (resetButton) {
-            resetButton.addEventListener('click', () => this.showResetModal());
-        }
+        // Bind events to all relevant form elements
+        const inputs = form.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            const eventType = (input.type === 'checkbox' || input.tagName === 'SELECT') ? 'change' : 'blur';
+            input.addEventListener(eventType, () => this.saveField(input));
+        });
 
         // Refresh button
         const refreshButton = document.getElementById('refresh-config');
         if (refreshButton) {
             refreshButton.addEventListener('click', async () => {
                 await this.loadConfiguration();
-                this.isDirty = false;
-                this.updateSaveButton();
                 this.clearValidationErrors();
                 utils.showNotification('Configuration refreshed from server', 'info');
             });
         }
+    }
 
-        // Reset modal events
-        const confirmReset = document.getElementById('confirm-reset');
-        const cancelReset = document.getElementById('cancel-reset');
+    async saveField(fieldElement) {
+        if (!fieldElement || !fieldElement.id) return;
+
+        const fieldName = fieldElement.id;
+        const backendKey = this.keyMap[fieldName];
         
-        if (confirmReset) {
-            confirmReset.addEventListener('click', () => this.resetConfiguration());
+        if (!backendKey) {
+            console.warn(`No backend key found for field: ${fieldName}`);
+            return;
+        }
+
+        // Validate field before saving
+        if (!this.validateField(fieldName)) {
+            utils.showNotification(`Invalid value for ${fieldName}. Not saved.`, 'error');
+            return;
+        }
+
+        const value = this.getFieldValue(fieldName);
+
+        try {
+            const response = await api.post('/config', { key: backendKey, value: value });
+            if (response.status === 'success') {
+                this.showSaveConfirmation(fieldElement);
+            } else {
+                throw new Error(response.detail || 'Save failed');
+            }
+        } catch (error) {
+            console.error(`Failed to save ${fieldName}:`, error);
+            utils.showNotification(`Error saving ${fieldName}: ${error.message}`, 'error');
+            this.showSaveError(fieldElement);
+        }
+    }
+
+    showSaveConfirmation(fieldElement) {
+        let feedbackEl = fieldElement.nextElementSibling;
+        if (!feedbackEl || !feedbackEl.classList.contains('save-feedback')) {
+            feedbackEl = document.createElement('span');
+            feedbackEl.className = 'save-feedback ml-2 text-green-500';
+            fieldElement.parentNode.insertBefore(feedbackEl, fieldElement.nextSibling);
         }
         
-        if (cancelReset) {
-            cancelReset.addEventListener('click', () => utils.hideModal('reset-modal'));
-        }
+        feedbackEl.innerHTML = '✓ Saved';
+        feedbackEl.classList.remove('text-red-500');
+        feedbackEl.classList.add('text-green-500');
+        
+        setTimeout(() => {
+            feedbackEl.innerHTML = '';
+        }, 2000);
+    }
 
-        // Form change detection
-        const form = document.getElementById('config-form');
-        if (form) {
-            form.addEventListener('input', () => this.onFormChange());
-            form.addEventListener('change', () => this.onFormChange());
+    showSaveError(fieldElement) {
+        let feedbackEl = fieldElement.nextElementSibling;
+        if (!feedbackEl || !feedbackEl.classList.contains('save-feedback')) {
+            feedbackEl = document.createElement('span');
+            feedbackEl.className = 'save-feedback ml-2 text-red-500';
+            fieldElement.parentNode.insertBefore(feedbackEl, fieldElement.nextSibling);
         }
+        
+        feedbackEl.innerHTML = '✗ Error';
+        feedbackEl.classList.remove('text-green-500');
+        feedbackEl.classList.add('text-red-500');
+    }
 
-        // Close modal on escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                utils.hideModal('reset-modal');
+    setupFormValidation() {
+        Object.keys(this.keyMap).forEach(fieldName => {
+            const field = document.getElementById(fieldName);
+            if (field) {
+                field.addEventListener('input', () => this.validateField(fieldName));
             }
         });
     }
 
-    setupFormValidation() {
-        // Workers validation
-        const workersField = document.getElementById('workers');
-        if (workersField) {
-            workersField.addEventListener('input', () => this.validateWorkers());
-        }
-
-        // URL validation
-        const urlFields = ['api_host', 'websocket_url'];
-        urlFields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.addEventListener('blur', () => this.validateUrl(fieldId));
-            }
-        });
-
-        // Number validation
-        const numberFields = ['api_timeout', 'max_retries', 'cache_ttl', 'cache_max_size', 'refresh_interval', 'max_tokens'];
-        numberFields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.addEventListener('input', () => this.validateNumber(fieldId));
-            }
-        });
-
-        // Temperature validation
-        const temperatureField = document.getElementById('temperature');
-        if (temperatureField) {
-            temperatureField.addEventListener('input', () => this.validateTemperature());
+    validateField(fieldName) {
+        switch(fieldName) {
+            case 'workers': return this.validateWorkers();
+            case 'api_host':
+            case 'websocket_url': return this.validateUrl(fieldName);
+            case 'api_timeout':
+            case 'max_retries':
+            case 'cache_ttl':
+            case 'cache_max_size':
+            case 'refresh_interval':
+            case 'text_max_tokens':
+            case 'text_top_k':
+            case 'text_timeout':
+            case 'text_retries':
+            case 'embedding_batch_size':
+            case 'embedding_timeout':
+            case 'embedding_retries':
+            case 'embedding_chunk_size':
+            case 'embedding_overlap':
+                return this.validateNumber(fieldName);
+            case 'text_temperature':
+            case 'text_top_p':
+                return this.validateFloat(fieldName);
+            default:
+                return true; // No validation for other fields
         }
     }
 
@@ -231,11 +289,11 @@ class ConfigManager {
 
         if (value < 1 || value > 16) {
             field.classList.add('border-red-500');
-            errorElement.classList.remove('hidden');
+            if (errorElement) errorElement.classList.remove('hidden');
             return false;
         } else {
             field.classList.remove('border-red-500');
-            errorElement.classList.add('hidden');
+            if (errorElement) errorElement.classList.add('hidden');
             return true;
         }
     }
@@ -243,7 +301,6 @@ class ConfigManager {
     validateUrl(fieldId) {
         const field = document.getElementById(fieldId);
         if (!field) return true;
-
         try {
             new URL(field.value);
             field.classList.remove('border-red-500');
@@ -257,10 +314,9 @@ class ConfigManager {
     validateNumber(fieldId) {
         const field = document.getElementById(fieldId);
         if (!field) return true;
-
-        const value = parseFloat(field.value);
-        const min = parseFloat(field.getAttribute('min')) || 0;
-        const max = parseFloat(field.getAttribute('max')) || Infinity;
+        const value = parseInt(field.value);
+        const min = parseInt(field.getAttribute('min')) || 0;
+        const max = parseInt(field.getAttribute('max')) || Infinity;
 
         if (isNaN(value) || value < min || value > max) {
             field.classList.add('border-red-500');
@@ -271,11 +327,14 @@ class ConfigManager {
         }
     }
 
-    validateTemperature() {
-        const field = document.getElementById('temperature');
+    validateFloat(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (!field) return true;
         const value = parseFloat(field.value);
+        const min = parseFloat(field.getAttribute('min')) || 0.0;
+        const max = parseFloat(field.getAttribute('max')) || 2.0;
 
-        if (isNaN(value) || value < 0 || value > 2) {
+        if (isNaN(value) || value < min || value > max) {
             field.classList.add('border-red-500');
             return false;
         } else {
@@ -284,225 +343,13 @@ class ConfigManager {
         }
     }
 
-    validateForm() {
-        let isValid = true;
-
-        // Basic form validation
-        isValid &= this.validateWorkers();
-        isValid &= this.validateUrl('api_host');
-        isValid &= this.validateUrl('websocket_url');
-        isValid &= this.validateNumber('api_timeout');
-        isValid &= this.validateNumber('max_retries');
-        isValid &= this.validateNumber('cache_ttl');
-        isValid &= this.validateNumber('cache_max_size');
-        isValid &= this.validateNumber('refresh_interval');
-
-        // AI/LLM validation - delegate to AI manager
-        if (window.aiLLMManager) {
-            isValid &= window.aiLLMManager.validateAILLMConfig();
-        }
-
-        return Boolean(isValid);
-    }
-
-    onFormChange() {
-        this.updateDirtyState();
-        this.updateSaveButton();
-    }
-
-    updateDirtyState() {
-        const currentConfig = this.getCurrentConfig();
-        this.isDirty = JSON.stringify(currentConfig) !== JSON.stringify(this.originalConfig);
-    }
-
-    updateSaveButton() {
-        const saveButton = document.getElementById('save-config');
-        if (saveButton) {
-            saveButton.disabled = !this.isDirty || this.isLoading;
-            
-            if (this.isDirty && !this.isLoading) {
-                saveButton.classList.remove('opacity-50');
-            } else {
-                saveButton.classList.add('opacity-50');
-            }
-        }
-    }
-
-    getCurrentConfig() {
-        const baseConfig = {
-            environment: this.getFieldValue('environment'),
-            debug_mode: this.getFieldValue('debug_mode'),
-            log_level: this.getFieldValue('log_level'),
-            workers: this.getFieldValue('workers'),
-            api_host: this.getFieldValue('api_host'),
-            api_timeout: this.getFieldValue('api_timeout'),
-            websocket_url: this.getFieldValue('websocket_url'),
-            max_retries: this.getFieldValue('max_retries'),
-            cache_ttl: this.getFieldValue('cache_ttl'),
-            cache_max_size: this.getFieldValue('cache_max_size'),
-            auto_refresh: this.getFieldValue('auto_refresh'),
-            refresh_interval: this.getFieldValue('refresh_interval')
-        };
-
-        // Get AI/LLM config from dedicated manager or fallback to basic fields
-        const aiLLMConfig = window.aiLLMManager
-            ? window.aiLLMManager.getAILLMConfig()
-            : {
-                llm_provider: this.getFieldValue('llm_provider'),
-                llm_model: this.getFieldValue('llm_model'),
-                max_tokens: this.getFieldValue('max_tokens'),
-                temperature: this.getFieldValue('temperature')
-            };
-
-        return { ...baseConfig, ...aiLLMConfig };
-    }
-
-    async saveConfiguration() {
-        if (!this.validateForm()) {
-            utils.showNotification('Please fix validation errors before saving', 'error');
-            return;
-        }
-
-        this.isLoading = true;
-        this.updateSaveButton();
-        this.showLoadingState();
-
-        try {
-            const config = this.getCurrentConfig();
-            // Map config keys to backend dot.notation keys
-            const keyMap = {
-                environment: "app.environment",
-                debug_mode: "app.debug",
-                log_level: "app.log_level",
-                workers: "app.workers",
-                api_host: "app.api_host",
-                api_timeout: "app.api_timeout",
-                websocket_url: "app.websocket_url",
-                max_retries: "app.max_retries",
-                cache_ttl: "ai.cache_ttl_seconds",
-                cache_max_size: "redis.max_connections",
-                auto_refresh: "app.auto_refresh",
-                refresh_interval: "app.refresh_interval",
-                llm_provider: "ai.primary_provider",
-                llm_model: "ai.llm_model",
-                max_tokens: "ai.max_tokens",
-                temperature: "ai.temperature"
-                // Add more mappings as needed
-            };
-            const items = Object.entries(config).map(([k, v]) => ({
-                key: keyMap[k] || k,
-                value: v
-            }));
-            console.log('Sending bulk configuration:', items);
-            const response = await api.post('/config/bulk', items);
-
-            this.originalConfig = { ...config };
-            this.isDirty = false;
-            this.updateSaveButton();
-            this.hideLoadingState();
-
-            utils.showNotification('Configuration saved successfully', 'success');
-        } catch (error) {
-            console.error('Failed to save configuration:', error);
-            this.hideLoadingState();
-
-            // Extract detailed error message from API response
-            let errorMessage = 'Failed to save configuration';
-            if (error.message && error.message.includes('HTTP')) {
-                const statusMatch = error.message.match(/HTTP (\d+)/);
-                if (statusMatch) {
-                    const statusCode = parseInt(statusMatch[1]);
-                    if (statusCode === 422) {
-                        errorMessage = 'Invalid configuration data. Please check your inputs.';
-                    } else if (statusCode === 400) {
-                        errorMessage = 'Bad request. Please verify all required fields are filled correctly.';
-                    } else if (statusCode >= 500) {
-                        errorMessage = 'Server error. Please try again later.';
-                    }
-                }
-            }
-
-            utils.showNotification(errorMessage, 'error', 10000);
-            this.highlightErrorFields();
-        } finally {
-            this.isLoading = false;
-            this.updateSaveButton();
-        }
-    }
-
-    showResetModal() {
-        utils.showModal('reset-modal');
-    }
-
-    async resetConfiguration() {
-        utils.hideModal('reset-modal');
-        
-        try {
-            this.populateForm(this.originalConfig);
-            this.isDirty = false;
-            this.updateSaveButton();
-            this.clearValidationErrors();
-            
-            utils.showNotification('Configuration reset to last saved values', 'info');
-        } catch (error) {
-            console.error('Failed to reset configuration:', error);
-            utils.showNotification('Failed to reset configuration', 'error');
-        }
-    }
-
     clearValidationErrors() {
         const form = document.getElementById('config-form');
         if (!form) return;
-
         const errorFields = form.querySelectorAll('.border-red-500');
-        errorFields.forEach(field => {
-            field.classList.remove('border-red-500');
-        });
-
+        errorFields.forEach(field => field.classList.remove('border-red-500'));
         const errorMessages = form.querySelectorAll('.text-red-600:not(.hidden)');
-        errorMessages.forEach(message => {
-            message.classList.add('hidden');
-        });
-    }
-
-    showLoadingState() {
-        const saveButton = document.getElementById('save-config');
-        if (saveButton) {
-            const originalText = saveButton.textContent;
-            saveButton.innerHTML = `
-                <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Saving...
-            `;
-        }
-    }
-
-    hideLoadingState() {
-        const saveButton = document.getElementById('save-config');
-        if (saveButton) {
-            saveButton.innerHTML = 'Save Configuration';
-        }
-    }
-
-    highlightErrorFields() {
-        // Re-run validation to highlight problematic fields
-        this.validateForm();
-        
-        // Show a visual indicator that there are errors
-        const form = document.getElementById('config-form');
-        if (form) {
-            const errorFields = form.querySelectorAll('.border-red-500');
-            if (errorFields.length > 0) {
-                // Scroll to first error field
-                errorFields[0].scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-                errorFields[0].focus();
-            }
-        }
+        errorMessages.forEach(message => message.classList.add('hidden'));
     }
 }
 
@@ -516,20 +363,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listen for config_update events from WebSocket and reload config
     if (window.wsManager) {
-        window.wsManager.on('config_update', async () => {
-            await configManager.loadConfiguration();
-            configManager.isDirty = false;
-            configManager.updateSaveButton();
-            configManager.clearValidationErrors();
-            utils.showNotification('Configuration updated from server', 'info');
+        window.wsManager.on('config_update', async (data) => {
+            console.log('Config update received from WebSocket:', data);
+            // Optimistically update the field value without a full reload
+            const frontendKey = configManager.invertedKeyMap[data.key];
+            if (frontendKey) {
+                configManager.setFieldValue(frontendKey, data.value);
+                utils.showNotification(`Setting '${data.key}' updated from server`, 'info');
+            }
         });
-    }
-});
-
-// Warn about unsaved changes before leaving
-window.addEventListener('beforeunload', (e) => {
-    if (configManager && configManager.isDirty) {
-        e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
     }
 });
