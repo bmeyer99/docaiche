@@ -13,7 +13,11 @@ RUN npm ci --only=production && npm cache clean --force
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+
+# Install all dependencies (including dev dependencies) for building
+COPY package.json package-lock.json* ./
+RUN npm ci && npm cache clean --force
+
 COPY . .
 
 # Disable telemetry during the build
