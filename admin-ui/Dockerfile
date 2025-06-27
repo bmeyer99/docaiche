@@ -1,9 +1,11 @@
 # Multi-stage build for Docaiche Admin UI
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libc6 \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
@@ -14,8 +16,15 @@ RUN npm install --only=production && npm cache clean --force
 FROM base AS builder
 WORKDIR /app
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install all dependencies (including dev dependencies) for building
-COPY package.json package-lock.json* ./
+COPY package.json ./
 RUN npm install && npm cache clean --force
 
 # Copy configuration files first
@@ -31,6 +40,7 @@ RUN ls -la src/lib/ || echo "src/lib directory not found"
 
 # Disable telemetry during the build
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_SENTRY_DISABLED=true
 
 # Build the application
 RUN npm run build
