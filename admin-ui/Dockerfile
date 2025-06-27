@@ -18,7 +18,11 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install && npm cache clean --force
 
+# Copy source files
 COPY . .
+
+# Debug: List files to verify they're copied
+RUN ls -la src/lib/
 
 # Disable telemetry during the build
 ENV NEXT_TELEMETRY_DISABLED=1
