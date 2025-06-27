@@ -30,28 +30,91 @@ async def list_providers(
     GET /api/v1/providers - List all available LLM providers with their status
     """
     try:
-        # Get all configured providers
+        # Get all configured providers - comprehensive list
         providers = [
+            ProviderResponse(
+                id="ollama",
+                name="Ollama",
+                type="text_generation",
+                status="available",
+                configured=False,
+                category="local",
+                description="Local LLM inference server with support for multiple models",
+                requires_api_key=False,
+                supports_embedding=True,
+                supports_chat=True
+            ),
             ProviderResponse(
                 id="openai",
                 name="OpenAI",
                 type="text_generation",
                 status="available",
-                configured=False
+                configured=False,
+                category="cloud",
+                description="OpenAI GPT models and embeddings",
+                requires_api_key=True,
+                supports_embedding=True,
+                supports_chat=True
+            ),
+            ProviderResponse(
+                id="openrouter",
+                name="OpenRouter",
+                type="text_generation",
+                status="available",
+                configured=False,
+                category="cloud",
+                description="Access to multiple LLM providers through one API",
+                requires_api_key=True,
+                supports_embedding=False,
+                supports_chat=True
             ),
             ProviderResponse(
                 id="anthropic", 
-                name="Anthropic",
+                name="Anthropic Claude",
                 type="text_generation",
                 status="available",
-                configured=False
+                configured=False,
+                category="cloud",
+                description="Anthropic Claude models for advanced reasoning",
+                requires_api_key=True,
+                supports_embedding=False,
+                supports_chat=True
             ),
             ProviderResponse(
-                id="ollama",
-                name="Ollama",
-                type="text_generation", 
+                id="groq",
+                name="Groq",
+                type="text_generation",
                 status="available",
-                configured=False
+                configured=False,
+                category="cloud",
+                description="Ultra-fast LLM inference with Groq chips",
+                requires_api_key=True,
+                supports_embedding=False,
+                supports_chat=True
+            ),
+            ProviderResponse(
+                id="lmstudio",
+                name="LM Studio",
+                type="text_generation",
+                status="available",
+                configured=False,
+                category="local",
+                description="Local LLM inference with LM Studio",
+                requires_api_key=False,
+                supports_embedding=True,
+                supports_chat=True
+            ),
+            ProviderResponse(
+                id="mistral",
+                name="Mistral AI",
+                type="text_generation",
+                status="available",
+                configured=False,
+                category="cloud",
+                description="Mistral AI models for efficient inference",
+                requires_api_key=True,
+                supports_embedding=True,
+                supports_chat=True
             )
         ]
         

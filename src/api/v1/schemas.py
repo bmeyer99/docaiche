@@ -163,6 +163,11 @@ class ProviderResponse(BaseModel):
     type: str = Field(..., description="Provider type")
     status: str = Field(..., description="Provider status")
     configured: bool = Field(..., description="Whether provider is configured")
+    category: Optional[str] = Field(None, description="Provider category (local, cloud, enterprise)")
+    description: Optional[str] = Field(None, description="Provider description")
+    requires_api_key: Optional[bool] = Field(None, description="Whether provider requires API key")
+    supports_embedding: Optional[bool] = Field(None, description="Whether provider supports embeddings")
+    supports_chat: Optional[bool] = Field(None, description="Whether provider supports chat")
 
 
 class ProviderConfigRequest(BaseModel):

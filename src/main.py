@@ -32,10 +32,28 @@ async def lifespan(app: FastAPI):
     # Startup
     print(f"🚀 Docaiche API starting up at {datetime.utcnow()}")
     
+    # Initialize configuration manager
+    try:
+        from src.core.config.manager import ConfigurationManager
+        config_manager = ConfigurationManager()
+        await config_manager.initialize()
+        await config_manager.load_configuration()
+        print("✅ Configuration manager initialized and loaded")
+    except Exception as e:
+        print(f"⚠️ Configuration manager initialization failed: {e}")
+    
     yield
     
     # Shutdown
     print(f"🛑 Docaiche API shutting down at {datetime.utcnow()}")
+    
+    # Cleanup dependencies
+    try:
+        from src.api.v1.dependencies import cleanup_dependencies
+        await cleanup_dependencies()
+        print("✅ Dependencies cleaned up")
+    except Exception as e:
+        print(f"⚠️ Dependency cleanup failed: {e}")
 
 
 def create_app() -> FastAPI:

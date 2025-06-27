@@ -11,6 +11,7 @@ from src.core.config import get_system_configuration
 from src.database.connection import DatabaseManager, CacheManager, create_database_manager, create_cache_manager
 from src.clients.anythingllm import AnythingLLMClient
 from src.search.orchestrator import SearchOrchestrator
+from src.core.config.manager import ConfigurationManager
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ _db_manager: Optional[DatabaseManager] = None
 _cache_manager: Optional[CacheManager] = None  
 _anythingllm_client: Optional[AnythingLLMClient] = None
 _search_orchestrator: Optional[SearchOrchestrator] = None
+_configuration_manager: Optional[ConfigurationManager] = None
 
 
 class StubDatabaseManager:
@@ -221,12 +223,29 @@ async def get_search_orchestrator(
     return _search_orchestrator
 
 
+async def get_configuration_manager() -> ConfigurationManager:
+    """
+    Dependency to get ConfigurationManager instance
+    """
+    global _configuration_manager
+    
+    if _configuration_manager is None:
+        try:
+            _configuration_manager = ConfigurationManager()
+            logger.info("Configuration manager initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize configuration manager: {e}")
+            raise HTTPException(status_code=500, detail="Configuration manager unavailable")
+    
+    return _configuration_manager
+
+
 # Cleanup function for application shutdown
 async def cleanup_dependencies():
     """
     Cleanup all dependency instances on application shutdown
     """
-    global _db_manager, _cache_manager, _anythingllm_client, _search_orchestrator
+    global _db_manager, _cache_manager, _anythingllm_client, _search_orchestrator, _configuration_manager
     
     try:
         if _db_manager and hasattr(_db_manager, 'disconnect'):
@@ -246,6 +265,7 @@ async def cleanup_dependencies():
         _cache_manager = None
         _anythingllm_client = None
         _search_orchestrator = None
+        _configuration_manager = None
         
         logger.info("All dependencies cleaned up successfully")
         
