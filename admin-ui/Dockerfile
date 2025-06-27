@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
+RUN npm ci --only=production && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Install all dependencies (including dev dependencies) for building
 COPY package.json package-lock.json* ./
-RUN npm ci --legacy-peer-deps && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 COPY . .
 

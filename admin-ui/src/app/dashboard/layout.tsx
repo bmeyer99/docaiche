@@ -1,4 +1,4 @@
-import KBar from '@/components/kbar';
+import CommandPalette from '@/components/command-palette';
 import AppSidebar from '@/components/layout/app-sidebar';
 import Header from '@/components/layout/header';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -19,7 +19,7 @@ export default async function DashboardLayout({
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
   return (
-    <KBar>
+    <CommandPalette>
       <SidebarProvider defaultOpen={defaultOpen}>
         <AppSidebar />
         <SidebarInset>
@@ -29,6 +29,6 @@ export default async function DashboardLayout({
           {/* page main content ends */}
         </SidebarInset>
       </SidebarProvider>
-    </KBar>
+    </CommandPalette>
   );
 }
