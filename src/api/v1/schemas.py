@@ -153,3 +153,46 @@ class AdminSearchResponse(BaseModel):
     page: int = Field(..., description="Current page number (1-based).")
     page_size: int = Field(..., description="Number of items per page.")
     has_more: bool = Field(..., description="Whether there are more pages available.")
+
+
+# Provider Management Schemas
+class ProviderResponse(BaseModel):
+    """Response for provider listing"""
+    id: str = Field(..., description="Provider identifier")
+    name: str = Field(..., description="Display name")
+    type: str = Field(..., description="Provider type")
+    status: str = Field(..., description="Provider status")
+    configured: bool = Field(..., description="Whether provider is configured")
+
+
+class ProviderConfigRequest(BaseModel):
+    """Request for provider configuration"""
+    base_url: str = Field(..., description="Provider base URL")
+    api_key: Optional[str] = Field(None, description="API key")
+    model: Optional[str] = Field(None, description="Default model")
+
+
+class ProviderTestResponse(BaseModel):
+    """Response for provider connection test"""
+    success: bool = Field(..., description="Whether test succeeded")
+    message: str = Field(..., description="Test result message")
+    latency: float = Field(..., description="Response latency in milliseconds")
+    models: Optional[List[str]] = Field(None, description="Available models")
+
+
+# Activity Tracking Schemas
+class ActivityItem(BaseModel):
+    """Individual activity item"""
+    id: str = Field(..., description="Activity identifier")
+    type: str = Field(..., description="Activity type")
+    message: str = Field(..., description="Activity description")
+    timestamp: datetime = Field(..., description="When activity occurred")
+    details: Optional[str] = Field(None, description="Additional details")
+
+
+class ActivityResponse(BaseModel):
+    """Response for activity queries"""
+    items: List[ActivityItem] = Field(..., description="Activity items")
+    total_count: int = Field(..., description="Total activity count")
+    page: int = Field(..., description="Current page")
+    has_more: bool = Field(..., description="Whether more pages exist")

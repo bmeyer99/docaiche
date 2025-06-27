@@ -275,19 +275,19 @@ export class DocaicheApiClient {
   /**
    * Provider Management
    */
-  async getProviderConfigurations(): Promise<Record<string, any>> {
-    return this.get<Record<string, any>>('/providers/configurations');
+  async getProviderConfigurations(): Promise<any[]> {
+    return this.get<any[]>('/providers');
   }
 
   async updateProviderConfiguration(providerId: string, config: any): Promise<any> {
-    return this.put<any>(`/providers/configurations/${providerId}`, config);
+    return this.post<any>(`/providers/${providerId}/config`, config);
   }
 
-  async testProviderConnection(providerId: string): Promise<{ success: boolean; message: string }> {
+  async testProviderConnection(providerId: string, config: any): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.post<{ success: boolean; message: string }>(
-        `/providers/test/${providerId}`,
-        {},
+        `/providers/${providerId}/test`,
+        config,
         { timeout: API_CONFIG.TIMEOUTS.CONNECTION_TEST }
       );
       return response;
@@ -311,11 +311,11 @@ export class DocaicheApiClient {
   }
 
   async getDashboardStats(): Promise<any> {
-    return this.get<any>('/dashboard/stats');
+    return this.get<any>('/stats');
   }
 
   async getRecentActivity(): Promise<any[]> {
-    return this.get<any[]>('/activity/recent');
+    return this.get<any[]>('/admin/activity/recent');
   }
 
 

@@ -17,6 +17,8 @@ from .config_endpoints import router as config_router
 from .health_endpoints import router as health_router
 from .enrichment import enrichment_router
 from .ingestion import ingestion_router
+from .provider_endpoints import router as provider_router
+from .activity_endpoints import router as activity_router
 from .middleware import limiter, rate_limit_handler
 from .exceptions import (
     validation_exception_handler,
@@ -36,6 +38,8 @@ api_router.include_router(config_router)
 api_router.include_router(health_router)
 api_router.include_router(enrichment_router)
 api_router.include_router(ingestion_router)
+api_router.include_router(provider_router)
+api_router.include_router(activity_router)
 
 # Add rate limiter state to router
 api_router.state = type('State', (), {'limiter': limiter})()

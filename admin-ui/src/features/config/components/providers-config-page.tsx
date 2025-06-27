@@ -30,7 +30,20 @@ export default function ProvidersConfigPage() {
     setLoading(true);
     try {
       const data = await apiClient.getProviderConfigurations();
-      setConfigurations(data || {});
+      // Convert array response to Record format expected by the component
+      const configRecord = Array.isArray(data) 
+        ? data.reduce((acc, provider) => {
+            acc[provider.id] = {
+              id: provider.id,
+              name: provider.name,
+              type: provider.type,
+              status: provider.status,
+              configured: provider.configured
+            };
+            return acc;
+          }, {} as Record<string, any>)
+        : data || {};
+      setConfigurations(configRecord);
     } catch (error) {
       toast({
         title: "Error",
@@ -65,7 +78,22 @@ export default function ProvidersConfigPage() {
 
   const testConnection = async (providerId: string) => {
     try {
-      const result = await apiClient.testProviderConnection(providerId);
+      // Get the provider config for testing
+      const providerConfig = configurations[providerId];
+      if (!providerConfig) {
+        toast({
+          title: "Error",
+          description: "Provider configuration not found",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const result = await apiClient.testProviderConnection(providerId, {
+        base_url: providerConfig.config?.base_url || "",
+        api_key: providerConfig.config?.api_key || "",
+        model: providerConfig.config?.model || ""
+      });
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,

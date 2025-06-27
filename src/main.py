@@ -17,10 +17,9 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from src.api.endpoints import api_router
-from src.api.schemas import ProblemDetail
+from src.api.v1.api import api_router, setup_exception_handlers
+from src.api.v1.schemas import ProblemDetail
 from src.core.middleware import LoggingMiddleware
-from src.core.exceptions import setup_exception_handlers
 
 
 # Rate limiter setup
