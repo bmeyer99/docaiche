@@ -20,7 +20,7 @@ RUN npm install && npm cache clean --force
 
 # Copy configuration files first
 COPY tsconfig.json next.config.ts ./
-COPY tailwind.config.ts postcss.config.mjs components.json ./
+COPY postcss.config.js tailwind.config.js components.json ./
 
 # Copy source files
 COPY . .
