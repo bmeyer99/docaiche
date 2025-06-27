@@ -22,7 +22,8 @@ RUN npm install && npm cache clean --force
 COPY . .
 
 # Debug: List files to verify they're copied
-RUN ls -la src/lib/
+RUN ls -la
+RUN ls -la src/ || echo "src directory not found"
 
 # Disable telemetry during the build
 ENV NEXT_TELEMETRY_DISABLED=1
