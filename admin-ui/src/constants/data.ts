@@ -11,52 +11,85 @@ export type Product = {
   updated_at: string;
 };
 
-//Info: The following data is used for the sidebar navigation and Cmd K bar.
+//Info: Navigation items for Docaiche Admin Interface
 export const navItems: NavItem[] = [
   {
-    title: 'Dashboard',
+    title: 'Overview',
     url: '/dashboard/overview',
     icon: 'dashboard',
     isActive: false,
-    shortcut: ['d', 'd'],
-    items: [] // Empty array as there are no child items for Dashboard
+    shortcut: ['d', 'o'],
+    items: []
   },
   {
-    title: 'Product',
-    url: '/dashboard/product',
-    icon: 'product',
-    shortcut: ['p', 'p'],
+    title: 'System Health',
+    url: '/dashboard/health',
+    icon: 'heartHandshake',
+    shortcut: ['h', 'h'],
     isActive: false,
-    items: [] // No child items
+    items: []
   },
   {
-    title: 'Account',
-    url: '#', // Placeholder as there is no direct link for the parent
-    icon: 'billing',
+    title: 'Configuration',
+    url: '#',
+    icon: 'settings',
     isActive: true,
-
+    shortcut: ['c', 'c'],
     items: [
       {
-        title: 'Profile',
-        url: '/dashboard/profile',
-        icon: 'userPen',
-        shortcut: ['m', 'm']
+        title: 'AI Providers',
+        url: '/dashboard/config/providers',
+        icon: 'bot',
+        shortcut: ['c', 'p']
       },
       {
-        title: 'Login',
-        shortcut: ['l', 'l'],
-        url: '/',
-        icon: 'login'
+        title: 'System Settings',
+        url: '/dashboard/config/system',
+        icon: 'settings2',
+        shortcut: ['c', 's']
+      },
+      {
+        title: 'Cache Management',
+        url: '/dashboard/config/cache',
+        icon: 'database',
+        shortcut: ['c', 'm']
       }
     ]
   },
   {
-    title: 'Kanban',
-    url: '/dashboard/kanban',
-    icon: 'kanban',
-    shortcut: ['k', 'k'],
+    title: 'Content Management',
+    url: '#',
+    icon: 'fileText',
     isActive: false,
-    items: [] // No child items
+    shortcut: ['c', 'o'],
+    items: [
+      {
+        title: 'Content Search',
+        url: '/dashboard/content/search',
+        icon: 'search',
+        shortcut: ['c', 'r']
+      },
+      {
+        title: 'Collections',
+        url: '/dashboard/content/collections',
+        icon: 'folder',
+        shortcut: ['c', 'l']
+      },
+      {
+        title: 'Upload Content',
+        url: '/dashboard/content/upload',
+        icon: 'upload',
+        shortcut: ['c', 'u']
+      }
+    ]
+  },
+  {
+    title: 'Analytics',
+    url: '/dashboard/analytics',
+    icon: 'barChart',
+    shortcut: ['a', 'a'],
+    isActive: false,
+    items: []
   }
 ];
 
