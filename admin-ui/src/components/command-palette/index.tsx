@@ -1,7 +1,7 @@
 'use client';
 
 import { navItems } from '@/constants/data';
-import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { useTheme } from 'next-themes';
@@ -13,7 +13,7 @@ interface CommandPaletteProps {
 export default function CommandPalette({ children }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const { setTheme, theme } = useTheme();
+  const { setTheme } = useTheme();
 
   // Toggle command palette with Cmd+K
   useEffect(() => {

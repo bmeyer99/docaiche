@@ -11,7 +11,7 @@ interface EmptyStateProps {
   };
 }
 
-export function EmptyState({ icon = 'fileText', title, description, action }: EmptyStateProps) {
+export function EmptyState({ icon = 'post', title, description, action }: EmptyStateProps) {
   const IconComponent = Icons[icon];
   
   return (

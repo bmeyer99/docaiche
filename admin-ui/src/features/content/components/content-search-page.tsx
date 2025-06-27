@@ -243,7 +243,7 @@ export default function ContentSearchPage() {
                   {totalResults > 0 ? (
                     <>Found {totalResults.toLocaleString()} results in {searchTime}ms</>
                   ) : (
-                    <>No results found for "{query}"</>
+                    <>No results found for &ldquo;{query}&rdquo;</>
                   )}
                 </CardDescription>
               </div>

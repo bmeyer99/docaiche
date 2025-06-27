@@ -1,10 +1,8 @@
 'use client';
-import { useState } from 'react';
 import { IconSearch } from '@tabler/icons-react';
 import { Button } from './ui/button';
 
 export default function SearchInput() {
-  const [open, setOpen] = useState(false);
 
   const handleToggle = () => {
     // Dispatch a keyboard event to trigger the command palette
