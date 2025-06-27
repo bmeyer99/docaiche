@@ -15,15 +15,19 @@ FROM base AS builder
 WORKDIR /app
 
 # Install all dependencies (including dev dependencies) for building
-COPY package.json ./
+COPY package.json package-lock.json* ./
 RUN npm install && npm cache clean --force
+
+# Copy configuration files first
+COPY tsconfig.json next.config.ts ./
+COPY tailwind.config.ts postcss.config.mjs components.json ./
 
 # Copy source files
 COPY . .
 
 # Debug: List files to verify they're copied
 RUN ls -la
-RUN ls -la src/ || echo "src directory not found"
+RUN ls -la src/lib/ || echo "src/lib directory not found"
 
 # Disable telemetry during the build
 ENV NEXT_TELEMETRY_DISABLED=1
