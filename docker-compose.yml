@@ -28,24 +28,6 @@ services:
       - db_data:/data
     restart: unless-stopped
 
-  web_ui:
-    build:
-      context: .
-      dockerfile: src/web_ui/Dockerfile
-    ports:
-      - "4080:8080"
-    depends_on:
-      api:
-        condition: service_healthy
-    networks:
-      - docaiche
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 5s
-      timeout: 4s
-      retries: 10
-    restart: unless-stopped
-
   admin-ui:
     build:
       context: ./admin-ui
