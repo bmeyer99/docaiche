@@ -161,9 +161,9 @@ export default function ContentUploadPage() {
             ...f, 
             status: 'completed', 
             result: {
-              documentId: response.documentId,
-              extractedText: response.extractedText || '',
-              pageCount: response.pageCount
+              documentId: (response as any)?.documentId || 'unknown',
+              extractedText: (response as any)?.extractedText || '',
+              pageCount: (response as any)?.pageCount || 0
             }
           } : f
         ));
@@ -221,7 +221,7 @@ export default function ContentUploadPage() {
     if (file.type.includes('text')) return <Icons.fileText className="w-8 h-8 text-gray-600" />;
     if (file.type.includes('markdown')) return <Icons.fileText className="w-8 h-8 text-blue-500" />;
     if (file.type.includes('html')) return <Icons.globe className="w-8 h-8 text-orange-600" />;
-    return <Icons.file className="w-8 h-8" />;
+    return <Icons.page className="w-8 h-8" />;
   };
 
   const getStatusIcon = (status: UploadFile['status']) => {
@@ -366,7 +366,7 @@ export default function ContentUploadPage() {
             />
             <Button asChild>
               <label htmlFor="file-upload" className="cursor-pointer">
-                <Icons.plus className="w-4 h-4 mr-2" />
+                <Icons.add className="w-4 h-4 mr-2" />
                 Select Files
               </label>
             </Button>
@@ -402,75 +402,75 @@ export default function ContentUploadPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {uploadFiles.map((uploadFile) => (
-                <div key={uploadFile.id} className="border rounded-lg p-4">
+              {uploadFiles.map((file) => (
+                <div key={file.id} className="border rounded-lg p-4">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0">
-                      {getFileIcon(uploadFile.file)}
+                      {getFileIcon(file.file)}
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <div className="font-medium truncate">{uploadFile.file.name}</div>
+                        <div className="font-medium truncate">{file.file.name}</div>
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(uploadFile.status)}
-                          {getStatusBadge(uploadFile.status)}
+                          {getStatusIcon(file.status)}
+                          {getStatusBadge(file.status)}
                         </div>
                       </div>
                       
                       <div className="text-sm text-muted-foreground mb-2">
-                        {formatFileSize(uploadFile.file.size)} • {uploadFile.file.type}
+                        {formatFileSize(file.file.size)} • {file.file.type}
                       </div>
 
-                      {uploadFile.status === 'uploading' && (
+                      {file.status === 'uploading' && (
                         <div className="mb-2">
-                          <Progress value={uploadFile.progress} className="h-2" />
+                          <Progress value={file.progress} className="h-2" />
                           <div className="text-xs text-muted-foreground mt-1">
-                            {uploadFile.progress.toFixed(0)}% uploaded
+                            {file.progress.toFixed(0)}% uploaded
                           </div>
                         </div>
                       )}
 
-                      {uploadFile.status === 'error' && uploadFile.error && (
+                      {file.status === 'error' && file.error && (
                         <div className="text-sm text-red-600 mb-2">
-                          Error: {uploadFile.error}
+                          Error: {file.error}
                         </div>
                       )}
 
-                      {uploadFile.status === 'completed' && uploadFile.result && (
+                      {file.status === 'completed' && file.result && (
                         <div className="text-sm text-green-600 mb-2">
-                          Successfully indexed • Document ID: {uploadFile.result.documentId}
-                          {uploadFile.result.pageCount && ` • ${uploadFile.result.pageCount} pages`}
+                          Successfully indexed • Document ID: {file.result.documentId}
+                          {file.result.pageCount && ` • ${file.result.pageCount} pages`}
                         </div>
                       )}
                     </div>
 
                     <div className="flex-shrink-0">
-                      {uploadFile.status === 'pending' && (
+                      {file.status === 'pending' && (
                         <div className="flex gap-1">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => uploadFile(uploadFile)}
+                            onClick={() => uploadFile(file)}
                           >
                             <Icons.upload className="w-3 h-3" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => removeFile(uploadFile.id)}
+                            onClick={() => removeFile(file.id)}
                           >
-                            <Icons.x className="w-3 h-3" />
+                            <Icons.close className="w-3 h-3" />
                           </Button>
                         </div>
                       )}
-                      {uploadFile.status === 'completed' && (
+                      {file.status === 'completed' && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => removeFile(uploadFile.id)}
+                          onClick={() => removeFile(file.id)}
                         >
-                          <Icons.x className="w-3 h-3" />
+                          <Icons.close className="w-3 h-3" />
                         </Button>
                       )}
                     </div>

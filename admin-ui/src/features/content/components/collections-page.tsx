@@ -44,7 +44,7 @@ export default function CollectionsPage() {
   const loadCollections = async () => {
     try {
       const data = await apiClient.getCollections();
-      setCollections(data.collections || []);
+      setCollections((data.collections || []) as unknown as Collection[]);
     } catch (error) {
       toast({
         title: "Error",
@@ -173,7 +173,7 @@ export default function CollectionsPage() {
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Icons.plus className="w-4 h-4 mr-2" />
+              <Icons.add className="w-4 h-4 mr-2" />
               Create Collection
             </Button>
           </DialogTrigger>
@@ -309,7 +309,7 @@ export default function CollectionsPage() {
                     onClick={() => reindexCollection(collection.id, collection.name)}
                     disabled={collection.status === 'indexing'}
                   >
-                    <Icons.refreshCw className="w-3 h-3 mr-1" />
+                    <Icons.arrowRight className="w-3 h-3 mr-1" />
                     Reindex
                   </Button>
                   <Button 
@@ -333,7 +333,7 @@ export default function CollectionsPage() {
               Create your first collection to start organizing your documents
             </div>
             <Button onClick={() => setCreateDialogOpen(true)}>
-              <Icons.plus className="w-4 h-4 mr-2" />
+              <Icons.add className="w-4 h-4 mr-2" />
               Create Collection
             </Button>
           </CardContent>

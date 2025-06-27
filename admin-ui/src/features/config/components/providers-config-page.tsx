@@ -81,16 +81,16 @@ export default function ProvidersConfigPage() {
   };
 
   const getProvidersByCategory = () => {
-    return Object.entries(AI_PROVIDERS).reduce((acc, [id, provider]) => {
+    return Object.entries(AI_PROVIDERS).reduce((acc, [, provider]) => {
       if (!acc[provider.category]) acc[provider.category] = [];
-      acc[provider.category].push({ id, ...provider });
+      acc[provider.category].push(provider);
       return acc;
-    }, {} as Record<string, Array<ProviderDefinition & { id: string }>>);
+    }, {} as Record<string, Array<ProviderDefinition>>);
   };
 
-  const renderProviderCard = (provider: ProviderDefinition & { id: string }) => {
+  const renderProviderCard = (provider: ProviderDefinition) => {
     const config = configurations[provider.id] || {};
-    const isConfigured = config.enabled && (provider.requiresApiKey ? !!config.apiKey : true);
+    const isConfigured = config.enabled && (provider.requiresApiKey ? !!config.config?.api_key : true);
     
     return (
       <Card key={provider.id} className="cursor-pointer hover:shadow-md transition-shadow">
@@ -122,9 +122,6 @@ export default function ProvidersConfigPage() {
             {provider.supportsChat && (
               <Badge variant="outline">Chat</Badge>
             )}
-            {provider.supportsCompletion && (
-              <Badge variant="outline">Completion</Badge>
-            )}
           </div>
           <div className="flex gap-2">
             <Button 
@@ -141,7 +138,7 @@ export default function ProvidersConfigPage() {
                 onClick={() => testConnection(provider.id)}
                 disabled={loading}
               >
-                <Icons.zap className="w-4 h-4 mr-1" />
+                <Icons.settings className="w-4 h-4 mr-1" />
                 Test
               </Button>
             )}
@@ -176,11 +173,17 @@ export default function ProvidersConfigPage() {
             <Label htmlFor="baseUrl">Base URL</Label>
             <Input
               id="baseUrl"
-              value={config.baseUrl || provider.defaultBaseUrl || ''}
+              value={config.config?.base_url || provider.defaultBaseUrl || ''}
               onChange={(e) => 
                 setConfigurations(prev => ({
                   ...prev,
-                  [provider.id]: { ...config, baseUrl: e.target.value }
+                  [provider.id]: { 
+                    ...config, 
+                    config: { 
+                      ...config.config, 
+                      base_url: e.target.value 
+                    }
+                  }
                 }))
               }
               placeholder={provider.defaultBaseUrl}
@@ -193,11 +196,17 @@ export default function ProvidersConfigPage() {
               <Input
                 id="apiKey"
                 type="password"
-                value={config.apiKey || ''}
+                value={config.config?.api_key || ''}
                 onChange={(e) => 
                   setConfigurations(prev => ({
                     ...prev,
-                    [provider.id]: { ...config, apiKey: e.target.value }
+                    [provider.id]: { 
+                      ...config, 
+                      config: { 
+                        ...config.config, 
+                        api_key: e.target.value 
+                      }
+                    }
                   }))
                 }
                 placeholder="Enter your API key"
@@ -211,14 +220,20 @@ export default function ProvidersConfigPage() {
                 {field.label}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </Label>
-              {field.type === 'textarea' ? (
+              {false ? (
                 <Textarea
                   id={field.key}
-                  value={config[field.key] || ''}
+                  value={config.config?.[field.key] || ''}
                   onChange={(e) => 
                     setConfigurations(prev => ({
                       ...prev,
-                      [provider.id]: { ...config, [field.key]: e.target.value }
+                      [provider.id]: { 
+                        ...config, 
+                        config: { 
+                          ...config.config, 
+                          [field.key]: e.target.value 
+                        }
+                      }
                     }))
                   }
                   placeholder={field.placeholder}
@@ -227,11 +242,17 @@ export default function ProvidersConfigPage() {
                 <Input
                   id={field.key}
                   type="number"
-                  value={config[field.key] || ''}
+                  value={config.config?.[field.key] || ''}
                   onChange={(e) => 
                     setConfigurations(prev => ({
                       ...prev,
-                      [provider.id]: { ...config, [field.key]: parseInt(e.target.value) }
+                      [provider.id]: { 
+                        ...config, 
+                        config: { 
+                          ...config.config, 
+                          [field.key]: parseInt(e.target.value) || 0
+                        }
+                      }
                     }))
                   }
                   placeholder={field.placeholder}
@@ -239,11 +260,17 @@ export default function ProvidersConfigPage() {
               ) : (
                 <Input
                   id={field.key}
-                  value={config[field.key] || ''}
+                  value={config.config?.[field.key] || ''}
                   onChange={(e) => 
                     setConfigurations(prev => ({
                       ...prev,
-                      [provider.id]: { ...config, [field.key]: e.target.value }
+                      [provider.id]: { 
+                        ...config, 
+                        config: { 
+                          ...config.config, 
+                          [field.key]: e.target.value 
+                        }
+                      }
                     }))
                   }
                   placeholder={field.placeholder}
@@ -275,7 +302,7 @@ export default function ProvidersConfigPage() {
             onClick={() => testConnection(provider.id)}
             disabled={loading || !config.enabled}
           >
-            <Icons.zap className="w-4 h-4 mr-2" />
+            <Icons.activity className="w-4 h-4 mr-2" />
             Test Connection
           </Button>
         </div>
@@ -344,7 +371,7 @@ export default function ProvidersConfigPage() {
           <Card>
             <CardContent className="p-6">
               {activeProviderData ? (
-                renderConfigurationForm({ id: activeProvider, ...activeProviderData })
+                renderConfigurationForm(activeProviderData)
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   Select a provider to configure

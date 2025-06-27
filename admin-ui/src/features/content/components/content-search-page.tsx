@@ -57,10 +57,10 @@ export default function ContentSearchPage() {
         query: searchQuery,
         ...searchFilters,
         limit: 20
-      });
+      } as any);
 
-      setResults(response.results || []);
-      setTotalResults(response.total || 0);
+      setResults((response as any).results || []);
+      setTotalResults((response as any).total || 0);
       setSearchTime(Date.now() - startTime);
     } catch (error) {
       toast({
@@ -100,7 +100,7 @@ export default function ContentSearchPage() {
       case 'txt': return <Icons.fileText className="w-4 h-4 text-gray-600" />;
       case 'docx': case 'doc': return <Icons.fileText className="w-4 h-4 text-blue-700" />;
       case 'html': case 'htm': return <Icons.globe className="w-4 h-4 text-orange-600" />;
-      default: return <Icons.file className="w-4 h-4" />;
+      default: return <Icons.page className="w-4 h-4" />;
     }
   };
 
@@ -155,7 +155,7 @@ export default function ContentSearchPage() {
                 )}
               </Button>
               <Button variant="outline" onClick={clearSearch} size="sm">
-                <Icons.x className="w-4 h-4 mr-2" />
+                <Icons.close className="w-4 h-4 mr-2" />
                 Clear
               </Button>
             </div>

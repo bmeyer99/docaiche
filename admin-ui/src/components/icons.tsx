@@ -30,7 +30,23 @@ import {
   IconUserX,
   IconX,
   IconLayoutKanban,
-  IconBrandGithub
+  IconBrandGithub,
+  IconActivity,
+  IconCalendar,
+  IconCircle,
+  IconClock,
+  IconDatabase,
+  IconExternalLink,
+  IconEye,
+  IconFolder,
+  IconGlobe,
+  IconSearch,
+  IconTag,
+  IconTrendingUp,
+  IconUpload,
+  IconUsers,
+  IconChartBar,
+  IconRobot
 } from '@tabler/icons-react';
 
 export type Icon = React.ComponentType<IconProps>;
@@ -66,5 +82,26 @@ export const Icons = {
   laptop: IconDeviceLaptop,
   github: IconBrandGithub,
   twitter: IconBrandTwitter,
-  check: IconCheck
+  check: IconCheck,
+  activity: IconActivity,
+  alertCircle: IconAlertTriangle,
+  calendar: IconCalendar,
+  circle: IconCircle,
+  clock: IconClock,
+  database: IconDatabase,
+  externalLink: IconExternalLink,
+  eye: IconEye,
+  fileText: IconFileText,
+  folder: IconFolder,
+  globe: IconGlobe,
+  search: IconSearch,
+  tag: IconTag,
+  trendingUp: IconTrendingUp,
+  upload: IconUpload,
+  users: IconUsers,
+  barChart: IconChartBar,
+  bot: IconRobot,
+  checkCircle: IconCheck,
+  moreHorizontal: IconDotsVertical,
+  trash2: IconTrash
 };

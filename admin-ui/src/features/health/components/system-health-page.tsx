@@ -142,7 +142,7 @@ export default function SystemHealthPage() {
             size="sm"
             onClick={() => setAutoRefresh(!autoRefresh)}
           >
-            <Icons.refreshCw className={`w-4 h-4 mr-2 ${autoRefresh ? 'animate-spin' : ''}`} />
+            <Icons.arrowRight className={`w-4 h-4 mr-2 ${autoRefresh ? 'animate-spin' : ''}`} />
             {autoRefresh ? 'Auto Refresh On' : 'Auto Refresh Off'}
           </Button>
           <Button
@@ -151,7 +151,7 @@ export default function SystemHealthPage() {
             onClick={checkHealthStatus}
             disabled={loading}
           >
-            <Icons.refreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <Icons.arrowRight className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>

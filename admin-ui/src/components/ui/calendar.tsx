@@ -64,10 +64,6 @@ function Calendar({
         day_hidden: 'invisible',
         ...classNames
       }}
-      components={{
-        IconLeft: LeftIcon,
-        IconRight: RightIcon
-      }}
       {...props}
     />
   );

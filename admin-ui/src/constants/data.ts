@@ -13,7 +13,7 @@ export const navItems: NavItem[] = [
   {
     title: 'System Health',
     url: '/dashboard/health',
-    icon: 'heartHandshake',
+    icon: 'activity',
     shortcut: ['h', 'h'],
     isActive: false,
     items: []
@@ -34,7 +34,7 @@ export const navItems: NavItem[] = [
       {
         title: 'System Settings',
         url: '/dashboard/config/system',
-        icon: 'settings2',
+        icon: 'settings',
         shortcut: ['c', 's']
       },
       {
