@@ -1,115 +1,169 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/9113740/201498864-2a900c64-d88f-4ed4-b5cf-770bcb57e1f5.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/9113740/201498152-b171abb8-9225-487a-821c-6ff49ee48579.png">
-</picture>
+# Docaiche Admin Interface
 
-<div align="center"><strong>Next.js Admin Dashboard Starter Template With Shadcn-ui</strong></div>
-<div align="center">Built with the Next.js 15 App Router</div>
-<br />
-<div align="center">
-<a href="https://dub.sh/shadcn-dashboard">View Demo</a>
-<span>
-</div>
+A modern, responsive administration interface for the Docaiche documentation search system built with Next.js 15, React 19, and shadcn/ui.
 
-## Overview
+## Features
 
-This is a starter template using the following stack:
+### 🎛️ Dashboard Overview
+- Real-time system metrics and statistics
+- Quick access to key information
+- Activity feed with recent system events
+- Provider status overview
 
-- Framework - [Next.js 15](https://nextjs.org/13)
-- Language - [TypeScript](https://www.typescriptlang.org)
-- Auth - [Clerk](https://go.clerk.com/ILdYhn7)
-- Error tracking - [<picture><img alt="Sentry" src="public/assets/sentry.svg">
-        </picture>](https://sentry.io/for/nextjs/?utm_source=github&utm_medium=paid-community&utm_campaign=general-fy26q2-nextjs&utm_content=github-banner-project-tryfree)
-- Styling - [Tailwind CSS v4](https://tailwindcss.com)
-- Components - [Shadcn-ui](https://ui.shadcn.com)
-- Schema Validations - [Zod](https://zod.dev)
-- State Management - [Zustand](https://zustand-demo.pmnd.rs)
-- Search params state manager - [Nuqs](https://nuqs.47ng.com/)
-- Tables - [Tanstack Data Tables](https://ui.shadcn.com/docs/components/data-table) • [Dice table](https://www.diceui.com/docs/components/data-table)
-- Forms - [React Hook Form](https://ui.shadcn.com/docs/components/form)
-- Command+k interface - [kbar](https://kbar.vercel.app/)
-- Linting - [ESLint](https://eslint.org)
-- Pre-commit Hooks - [Husky](https://typicode.github.io/husky/)
-- Formatting - [Prettier](https://prettier.io)
+### 🔧 AI Provider Management
+- Support for multiple AI providers (Ollama, OpenAI, Anthropic, OpenRouter)
+- Easy configuration interface with form validation
+- Connection testing and status monitoring
+- Provider-specific settings and customization
 
-_If you are looking for a Tanstack start dashboard template, here is the [repo](https://git.new/tanstack-start-dashboard)._
+### 📊 System Health Monitoring
+- Real-time service status tracking
+- System resource monitoring (CPU, memory, storage)
+- Auto-refresh functionality
+- Performance metrics and uptime tracking
 
-## Pages
+### 📁 Content Management
+- Advanced document search with filtering
+- Collection management and organization
+- Drag-and-drop file upload interface
+- Support for multiple file formats (PDF, MD, TXT, DOCX, HTML)
+- Batch operations and progress tracking
 
-| Pages                                                                                 | Specifications                                                                                                                                                                                                                                                          |
-| :------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Signup / Signin](https://go.clerk.com/ILdYhn7)      | Authentication with **Clerk** provides secure authentication and user management with multiple sign-in options including passwordless authentication, social logins, and enterprise SSO - all designed to enhance security while delivering a seamless user experience. |
-| [Dashboard (Overview)](https://shadcn-dashboard.kiranism.dev/dashboard)    | Cards with Recharts graphs for analytics. Parallel routes in the overview sections feature independent loading, error handling, and isolated component rendering. |
-| [Product](https://shadcn-dashboard.kiranism.dev/dashboard/product)         | Tanstack tables with server side searching, filter, pagination by Nuqs which is a Type-safe search params state manager in nextjs                                                                                                                                       |
-| [Product/new](https://shadcn-dashboard.kiranism.dev/dashboard/product/new) | A Product Form with shadcn form (react-hook-form + zod).                                                                                                                                                                                                                |
-| [Profile](https://shadcn-dashboard.kiranism.dev/dashboard/profile)         | Clerk's full-featured account management UI that allows users to manage their profile and security settings                                                                                                                                                             |
-| [Kanban Board](https://shadcn-dashboard.kiranism.dev/dashboard/kanban)     | A Drag n Drop task management board with dnd-kit and zustand to persist state locally.                                                                                                                                                                                  |
-| [Not Found](https://shadcn-dashboard.kiranism.dev/dashboard/notfound)      | Not Found Page Added in the root level                                                                                                                                                                                                                                  |
-| [Global Error](https://sentry.io/for/nextjs/?utm_source=github&utm_medium=paid-community&utm_campaign=general-fy26q2-nextjs&utm_content=github-banner-project-tryfree)           | A centralized error page that captures and displays errors across the application. Integrated with **Sentry** to log errors, provide detailed reports, and enable replay functionality for better debugging. |
+### 📈 Analytics Dashboard
+- Search analytics and usage patterns
+- Content performance metrics
+- System performance monitoring
+- Provider usage statistics
 
-## Feature based organization
+## Technology Stack
 
-```plaintext
+- **Framework**: Next.js 15 with React 19
+- **Styling**: Tailwind CSS v4 with shadcn/ui components
+- **TypeScript**: Full type safety throughout
+- **Architecture**: Centralized design system with API client
+- **Docker**: Multi-stage builds for production deployment
+
+## Project Structure
+
+```
 src/
-├── app/ # Next.js App Router directory
-│ ├── (auth)/ # Auth route group
-│ │ ├── (signin)/
-│ ├── (dashboard)/ # Dashboard route group
-│ │ ├── layout.tsx
-│ │ ├── loading.tsx
-│ │ └── page.tsx
-│ └── api/ # API routes
-│
-├── components/ # Shared components
-│ ├── ui/ # UI components (buttons, inputs, etc.)
-│ └── layout/ # Layout components (header, sidebar, etc.)
-│
-├── features/ # Feature-based modules
-│ ├── feature/
-│ │ ├── components/ # Feature-specific components
-│ │ ├── actions/ # Server actions
-│ │ ├── schemas/ # Form validation schemas
-│ │ └── utils/ # Feature-specific utilities
-│ │
-├── lib/ # Core utilities and configurations
-│ ├── auth/ # Auth configuration
-│ ├── db/ # Database utilities
-│ └── utils/ # Shared utilities
-│
-├── hooks/ # Custom hooks
-│ └── use-debounce.ts
-│
-├── stores/ # Zustand stores
-│ └── dashboard-store.ts
-│
-└── types/ # TypeScript types
-└── index.ts
+├── app/                    # Next.js app router pages
+│   ├── api/               # API routes (health check)
+│   └── dashboard/         # Admin dashboard pages
+├── components/            # Reusable UI components
+│   └── ui/               # shadcn/ui components
+├── features/             # Feature-specific components
+│   ├── analytics/        # Analytics dashboard
+│   ├── config/          # Configuration management
+│   ├── content/         # Content management
+│   ├── health/          # System health monitoring
+│   ├── overview/        # Dashboard overview
+│   └── profile/         # System information
+├── lib/                 # Utility libraries
+│   ├── config/          # API and provider configurations
+│   ├── design-system/   # Design tokens and theming
+│   └── utils/           # API client and utilities
+└── constants/           # Navigation and constants
 ```
 
 ## Getting Started
 
-> [!NOTE]  
-> We are using **Next 15** with **React 19**, follow these steps:
+### Development
 
-Clone the repo:
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Production with Docker
+
+The admin interface is included in the main docker-compose setup:
+
+```bash
+# From the root docaiche directory
+docker-compose up admin-ui
 ```
-git clone https://github.com/Kiranism/next-shadcn-dashboard-starter.git
+
+The interface will be available at [http://localhost:3000](http://localhost:3000)
+
+## Environment Variables
+
+```env
+NEXT_PUBLIC_API_URL=http://api:8000/api/v1
+NEXT_PUBLIC_APP_NAME=Docaiche Admin
+NEXT_PUBLIC_ENABLE_AUTH=false
+NODE_ENV=production
 ```
 
-- `pnpm install` ( we have legacy-peer-deps=true added in the .npmrc)
-- Create a `.env.local` file by copying the example environment file:
-  `cp env.example.txt .env.local`
-- Add the required environment variables to the `.env.local` file.
-- `pnpm run dev`
+## API Integration
 
-##### Environment Configuration Setup
+The admin interface communicates with the Docaiche API through a centralized API client (`src/lib/utils/api-client.ts`) that provides:
 
-To configure the environment for this project, refer to the `env.example.txt` file. This file contains the necessary environment variables required for authentication and error tracking.
+- Automatic retry logic with exponential backoff
+- Comprehensive error handling
+- Request/response type safety
+- RFC 7807 Problem Details support
+- Connection testing utilities
 
-You should now be able to access the application at http://localhost:3000.
+## Key Features
 
-> [!WARNING]
-> After cloning or forking the repository, be cautious when pulling or syncing with the latest changes, as this may result in breaking conflicts.
+### Responsive Design
+- Mobile-first approach with responsive layouts
+- Dark/light theme support
+- Consistent design system with design tokens
 
-Cheers! 🥂
+### Real-time Updates
+- Auto-refresh functionality for live data
+- Real-time status indicators
+- Progressive loading states
+
+### User Experience
+- Loading skeletons for better perceived performance
+- Comprehensive error handling with user-friendly messages
+- Keyboard shortcuts and accessibility features
+- Intuitive navigation with breadcrumbs
+
+### Developer Experience
+- Full TypeScript coverage
+- Centralized configuration management
+- Modular component architecture
+- Consistent code patterns and conventions
+
+## Deployment
+
+The admin interface is designed for deployment in lab environments behind Traefik with:
+
+- No authentication requirements
+- Docker networking integration
+- Health check endpoints
+- Production-optimized builds
+
+## Contributing
+
+1. Follow the existing code patterns and TypeScript conventions
+2. Use the centralized API client for all backend communications
+3. Leverage the design system tokens for consistent styling
+4. Add appropriate loading states and error handling
+5. Test across different screen sizes and themes
+
+## Architecture Decisions
+
+- **No Authentication**: Designed for secure lab environments
+- **Centralized API Client**: Single source of truth for API interactions
+- **Design Tokens**: Consistent theming and branding
+- **Feature-based Organization**: Logical grouping of related functionality
+- **Modern React Patterns**: Hooks, functional components, and TypeScript
+
+## Performance Optimizations
+
+- Next.js 15 optimizations (React 19, Server Components)
+- Efficient bundle splitting and code organization
+- Optimized loading states and progressive enhancement
+- Docker multi-stage builds for minimal production images

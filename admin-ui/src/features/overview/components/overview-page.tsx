@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { DocaicheApiClient } from '@/lib/utils/api-client';
 import { AI_PROVIDERS } from '@/lib/config/providers';
 
@@ -84,6 +85,14 @@ export default function OverviewPage() {
       default: return 'text-gray-600';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 p-6">
+        <LoadingSkeleton variant="dashboard" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
