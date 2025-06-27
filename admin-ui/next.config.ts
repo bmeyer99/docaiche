@@ -6,6 +6,10 @@ const baseConfig: NextConfig = {
   // Enable standalone output for Docker deployment
   output: 'standalone',
   
+  // Disable static optimization to avoid hanging during build
+  trailingSlash: false,
+  skipTrailingSlashRedirect: true,
+  
   images: {
     remotePatterns: [
       {
