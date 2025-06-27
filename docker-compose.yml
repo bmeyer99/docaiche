@@ -30,8 +30,8 @@ services:
 
   admin-ui:
     build:
-      context: ./admin-ui
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./admin-ui/Dockerfile
     ports:
       - "3000:3000"
     environment:
