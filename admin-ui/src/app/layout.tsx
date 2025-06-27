@@ -16,8 +16,8 @@ const META_THEME_COLORS = {
 };
 
 export const metadata: Metadata = {
-  title: 'Next Shadcn',
-  description: 'Basic dashboard with Next.js and Shadcn'
+  title: 'Docaiche Admin',
+  description: 'Modern admin interface for Docaiche documentation search system'
 };
 
 export const viewport: Viewport = {
