@@ -4,6 +4,7 @@ Essential middleware for the simplified Docaiche API.
 Includes only the necessary middleware for logging and request tracking.
 """
 
+import logging
 import time
 import uuid
 from datetime import datetime
@@ -11,6 +12,11 @@ from typing import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from src.logging_config import MetricsLogger
+
+logger = logging.getLogger(__name__)
+metrics = MetricsLogger(logger)
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -28,10 +34,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Record start time
         start_time = time.time()
 
-        # Log incoming request
-        print(
-            f"[{datetime.utcnow().isoformat()}] [{trace_id}] "
-            f"{request.method} {request.url.path} - Started"
+        # Log request start (for debugging)
+        logger.debug(
+            f"Request started",
+            extra={
+                'request_id': trace_id,
+                'method': request.method,
+                'path': request.url.path,
+            }
         )
 
         try:
@@ -45,11 +55,15 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response.headers["X-Trace-ID"] = trace_id
             response.headers["X-Process-Time"] = str(process_time)
 
-            # Log response
-            print(
-                f"[{datetime.utcnow().isoformat()}] [{trace_id}] "
-                f"{request.method} {request.url.path} - "
-                f"Completed {response.status_code} in {process_time:.3f}s"
+            # Log structured metrics
+            metrics.log_api_request(
+                request_id=trace_id,
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code,
+                duration=process_time,
+                user_agent=request.headers.get("user-agent", "unknown"),
+                remote_addr=request.client.host if request.client else "unknown"
             )
 
             return response
@@ -58,11 +72,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # Calculate processing time even for errors
             process_time = time.time() - start_time
 
-            # Log error
-            print(
-                f"[{datetime.utcnow().isoformat()}] [{trace_id}] "
-                f"{request.method} {request.url.path} - "
-                f"Error after {process_time:.3f}s: {str(e)}"
+            # Log error with structured format
+            metrics.log_error(
+                error_type=type(e).__name__,
+                error_message=str(e),
+                request_id=trace_id,
+                method=request.method,
+                path=request.url.path,
+                duration=process_time
             )
 
             # Re-raise the exception

@@ -230,25 +230,24 @@ async def get_stats(
                     "evictions": 0,
                 }
         
-        # Get real content statistics
+        # Get real content statistics (document_chunks table doesn't exist yet)
         content_stats_query = """
         SELECT 
-            COUNT(DISTINCT cm.content_id) as total_documents,
-            COUNT(dc.chunk_id) as total_chunks,
-            AVG(cm.quality_score) as avg_quality_score,
-            COUNT(DISTINCT cm.workspace) as workspaces,
-            MAX(cm.enriched_at) as last_enrichment
-        FROM content_metadata cm
-        LEFT JOIN document_chunks dc ON cm.content_id = dc.content_id
+            COUNT(DISTINCT content_id) as total_documents,
+            0 as total_chunks,
+            AVG(quality_score) as avg_quality_score,
+            COUNT(DISTINCT workspace) as workspaces,
+            MAX(enriched_at) as last_enrichment
+        FROM content_metadata
         """
         content_result = await db_manager.fetch_one(content_stats_query)
         
         content_stats = {
             "total_documents": content_result.get("total_documents", 0) if content_result else 0,
             "total_chunks": content_result.get("total_chunks", 0) if content_result else 0,
-            "avg_quality_score": float(content_result.get("avg_quality_score", 0)) if content_result else 0,
+            "avg_quality_score": float(content_result.get("avg_quality_score", 0)) if content_result and content_result.get("avg_quality_score") is not None else 0,
             "workspaces": content_result.get("workspaces", 0) if content_result else 0,
-            "last_enrichment": content_result.get("last_enrichment") or datetime.utcnow(),
+            "last_enrichment": content_result.get("last_enrichment") or datetime.utcnow() if content_result else datetime.utcnow(),
         }
         
         # Get real system statistics
@@ -325,10 +324,10 @@ async def get_analytics(
         
         # Get top queries
         top_queries_query = """
-        SELECT query, COUNT(*) as count
+        SELECT query_text, COUNT(*) as count
         FROM search_queries
         WHERE created_at >= :start_date AND created_at <= :end_date
-        GROUP BY query
+        GROUP BY query_text
         ORDER BY count DESC
         LIMIT 5
         """
@@ -382,7 +381,7 @@ async def get_analytics(
                 "avgResponseTime": float(search_result.get("avg_response_time", 0)) if search_result else 0,
                 "successRate": float(search_result.get("success_rate", 0)) if search_result else 0,
                 "topQueries": [
-                    {"query": q["query"], "count": q["count"]} 
+                    {"query": q.get("query_text", ""), "count": q.get("count", 0)} 
                     for q in (top_queries or [])
                 ],
             },
@@ -391,7 +390,7 @@ async def get_analytics(
                 "totalChunks": content_result.get("total_chunks", 0) if content_result else 0,
                 "avgQualityScore": float(content_result.get("avg_quality_score", 0)) if content_result else 0,
                 "documentsByTechnology": [
-                    {"technology": t["technology"], "count": t["count"]}
+                    {"technology": t.get("technology", ""), "count": t.get("count", 0)}
                     for t in (tech_docs or [])
                 ],
             },

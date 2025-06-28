@@ -1,0 +1,1308 @@
+openapi: 3.0.3
+info:
+  title: Docaiche API
+  description: |
+    AI-powered documentation search and content management system with advanced analytics capabilities.
+    
+    ## Overview
+    Docaiche provides intelligent documentation search, content enrichment, and comprehensive analytics
+    for tracking user behavior and system performance. The API supports real-time search with caching,
+    content ingestion from multiple sources, and AI-powered content enhancement.
+    
+    ## Key Features
+    - **Intelligent Search**: AI-powered search with technology filtering and relevance scoring
+    - **Content Management**: Ingest and manage documentation from various sources
+    - **Analytics Dashboard**: Comprehensive metrics for search patterns, user behavior, and system performance
+    - **AI Enrichment**: Automatic content enhancement using LLM providers
+    - **Real-time Monitoring**: Live system health and performance metrics
+    
+    ## Analytics Capabilities
+    The analytics endpoints provide rich data for building beautiful dashboards:
+    - Search query trends and patterns over time
+    - User engagement metrics (clicks, dwell time, scroll depth)
+    - Content quality scores and performance
+    - System performance metrics (response times, cache hit rates)
+    - Technology adoption trends
+    - Real-time activity feeds
+    
+  version: 2.0.0
+  contact:
+    name: Docaiche Support
+    email: support@docaiche.io
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development server (direct API access)
+  - url: http://localhost:4080/api/v1
+    description: Production server (through admin-ui proxy)
+
+tags:
+  - name: search
+    description: Search operations and feedback
+  - name: health
+    description: Health checks and system monitoring
+  - name: analytics
+    description: Analytics and metrics endpoints
+  - name: config
+    description: Configuration management
+  - name: admin
+    description: Administrative operations
+  - name: providers
+    description: AI provider management
+  - name: ingestion
+    description: Document ingestion
+  - name: enrichment
+    description: AI-powered content enrichment
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: System health check
+      description: |
+        Returns overall system health and individual component statuses.
+        Use this endpoint for monitoring and alerting.
+      operationId: getHealth
+      responses:
+        '200':
+          description: System health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                overall_status: "healthy"
+                timestamp: "2025-06-28T17:00:00Z"
+                version: "1.0.0"
+                components:
+                  database:
+                    status: "healthy"
+                    message: "Connected"
+                  redis:
+                    status: "healthy"
+                    message: "Connected"
+                  anythingllm:
+                    status: "healthy"
+                    message: "Connected"
+                  llm_providers:
+                    status: "configured"
+                    message: "LLM providers enabled"
+                features:
+                  document_processing: "available"
+                  search: "available"
+                  llm_enhancement: "available"
+
+  /stats:
+    get:
+      tags: [health, analytics]
+      summary: System statistics
+      description: |
+        Provides comprehensive usage and performance statistics.
+        
+        **Use Cases for Dashboards:**
+        - Real-time performance monitoring widgets
+        - Cache efficiency gauges
+        - Search volume time series charts
+        - System resource utilization graphs
+        
+        **Metrics Included:**
+        - Search statistics: total searches, response times, cache performance
+        - Content statistics: document counts, quality scores, workspace distribution
+        - System statistics: CPU, memory, disk usage, uptime
+        - Cache statistics: hit/miss rates, memory usage, evictions
+      operationId: getStats
+      responses:
+        '200':
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '500':
+          description: Statistics unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analytics:
+    get:
+      tags: [analytics]
+      summary: Detailed analytics data
+      description: |
+        Returns comprehensive analytics for the specified time range.
+        
+        **Dashboard Visualization Ideas:**
+        - Search query word clouds from top queries
+        - Technology adoption pie charts
+        - User engagement funnel charts
+        - Time series graphs for all metrics
+        - Geographic distribution maps (if user location data available)
+        
+        **Data Granularity:**
+        - Supports 24h, 7d, and 30d time ranges
+        - Returns aggregated metrics suitable for visualization
+        - Includes top-N lists for queries and technologies
+      operationId: getAnalytics
+      parameters:
+        - name: timeRange
+          in: query
+          description: Time range for analytics
+          required: false
+          schema:
+            type: string
+            enum: [24h, 7d, 30d]
+            default: 24h
+      responses:
+        '200':
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsResponse'
+
+  /search:
+    get:
+      tags: [search]
+      summary: Search documents (GET)
+      description: |
+        Simple GET endpoint for search queries. Useful for browser testing and simple integrations.
+      operationId: searchDocumentsGet
+      parameters:
+        - name: q
+          in: query
+          description: Search query string
+          required: true
+          schema:
+            type: string
+          example: "react hooks"
+        - name: technology_hint
+          in: query
+          description: Filter by technology
+          required: false
+          schema:
+            type: string
+          example: "react"
+        - name: limit
+          in: query
+          description: Maximum results to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: session_id
+          in: query
+          description: Session identifier for tracking
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+    
+    post:
+      tags: [search]
+      summary: Search documents (POST)
+      description: |
+        Advanced search endpoint with full request body support.
+        
+        **Features:**
+        - AI-powered relevance ranking
+        - Technology-specific filtering
+        - Result caching for performance
+        - Background content enrichment triggers
+        
+        **Search Algorithm:**
+        - Queries AnythingLLM vector database
+        - Applies multi-factor relevance scoring
+        - Considers user feedback signals
+        - Optimizes for documentation-specific content
+      operationId: searchDocumentsPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '500':
+          description: Search execution failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /feedback:
+    post:
+      tags: [search]
+      summary: Submit feedback
+      description: |
+        Submit user feedback on search results.
+        
+        **Feedback Types:**
+        - helpful: Result was useful
+        - not_helpful: Result wasn't useful
+        - outdated: Content is outdated
+        - incorrect: Content has errors
+        - flag: Content needs review
+        
+        **Impact on System:**
+        - Influences future search rankings
+        - Triggers content quality reviews
+        - Feeds into analytics dashboards
+      operationId: submitFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '202':
+          description: Feedback accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Feedback received and will be processed"
+
+  /signals:
+    post:
+      tags: [search]
+      summary: Submit usage signal
+      description: |
+        Submit implicit user behavior signals.
+        
+        **Signal Types:**
+        - click: User clicked on result
+        - dwell_time: Time spent on result
+        - copy: User copied content
+        - share: User shared result
+        - scroll_depth: How far user scrolled
+        
+        **Analytics Usage:**
+        - Builds user engagement heatmaps
+        - Tracks content effectiveness
+        - Improves search relevance
+      operationId: submitSignal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignalRequest'
+      responses:
+        '202':
+          description: Signal accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Signal received and will be processed"
+
+  /config:
+    get:
+      tags: [config]
+      summary: Get configuration
+      description: List all configuration items
+      operationId: getConfiguration
+      parameters:
+        - name: category
+          in: query
+          description: Filter by category
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Configuration items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigurationResponse'
+    
+    put:
+      tags: [config]
+      summary: Update configuration
+      description: Update a configuration value
+      operationId: updateConfiguration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdateRequest'
+      responses:
+        '202':
+          description: Configuration update accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigUpdateResponse'
+
+  /collections:
+    get:
+      tags: [config]
+      summary: List collections
+      description: |
+        List all document collections/workspaces.
+        
+        **Collection Metadata:**
+        - Technology focus
+        - Document count
+        - Last update time
+        - Active status
+      operationId: getCollections
+      responses:
+        '200':
+          description: Collections list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionsResponse'
+
+  /providers:
+    get:
+      tags: [providers]
+      summary: List AI providers
+      description: |
+        List all available AI/LLM providers.
+        
+        **Provider Information:**
+        - Available providers (Ollama, OpenAI, etc.)
+        - Configuration status
+        - Supported capabilities
+        - API requirements
+      operationId: listProviders
+      responses:
+        '200':
+          description: Providers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Provider'
+
+  /providers/{provider_id}/test:
+    post:
+      tags: [providers]
+      summary: Test provider connection
+      description: |
+        Test connection to an AI provider.
+        
+        **Test Process:**
+        - Validates credentials/connection
+        - Retrieves available models
+        - Measures latency
+        - Returns success/failure status
+      operationId: testProvider
+      parameters:
+        - name: provider_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "ollama"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderTestRequest'
+      responses:
+        '200':
+          description: Test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderTestResponse'
+
+  /admin/activity/recent:
+    get:
+      tags: [admin, analytics]
+      summary: Get recent activity
+      description: |
+        Returns recent system activity across all components.
+        
+        **Activity Types:**
+        - search: Search queries performed
+        - config: Configuration changes
+        - content: Document operations
+        - error: System errors
+        
+        **Dashboard Usage:**
+        - Real-time activity feed widget
+        - Activity type distribution charts
+        - User action timelines
+      operationId: getRecentActivity
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum items to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: activity_type
+          in: query
+          description: Filter by activity type
+          required: false
+          schema:
+            type: string
+            enum: [search, config, content, error]
+      responses:
+        '200':
+          description: Activity items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivityItem'
+
+  /admin/activity/searches:
+    get:
+      tags: [admin, analytics]
+      summary: Get recent searches
+      description: |
+        Returns detailed recent search query history.
+        
+        **Data Included:**
+        - Query text
+        - Timestamp
+        - Result count
+        - Technology filters used
+        - Cache hit status
+      operationId: getRecentSearches
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum items to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Recent searches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivityItem'
+
+  /admin/activity/errors:
+    get:
+      tags: [admin]
+      summary: Get recent errors
+      description: |
+        Returns recent system errors for monitoring.
+        
+        **Error Categories:**
+        - Provider connection failures
+        - Search index issues
+        - Processing errors
+        - Configuration problems
+      operationId: getRecentErrors
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum items to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Recent errors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivityItem'
+
+  /admin/dashboard:
+    get:
+      tags: [admin, analytics]
+      summary: Get dashboard data
+      description: |
+        Aggregated dashboard data for admin UI.
+        
+        **Comprehensive Overview Including:**
+        - All system statistics
+        - Recent activity summary
+        - Provider status
+        - Health overview
+        
+        **Single Endpoint for Dashboard:**
+        - Reduces API calls
+        - Pre-aggregated data
+        - Optimized for UI rendering
+      operationId: getDashboardData
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardData'
+
+  /admin/search:
+    get:
+      tags: [admin]
+      summary: Admin content search
+      description: Search content with admin privileges
+      operationId: adminSearchContent
+      parameters:
+        - name: query
+          in: query
+          description: Search query
+          required: false
+          schema:
+            type: string
+        - name: technology
+          in: query
+          description: Filter by technology
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by status
+          required: false
+          schema:
+            type: string
+            enum: [active, inactive, pending]
+        - name: limit
+          in: query
+          description: Maximum results
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Admin search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSearchResponse'
+
+  /ingestion/upload:
+    post:
+      tags: [ingestion]
+      summary: Upload document
+      description: |
+        Upload a document for processing and indexing.
+        
+        **Supported Formats:**
+        - PDF documents
+        - Word documents (.docx)
+        - Markdown files
+        - Plain text
+        - HTML pages
+        
+        **Processing Pipeline:**
+        1. Content extraction
+        2. Chunking and preprocessing
+        3. Vector embedding generation
+        4. AnythingLLM workspace upload
+        5. Quality scoring
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, technology]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Document file
+                technology:
+                  type: string
+                  description: Technology category
+                title:
+                  type: string
+                  description: Document title
+                source_url:
+                  type: string
+                  description: Original source URL
+                workspace:
+                  type: string
+                  description: Target workspace
+      responses:
+        '200':
+          description: Upload successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  document_id:
+                    type: string
+                    description: Unique document identifier
+
+  /enrichment/enrich:
+    post:
+      tags: [enrichment]
+      summary: Enrich content
+      description: |
+        Trigger AI-powered content enrichment.
+        
+        **Enrichment Capabilities:**
+        - Generate missing documentation
+        - Improve content quality
+        - Add code examples
+        - Create summaries
+        - Fix technical errors
+        
+        **Currently:** Returns 503 as service is not initialized
+      operationId: enrichContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrichmentRequest'
+      responses:
+        '202':
+          description: Enrichment started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrichmentResponse'
+        '503':
+          description: Enrichment service unavailable
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, overall_status, timestamp, version, components, features]
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        overall_status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        components:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ComponentStatus'
+            redis:
+              $ref: '#/components/schemas/ComponentStatus'
+            anythingllm:
+              $ref: '#/components/schemas/ComponentStatus'
+            llm_providers:
+              $ref: '#/components/schemas/ComponentStatus'
+            search_orchestrator:
+              $ref: '#/components/schemas/ComponentStatus'
+        features:
+          type: object
+          additionalProperties:
+            type: string
+
+    ComponentStatus:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unavailable, configured, none_configured]
+        message:
+          type: string
+
+    StatsResponse:
+      type: object
+      required: [search_stats, cache_stats, content_stats, system_stats, timestamp]
+      properties:
+        search_stats:
+          type: object
+          properties:
+            total_searches:
+              type: integer
+              description: Total number of searches performed
+            avg_response_time_ms:
+              type: number
+              description: Average search response time in milliseconds
+            cache_hit_rate:
+              type: number
+              description: Percentage of searches served from cache
+            successful_searches:
+              type: integer
+              description: Number of successful searches
+            failed_searches:
+              type: integer
+              description: Number of failed searches
+        cache_stats:
+          type: object
+          properties:
+            hit_rate:
+              type: number
+              description: Cache hit rate (0-1)
+            miss_rate:
+              type: number
+              description: Cache miss rate (0-1)
+            total_keys:
+              type: integer
+              description: Total keys in cache
+            memory_usage_mb:
+              type: number
+              description: Cache memory usage in MB
+            evictions:
+              type: integer
+              description: Number of cache evictions
+        content_stats:
+          type: object
+          properties:
+            total_documents:
+              type: integer
+              description: Total documents in system
+            total_chunks:
+              type: integer
+              description: Total document chunks
+            avg_quality_score:
+              type: number
+              description: Average document quality score (0-1)
+            workspaces:
+              type: integer
+              description: Number of workspaces
+            last_enrichment:
+              type: string
+              format: date-time
+              description: Last enrichment timestamp
+        system_stats:
+          type: object
+          properties:
+            uptime_seconds:
+              type: integer
+              description: System uptime in seconds
+            cpu_usage_percent:
+              type: number
+              description: CPU usage percentage
+            memory_usage_mb:
+              type: number
+              description: Memory usage in MB
+            disk_usage_mb:
+              type: number
+              description: Disk usage in MB
+        timestamp:
+          type: string
+          format: date-time
+
+    AnalyticsResponse:
+      type: object
+      required: [timeRange, searchMetrics, contentMetrics, userMetrics, timestamp]
+      properties:
+        timeRange:
+          type: string
+          enum: [24h, 7d, 30d]
+        searchMetrics:
+          type: object
+          properties:
+            totalSearches:
+              type: integer
+              description: Total searches in period
+            avgResponseTime:
+              type: number
+              description: Average response time
+            successRate:
+              type: number
+              description: Search success rate (0-1)
+            topQueries:
+              type: array
+              items:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  count:
+                    type: integer
+        contentMetrics:
+          type: object
+          properties:
+            totalDocuments:
+              type: integer
+            totalChunks:
+              type: integer
+            avgQualityScore:
+              type: number
+            documentsByTechnology:
+              type: array
+              items:
+                type: object
+                properties:
+                  technology:
+                    type: string
+                  count:
+                    type: integer
+        userMetrics:
+          type: object
+          properties:
+            activeUsers:
+              type: integer
+            totalSessions:
+              type: integer
+            avgSessionDuration:
+              type: number
+              description: Average session duration in milliseconds
+        timestamp:
+          type: string
+          format: date-time
+
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: Search query text
+          minLength: 1
+          maxLength: 500
+        technology_hint:
+          type: string
+          description: Optional technology filter
+        limit:
+          type: integer
+          description: Maximum results to return
+          minimum: 1
+          maximum: 100
+          default: 20
+        session_id:
+          type: string
+          description: Session identifier for tracking
+
+    SearchResponse:
+      type: object
+      required: [results, total_count, query, execution_time_ms, cache_hit, enrichment_triggered]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        total_count:
+          type: integer
+          description: Total matching documents
+        query:
+          type: string
+          description: Original search query
+        technology_hint:
+          type: string
+          description: Technology filter applied
+        execution_time_ms:
+          type: integer
+          description: Query execution time
+        cache_hit:
+          type: boolean
+          description: Whether results came from cache
+        enrichment_triggered:
+          type: boolean
+          description: Whether background enrichment was triggered
+
+    SearchResult:
+      type: object
+      required: [content_id, title, snippet, source_url, technology, relevance_score, content_type, workspace]
+      properties:
+        content_id:
+          type: string
+          description: Unique content identifier
+        title:
+          type: string
+          description: Document title
+        snippet:
+          type: string
+          description: Content preview snippet
+        source_url:
+          type: string
+          description: Original source URL
+        technology:
+          type: string
+          description: Technology category
+        relevance_score:
+          type: number
+          description: Relevance score (0-1)
+          minimum: 0
+          maximum: 1
+        content_type:
+          type: string
+          description: Type of content
+          enum: [documentation, tutorial, api_reference, guide, example]
+        workspace:
+          type: string
+          description: Workspace/collection name
+
+    FeedbackRequest:
+      type: object
+      required: [content_id, feedback_type]
+      properties:
+        content_id:
+          type: string
+          description: Document identifier
+        feedback_type:
+          type: string
+          enum: [helpful, not_helpful, outdated, incorrect, flag]
+        rating:
+          type: integer
+          description: Optional rating (1-5)
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          description: Optional comment
+          maxLength: 1000
+        search_query:
+          type: string
+          description: Associated search query
+        result_position:
+          type: integer
+          description: Position in search results
+
+    SignalRequest:
+      type: object
+      required: [content_id, signal_type]
+      properties:
+        content_id:
+          type: string
+          description: Document identifier
+        signal_type:
+          type: string
+          enum: [click, dwell_time, copy, share, scroll_depth]
+        signal_value:
+          type: number
+          description: Signal strength/value
+        search_query:
+          type: string
+          description: Associated search query
+        result_position:
+          type: integer
+          description: Position in search results
+        duration_ms:
+          type: integer
+          description: Duration for time-based signals
+
+    ConfigurationResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConfigItem'
+
+    ConfigItem:
+      type: object
+      required: [key, value, schema_version, is_sensitive]
+      properties:
+        key:
+          type: string
+          description: Configuration key
+        value:
+          description: Configuration value (type varies)
+        schema_version:
+          type: string
+          description: Schema version
+        description:
+          type: string
+          description: Configuration description
+        is_sensitive:
+          type: boolean
+          description: Whether value is sensitive
+
+    ConfigUpdateRequest:
+      type: object
+      required: [key, value]
+      properties:
+        key:
+          type: string
+          description: Configuration key to update
+        value:
+          description: New configuration value
+
+    ConfigUpdateResponse:
+      type: object
+      required: [message, key, status]
+      properties:
+        message:
+          type: string
+        key:
+          type: string
+        status:
+          type: string
+          enum: [accepted, rejected]
+
+    CollectionsResponse:
+      type: object
+      required: [collections]
+      properties:
+        collections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Collection'
+
+    Collection:
+      type: object
+      required: [slug, name, technology, document_count, last_updated, is_active]
+      properties:
+        slug:
+          type: string
+          description: Unique collection identifier
+        name:
+          type: string
+          description: Display name
+        technology:
+          type: string
+          description: Technology focus
+        document_count:
+          type: integer
+          description: Number of documents
+        last_updated:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+          description: Whether collection is active
+
+    Provider:
+      type: object
+      required: [id, name, type, status, configured, category, description, requires_api_key, supports_embedding, supports_chat]
+      properties:
+        id:
+          type: string
+          description: Provider identifier
+        name:
+          type: string
+          description: Display name
+        type:
+          type: string
+          enum: [text_generation, embedding, multimodal]
+        status:
+          type: string
+          enum: [available, unavailable, error]
+        configured:
+          type: boolean
+          description: Whether provider is configured
+        category:
+          type: string
+          enum: [local, cloud]
+        description:
+          type: string
+        requires_api_key:
+          type: boolean
+        supports_embedding:
+          type: boolean
+        supports_chat:
+          type: boolean
+
+    ProviderTestRequest:
+      type: object
+      properties:
+        base_url:
+          type: string
+          description: Provider base URL (for local providers)
+        api_key:
+          type: string
+          description: API key (for cloud providers)
+        model:
+          type: string
+          description: Model to test with
+
+    ProviderTestResponse:
+      type: object
+      required: [success, message, latency]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        latency:
+          type: number
+          description: Response time in milliseconds
+        models:
+          type: array
+          items:
+            type: string
+          description: Available models
+
+    ActivityItem:
+      type: object
+      required: [id, type, message, timestamp]
+      properties:
+        id:
+          type: string
+          description: Unique activity identifier
+        type:
+          type: string
+          enum: [search, config, content, error, upload, enrichment]
+        message:
+          type: string
+          description: Activity description
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: string
+          description: Additional details
+
+    AdminSearchResponse:
+      type: object
+      required: [items, total_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSearchItem'
+        total_count:
+          type: integer
+
+    AdminSearchItem:
+      type: object
+      required: [content_id, title, content_type, technology, source_url, created_at, status]
+      properties:
+        content_id:
+          type: string
+        title:
+          type: string
+        content_type:
+          type: string
+        technology:
+          type: string
+        source_url:
+          type: string
+        collection_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_updated:
+          type: string
+          format: date-time
+        size_bytes:
+          type: integer
+        status:
+          type: string
+          enum: [active, inactive, pending]
+
+    DashboardData:
+      type: object
+      required: [stats, recent_activity, providers, health]
+      properties:
+        stats:
+          type: object
+          description: Aggregated statistics
+          properties:
+            search_stats:
+              type: object
+            content_stats:
+              type: object
+            system_stats:
+              type: object
+            cache_stats:
+              type: object
+        recent_activity:
+          type: array
+          items:
+            type: object
+        providers:
+          type: object
+          properties:
+            configured:
+              type: integer
+            available:
+              type: integer
+            active:
+              type: integer
+        health:
+          type: object
+          properties:
+            overall_status:
+              type: string
+            services_up:
+              type: integer
+            services_total:
+              type: integer
+
+    EnrichmentRequest:
+      type: object
+      required: [content_id]
+      properties:
+        content_id:
+          type: string
+          description: Document to enrich
+        enrichment_type:
+          type: string
+          enum: [quality_improvement, gap_filling, example_generation, summary]
+        target_quality_score:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    EnrichmentResponse:
+      type: object
+      required: [enrichment_id, status]
+      properties:
+        enrichment_id:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        estimated_completion:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          description: Error message
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (future implementation)
+
+security: []  # No security currently implemented

@@ -19,8 +19,10 @@ from .middleware import limiter
 from .dependencies import get_database_manager, get_search_orchestrator
 from src.database.connection import DatabaseManager
 from src.search.orchestrator import SearchOrchestrator
+from src.logging_config import MetricsLogger
 
 logger = logging.getLogger(__name__)
+metrics = MetricsLogger(logger)
 
 # Create router for search endpoints
 router = APIRouter()
@@ -52,8 +54,9 @@ async def search_documents_post(
         HTTPException: If search execution fails
     """
     try:
-        logger.info(f"Search request: {search_request.query[:100]}...")
-
+        import time
+        start_time = time.time()
+        
         # For now, return mock data until search orchestrator integration is complete
         mock_results = [
             SearchResult(
@@ -78,13 +81,27 @@ async def search_documents_post(
             ),
         ]
 
+        results = mock_results[: search_request.limit]
+        execution_time = (time.time() - start_time) * 1000  # Convert to ms
+        cache_hit = False  # Mock data is never from cache
+        
+        # Log search metrics
+        metrics.log_search_query(
+            query=search_request.query,
+            result_count=len(results),
+            cache_hit=cache_hit,
+            duration=execution_time / 1000,  # Convert back to seconds for logging
+            technology_hint=search_request.technology_hint,
+            session_id=search_request.session_id
+        )
+
         return SearchResponse(
-            results=mock_results[: search_request.limit],
+            results=results,
             total_count=len(mock_results),
             query=search_request.query,
             technology_hint=search_request.technology_hint,
-            execution_time_ms=45,
-            cache_hit=False,
+            execution_time_ms=int(execution_time),
+            cache_hit=cache_hit,
             enrichment_triggered=False,
         )
 

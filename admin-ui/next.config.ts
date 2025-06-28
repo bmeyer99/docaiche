@@ -16,6 +16,10 @@ const baseConfig: NextConfig = {
         source: '/api/v1/:path*',
         destination: 'http://api:8000/api/v1/:path*',
       },
+      {
+        source: '/grafana/:path*',
+        destination: 'http://grafana:3000/:path*',
+      },
     ]
   },
 

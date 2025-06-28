@@ -5,6 +5,7 @@ A clean, maintainable FastAPI application that consolidates all functionality
 into a single service with essential middleware and clear error handling.
 """
 
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -17,7 +18,13 @@ from slowapi.util import get_remote_address
 
 from src.api.v1.api import api_router, setup_exception_handlers
 from src.core.middleware import LoggingMiddleware
+from src.logging_config import setup_structured_logging, MetricsLogger
 
+
+# Setup structured logging
+setup_structured_logging()
+logger = logging.getLogger(__name__)
+metrics = MetricsLogger(logger)
 
 # Rate limiter setup
 limiter = Limiter(key_func=get_remote_address)

@@ -220,7 +220,9 @@ class DatabaseManager:
                     result = await session.execute(text(query_modified), param_dict)
                 else:
                     result = await session.execute(text(query))
-                return result.fetchone()
+                row = result.fetchone()
+                # Convert Row to dict for easier access
+                return dict(row._mapping) if row else None
         except SQLAlchemyError as e:
             logger.error(f"Query fetch_one failed: {query[:100]}... Error: {e}")
             raise
@@ -255,7 +257,9 @@ class DatabaseManager:
                     result = await session.execute(text(query_modified), param_dict)
                 else:
                     result = await session.execute(text(query))
-                return result.fetchall()
+                rows = result.fetchall()
+                # Convert Rows to list of dicts for easier access
+                return [dict(row._mapping) for row in rows]
         except SQLAlchemyError as e:
             logger.error(f"Query fetch_all failed: {query[:100]}... Error: {e}")
             raise
