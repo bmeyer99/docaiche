@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Upload, Search, Folder } from "lucide-react";
+import { Icons } from "@/components/icons";
 
 export default function DocumentsPage() {
   return (
@@ -10,7 +10,7 @@ export default function DocumentsPage() {
         <h1 className="text-3xl font-bold">Documents</h1>
         <div className="flex items-center space-x-2">
           <Button>
-            <Upload className="mr-2 h-4 w-4" />
+            <Icons.upload className="mr-2 h-4 w-4" />
             Upload
           </Button>
         </div>
@@ -20,7 +20,7 @@ export default function DocumentsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Search className="h-5 w-5" />
+              <Icons.search className="h-5 w-5" />
               <span>Search Documents</span>
             </CardTitle>
           </CardHeader>
@@ -33,7 +33,7 @@ export default function DocumentsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Folder className="h-5 w-5" />
+              <Icons.folder className="h-5 w-5" />
               <span>Collections</span>
             </CardTitle>
           </CardHeader>
@@ -46,7 +46,7 @@ export default function DocumentsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Upload className="h-5 w-5" />
+              <Icons.upload className="h-5 w-5" />
               <span>Upload Content</span>
             </CardTitle>
           </CardHeader>

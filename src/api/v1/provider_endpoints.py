@@ -4,8 +4,8 @@ LLM Provider configuration, testing, and management endpoints
 """
 
 import logging
-# from datetime import datetime  # Not currently used
-from typing import List
+from datetime import datetime
+from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -14,10 +14,71 @@ from .middleware import limiter
 from .dependencies import get_configuration_manager
 from src.core.config.manager import ConfigurationManager
 
+# Import the new provider registry system
+try:
+    from src.llm import (
+        get_provider_registry,
+        ProviderRegistry,
+        ProviderInfo,
+        ProviderCapabilities,
+        TestResult,
+        ProviderHealth,
+        HealthStatus
+    )
+    REGISTRY_AVAILABLE = True
+except ImportError as e:
+    logging.getLogger(__name__).warning(f"Provider registry not available: {e}")
+    REGISTRY_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # Create router for provider endpoints
 router = APIRouter()
+
+
+def get_registry() -> Optional[ProviderRegistry]:
+    """Dependency to get provider registry instance if available"""
+    if REGISTRY_AVAILABLE:
+        return get_provider_registry()
+    return None
+
+
+@router.get("/provider-registry-status", tags=["providers"])
+@limiter.limit("30/minute")
+async def get_provider_registry_stats(
+    request: Request,
+    registry: Optional[ProviderRegistry] = Depends(get_registry)
+) -> Dict[str, Any]:
+    """
+    GET /api/v1/providers/registry/stats - Get provider registry statistics
+    This endpoint tests if the new provider registry system is working
+    """
+    try:
+        if not registry or not REGISTRY_AVAILABLE:
+            return {
+                "registry_available": False,
+                "message": "Provider registry system not available",
+                "fallback_mode": True,
+                "static_providers_count": 2
+            }
+        
+        stats = registry.get_registry_stats()
+        
+        return {
+            "registry_available": True,
+            "message": "Provider registry system operational",
+            "fallback_mode": False,
+            "stats": stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get registry stats: {e}")
+        return {
+            "registry_available": False,
+            "message": f"Registry error: {str(e)}",
+            "fallback_mode": True,
+            "error": str(e)
+        }
 
 
 @router.get("/providers", response_model=List[ProviderResponse], tags=["providers"])
@@ -116,6 +177,18 @@ async def list_providers(
                 supports_embedding=True,
                 supports_chat=True,
             ),
+            ProviderResponse(
+                id="litellm",
+                name="LiteLLM",
+                type="text_generation",
+                status="available",
+                configured=False,
+                category="gateway",
+                description="Universal proxy for 100+ LLM APIs with unified interface",
+                requires_api_key=False,
+                supports_embedding=True,
+                supports_chat=True,
+            ),
         ]
 
         return providers
@@ -185,6 +258,33 @@ async def test_provider_connection(
                     return ProviderTestResponse(
                         success=False,
                         message=f"Connection failed: HTTP {response.status_code}",
+                        latency=response.elapsed.total_seconds() * 1000,
+                    )
+
+        elif provider_id.lower() == "litellm":
+            # Test LiteLLM proxy connection
+            base_url_clean = test_config.base_url.rstrip("/")
+            endpoint = f"{base_url_clean}/v1/models"
+            headers = {"Content-Type": "application/json"}
+            
+            if test_config.api_key:
+                headers["Authorization"] = f"Bearer {test_config.api_key}"
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(endpoint, headers=headers)
+
+                if response.status_code == 200:
+                    models = response.json().get("data", [])
+                    return ProviderTestResponse(
+                        success=True,
+                        message=f"LiteLLM proxy connection successful. {len(models)} models available.",
+                        latency=response.elapsed.total_seconds() * 1000,
+                        models=[model.get("id", "") for model in models[:5]],
+                    )
+                else:
+                    return ProviderTestResponse(
+                        success=False,
+                        message=f"LiteLLM proxy connection failed: HTTP {response.status_code}",
                         latency=response.elapsed.total_seconds() * 1000,
                     )
 

@@ -236,3 +236,50 @@ class ProviderStatusResponse(BaseModel):
     health: ProviderHealth = Field(..., description="Current health status")
     metrics: Optional[ProviderMetrics] = Field(None, description="Performance metrics")
     config: ProviderConfig = Field(..., description="Current configuration")
+
+
+# Additional models for backward compatibility with existing code
+class EvaluationResult(BaseModel):
+    """Result of an LLM evaluation"""
+    score: float = Field(..., ge=0.0, le=1.0, description="Evaluation score")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in evaluation")
+    reasoning: Optional[str] = Field(None, description="Reasoning for evaluation")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+
+class EnrichmentStrategy(str, Enum):
+    """Enrichment strategy types"""
+    SEMANTIC = "semantic"
+    KEYWORD = "keyword"
+    HYBRID = "hybrid"
+    CONTEXTUAL = "contextual"
+
+
+class QualityAssessment(BaseModel):
+    """Quality assessment result"""
+    overall_score: float = Field(..., ge=0.0, le=1.0, description="Overall quality score")
+    clarity_score: float = Field(..., ge=0.0, le=1.0, description="Content clarity score")
+    completeness_score: float = Field(..., ge=0.0, le=1.0, description="Content completeness score")
+    accuracy_score: float = Field(..., ge=0.0, le=1.0, description="Content accuracy score")
+    usefulness_score: float = Field(..., ge=0.0, le=1.0, description="Content usefulness score")
+    assessment_reasoning: Optional[str] = Field(None, description="Reasoning for assessment")
+
+
+# Provider status tracking
+class LLMProviderStatus(str, Enum):
+    """LLM provider status values"""
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    UNAVAILABLE = "unavailable"
+    UNKNOWN = "unknown"
+
+
+# Exception for backward compatibility
+class LLMProviderUnavailableError(Exception):
+    """Raised when LLM provider is unavailable"""
+    pass
+
+
+def get_provider_status(provider_name: str) -> LLMProviderStatus:
+    """Get status of a provider (placeholder implementation)"""
+    return LLMProviderStatus.UNKNOWN

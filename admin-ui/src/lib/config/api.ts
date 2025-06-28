@@ -8,7 +8,7 @@
 // API Configuration Constants
 export const API_CONFIG = {
   // Base URL from environment variable with fallback
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://api:8000/api/v1',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4080/api/v1',
   
   // Request timeouts (in milliseconds)
   TIMEOUTS: {

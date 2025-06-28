@@ -8,8 +8,8 @@ type hints, and field descriptions for comprehensive configuration management.
 
 import logging
 import re
-from typing import Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal, Optional, Dict, Any, List
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -211,21 +211,98 @@ class OpenAIConfig(BaseModel):
         return v.strip()
 
 
-class AIConfig(BaseModel):
-    """AI provider configuration with failover support"""
+class ProviderConfig(BaseModel):
+    """Individual provider configuration"""
+    
+    enabled: bool = Field(True, description="Whether provider is enabled")
+    config: Dict[str, Any] = Field(default_factory=dict, description="Provider-specific configuration")
+    display_name: Optional[str] = Field(None, description="Custom display name")
+    priority: int = Field(0, description="Provider priority (higher = preferred)")
+    
+    # Performance settings
+    max_concurrent_requests: int = Field(5, ge=1, description="Maximum concurrent requests")
+    timeout_seconds: int = Field(30, ge=1, description="Request timeout")
+    retry_attempts: int = Field(3, ge=0, description="Number of retry attempts")
+    
+    # Model configurations
+    text_config: Optional[Dict[str, Any]] = Field(None, description="Text generation configuration")
+    embedding_config: Optional[Dict[str, Any]] = Field(None, description="Embedding configuration")
 
-    primary_provider: Literal["ollama", "openai"] = Field(
-        "ollama", description="Primary LLM provider"
-    )
-    fallback_provider: Optional[Literal["ollama", "openai"]] = Field(
-        "openai", description="Fallback LLM provider"
-    )
+
+class AIConfig(BaseModel):
+    """Enhanced AI provider configuration with multi-provider support"""
+
+    # Legacy fields for backward compatibility
+    primary_provider: str = Field("ollama", description="Primary LLM provider ID")
+    fallback_provider: Optional[str] = Field("openai", description="Fallback LLM provider ID")
     enable_failover: bool = Field(True, description="Enable automatic failover")
+    
+    # Legacy provider configs (for backward compatibility)
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     openai: Optional[OpenAIConfig] = None
-    cache_ttl_seconds: int = Field(
-        3600, ge=0, description="Cache TTL for LLM responses"
+    
+    # New multi-provider system
+    providers: Dict[str, ProviderConfig] = Field(
+        default_factory=dict, 
+        description="Dynamic provider configurations"
     )
+    
+    # Global settings
+    cache_ttl_seconds: int = Field(3600, ge=0, description="Cache TTL for LLM responses")
+    load_balancing_enabled: bool = Field(False, description="Enable load balancing")
+    health_check_interval: int = Field(300, ge=30, description="Health check interval in seconds")
+    
+    @model_validator(mode='after')
+    def ensure_legacy_providers_in_providers(self):
+        """Ensure legacy providers are included in the providers dict"""
+        # Add ollama to providers if not already present
+        if 'ollama' not in self.providers:
+            self.providers['ollama'] = ProviderConfig(
+                enabled=True,
+                config={
+                    'endpoint': self.ollama.endpoint,
+                    'model': self.ollama.model,
+                    'temperature': self.ollama.temperature,
+                    'max_tokens': self.ollama.max_tokens,
+                    'timeout_seconds': self.ollama.timeout_seconds
+                },
+                priority=10 if self.primary_provider == 'ollama' else 5
+            )
+        
+        # Add openai to providers if configured
+        if self.openai and 'openai' not in self.providers:
+            self.providers['openai'] = ProviderConfig(
+                enabled=True,
+                config={
+                    'api_key': self.openai.api_key,
+                    'model': self.openai.model,
+                    'temperature': self.openai.temperature,
+                    'max_tokens': self.openai.max_tokens,
+                    'timeout_seconds': self.openai.timeout_seconds
+                },
+                priority=10 if self.primary_provider == 'openai' else 5
+            )
+        
+        return self
+    
+    def get_enabled_providers(self) -> List[str]:
+        """Get list of enabled provider IDs"""
+        return [pid for pid, config in self.providers.items() if config.enabled]
+    
+    def get_provider_config(self, provider_id: str) -> Optional[ProviderConfig]:
+        """Get configuration for a specific provider"""
+        return self.providers.get(provider_id)
+    
+    def add_provider(self, provider_id: str, config: ProviderConfig):
+        """Add or update a provider configuration"""
+        self.providers[provider_id] = config
+    
+    def remove_provider(self, provider_id: str) -> bool:
+        """Remove a provider configuration"""
+        if provider_id in self.providers:
+            del self.providers[provider_id]
+            return True
+        return False
 
 
 class EnrichmentConfig(BaseModel):

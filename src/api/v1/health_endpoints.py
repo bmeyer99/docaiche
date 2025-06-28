@@ -416,3 +416,23 @@ async def get_analytics(
             "timeRange": timeRange,
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+
+@router.get("/registry-test")
+async def test_registry_route():
+    """Simple test route to verify route registration works"""
+    try:
+        from src.llm import get_provider_registry, REGISTRY_AVAILABLE
+        if hasattr(get_provider_registry, '__name__'):
+            return {
+                "route_registration": "working",
+                "registry_import": "success",
+                "registry_available": True
+            }
+    except Exception as e:
+        return {
+            "route_registration": "working", 
+            "registry_import": "failed",
+            "registry_available": False,
+            "error": str(e)
+        }

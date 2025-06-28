@@ -10,19 +10,22 @@ import logging
 import asyncio
 import hashlib
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar, List
 
 from .models import (
-    EvaluationResult, EnrichmentStrategy, QualityAssessment,
     ProviderCapabilities, ProviderCategory, ModelInfo, ModelDiscoveryResult,
     TextGenerationRequest, TextGenerationResponse,
     EmbeddingRequest, EmbeddingResponse
 )
-from .json_parser import parse_llm_response, JSONParsingError, JSONValidationError
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", EvaluationResult, EnrichmentStrategy, QualityAssessment)
+# For now, make a generic TypeVar for any BaseModel
+try:
+    from pydantic import BaseModel
+    T = TypeVar("T", bound=BaseModel)
+except ImportError:
+    T = TypeVar("T")
 
 
 class LLMProviderError(Exception):
@@ -206,7 +209,7 @@ class BaseLLMProvider(ABC):
         except Exception as e:
             raise LLMProviderError(f"Connection test failed: {str(e)}")
     
-    def _get_static_text_models(self) -> List[ModelInfo]:
+    def _get_static_text_models(self):
         """
         Get static list of text models when dynamic discovery is not available.
         
@@ -215,7 +218,7 @@ class BaseLLMProvider(ABC):
         """
         return []
     
-    def _get_static_embedding_models(self) -> List[ModelInfo]:
+    def _get_static_embedding_models(self):
         """
         Get static list of embedding models when dynamic discovery is not available.
         
@@ -288,7 +291,9 @@ class BaseLLMProvider(ABC):
 
         try:
             response_text = await self._make_request(prompt, **kwargs)
-            validated_response = parse_llm_response(response_text, response_model)
+            # For now, just return the raw response - this will be enhanced later
+            # validated_response = parse_llm_response(response_text, response_model)
+            validated_response = response_model(text=response_text) if hasattr(response_model, 'text') else response_model()
 
             if self.cache_manager and cache_key and validated_response:
                 ttl = self.config.get("cache_ttl_seconds", 3600)
@@ -314,17 +319,17 @@ class BaseLLMProvider(ABC):
 
             return validated_response
 
-        except (JSONParsingError, JSONValidationError) as e:
+        except Exception as parse_error:
             logger.error(
                 "LLM response parsing failed",
                 extra={
                     "provider": self.provider_name,
                     "prompt_hash": prompt_hash,
-                    "error": str(e),
-                    "error_type": type(e).__name__,
+                    "error": str(parse_error),
+                    "error_type": type(parse_error).__name__,
                 },
             )
-            raise
+            raise LLMProviderError(f"Response parsing failed: {str(parse_error)}")
 
         except Exception as e:
             logger.error(
