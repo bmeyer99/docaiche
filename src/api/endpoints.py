@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File, BackgroundTasks, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File, BackgroundTasks, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -48,7 +48,8 @@ limiter = Limiter(key_func=get_remote_address)
 @api_router.post("/search", response_model=SearchResponse)
 @limiter.limit("30/minute")
 async def search_documents(
-    request: SearchRequest,
+    request: Request,
+    search_request: SearchRequest,
     search_service=Depends(get_search_service)
 ) -> SearchResponse:
     """
@@ -59,24 +60,24 @@ async def search_documents(
     """
     try:
         # For demo purposes, return mock data
-        # In real implementation, this would call search_service.search(request)
+        # In real implementation, this would call search_service.search(search_request)
         return SearchResponse(
             results=[
                 SearchResult(
                     content_id=f"doc_{i}",
                     title=f"Example Document {i}",
-                    snippet=f"This is a snippet for query: {request.query}",
+                    snippet=f"This is a snippet for query: {search_request.query}",
                     source_url=f"https://example.com/doc-{i}",
-                    technology=request.technology_hint or "python",
+                    technology=search_request.technology_hint or "python",
                     relevance_score=0.9 - (i * 0.1),
                     content_type="documentation",
                     workspace="default"
                 )
-                for i in range(min(request.limit, 3))
+                for i in range(min(search_request.limit, 3))
             ],
             total_count=100,
-            query=request.query,
-            technology_hint=request.technology_hint,
+            query=search_request.query,
+            technology_hint=search_request.technology_hint,
             execution_time_ms=45,
             cache_hit=False,
             enrichment_triggered=False
@@ -91,6 +92,7 @@ async def search_documents(
 @api_router.get("/search", response_model=SearchResponse)
 @limiter.limit("30/minute")
 async def search_documents_simple(
+    request: Request,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     technology: Optional[str] = Query(None, description="Technology filter"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
@@ -107,12 +109,13 @@ async def search_documents_simple(
         technology_hint=technology,
         limit=limit
     )
-    return await search_documents(search_request, search_service)
+    return await search_documents(request, search_request, search_service)
 
 
 @api_router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("10/minute")
 async def upload_document(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="Document file to upload"),
     collection: Optional[str] = Query(None, description="Target collection"),
@@ -146,6 +149,7 @@ async def upload_document(
 @api_router.delete("/content/{content_id}", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("10/minute")
 async def remove_content(
+    request: Request,
     content_id: str = Path(..., description="Unique content identifier"),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     content_service=Depends(get_content_service)
@@ -168,7 +172,8 @@ async def remove_content(
 @api_router.post("/feedback", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("20/minute")
 async def submit_feedback(
-    request: FeedbackRequest,
+    request: Request,
+    feedback_request: FeedbackRequest,
     background_tasks: BackgroundTasks,
     feedback_service=Depends(get_feedback_service)
 ):
@@ -178,7 +183,7 @@ async def submit_feedback(
     Feedback is processed asynchronously to improve search quality.
     """
     # Add background task for feedback processing
-    # background_tasks.add_task(feedback_service.process_feedback, request)
+    # background_tasks.add_task(feedback_service.process_feedback, feedback_request)
     
     return {"message": "Feedback submitted successfully"}
 
@@ -186,7 +191,8 @@ async def submit_feedback(
 @api_router.post("/signals", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("50/minute")
 async def submit_signals(
-    request: SignalRequest,
+    request: Request,
+    signal_request: SignalRequest,
     background_tasks: BackgroundTasks,
     feedback_service=Depends(get_feedback_service)
 ):
@@ -197,7 +203,7 @@ async def submit_signals(
     search relevance and user experience.
     """
     # Add background task for signal processing
-    # background_tasks.add_task(feedback_service.process_signal, request)
+    # background_tasks.add_task(feedback_service.process_signal, signal_request)
     
     return {"message": "Signal recorded successfully"}
 
@@ -207,9 +213,7 @@ async def submit_signals(
 # ============================================================================
 
 @api_router.get("/health", response_model=HealthResponse)
-async def get_health(
-    health_service=Depends(get_health_service)
-) -> HealthResponse:
+async def get_health() -> HealthResponse:
     """
     Get comprehensive system health status.
     

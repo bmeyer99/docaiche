@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DocAI Cache System{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/favicon.ico') }}">
+    <meta name="csrf-token" content="{{ request.session.get('csrf', '') }}">
+    <!-- Load React app CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', path='/web/dist/assets/index-BjqciV27.css') }}">
+</head>
+<body>
+    <div id="root"></div>
+    
+    <!-- Load React app JavaScript -->
+    <script type="module" src="{{ url_for('static', path='/web/dist/assets/index-DOW-1dHI.js') }}"></script>
+</body>
+</html>

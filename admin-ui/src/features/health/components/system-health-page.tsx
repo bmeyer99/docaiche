@@ -45,9 +45,9 @@ export default function SystemHealthPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const { toast } = useToast();
-  const apiClient = new DocaicheApiClient();
 
   const checkHealthStatus = useCallback(async () => {
+    const apiClient = new DocaicheApiClient();
     try {
       const [healthData, metricsData] = await Promise.allSettled([
         apiClient.getSystemHealth(),
@@ -72,7 +72,7 @@ export default function SystemHealthPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiClient, toast]);
+  }, [toast]);
 
   useEffect(() => {
     checkHealthStatus();
@@ -84,15 +84,6 @@ export default function SystemHealthPage() {
     const interval = setInterval(checkHealthStatus, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, [autoRefresh, checkHealthStatus]);
-
-  const getStatusColor = (status: ServiceHealth['status']) => {
-    switch (status) {
-      case 'healthy': return 'text-green-600';
-      case 'warning': return 'text-yellow-600';
-      case 'unhealthy': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  };
 
   const getStatusBadge = (status: ServiceHealth['status']) => {
     switch (status) {

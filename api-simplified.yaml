@@ -251,6 +251,124 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  # Provider Management Endpoints
+  /api/v1/providers:
+    get:
+      summary: List AI providers
+      description: Get list of available AI/LLM providers and their configuration status
+      tags: [Providers]
+      responses:
+        '200':
+          description: List of available providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/providers/{provider_id}/test:
+    post:
+      summary: Test provider connection
+      description: Test connection to a specific AI provider with given configuration
+      tags: [Providers]
+      parameters:
+        - name: provider_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Provider identifier (e.g., 'openai', 'ollama', 'anthropic')
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderConfigRequest'
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderTestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/providers/{provider_id}/config:
+    post:
+      summary: Save provider configuration
+      description: Save configuration settings for a specific AI provider
+      tags: [Providers]
+      parameters:
+        - name: provider_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Provider identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderConfigRequest'
+      responses:
+        '200':
+          description: Configuration saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # Activity Tracking Endpoints
+  /api/v1/admin/activity/recent:
+    get:
+      summary: Get recent activity
+      description: Get recent system activity for admin dashboard
+      tags: [Admin]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of activity items to return
+      responses:
+        '200':
+          description: Recent activity items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/admin/dashboard:
+    get:
+      summary: Get dashboard data
+      description: Get aggregated data for admin dashboard including stats and system status
+      tags: [Admin]
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   # Administration Endpoints
   /api/v1/admin/search-content:
     get:
@@ -671,6 +789,132 @@ components:
           type: boolean
           description: Whether more pages available
 
+    # Provider Management Schemas
+    ProviderResponse:
+      type: object
+      required: [id, name, type, status, configured]
+      properties:
+        id:
+          type: string
+          description: Provider identifier
+        name:
+          type: string
+          description: Display name
+        type:
+          type: string
+          description: Provider type (e.g., 'openai', 'ollama', 'anthropic')
+        status:
+          type: string
+          enum: [connected, disconnected, testing, error]
+          description: Provider connection status
+        configured:
+          type: boolean
+          description: Whether provider is properly configured
+
+    ProviderConfigRequest:
+      type: object
+      required: [base_url]
+      properties:
+        base_url:
+          type: string
+          format: uri
+          description: Provider base URL
+        api_key:
+          type: string
+          description: API key (optional for local providers)
+        model:
+          type: string
+          description: Default model to use
+
+    ProviderTestResponse:
+      type: object
+      required: [success, message, latency]
+      properties:
+        success:
+          type: boolean
+          description: Whether connection test succeeded
+        message:
+          type: string
+          description: Test result message
+        latency:
+          type: number
+          description: Response latency in milliseconds
+        models:
+          type: array
+          items:
+            type: string
+          description: Available models (if connection successful)
+
+    # Activity Tracking Schemas
+    ActivityItem:
+      type: object
+      required: [id, type, message, timestamp]
+      properties:
+        id:
+          type: string
+          description: Activity identifier
+        type:
+          type: string
+          description: Activity type (e.g., 'search', 'upload', 'config')
+        message:
+          type: string
+          description: Activity description
+        timestamp:
+          type: string
+          format: date-time
+          description: When activity occurred
+        details:
+          type: string
+          description: Additional activity details
+
+    ActivityResponse:
+      type: object
+      required: [items, total_count, page, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+          description: Activity items
+        total_count:
+          type: integer
+          description: Total activity count
+        page:
+          type: integer
+          description: Current page
+        has_more:
+          type: boolean
+          description: Whether more pages exist
+
+    DashboardResponse:
+      type: object
+      required: [stats, health, activity]
+      properties:
+        stats:
+          type: object
+          properties:
+            total_searches:
+              type: integer
+              description: Total number of searches performed
+            total_documents:
+              type: integer
+              description: Total documents indexed
+            active_providers:
+              type: integer
+              description: Number of active/configured providers
+            cache_hit_rate:
+              type: number
+              description: Cache hit rate percentage
+          description: System statistics
+        health:
+          $ref: '#/components/schemas/HealthResponse'
+          description: Current system health
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+          description: Recent activity items
+
     # Error Schema
     ProblemDetail:
       type: object
@@ -772,5 +1016,7 @@ tags:
     description: System health and statistics
   - name: Configuration
     description: System configuration management
+  - name: Providers
+    description: AI provider management and configuration
   - name: Admin
     description: Administrative operations

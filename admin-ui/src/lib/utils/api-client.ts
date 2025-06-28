@@ -8,7 +8,6 @@
 import { 
   API_CONFIG, 
   API_ENDPOINTS, 
-  type ApiResponse,
   type ConfigurationResponse,
   type ConfigurationUpdateRequest,
   type HealthResponse,
@@ -17,8 +16,7 @@ import {
   type AdminSearchParams,
   type AdminSearchResponse,
   type UploadResponse,
-  type ProblemDetail,
-  HTTP_STATUS
+  type ProblemDetail
 } from '../config/api';
 
 // Request options interface
@@ -30,12 +28,15 @@ interface RequestOptions {
 
 // API Client Class
 export class DocaicheApiClient {
-  private baseURL: string;
+  private baseUrl: string;
   private defaultHeaders: Record<string, string>;
 
-  constructor(baseURL?: string) {
-    this.baseURL = baseURL || API_CONFIG.BASE_URL;
-    this.defaultHeaders = { ...API_CONFIG.HEADERS };
+  constructor() {
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, '');
+    this.baseUrl = `${base}/api/v1`;
+    this.defaultHeaders = {
+      'Content-Type': 'application/json',
+    };
   }
 
   /**
@@ -47,7 +48,7 @@ export class DocaicheApiClient {
   ): Promise<T> {
     const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = API_CONFIG.RETRY.MAX_ATTEMPTS, ...fetchOptions } = options;
     
-    const url = `${this.baseURL}${endpoint}`;
+    const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       ...this.defaultHeaders,
       ...options.headers
@@ -275,19 +276,19 @@ export class DocaicheApiClient {
   /**
    * Provider Management
    */
-  async getProviderConfigurations(): Promise<Record<string, any>> {
-    return this.get<Record<string, any>>('/providers/configurations');
+  async getProviderConfigurations(): Promise<any[]> {
+    return this.get<any[]>('/api/v1/providers');
   }
 
   async updateProviderConfiguration(providerId: string, config: any): Promise<any> {
-    return this.put<any>(`/providers/configurations/${providerId}`, config);
+    return this.post<any>(`/api/v1/providers/${providerId}/config`, config);
   }
 
-  async testProviderConnection(providerId: string): Promise<{ success: boolean; message: string }> {
+  async testProviderConnection(providerId: string, config: any): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.post<{ success: boolean; message: string }>(
-        `/providers/test/${providerId}`,
-        {},
+        `/api/v1/providers/${providerId}/test`,
+        config,
         { timeout: API_CONFIG.TIMEOUTS.CONNECTION_TEST }
       );
       return response;
@@ -303,33 +304,33 @@ export class DocaicheApiClient {
    * Health and Monitoring Methods
    */
   async getSystemHealth(): Promise<any> {
-    return this.get<any>('/system/health');
+    return this.get<any>('/api/v1/system/health');
   }
 
   async getSystemMetrics(): Promise<any> {
-    return this.get<any>('/system/metrics');
+    return this.get<any>('/api/v1/system/metrics');
   }
 
   async getDashboardStats(): Promise<any> {
-    return this.get<any>('/dashboard/stats');
+    return this.get<any>('/api/v1/stats');
   }
 
   async getRecentActivity(): Promise<any[]> {
-    return this.get<any[]>('/activity/recent');
+    return this.get<any[]>('/api/v1/admin/activity/recent');
   }
 
 
 
   async createCollection(data: any): Promise<any> {
-    return this.post<any>('/content/collections', data);
+    return this.post<any>('/api/v1/content/collections', data);
   }
 
   async deleteCollection(collectionId: string): Promise<void> {
-    return this.delete<void>(`/content/collections/${collectionId}`);
+    return this.delete<void>(`/api/v1/content/collections/${collectionId}`);
   }
 
   async reindexCollection(collectionId: string): Promise<any> {
-    return this.post<any>(`/content/collections/${collectionId}/reindex`, {});
+    return this.post<any>(`/api/v1/content/collections/${collectionId}/reindex`, {});
   }
 
 
@@ -337,7 +338,7 @@ export class DocaicheApiClient {
    * Analytics Methods
    */
   async getAnalytics(timeRange: string = '24h'): Promise<any> {
-    return this.get<any>(`/analytics?timeRange=${timeRange}`);
+    return this.get<any>(`/api/v1/analytics?timeRange=${timeRange}`);
   }
 }
 

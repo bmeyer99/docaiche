@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
-from api.schemas import ProblemDetail
+from src.api.schemas import ProblemDetail
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):

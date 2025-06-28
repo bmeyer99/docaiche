@@ -18,33 +18,27 @@ import {
   ChartTooltip,
   ChartTooltipContent
 } from '@/components/ui/chart';
-
-const chartData = [
-  { browser: 'chrome', visitors: 275, fill: 'var(--primary)' },
-  { browser: 'safari', visitors: 200, fill: 'var(--primary-light)' },
-  { browser: 'firefox', visitors: 287, fill: 'var(--primary-lighter)' },
-  { browser: 'edge', visitors: 173, fill: 'var(--primary-dark)' },
-  { browser: 'other', visitors: 190, fill: 'var(--primary-darker)' }
-];
+import { Icons } from '@/components/icons';
+import { DocaicheApiClient } from '@/lib/utils/api-client';
 
 const chartConfig = {
-  visitors: {
-    label: 'Visitors'
+  documents: {
+    label: 'Documents'
   },
-  chrome: {
-    label: 'Chrome',
+  python: {
+    label: 'Python',
     color: 'var(--primary)'
   },
-  safari: {
-    label: 'Safari',
+  javascript: {
+    label: 'JavaScript',
     color: 'var(--primary)'
   },
-  firefox: {
-    label: 'Firefox',
+  typescript: {
+    label: 'TypeScript',
     color: 'var(--primary)'
   },
-  edge: {
-    label: 'Edge',
+  react: {
+    label: 'React',
     color: 'var(--primary)'
   },
   other: {
@@ -54,19 +48,114 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function PieGraph() {
-  const totalVisitors = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.visitors, 0);
-  }, []);
+  const [chartData, setChartData] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const apiClient = new DocaicheApiClient();
+
+  const loadContentDistribution = React.useCallback(async () => {
+    try {
+      // Try to get collections data to understand content distribution
+      const collections = await apiClient.getCollections();
+      
+      // Group by technology
+      const techCounts = collections.collections.reduce((acc: any, collection: any) => {
+        const tech = collection.technology || 'other';
+        acc[tech] = (acc[tech] || 0) + collection.document_count;
+        return acc;
+      }, {});
+
+      // Convert to chart format
+      const data = Object.entries(techCounts).map(([tech, count]) => ({
+        technology: tech,
+        documents: count,
+        fill: `url(#fill${tech})`
+      }));
+
+      setChartData(data);
+      setError(null);
+    } catch (err) {
+      setError('Unable to load content distribution');
+      setChartData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiClient]);
+
+  React.useEffect(() => {
+    loadContentDistribution();
+  }, [loadContentDistribution]);
+
+  const totalDocuments = React.useMemo(() => {
+    return chartData.reduce((acc, curr) => acc + curr.documents, 0);
+  }, [chartData]);
+
+  const topTechnology = React.useMemo(() => {
+    if (chartData.length === 0) return null;
+    return chartData.reduce((prev, current) => 
+      prev.documents > current.documents ? prev : current
+    );
+  }, [chartData]);
+
+  if (loading) {
+    return (
+      <Card className='@container/card'>
+        <CardHeader>
+          <CardTitle>Content Distribution</CardTitle>
+          <CardDescription>Loading content breakdown...</CardDescription>
+        </CardHeader>
+        <CardContent className='flex items-center justify-center h-[300px]'>
+          <Icons.spinner className='w-8 h-8 animate-spin' />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className='@container/card'>
+        <CardHeader>
+          <CardTitle>Content Distribution</CardTitle>
+          <CardDescription>Content breakdown unavailable</CardDescription>
+        </CardHeader>
+        <CardContent className='flex flex-col items-center justify-center h-[300px] text-center'>
+          <Icons.alertCircle className='w-12 h-12 mb-4 text-red-500' />
+          <div className='text-sm text-muted-foreground'>{error}</div>
+          <div className='text-xs text-muted-foreground mt-1'>
+            API connection required for content statistics
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (chartData.length === 0) {
+    return (
+      <Card className='@container/card'>
+        <CardHeader>
+          <CardTitle>Content Distribution</CardTitle>
+          <CardDescription>No content data available</CardDescription>
+        </CardHeader>
+        <CardContent className='flex flex-col items-center justify-center h-[300px] text-center'>
+          <Icons.circle className='w-12 h-12 mb-4 text-muted-foreground' />
+          <div className='text-sm text-muted-foreground'>No content to analyze</div>
+          <div className='text-xs text-muted-foreground mt-1'>
+            Content distribution will appear after documents are indexed
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className='@container/card'>
       <CardHeader>
-        <CardTitle>Pie Chart - Donut with Text</CardTitle>
+        <CardTitle>Content Distribution</CardTitle>
         <CardDescription>
           <span className='hidden @[540px]/card:block'>
-            Total visitors by browser for the last 6 months
+            Documents by technology/framework
           </span>
-          <span className='@[540px]/card:hidden'>Browser distribution</span>
+          <span className='@[540px]/card:hidden'>Technology breakdown</span>
         </CardDescription>
       </CardHeader>
       <CardContent className='px-2 pt-4 sm:px-6 sm:pt-6'>
@@ -76,41 +165,36 @@ export function PieGraph() {
         >
           <PieChart>
             <defs>
-              {['chrome', 'safari', 'firefox', 'edge', 'other'].map(
-                (browser, index) => (
-                  <linearGradient
-                    key={browser}
-                    id={`fill${browser}`}
-                    x1='0'
-                    y1='0'
-                    x2='0'
-                    y2='1'
-                  >
-                    <stop
-                      offset='0%'
-                      stopColor='var(--primary)'
-                      stopOpacity={1 - index * 0.15}
-                    />
-                    <stop
-                      offset='100%'
-                      stopColor='var(--primary)'
-                      stopOpacity={0.8 - index * 0.15}
-                    />
-                  </linearGradient>
-                )
-              )}
+              {chartData.map((item, index) => (
+                <linearGradient
+                  key={item.technology}
+                  id={`fill${item.technology}`}
+                  x1='0'
+                  y1='0'
+                  x2='0'
+                  y2='1'
+                >
+                  <stop
+                    offset='0%'
+                    stopColor='var(--primary)'
+                    stopOpacity={1 - index * 0.15}
+                  />
+                  <stop
+                    offset='100%'
+                    stopColor='var(--primary)'
+                    stopOpacity={0.8 - index * 0.15}
+                  />
+                </linearGradient>
+              ))}
             </defs>
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent hideLabel />}
             />
             <Pie
-              data={chartData.map((item) => ({
-                ...item,
-                fill: `url(#fill${item.browser})`
-              }))}
-              dataKey='visitors'
-              nameKey='browser'
+              data={chartData}
+              dataKey='documents'
+              nameKey='technology'
               innerRadius={60}
               strokeWidth={2}
               stroke='var(--background)'
@@ -130,14 +214,14 @@ export function PieGraph() {
                           y={viewBox.cy}
                           className='fill-foreground text-3xl font-bold'
                         >
-                          {totalVisitors.toLocaleString()}
+                          {totalDocuments.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 24}
                           className='fill-muted-foreground text-sm'
                         >
-                          Total Visitors
+                          Total Documents
                         </tspan>
                       </text>
                     );
@@ -149,13 +233,15 @@ export function PieGraph() {
         </ChartContainer>
       </CardContent>
       <CardFooter className='flex-col gap-2 text-sm'>
-        <div className='flex items-center gap-2 leading-none font-medium'>
-          Chrome leads with{' '}
-          {((chartData[0].visitors / totalVisitors) * 100).toFixed(1)}%{' '}
-          <IconTrendingUp className='h-4 w-4' />
-        </div>
+        {topTechnology && (
+          <div className='flex items-center gap-2 leading-none font-medium'>
+            {topTechnology.technology} leads with{' '}
+            {((topTechnology.documents / totalDocuments) * 100).toFixed(1)}%{' '}
+            <IconTrendingUp className='h-4 w-4' />
+          </div>
+        )}
         <div className='text-muted-foreground leading-none'>
-          Based on data from January - June 2024
+          Based on indexed documentation collections
         </div>
       </CardFooter>
     </Card>

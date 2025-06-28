@@ -42,6 +42,14 @@ RUN ls -la src/lib/ || echo "src/lib directory not found"
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_SENTRY_DISABLED=true
 
+# Set build-time environment variables for Next.js
+ARG NEXT_PUBLIC_API_URL=http://api:8000/api/v1
+ARG NEXT_PUBLIC_APP_NAME=Docaiche Admin
+ARG NEXT_PUBLIC_ENABLE_AUTH=false
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+ENV NEXT_PUBLIC_ENABLE_AUTH=${NEXT_PUBLIC_ENABLE_AUTH}
+
 # Build the application
 RUN npm run build
 

@@ -17,10 +17,9 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from api.endpoints import api_router
-from api.schemas import ProblemDetail
-from core.middleware import LoggingMiddleware
-from core.exceptions import setup_exception_handlers
+from src.api.v1.api import api_router, setup_exception_handlers
+from src.api.v1.schemas import ProblemDetail
+from src.core.middleware import LoggingMiddleware
 
 
 # Rate limiter setup
@@ -33,10 +32,28 @@ async def lifespan(app: FastAPI):
     # Startup
     print(f"🚀 Docaiche API starting up at {datetime.utcnow()}")
     
+    # Initialize configuration manager
+    try:
+        from src.core.config.manager import ConfigurationManager
+        config_manager = ConfigurationManager()
+        await config_manager.initialize()
+        await config_manager.load_configuration()
+        print("✅ Configuration manager initialized and loaded")
+    except Exception as e:
+        print(f"⚠️ Configuration manager initialization failed: {e}")
+    
     yield
     
     # Shutdown
     print(f"🛑 Docaiche API shutting down at {datetime.utcnow()}")
+    
+    # Cleanup dependencies
+    try:
+        from src.api.v1.dependencies import cleanup_dependencies
+        await cleanup_dependencies()
+        print("✅ Dependencies cleaned up")
+    except Exception as e:
+        print(f"⚠️ Dependency cleanup failed: {e}")
 
 
 def create_app() -> FastAPI:

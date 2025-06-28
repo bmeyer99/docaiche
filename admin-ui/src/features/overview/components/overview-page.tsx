@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
@@ -9,12 +9,19 @@ import { DocaicheApiClient } from '@/lib/utils/api-client';
 import { AI_PROVIDERS } from '@/lib/config/providers';
 
 interface DashboardStats {
-  totalDocuments: number;
-  totalCollections: number;
-  activeProviders: number;
-  searchQueries24h: number;
-  systemUptime: number;
-  lastIndexed: string;
+  search_stats: {
+    searches_today?: number;
+    total_searches?: number;
+  };
+  content_stats: {
+    total_documents?: number;
+    collections?: number;
+    last_update?: string;
+  };
+  system_stats: {
+    uptime_seconds?: number;
+  };
+  cache_stats?: any;
 }
 
 interface RecentActivity {
@@ -31,30 +38,25 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const apiClient = new DocaicheApiClient();
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
-      const [statsData, activityData] = await Promise.allSettled([
+      const [statsData, activityData] = await Promise.all([
         apiClient.getDashboardStats(),
         apiClient.getRecentActivity()
       ]);
 
-      if (statsData.status === 'fulfilled') {
-        setStats(statsData.value);
-      }
-
-      if (activityData.status === 'fulfilled') {
-        setRecentActivity(activityData.value || []);
-      }
+      setStats(statsData);
+      setRecentActivity(activityData || []);
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+      // Leave stats and activity as null/empty on error
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);
@@ -112,7 +114,7 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? '...' : stats?.totalDocuments?.toLocaleString() || '0'}
+              {loading ? '...' : stats ? stats.content_stats?.total_documents?.toLocaleString() || 'No data' : 'API Error'}
             </div>
             <p className="text-xs text-muted-foreground">
               Indexed and searchable
@@ -127,7 +129,7 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? '...' : stats?.totalCollections || '0'}
+              {loading ? '...' : stats ? stats.content_stats?.collections || 'No data' : 'API Error'}
             </div>
             <p className="text-xs text-muted-foreground">
               Document collections
@@ -142,7 +144,7 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? '...' : stats?.activeProviders || '0'}
+              {loading ? '...' : stats ? 'No data' : 'API Error'}
             </div>
             <p className="text-xs text-muted-foreground">
               AI providers configured
@@ -157,7 +159,7 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loading ? '...' : stats?.searchQueries24h?.toLocaleString() || '0'}
+              {loading ? '...' : stats ? stats.search_stats?.searches_today?.toLocaleString() || 'No data' : 'API Error'}
             </div>
             <p className="text-xs text-muted-foreground">
               Queries processed
@@ -174,33 +176,33 @@ export default function OverviewPage() {
             <CardDescription>Current system health and uptime</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full" />
-                <span>System Status</span>
+            {loading ? (
+              <div>Loading system status...</div>
+            ) : stats ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <span>System Status</span>
+                  <span className="text-sm text-muted-foreground">API Connected</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Uptime</span>
+                  <span className="font-mono">
+                    {stats.system_stats?.uptime_seconds ? formatUptime(stats.system_stats.uptime_seconds) : 'No data'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Last Indexed</span>
+                  <span className="text-sm text-muted-foreground">
+                    {stats.content_stats?.last_update || 'No data'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-4 text-red-600">
+                <div>API Connection Failed</div>
+                <div className="text-sm text-muted-foreground">Cannot retrieve system status</div>
               </div>
-              <Badge className="bg-green-100 text-green-800">Healthy</Badge>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span>Uptime</span>
-              <span className="font-mono">
-                {loading ? '...' : stats ? formatUptime(stats.systemUptime) : '0m'}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span>Last Indexed</span>
-              <span className="text-sm text-muted-foreground">
-                {loading ? '...' : stats?.lastIndexed ? 
-                  new Date(stats.lastIndexed).toLocaleString() : 'Never'}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span>Environment</span>
-              <Badge variant="secondary">Lab</Badge>
-            </div>
+            )}
           </CardContent>
         </Card>
 
