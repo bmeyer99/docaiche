@@ -11,8 +11,17 @@ import logging
 from datetime import datetime
 from typing import Optional, List, Any, Dict
 from sqlalchemy import (
-    String, Integer, Float, Boolean, DateTime, Text, JSON,
-    CheckConstraint, ForeignKey, UniqueConstraint, Index
+    String,
+    Integer,
+    Float,
+    Boolean,
+    DateTime,
+    Text,
+    JSON,
+    CheckConstraint,
+    ForeignKey,
+    UniqueConstraint,
+    Index,
 )
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -24,19 +33,22 @@ logger = logging.getLogger(__name__)
 class Base(AsyncAttrs, DeclarativeBase):
     """
     Base class for all SQLAlchemy models using async patterns.
-    
+
     Provides common async capabilities and consistent patterns
     across all database models.
     """
+
     pass
 
 
 # PRD-002 Exact Schema Models (7 tables)
 
+
 class SystemConfig(Base):
     """System configuration table - PRD-002 lines 34-40"""
+
     __tablename__ = "system_config"
-    
+
     key: Mapped[str] = mapped_column(String, primary_key=True)
     value: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
     schema_version: Mapped[str] = mapped_column(String, nullable=False, default="1.0")
@@ -44,14 +56,15 @@ class SystemConfig(Base):
         DateTime, nullable=False, default=func.current_timestamp()
     )
     updated_by: Mapped[str] = mapped_column(String, nullable=False, default="system")
-    
+
     __table_args__ = ()
 
 
 class SearchCache(Base):
     """Search cache table - PRD-002 lines 43-56"""
+
     __tablename__ = "search_cache"
-    
+
     query_hash: Mapped[str] = mapped_column(String, primary_key=True)
     original_query: Mapped[str] = mapped_column(String, nullable=False)
     search_results: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
@@ -68,7 +81,7 @@ class SearchCache(Base):
     last_accessed_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
+
     __table_args__ = (
         Index("idx_search_cache_expires_at", "expires_at"),
         Index("idx_search_cache_technology_hint", "technology_hint"),
@@ -78,8 +91,9 @@ class SearchCache(Base):
 
 class ContentMetadata(Base):
     """Content metadata table - PRD-002 lines 59-78"""
+
     __tablename__ = "content_metadata"
-    
+
     content_id: Mapped[str] = mapped_column(String, primary_key=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     source_url: Mapped[str] = mapped_column(String, nullable=False)
@@ -91,7 +105,9 @@ class ContentMetadata(Base):
     chunk_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     quality_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     freshness_score: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
-    processing_status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
+    processing_status: Mapped[str] = mapped_column(
+        String, nullable=False, default="pending"
+    )
     anythingllm_workspace: Mapped[Optional[str]] = mapped_column(String)
     anythingllm_document_id: Mapped[Optional[str]] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(
@@ -102,7 +118,7 @@ class ContentMetadata(Base):
     )
     last_accessed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     access_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    
+
     # Relationships
     feedback_events: Mapped[List["FeedbackEvents"]] = relationship(
         "FeedbackEvents", back_populates="content", cascade="all, delete-orphan"
@@ -110,7 +126,7 @@ class ContentMetadata(Base):
     usage_signals: Mapped[List["UsageSignals"]] = relationship(
         "UsageSignals", back_populates="content", cascade="all, delete-orphan"
     )
-    
+
     __table_args__ = (
         CheckConstraint("quality_score >= 0.0 AND quality_score <= 1.0"),
         CheckConstraint("freshness_score >= 0.0 AND freshness_score <= 1.0"),
@@ -129,11 +145,14 @@ class ContentMetadata(Base):
 
 class FeedbackEvents(Base):
     """Feedback events table - PRD-002 lines 81-94"""
+
     __tablename__ = "feedback_events"
-    
+
     event_id: Mapped[str] = mapped_column(String, primary_key=True)
     content_id: Mapped[str] = mapped_column(
-        String, ForeignKey("content_metadata.content_id", ondelete="CASCADE"), nullable=False
+        String,
+        ForeignKey("content_metadata.content_id", ondelete="CASCADE"),
+        nullable=False,
     )
     feedback_type: Mapped[str] = mapped_column(String, nullable=False)
     rating: Mapped[Optional[int]] = mapped_column(Integer)
@@ -146,11 +165,11 @@ class FeedbackEvents(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
+
     content: Mapped["ContentMetadata"] = relationship(
         "ContentMetadata", back_populates="feedback_events"
     )
-    
+
     __table_args__ = (
         CheckConstraint(
             "feedback_type IN ('helpful', 'not_helpful', 'outdated', 'incorrect', 'flag')"
@@ -165,11 +184,14 @@ class FeedbackEvents(Base):
 
 class UsageSignals(Base):
     """Usage signals table - PRD-002 lines 97-110"""
+
     __tablename__ = "usage_signals"
-    
+
     signal_id: Mapped[str] = mapped_column(String, primary_key=True)
     content_id: Mapped[str] = mapped_column(
-        String, ForeignKey("content_metadata.content_id", ondelete="CASCADE"), nullable=False
+        String,
+        ForeignKey("content_metadata.content_id", ondelete="CASCADE"),
+        nullable=False,
     )
     signal_type: Mapped[str] = mapped_column(String, nullable=False)
     signal_value: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
@@ -182,11 +204,11 @@ class UsageSignals(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
+
     content: Mapped["ContentMetadata"] = relationship(
         "ContentMetadata", back_populates="usage_signals"
     )
-    
+
     __table_args__ = (
         CheckConstraint(
             "signal_type IN ('click', 'dwell_time', 'copy', 'share', 'scroll_depth')"
@@ -200,18 +222,25 @@ class UsageSignals(Base):
 
 class SourceMetadata(Base):
     """Source metadata table - PRD-002 lines 113-130"""
+
     __tablename__ = "source_metadata"
-    
+
     source_id: Mapped[str] = mapped_column(String, primary_key=True)
     source_type: Mapped[str] = mapped_column(String, nullable=False)
     source_url: Mapped[str] = mapped_column(String, nullable=False)
     technology: Mapped[str] = mapped_column(String, nullable=False)
     reliability_score: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
-    avg_processing_time_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    total_documents_processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    avg_processing_time_ms: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    total_documents_processed: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
     last_successful_fetch: Mapped[Optional[datetime]] = mapped_column(DateTime)
     last_failed_fetch: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    consecutive_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
     rate_limit_status: Mapped[str] = mapped_column(String, default="normal")
     rate_limit_reset_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     avg_content_quality: Mapped[Optional[float]] = mapped_column(Float, default=0.0)
@@ -222,13 +251,11 @@ class SourceMetadata(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
+
     __table_args__ = (
         CheckConstraint("source_type IN ('github', 'web', 'api')"),
         CheckConstraint("reliability_score >= 0.0 AND reliability_score <= 1.0"),
-        CheckConstraint(
-            "rate_limit_status IN ('normal', 'limited', 'exhausted')"
-        ),
+        CheckConstraint("rate_limit_status IN ('normal', 'limited', 'exhausted')"),
         CheckConstraint("avg_content_quality >= 0.0 AND avg_content_quality <= 1.0"),
         Index("idx_source_metadata_source_type", "source_type"),
         Index("idx_source_metadata_technology", "technology"),
@@ -240,8 +267,9 @@ class SourceMetadata(Base):
 
 class TechnologyMappings(Base):
     """Technology mappings table - PRD-002 lines 133-150"""
+
     __tablename__ = "technology_mappings"
-    
+
     mapping_id: Mapped[str] = mapped_column(String, primary_key=True)
     technology: Mapped[str] = mapped_column(String, nullable=False)
     source_type: Mapped[str] = mapped_column(String, nullable=False)
@@ -255,7 +283,9 @@ class TechnologyMappings(Base):
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     is_official: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     last_updated: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    update_frequency_hours: Mapped[int] = mapped_column(Integer, nullable=False, default=24)
+    update_frequency_hours: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=24
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
@@ -263,12 +293,16 @@ class TechnologyMappings(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
+
     __table_args__ = (
         CheckConstraint("source_type IN ('github', 'web')"),
         UniqueConstraint(
-            "technology", "source_type", "owner", "repo", "base_url",
-            name="uq_technology_source_mapping"
+            "technology",
+            "source_type",
+            "owner",
+            "repo",
+            "base_url",
+            name="uq_technology_source_mapping",
         ),
         Index("idx_technology_mappings_technology", "technology"),
         Index("idx_technology_mappings_source_type", "source_type"),
@@ -280,13 +314,15 @@ class TechnologyMappings(Base):
 
 # Additional Models for Test Compatibility
 
+
 class DocumentMetadata(Base):
     """
     Document metadata model for test compatibility.
     Maps to expected test structure with different schema.
     """
+
     __tablename__ = "document_metadata"
-    
+
     id: Mapped[str] = mapped_column(String, primary_key=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     source_url: Mapped[str] = mapped_column(String, nullable=False)
@@ -299,7 +335,7 @@ class DocumentMetadata(Base):
         DateTime, nullable=False, default=func.current_timestamp()
     )
     metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
-    
+
     __table_args__ = (
         Index("idx_document_metadata_source_url", "source_url"),
         Index("idx_document_metadata_content_hash", "content_hash"),
@@ -308,8 +344,9 @@ class DocumentMetadata(Base):
 
 class DocumentChunk(Base):
     """Document chunk model for test compatibility"""
+
     __tablename__ = "document_chunks"
-    
+
     id: Mapped[str] = mapped_column(String, primary_key=True)
     document_id: Mapped[str] = mapped_column(
         String, ForeignKey("document_metadata.id", ondelete="CASCADE"), nullable=False
@@ -321,16 +358,15 @@ class DocumentChunk(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
-    __table_args__ = (
-        Index("idx_document_chunks_document_id", "document_id"),
-    )
+
+    __table_args__ = (Index("idx_document_chunks_document_id", "document_id"),)
 
 
 class ProcessedDocument(Base):
     """Processed document model for test compatibility"""
+
     __tablename__ = "processed_documents"
-    
+
     id: Mapped[str] = mapped_column(String, primary_key=True)
     document_id: Mapped[str] = mapped_column(
         String, ForeignKey("document_metadata.id", ondelete="CASCADE"), nullable=False
@@ -340,14 +376,15 @@ class ProcessedDocument(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
+
     __table_args__ = ()
 
 
 class SearchQuery(Base):
     """Search query model for test compatibility"""
+
     __tablename__ = "search_queries"
-    
+
     id: Mapped[str] = mapped_column(String, primary_key=True)
     query_text: Mapped[str] = mapped_column(String, nullable=False)
     query_hash: Mapped[str] = mapped_column(String, nullable=False)
@@ -355,16 +392,15 @@ class SearchQuery(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
-    __table_args__ = (
-        Index("idx_search_queries_created_at", "created_at"),
-    )
+
+    __table_args__ = (Index("idx_search_queries_created_at", "created_at"),)
 
 
 class CacheEntry(Base):
     """Cache entry model for test compatibility"""
+
     __tablename__ = "cache_entries"
-    
+
     id: Mapped[str] = mapped_column(String, primary_key=True)
     cache_key: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     cache_value: Mapped[str] = mapped_column(Text, nullable=False)
@@ -372,14 +408,15 @@ class CacheEntry(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )
-    
+
     __table_args__ = ()
 
 
 class SystemMetrics(Base):
     """System metrics model for test compatibility"""
+
     __tablename__ = "system_metrics"
-    
+
     id: Mapped[str] = mapped_column(String, primary_key=True)
     metric_name: Mapped[str] = mapped_column(String, nullable=False)
     metric_value: Mapped[float] = mapped_column(Float, nullable=False)
@@ -387,14 +424,15 @@ class SystemMetrics(Base):
         DateTime, nullable=False, default=func.current_timestamp()
     )
     metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
-    
+
     __table_args__ = ()
 
 
 class User(Base):
     """User model for test compatibility"""
+
     __tablename__ = "users"
-    
+
     id: Mapped[str] = mapped_column(String, primary_key=True)
     username: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     email: Mapped[str] = mapped_column(String, nullable=False, unique=True)
@@ -402,5 +440,5 @@ class User(Base):
         DateTime, nullable=False, default=func.current_timestamp()
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    
+
     __table_args__ = ()

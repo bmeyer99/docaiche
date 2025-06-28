@@ -2,8 +2,9 @@
 Metadata Extraction.
 Implements PRD-006: Extracts document metadata and properties for indexing and storage.
 """
+
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional
 from fastapi import HTTPException
 from src.document_processing.models import DocumentMetadata, DocumentFormat
 import hashlib
@@ -11,6 +12,7 @@ import mimetypes
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
 
 class MetadataExtractor:
     """
@@ -23,6 +25,7 @@ class MetadataExtractor:
         """
         try:
             import os
+
             file_size = os.path.getsize(file_path)
             mime_type, _ = mimetypes.guess_type(filename)
             format = await self.detect_format(None, filename)
@@ -36,7 +39,7 @@ class MetadataExtractor:
                 format=format,
                 mime_type=mime_type or "application/octet-stream",
                 upload_timestamp=upload_timestamp,
-                checksum=checksum
+                checksum=checksum,
             )
         except Exception as e:
             logger.error(f"Metadata extraction failed: {e}")
@@ -52,7 +55,9 @@ class MetadataExtractor:
             logger.error(f"Checksum calculation failed: {e}")
             raise HTTPException(status_code=500, detail="Checksum calculation failed")
 
-    async def detect_format(self, file_data: Optional[bytes], filename: str) -> DocumentFormat:
+    async def detect_format(
+        self, file_data: Optional[bytes], filename: str
+    ) -> DocumentFormat:
         """
         Detects document format based on filename extension.
         """

@@ -2,8 +2,8 @@
 Main processing pipeline for document processing.
 Implements PRD-006: Orchestrates ingestion, extraction, preprocessing, chunking, metadata, queue, and error handling.
 """
+
 import logging
-from typing import Optional, Dict, Any, List
 from fastapi import HTTPException
 from src.document_processing.ingestion import DocumentIngestionService
 from src.document_processing.extraction import TextExtractor
@@ -11,10 +11,11 @@ from src.document_processing.preprocessing import ContentPreprocessor
 from src.document_processing.chunking import DocumentChunker
 from src.document_processing.metadata import MetadataExtractor
 from src.document_processing.queue import ProcessingQueueManager
-from src.document_processing.models import ProcessingJob, ProcessingStatus, DocumentMetadata, DocumentFormat, DocumentChunk
+from src.document_processing.models import ProcessingJob, ProcessingStatus
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
 
 class DocumentProcessingPipeline:
     """
@@ -31,7 +32,7 @@ class DocumentProcessingPipeline:
         self.preprocessor = ContentPreprocessor()
         self.chunker = DocumentChunker(
             chunk_size=config_manager.get("chunk_size", 1000),
-            overlap=config_manager.get("chunk_overlap", 100)
+            overlap=config_manager.get("chunk_overlap", 100),
         )
         self.metadata_extractor = MetadataExtractor()
         self.queue = ProcessingQueueManager(cache_manager)
@@ -45,11 +46,14 @@ class DocumentProcessingPipeline:
             await self.ingestion.validate_document(file_data, filename)
             # Save file temporarily for extraction/metadata
             import tempfile
+
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
                 tmp.write(file_data)
                 tmp_path = tmp.name
             # Extract metadata
-            metadata = await self.metadata_extractor.extract_metadata(tmp_path, filename)
+            metadata = await self.metadata_extractor.extract_metadata(
+                tmp_path, filename
+            )
             # Store document and get document_id
             document_id = await self.ingestion.store_document(file_data, metadata)
             # Create processing job
@@ -98,7 +102,9 @@ class DocumentProcessingPipeline:
                 raise HTTPException(status_code=404, detail="Job not found")
             job = ProcessingJob(**job_data)
             if job.status != ProcessingStatus.FAILED:
-                raise HTTPException(status_code=400, detail="Job is not in failed state")
+                raise HTTPException(
+                    status_code=400, detail="Job is not in failed state"
+                )
             # Reset status and progress
             job.status = ProcessingStatus.PENDING
             job.progress = 0.0

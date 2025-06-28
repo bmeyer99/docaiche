@@ -2,11 +2,13 @@
 
 Supports formatting responses as JSON, Markdown, or other formats.
 """
+
 from typing import Any, Dict
 import logging
 import json
 
 logger = logging.getLogger(__name__)
+
 
 class ResponseFormatter:
     """Formats structured responses into the desired output format.
@@ -28,11 +30,7 @@ class ResponseFormatter:
     def __init__(self):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
-    def format(
-        self,
-        response: Dict[str, Any],
-        output_format: str = "json"
-    ) -> str:
+    def format(self, response: Dict[str, Any], output_format: str = "json") -> str:
         """Format the response as JSON, Markdown, or other supported formats.
 
         Args:
@@ -47,9 +45,13 @@ class ResponseFormatter:
         """
         try:
             if not response or not isinstance(response, dict):
-                self.logger.warning("Non-dict response input to format(); returning minimal output.")
+                self.logger.warning(
+                    "Non-dict response input to format(); returning minimal output."
+                )
                 if output_format.lower() == "json":
-                    return json.dumps({"content": str(response)}, ensure_ascii=False, indent=2)
+                    return json.dumps(
+                        {"content": str(response)}, ensure_ascii=False, indent=2
+                    )
                 elif output_format.lower() == "markdown":
                     return f"### Content\n{str(response)}\n"
                 elif output_format.lower() == "html":
@@ -80,7 +82,9 @@ class ResponseFormatter:
                     md += json.dumps(response["metadata"], ensure_ascii=False, indent=2)
                     md += "\n```\n"
                 if not md.strip():
-                    raise ValueError("Formatted Markdown output is empty for valid input.")
+                    raise ValueError(
+                        "Formatted Markdown output is empty for valid input."
+                    )
                 return md
             elif output_format.lower() == "html":
                 html = "<div class='response'>"
@@ -99,7 +103,11 @@ class ResponseFormatter:
                     html += "<h3>Content</h3><p>(No content)</p>"
                 if "metadata" in response and response["metadata"]:
                     html += "<h4>Metadata</h4>"
-                    html += "<pre>" + json.dumps(response["metadata"], ensure_ascii=False, indent=2) + "</pre>"
+                    html += (
+                        "<pre>"
+                        + json.dumps(response["metadata"], ensure_ascii=False, indent=2)
+                        + "</pre>"
+                    )
                 html += "</div>"
                 if not html.strip():
                     raise ValueError("Formatted HTML output is empty for valid input.")

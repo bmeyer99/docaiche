@@ -7,7 +7,7 @@ with comprehensive middleware, error handling, and rate limiting.
 """
 
 import logging
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from fastapi.exceptions import RequestValidationError
 from slowapi.errors import RateLimitExceeded
 
@@ -24,7 +24,7 @@ from .middleware import limiter, rate_limit_handler
 from .exceptions import (
     validation_exception_handler,
     http_exception_handler,
-    global_exception_handler
+    global_exception_handler,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,26 +44,26 @@ api_router.include_router(activity_router)
 api_router.include_router(analytics_router)
 
 # Add rate limiter state to router
-api_router.state = type('State', (), {'limiter': limiter})()
+api_router.state = type("State", (), {"limiter": limiter})()
 
 
 def setup_exception_handlers(app):
     """
     Setup all exception handlers for the FastAPI application.
-    
+
     Args:
         app: FastAPI application instance
     """
     # API-004: Custom RequestValidationError handler
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
-    
+
     # Rate limiting exception handler for API-005
     app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
-    
+
     # HTTP exception handler for structured error responses
     app.add_exception_handler(Exception, http_exception_handler)
-    
+
     # API-009: Global exception handler (fallback)
     app.add_exception_handler(Exception, global_exception_handler)
-    
+
     logger.info("Exception handlers configured successfully")

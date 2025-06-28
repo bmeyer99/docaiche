@@ -5,6 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class ViewModelService:
     def __init__(self, data_service: DataService):
         self.data_service = data_service

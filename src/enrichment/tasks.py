@@ -8,83 +8,83 @@ from src.enrichment.exceptions import ContentAcquisitionException
 
 logger = logging.getLogger(__name__)
 
+
 class TaskManager:
     """
     Task manager for coordinating enrichment tasks and background processing.
     Handles task creation, tracking, and lifecycle management with secure execution.
     """
-    
+
     def __init__(
-        self,
-        config: Optional[Any] = None,
-        queue: Any = None,
-        db_manager: Any = None
+        self, config: Optional[Any] = None, queue: Any = None, db_manager: Any = None
     ):
         # Handle both old and new parameter styles for backward compatibility
         if isinstance(config, dict) or config is None:
             self.config = config or {}
         else:
             # New style: config object, queue, db_manager
-            self.config = config.__dict__ if hasattr(config, '__dict__') else {}
-        
+            self.config = config.__dict__ if hasattr(config, "__dict__") else {}
+
         self.queue = queue
         self.db_manager = db_manager
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self._active_tasks: Dict[str, EnrichmentTask] = {}
-        
+
         # Initialize secure executor for privilege isolation
         from .security import SecureTaskExecutor
+
         self.secure_executor = SecureTaskExecutor()
-    
+
     async def create_task(self, task_type: str, **kwargs) -> str:
         """Create a new enrichment task and add it to the queue."""
         task = EnrichmentTask(
             task_id=f"{task_type}_{len(self._active_tasks)}",
             content_id=kwargs.get("content_id", ""),
-            parameters=kwargs
+            parameters=kwargs,
         )
         self._active_tasks[task.task_id] = task
-        
+
         if self.queue:
             await self.queue.enqueue(task)
-            
+
         self.logger.info(f"Created task {task.task_id}")
         return task.task_id
-    
+
     def get_status(self, task_id: str) -> str:
         """Get the status of a specific task."""
         if task_id in self._active_tasks:
             return self._active_tasks[task_id].status.value
         return "not_found"
-    
+
     async def process_next(self) -> Optional[bool]:
         """Process the next task in the queue."""
         if not self.queue:
             return None
-            
+
         task = await self.queue.dequeue()
         if not task:
             return None
-            
+
         try:
             # Mark task as running
             if task.task_id in self._active_tasks:
                 self._active_tasks[task.task_id].status = "running"
-            
+
             # Process task (placeholder implementation)
             self.logger.info(f"Processing task {task.task_id}")
-            
+
             # Mark as completed
             if task.task_id in self._active_tasks:
                 self._active_tasks[task.task_id].status = "completed"
-                
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Task {task.task_id} failed: {e}")
             if task.task_id in self._active_tasks:
                 self._active_tasks[task.task_id].status = "failed"
             return False
+
 
 class ContentAcquisitionManager(ABC):
     """
@@ -105,19 +105,24 @@ class ContentAcquisitionManager(ABC):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     @abstractmethod
-    async def acquire(self, gap_result: GapAnalysisResult, task: EnrichmentTask) -> Dict[str, Any]:
+    async def acquire(
+        self, gap_result: GapAnalysisResult, task: EnrichmentTask
+    ) -> Dict[str, Any]:
         """
         Acquire content to fill identified gaps.
         # TODO: IMPLEMENTATION ENGINEER - Implement acquisition logic:
         """
         pass
 
+
 class SimpleContentAcquisitionManager(ContentAcquisitionManager):
     """
     Concrete implementation of ContentAcquisitionManager for PRD-010.
     """
 
-    async def acquire(self, gap_result: GapAnalysisResult, task: EnrichmentTask) -> Dict[str, Any]:
+    async def acquire(
+        self, gap_result: GapAnalysisResult, task: EnrichmentTask
+    ) -> Dict[str, Any]:
         """
         Use gap_result to determine acquisition strategy.
         Fetch content from GitHub, web, or other sources.
@@ -129,13 +134,20 @@ class SimpleContentAcquisitionManager(ContentAcquisitionManager):
             for topic in gap_result.missing_topics:
                 repo_content = await self.github_client.fetch_topic_content(topic)
                 if repo_content:
-                    acquired_content.append({"topic": topic, "content": repo_content, "source": "github"})
+                    acquired_content.append(
+                        {"topic": topic, "content": repo_content, "source": "github"}
+                    )
             # Acquire outdated sections from web
             for section in gap_result.outdated_sections:
                 web_content = await self.webscraper_client.fetch_section_update(section)
                 if web_content:
-                    acquired_content.append({"section": section, "content": web_content, "source": "web"})
-            return {"acquired_content": acquired_content, "metadata": {"source": "SimpleContentAcquisitionManager"}}
+                    acquired_content.append(
+                        {"section": section, "content": web_content, "source": "web"}
+                    )
+            return {
+                "acquired_content": acquired_content,
+                "metadata": {"source": "SimpleContentAcquisitionManager"},
+            }
         except Exception as e:
             self.logger.error(f"Content acquisition failed: {e}")
             raise ContentAcquisitionException("Content acquisition failed") from e

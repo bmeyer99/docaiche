@@ -9,8 +9,12 @@ as specified in PRD-009.
 
 from .orchestrator import SearchOrchestrator
 from .models import (
-    SearchQuery, SearchResult, SearchResults, SearchStrategy,
-    WorkspaceInfo, EvaluationResult
+    SearchQuery,
+    SearchResult,
+    SearchResults,
+    SearchStrategy,
+    WorkspaceInfo,
+    EvaluationResult,
 )
 from .strategies import WorkspaceSearchStrategy
 from .ranking import ResultRanker
@@ -21,33 +25,30 @@ from .exceptions import (
     MetadataSearchError,
     ResultRankingError,
     SearchCacheError,
-    WorkspaceSelectionError
+    WorkspaceSelectionError,
 )
 from .factory import create_search_orchestrator
 
 __all__ = [
     # Core classes
-    'SearchOrchestrator',
-    'WorkspaceSearchStrategy',
-    'ResultRanker',
-    'SearchCacheManager',
-    
+    "SearchOrchestrator",
+    "WorkspaceSearchStrategy",
+    "ResultRanker",
+    "SearchCacheManager",
     # Data models
-    'SearchQuery',
-    'SearchResult', 
-    'SearchResults',
-    'SearchStrategy',
-    'WorkspaceInfo',
-    'EvaluationResult',
-    
+    "SearchQuery",
+    "SearchResult",
+    "SearchResults",
+    "SearchStrategy",
+    "WorkspaceInfo",
+    "EvaluationResult",
     # Exceptions
-    'SearchOrchestrationError',
-    'VectorSearchError',
-    'MetadataSearchError',
-    'ResultRankingError',
-    'SearchCacheError',
-    'WorkspaceSelectionError',
-    
+    "SearchOrchestrationError",
+    "VectorSearchError",
+    "MetadataSearchError",
+    "ResultRankingError",
+    "SearchCacheError",
+    "WorkspaceSelectionError",
     # Factory
-    'create_search_orchestrator'
+    "create_search_orchestrator",
 ]

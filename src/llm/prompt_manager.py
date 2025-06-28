@@ -7,16 +7,18 @@ and caching for performance as specified in PRD-005.
 """
 
 import logging
-import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 import re
 
 logger = logging.getLogger(__name__)
 
+
 class PromptTemplateError(Exception):
     """Raised when prompt template operations fail"""
+
     pass
+
 
 class PromptManager:
     """
@@ -67,7 +69,7 @@ class PromptManager:
 
         try:
             # Load template content
-            with open(template_path, 'r', encoding='utf-8') as f:
+            with open(template_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
 
             if not content:
@@ -80,11 +82,15 @@ class PromptManager:
             variables = self._extract_variables(content)
             self._variable_cache[template_name] = variables
 
-            logger.debug(f"Template {template_name} loaded successfully with variables: {variables}")
+            logger.debug(
+                f"Template {template_name} loaded successfully with variables: {variables}"
+            )
             return content
 
         except IOError as e:
-            raise PromptTemplateError(f"Failed to read template {template_name}: {str(e)}")
+            raise PromptTemplateError(
+                f"Failed to read template {template_name}: {str(e)}"
+            )
 
     def format_template(self, template_name: str, **variables) -> str:
         """
@@ -119,10 +125,14 @@ class PromptManager:
 
         except KeyError as e:
             missing_var = str(e).strip("'\"")
-            raise PromptTemplateError(f"Missing required variable '{missing_var}' for template {template_name}")
+            raise PromptTemplateError(
+                f"Missing required variable '{missing_var}' for template {template_name}"
+            )
 
         except ValueError as e:
-            raise PromptTemplateError(f"Template formatting error for {template_name}: {str(e)}")
+            raise PromptTemplateError(
+                f"Template formatting error for {template_name}: {str(e)}"
+            )
 
     def _sanitize_input(self, value: str) -> str:
         """
@@ -140,7 +150,12 @@ class PromptManager:
         if len(sanitized) > 4096:
             sanitized = sanitized[:4096]
         # Block common prompt injection patterns
-        sanitized = re.sub(r"(ignore previous instructions|as an ai language model|you are a helpful assistant)", "", sanitized, flags=re.IGNORECASE)
+        sanitized = re.sub(
+            r"(ignore previous instructions|as an ai language model|you are a helpful assistant)",
+            "",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
         return sanitized
 
     def _validate_sanitized_vars(self, variables: Dict[str, str]) -> None:
@@ -153,11 +168,15 @@ class PromptManager:
         """
         for k, v in variables.items():
             # Block suspicious patterns
-            if re.search(r"(}}|{{|<script|</script|system:|user:|assistant:)", v, re.IGNORECASE):
+            if re.search(
+                r"(}}|{{|<script|</script|system:|user:|assistant:)", v, re.IGNORECASE
+            ):
                 raise PromptTemplateError(f"Unsafe content detected in variable '{k}'")
             # Block excessive length
             if len(v) > 4096:
-                raise PromptTemplateError(f"Variable '{k}' exceeds maximum allowed length")
+                raise PromptTemplateError(
+                    f"Variable '{k}' exceeds maximum allowed length"
+                )
 
     def _extract_variables(self, template_content: str) -> set:
         """
@@ -170,19 +189,21 @@ class PromptManager:
             Set of variable names found in template
         """
         # Find all {variable_name} patterns
-        pattern = r'\{([^}]+)\}'
+        pattern = r"\{([^}]+)\}"
         matches = re.findall(pattern, template_content)
 
         # Filter out format specifiers (e.g., {var:format})
         variables = set()
         for match in matches:
-            var_name = match.split(':')[0].strip()
+            var_name = match.split(":")[0].strip()
             if var_name and var_name.isidentifier():
                 variables.add(var_name)
 
         return variables
 
-    def _validate_variables(self, template_name: str, provided_vars: Dict[str, Any]) -> None:
+    def _validate_variables(
+        self, template_name: str, provided_vars: Dict[str, Any]
+    ) -> None:
         """
         Validate that all required variables are provided.
 
@@ -197,7 +218,9 @@ class PromptManager:
             # Extract variables if not cached
             template_content = self._template_cache.get(template_name)
             if template_content:
-                self._variable_cache[template_name] = self._extract_variables(template_content)
+                self._variable_cache[template_name] = self._extract_variables(
+                    template_content
+                )
 
         required_vars = self._variable_cache.get(template_name, set())
         provided_var_names = set(provided_vars.keys())
@@ -238,7 +261,9 @@ class PromptManager:
             required_vars = self._extract_variables(template_content)
             self._variable_cache[template_name] = required_vars
         # Fill missing variables with empty string
-        safe_vars = {k: self._sanitize_input(str(variables.get(k, ""))) for k in required_vars}
+        safe_vars = {
+            k: self._sanitize_input(str(variables.get(k, ""))) for k in required_vars
+        }
         # Add any extra variables provided
         for k, v in variables.items():
             if k not in safe_vars:
@@ -249,7 +274,9 @@ class PromptManager:
             return formatted
         except Exception as e:
             logger.error(f"Template filling error for {template_name}: {e}")
-            raise PromptTemplateError(f"Template filling error for {template_name}: {str(e)}")
+            raise PromptTemplateError(
+                f"Template filling error for {template_name}: {str(e)}"
+            )
 
     def get_template_variables(self, template_name: str) -> set:
         """
@@ -302,39 +329,41 @@ class PromptManager:
             issues = []
 
             # Check for unmatched braces
-            open_braces = content.count('{')
-            close_braces = content.count('}')
+            open_braces = content.count("{")
+            close_braces = content.count("}")
             if open_braces != close_braces:
-                issues.append(f"Unmatched braces: {open_braces} open, {close_braces} close")
+                issues.append(
+                    f"Unmatched braces: {open_braces} open, {close_braces} close"
+                )
 
             # Check for empty template
             if not content.strip():
                 issues.append("Template is empty")
 
             # Check for variables with invalid names
-            all_braces = re.findall(r'\{([^}]*)\}', content)
+            all_braces = re.findall(r"\{([^}]*)\}", content)
             for var in all_braces:
-                var_name = var.split(':')[0].strip()
+                var_name = var.split(":")[0].strip()
                 if var_name and not var_name.isidentifier():
                     issues.append(f"Invalid variable name: '{var_name}'")
 
             return {
-                'valid': len(issues) == 0,
-                'template': template_name,
-                'variables': sorted(variables),
-                'variable_count': len(variables),
-                'issues': issues,
-                'content_length': len(content)
+                "valid": len(issues) == 0,
+                "template": template_name,
+                "variables": sorted(variables),
+                "variable_count": len(variables),
+                "issues": issues,
+                "content_length": len(content),
             }
 
         except PromptTemplateError as e:
             return {
-                'valid': False,
-                'template': template_name,
-                'variables': [],
-                'variable_count': 0,
-                'issues': [str(e)],
-                'content_length': 0
+                "valid": False,
+                "template": template_name,
+                "variables": [],
+                "variable_count": 0,
+                "issues": [str(e)],
+                "content_length": 0,
             }
 
     def clear_cache(self) -> None:
@@ -360,8 +389,10 @@ class PromptManager:
         # Load fresh from disk
         return self.load_template(template_name)
 
+
 # Global prompt manager instance for convenience
 _global_prompt_manager: Optional[PromptManager] = None
+
 
 def get_prompt_manager(templates_dir: str = "templates") -> PromptManager:
     """
@@ -379,6 +410,7 @@ def get_prompt_manager(templates_dir: str = "templates") -> PromptManager:
         _global_prompt_manager = PromptManager(templates_dir)
 
     return _global_prompt_manager
+
 
 def format_template(template_name: str, **variables) -> str:
     """

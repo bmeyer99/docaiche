@@ -1,15 +1,18 @@
 """
 APIResponsePipeline: Orchestrates formatting and caching of API responses.
 """
+
 from typing import Any, Dict, Optional
 from .formatters import BaseAPIFormatter, SimpleJSONFormatter
 from .caching import ResponseCacheHandler
 from .exceptions import APIResponseError
 
+
 class APIResponsePipeline:
     """
     Handles the processing of API responses, including formatting and caching.
     """
+
     def __init__(
         self,
         formatter: BaseAPIFormatter,

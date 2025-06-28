@@ -1,10 +1,12 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
 
+
 class WebUISettings(BaseSettings):
     """
     Settings for the Web UI service.
     """
+
     allowed_origins: str = Field(default="*", description="CORS allowed origins")
 
     class Config:

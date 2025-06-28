@@ -2,14 +2,20 @@
 Document Ingestion Service.
 Implements PRD-006: Handles file uploads, validation, and initial processing entrypoint.
 """
+
 import logging
-from typing import Optional, Dict, Any, List
 from fastapi import HTTPException
-from src.document_processing.models import DocumentMetadata, ProcessingJob, DocumentFormat, ProcessingStatus
+from src.document_processing.models import (
+    DocumentMetadata,
+    ProcessingJob,
+    DocumentFormat,
+    ProcessingStatus,
+)
 from datetime import datetime
 import hashlib
 
 logger = logging.getLogger(__name__)
+
 
 class DocumentIngestionService:
     """
@@ -20,10 +26,21 @@ class DocumentIngestionService:
     def __init__(self, config_manager, db_manager):
         self.config_manager = config_manager
         self.db_manager = db_manager
-        self.max_file_size = self.config_manager.get("document_max_file_size", 20 * 1024 * 1024)  # 20MB default
-        self.allowed_formats = set(self.config_manager.get("document_allowed_formats", [
-            DocumentFormat.PDF, DocumentFormat.DOCX, DocumentFormat.TXT, DocumentFormat.MARKDOWN, DocumentFormat.HTML
-        ]))
+        self.max_file_size = self.config_manager.get(
+            "document_max_file_size", 20 * 1024 * 1024
+        )  # 20MB default
+        self.allowed_formats = set(
+            self.config_manager.get(
+                "document_allowed_formats",
+                [
+                    DocumentFormat.PDF,
+                    DocumentFormat.DOCX,
+                    DocumentFormat.TXT,
+                    DocumentFormat.MARKDOWN,
+                    DocumentFormat.HTML,
+                ],
+            )
+        )
 
     async def validate_document(self, file_data: bytes, filename: str) -> bool:
         """
@@ -49,7 +66,9 @@ class DocumentIngestionService:
         Stores document in database and returns document_id.
         """
         try:
-            document_id = await self.db_manager.store_document(file_data, metadata.dict())
+            document_id = await self.db_manager.store_document(
+                file_data, metadata.dict()
+            )
             logger.info(f"Stored document {metadata.filename} with id {document_id}")
             return document_id
         except Exception as e:
@@ -69,11 +88,13 @@ class DocumentIngestionService:
                 status=ProcessingStatus.PENDING,
                 progress=0.0,
                 created_at=now,
-                updated_at=now
+                updated_at=now,
             )
             await self.db_manager.create_processing_job(job.dict())
             logger.info(f"Created processing job {job_id} for document {document_id}")
             return job
         except Exception as e:
             logger.error(f"Failed to create processing job for {document_id}: {e}")
-            raise HTTPException(status_code=500, detail="Failed to create processing job")
+            raise HTTPException(
+                status_code=500, detail="Failed to create processing job"
+            )

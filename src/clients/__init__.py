@@ -14,7 +14,7 @@ from .exceptions import (
     AnythingLLMRateLimitError,
     AnythingLLMWorkspaceError,
     AnythingLLMDocumentError,
-    AnythingLLMCircuitBreakerError
+    AnythingLLMCircuitBreakerError,
 )
 
 __all__ = [
@@ -25,5 +25,5 @@ __all__ = [
     "AnythingLLMRateLimitError",
     "AnythingLLMWorkspaceError",
     "AnythingLLMDocumentError",
-    "AnythingLLMCircuitBreakerError"
+    "AnythingLLMCircuitBreakerError",
 ]

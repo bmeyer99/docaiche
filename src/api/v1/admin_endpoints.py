@@ -5,7 +5,7 @@ Admin search content and content management endpoints
 
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
 
@@ -20,8 +20,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-
-
 @router.get("/admin/search-content", response_model=AdminSearchResponse, tags=["admin"])
 @limiter.limit("20/minute")
 async def admin_search_content(
@@ -31,14 +29,14 @@ async def admin_search_content(
     technology: Optional[str] = Query(None, description="Technology filter"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Results offset"),
-    db_manager: DatabaseManager = Depends(get_database_manager)
+    db_manager: DatabaseManager = Depends(get_database_manager),
 ) -> AdminSearchResponse:
     """
     GET /api/v1/admin/search-content - Searches content metadata for admin management
-    
+
     Accepts query parameters: search_term, content_type, technology, limit, offset
     Returns AdminSearchResponse.
-    
+
     Args:
         request: FastAPI request object (required for rate limiting)
         search_term: Optional search term filter
@@ -47,13 +45,15 @@ async def admin_search_content(
         limit: Maximum number of results
         offset: Results offset for pagination
         db_manager: Database manager dependency
-        
+
     Returns:
         AdminSearchResponse with content items and pagination
     """
     try:
-        logger.info(f"Admin content search: term='{search_term}', type='{content_type}', tech='{technology}'")
-        
+        logger.info(
+            f"Admin content search: term='{search_term}', type='{content_type}', tech='{technology}'"
+        )
+
         # Mock admin content data conforming to schema
         items = [
             AdminContentItem(
@@ -66,7 +66,7 @@ async def admin_search_content(
                 created_at=datetime.utcnow(),
                 last_updated=datetime.utcnow(),
                 size_bytes=15432,
-                status="active"
+                status="active",
             ),
             AdminContentItem(
                 content_id="admin_doc_002",
@@ -78,21 +78,21 @@ async def admin_search_content(
                 created_at=datetime.utcnow(),
                 last_updated=datetime.utcnow(),
                 size_bytes=23456,
-                status="active"
-            )
+                status="active",
+            ),
         ]
-        
+
         # Apply pagination
-        paginated_items = items[offset:offset + limit]
-        
+        paginated_items = items[offset : offset + limit]
+
         return AdminSearchResponse(
             items=paginated_items,
             total_count=len(items),
             page=(offset // limit) + 1,
             page_size=limit,
-            has_more=offset + limit < len(items)
+            has_more=offset + limit < len(items),
         )
-        
+
     except Exception as e:
         logger.error(f"Admin content search failed: {e}")
         raise HTTPException(status_code=500, detail="Admin content search failed")
@@ -104,32 +104,32 @@ async def flag_content(
     request: Request,
     content_id: str,
     background_tasks: BackgroundTasks,
-    db_manager: DatabaseManager = Depends(get_database_manager)
+    db_manager: DatabaseManager = Depends(get_database_manager),
 ) -> Dict[str, str]:
     """
     DELETE /api/v1/content/{id} - Flags content for removal (admin action)
-    
+
     Args:
         request: FastAPI request object (required for rate limiting)
         content_id: ID of content to flag for removal
         background_tasks: FastAPI background tasks for processing
         db_manager: Database manager dependency
-        
+
     Returns:
         Confirmation message with HTTP 202
     """
     try:
         logger.info(f"Content flagged for removal: {content_id}")
-        
+
         # Add background task to flag content (placeholder)
         def flag_content_task():
             logger.info(f"Flagging content for removal: {content_id}")
             # TODO: Implement content flagging logic
-        
+
         background_tasks.add_task(flag_content_task)
-        
+
         return {"message": f"Content {content_id} flagged for review"}
-        
+
     except Exception as e:
         logger.error(f"Content flagging failed: {e}")
         raise HTTPException(status_code=500, detail="Content flagging failed")

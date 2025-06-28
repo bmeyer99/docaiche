@@ -6,13 +6,13 @@ from aiolimiter import AsyncLimiter
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
 import asyncio
-import re
 from urllib.parse import urlparse, urljoin
 
 from src.core.config.models import ScrapingConfig
 from src.clients.exceptions import WebScrapingError, CircuitBreakerError
 
 logger = logging.getLogger(__name__)
+
 
 class ScrapedContent(BaseModel):
     """
@@ -26,12 +26,14 @@ class ScrapedContent(BaseModel):
         links: List of discovered links on the page.
         metadata: Additional metadata (headers, status, etc).
     """
+
     url: HttpUrl
     title: Optional[str]
     text: Optional[str]
     html: Optional[str]
     links: List[HttpUrl]
     metadata: Dict[str, Any]
+
 
 class WebScrapingClient:
     """
@@ -62,12 +64,13 @@ class WebScrapingClient:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(
                 headers={"User-Agent": self.config.user_agent},
-                timeout=aiohttp.ClientTimeout(total=self._cb_config.timeout_seconds)
+                timeout=aiohttp.ClientTimeout(total=self._cb_config.timeout_seconds),
             )
         return self._session
 
     def _check_circuit_breaker(self):
         import time
+
         if self._circuit_breaker_open:
             elapsed = time.time() - self._circuit_breaker_last_open
             if elapsed > self._cb_config.recovery_timeout:
@@ -79,6 +82,7 @@ class WebScrapingClient:
 
     def _record_failure(self):
         import time
+
         self._circuit_breaker_failures += 1
         if self._circuit_breaker_failures >= self._cb_config.failure_threshold:
             self._circuit_breaker_open = True
@@ -126,12 +130,14 @@ class WebScrapingClient:
                     else:
                         raise WebScrapingError(
                             f"Failed to fetch robots.txt: HTTP {resp.status}",
-                            status_code=resp.status
+                            status_code=resp.status,
                         )
             except asyncio.TimeoutError:
                 raise WebScrapingError("Timeout fetching robots.txt", status_code=504)
             except Exception as e:
-                raise WebScrapingError(f"Error fetching robots.txt: {e}", status_code=500)
+                raise WebScrapingError(
+                    f"Error fetching robots.txt: {e}", status_code=500
+                )
 
         # Evaluate rules for user-agent
         path = parsed.path or "/"
@@ -158,7 +164,9 @@ class WebScrapingClient:
                 rules.setdefault(current_agent, []).append(("allow", path))
         return rules
 
-    def _is_path_allowed(self, rules: Dict[str, List[str]], user_agent: str, path: str) -> bool:
+    def _is_path_allowed(
+        self, rules: Dict[str, List[str]], user_agent: str, path: str
+    ) -> bool:
         # Follows robots.txt precedence: specific UA > * > allow/disallow order
         agent_rules = rules.get(user_agent, []) + rules.get("*", [])
         allowed = True
@@ -200,26 +208,42 @@ class WebScrapingClient:
                 html = await resp.text(errors="replace")
                 if status == 403:
                     self._record_failure()
-                    raise WebScrapingError("Forbidden (403)", status_code=403, error_context={"url": url})
+                    raise WebScrapingError(
+                        "Forbidden (403)", status_code=403, error_context={"url": url}
+                    )
                 if status == 404:
                     self._record_failure()
-                    raise WebScrapingError("Not Found (404)", status_code=404, error_context={"url": url})
+                    raise WebScrapingError(
+                        "Not Found (404)", status_code=404, error_context={"url": url}
+                    )
                 if status == 429:
                     self._record_failure()
-                    raise WebScrapingError("Rate Limited (429)", status_code=429, error_context={"url": url})
+                    raise WebScrapingError(
+                        "Rate Limited (429)",
+                        status_code=429,
+                        error_context={"url": url},
+                    )
                 if status >= 500:
                     self._record_failure()
-                    raise WebScrapingError(f"Server Error ({status})", status_code=status, error_context={"url": url})
+                    raise WebScrapingError(
+                        f"Server Error ({status})",
+                        status_code=status,
+                        error_context={"url": url},
+                    )
                 # Success
                 self._record_success()
         except asyncio.TimeoutError:
             self._record_failure()
-            raise WebScrapingError("Timeout during HTTP GET", status_code=504, error_context={"url": url})
+            raise WebScrapingError(
+                "Timeout during HTTP GET", status_code=504, error_context={"url": url}
+            )
         except CircuitBreakerError:
             raise
         except Exception as e:
             self._record_failure()
-            raise WebScrapingError(f"Unexpected error: {e}", status_code=500, error_context={"url": url})
+            raise WebScrapingError(
+                f"Unexpected error: {e}", status_code=500, error_context={"url": url}
+            )
 
         # Parse HTML and extract content
         soup = BeautifulSoup(html, "lxml")
@@ -227,7 +251,9 @@ class WebScrapingClient:
         for tag in soup(["script", "style", "noscript"]):
             tag.decompose()
         # Remove comments
-        for comment in soup.find_all(string=lambda text: isinstance(text, (type(soup.Comment)))):
+        for comment in soup.find_all(
+            string=lambda text: isinstance(text, (type(soup.Comment)))
+        ):
             comment.extract()
         # Extract title
         title = soup.title.string.strip() if soup.title and soup.title.string else None
@@ -241,12 +267,7 @@ class WebScrapingClient:
             "status": status,
         }
         return ScrapedContent(
-            url=url,
-            title=title,
-            text=text,
-            html=html,
-            links=links,
-            metadata=metadata
+            url=url, title=title, text=text, html=html, links=links, metadata=metadata
         )
 
     async def extract_links(self, html: str, base_url: str) -> List[str]:

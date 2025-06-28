@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 
+
 class ContentSynthesizer:
     """Synthesizes content from search results and enrichment."""
 
@@ -15,7 +16,7 @@ class ContentSynthesizer:
         enrichment_results = enrichment_results or []
 
         combined = search_results + enrichment_results
-        
+
         seen_ids = set()
         deduped = []
         for item in combined:

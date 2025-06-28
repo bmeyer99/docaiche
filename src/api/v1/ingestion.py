@@ -3,10 +3,10 @@ Ingestion API Router - PRD-006/PRD-008
 Defines the ingestion_router for document upload and processing endpoints.
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, UploadFile, File, HTTPException
 
 ingestion_router = APIRouter(prefix="/ingestion", tags=["ingestion"])
+
 
 @ingestion_router.post("/upload")
 async def upload_document(file: UploadFile = File(...)):

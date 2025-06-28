@@ -12,7 +12,6 @@ import logging
 import uuid
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +25,15 @@ except ImportError:
 class DatabaseInitializer:
     """
     Database initialization class implementing exact schema from DB-001 task.
-    
+
     Integrates with CFG-001 configuration system and provides idempotent
     database creation with all tables, indexes, and default data.
     """
-    
+
     def __init__(self, db_path: Optional[str] = None):
         """
         Initialize DatabaseInitializer with configuration integration.
-        
+
         Args:
             db_path: Override database path (uses config if None)
         """
@@ -49,51 +48,56 @@ class DatabaseInitializer:
                     logger.info(f"Using configuration from CFG-001: {self.db_path}")
                 else:
                     self.db_path = "/app/data/docaiche.db"
-                    logger.info("CFG-001 configuration not available, using default path")
+                    logger.info(
+                        "CFG-001 configuration not available, using default path"
+                    )
             except Exception as e:
-                logger.warning(f"Could not load CFG-001 configuration, using default path: {e}")
+                logger.warning(
+                    f"Could not load CFG-001 configuration, using default path: {e}"
+                )
                 self.db_path = "/app/data/docaiche.db"
-        
+
         self.schema_version = "1.0.0"
-    
+
     def initialize_database(self, force_recreate: bool = False) -> None:
         """
         Initialize the SQLite database with all tables and indexes.
-        
+
         Args:
             force_recreate: If True, drop existing database and recreate
         """
         # Create data directory if it doesn't exist
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        
+
         if force_recreate and os.path.exists(self.db_path):
             os.remove(self.db_path)
             logger.info(f"Removed existing database: {self.db_path}")
-        
+
         with sqlite3.connect(self.db_path) as conn:
             # Enable foreign key constraints
             conn.execute("PRAGMA foreign_keys = ON")
-            
+
             # Create all tables
             self._create_tables(conn)
-            
+
             # Create all indexes
             self._create_indexes(conn)
-            
+
             # Insert initial schema version
             self._insert_schema_version(conn)
-            
+
             # Insert default technology mappings
             self._insert_default_mappings(conn)
-            
+
             conn.commit()
             logger.info(f"Database initialized successfully: {self.db_path}")
-    
+
     def _create_tables(self, conn: sqlite3.Connection) -> None:
         """Create all database tables exactly as specified in task requirements"""
-        
+
         # System configuration table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS system_config (
                 key TEXT PRIMARY KEY NOT NULL,
                 value JSON NOT NULL,
@@ -101,10 +105,12 @@ class DatabaseInitializer:
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_by TEXT NOT NULL DEFAULT 'system'
             )
-        """)
-        
+        """
+        )
+
         # Search cache table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS search_cache (
                 query_hash TEXT PRIMARY KEY NOT NULL,
                 original_query TEXT NOT NULL,
@@ -119,10 +125,12 @@ class DatabaseInitializer:
                 access_count INTEGER NOT NULL DEFAULT 0,
                 last_accessed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
-        """)
-        
+        """
+        )
+
         # Content metadata table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS content_metadata (
                 content_id TEXT PRIMARY KEY NOT NULL,
                 title TEXT NOT NULL,
@@ -143,10 +151,12 @@ class DatabaseInitializer:
                 last_accessed_at TIMESTAMP,
                 access_count INTEGER NOT NULL DEFAULT 0
             )
-        """)
-        
+        """
+        )
+
         # Feedback events table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS feedback_events (
                 event_id TEXT PRIMARY KEY NOT NULL,
                 content_id TEXT NOT NULL,
@@ -161,10 +171,12 @@ class DatabaseInitializer:
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (content_id) REFERENCES content_metadata(content_id) ON DELETE CASCADE
             )
-        """)
-        
+        """
+        )
+
         # Usage signals table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS usage_signals (
                 signal_id TEXT PRIMARY KEY NOT NULL,
                 content_id TEXT NOT NULL,
@@ -179,10 +191,12 @@ class DatabaseInitializer:
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (content_id) REFERENCES content_metadata(content_id) ON DELETE CASCADE
             )
-        """)
-        
+        """
+        )
+
         # Source metadata table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS source_metadata (
                 source_id TEXT PRIMARY KEY NOT NULL,
                 source_type TEXT NOT NULL CHECK (source_type IN ('github', 'web', 'api')),
@@ -201,10 +215,12 @@ class DatabaseInitializer:
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
-        """)
-        
+        """
+        )
+
         # Technology mappings table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS technology_mappings (
                 mapping_id TEXT PRIMARY KEY NOT NULL,
                 technology TEXT NOT NULL,
@@ -223,29 +239,31 @@ class DatabaseInitializer:
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(technology, source_type, owner, repo, base_url)
             )
-        """)
-        
+        """
+        )
+
         # Schema versions table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS schema_versions (
                 version_id TEXT PRIMARY KEY NOT NULL,
                 applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 description TEXT,
                 migration_script TEXT
             )
-        """)
-        
+        """
+        )
+
         logger.info("All database tables created successfully")
-    
+
     def _create_indexes(self, conn: sqlite3.Connection) -> None:
         """Create all performance indexes exactly as specified in task requirements"""
-        
+
         indexes = [
             # Search cache indexes
             "CREATE INDEX IF NOT EXISTS idx_search_cache_expires_at ON search_cache(expires_at)",
             "CREATE INDEX IF NOT EXISTS idx_search_cache_technology_hint ON search_cache(technology_hint)",
             "CREATE INDEX IF NOT EXISTS idx_search_cache_created_at ON search_cache(created_at)",
-            
             # Content metadata indexes
             "CREATE INDEX IF NOT EXISTS idx_content_metadata_technology ON content_metadata(technology)",
             "CREATE INDEX IF NOT EXISTS idx_content_metadata_source_url ON content_metadata(source_url)",
@@ -254,72 +272,160 @@ class DatabaseInitializer:
             "CREATE INDEX IF NOT EXISTS idx_content_metadata_processing_status ON content_metadata(processing_status)",
             "CREATE INDEX IF NOT EXISTS idx_content_metadata_created_at ON content_metadata(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_content_metadata_last_accessed_at ON content_metadata(last_accessed_at)",
-            
             # Feedback events indexes
             "CREATE INDEX IF NOT EXISTS idx_feedback_events_content_id ON feedback_events(content_id)",
             "CREATE INDEX IF NOT EXISTS idx_feedback_events_feedback_type ON feedback_events(feedback_type)",
             "CREATE INDEX IF NOT EXISTS idx_feedback_events_created_at ON feedback_events(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_feedback_events_user_session_id ON feedback_events(user_session_id)",
-            
             # Usage signals indexes
             "CREATE INDEX IF NOT EXISTS idx_usage_signals_content_id ON usage_signals(content_id)",
             "CREATE INDEX IF NOT EXISTS idx_usage_signals_signal_type ON usage_signals(signal_type)",
             "CREATE INDEX IF NOT EXISTS idx_usage_signals_created_at ON usage_signals(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_usage_signals_user_session_id ON usage_signals(user_session_id)",
-            
             # Source metadata indexes
             "CREATE INDEX IF NOT EXISTS idx_source_metadata_source_type ON source_metadata(source_type)",
             "CREATE INDEX IF NOT EXISTS idx_source_metadata_technology ON source_metadata(technology)",
             "CREATE INDEX IF NOT EXISTS idx_source_metadata_reliability_score ON source_metadata(reliability_score)",
             "CREATE INDEX IF NOT EXISTS idx_source_metadata_is_active ON source_metadata(is_active)",
             "CREATE INDEX IF NOT EXISTS idx_source_metadata_updated_at ON source_metadata(updated_at)",
-            
             # Technology mappings indexes
             "CREATE INDEX IF NOT EXISTS idx_technology_mappings_technology ON technology_mappings(technology)",
             "CREATE INDEX IF NOT EXISTS idx_technology_mappings_source_type ON technology_mappings(source_type)",
             "CREATE INDEX IF NOT EXISTS idx_technology_mappings_priority ON technology_mappings(priority)",
             "CREATE INDEX IF NOT EXISTS idx_technology_mappings_is_active ON technology_mappings(is_active)",
-            "CREATE INDEX IF NOT EXISTS idx_technology_mappings_is_official ON technology_mappings(is_official)"
+            "CREATE INDEX IF NOT EXISTS idx_technology_mappings_is_official ON technology_mappings(is_official)",
         ]
-        
+
         for index_sql in indexes:
             conn.execute(index_sql)
-        
+
         logger.info("All database indexes created successfully")
-    
+
     def _insert_schema_version(self, conn: sqlite3.Connection) -> None:
         """Insert initial schema version record"""
-        conn.execute("""
+        conn.execute(
+            """
             INSERT OR REPLACE INTO schema_versions (version_id, description)
             VALUES (?, ?)
-        """, (self.schema_version, "Initial database schema"))
-    
+        """,
+            (self.schema_version, "Initial database schema"),
+        )
+
     def _insert_default_mappings(self, conn: sqlite3.Connection) -> None:
         """Insert default technology-to-repository mappings"""
-        
+
         default_mappings = [
             # Python frameworks
-            (str(uuid.uuid4()), "python-fastapi", "github", "tiangolo", "fastapi", "docs", '["*.md"]', None, 10, True),
-            (str(uuid.uuid4()), "python-django", "github", "django", "django", "docs", '["*.txt", "*.md"]', None, 10, True),
-            (str(uuid.uuid4()), "python-flask", "github", "pallets", "flask", "docs", '["*.rst", "*.md"]', None, 9, True),
-            
+            (
+                str(uuid.uuid4()),
+                "python-fastapi",
+                "github",
+                "tiangolo",
+                "fastapi",
+                "docs",
+                '["*.md"]',
+                None,
+                10,
+                True,
+            ),
+            (
+                str(uuid.uuid4()),
+                "python-django",
+                "github",
+                "django",
+                "django",
+                "docs",
+                '["*.txt", "*.md"]',
+                None,
+                10,
+                True,
+            ),
+            (
+                str(uuid.uuid4()),
+                "python-flask",
+                "github",
+                "pallets",
+                "flask",
+                "docs",
+                '["*.rst", "*.md"]',
+                None,
+                9,
+                True,
+            ),
             # JavaScript frameworks
-            (str(uuid.uuid4()), "react", "github", "facebook", "react", "docs", '["*.md"]', None, 10, True),
-            (str(uuid.uuid4()), "nextjs", "github", "vercel", "next.js", "docs", '["*.mdx", "*.md"]', None, 10, True),
-            (str(uuid.uuid4()), "vue", "github", "vuejs", "core", "packages/vue", '["*.md"]', None, 10, True),
-            
+            (
+                str(uuid.uuid4()),
+                "react",
+                "github",
+                "facebook",
+                "react",
+                "docs",
+                '["*.md"]',
+                None,
+                10,
+                True,
+            ),
+            (
+                str(uuid.uuid4()),
+                "nextjs",
+                "github",
+                "vercel",
+                "next.js",
+                "docs",
+                '["*.mdx", "*.md"]',
+                None,
+                10,
+                True,
+            ),
+            (
+                str(uuid.uuid4()),
+                "vue",
+                "github",
+                "vuejs",
+                "core",
+                "packages/vue",
+                '["*.md"]',
+                None,
+                10,
+                True,
+            ),
             # DevOps tools
-            (str(uuid.uuid4()), "docker", "github", "docker", "docs", "content", '["*.md"]', None, 10, True),
-            (str(uuid.uuid4()), "kubernetes", "github", "kubernetes", "website", "content", '["*.md"]', None, 10, True),
+            (
+                str(uuid.uuid4()),
+                "docker",
+                "github",
+                "docker",
+                "docs",
+                "content",
+                '["*.md"]',
+                None,
+                10,
+                True,
+            ),
+            (
+                str(uuid.uuid4()),
+                "kubernetes",
+                "github",
+                "kubernetes",
+                "website",
+                "content",
+                '["*.md"]',
+                None,
+                10,
+                True,
+            ),
         ]
-        
+
         for mapping in default_mappings:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT OR IGNORE INTO technology_mappings 
                 (mapping_id, technology, source_type, owner, repo, docs_path, file_patterns, base_url, priority, is_official)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, mapping)
-        
+            """,
+                mapping,
+            )
+
         logger.info("Default technology mappings inserted")
 
     def get_database_path(self) -> str:
@@ -334,7 +440,7 @@ class DatabaseInitializer:
         """Get database information and stats"""
         if not self.check_database_exists():
             return {"exists": False, "path": self.db_path}
-        
+
         try:
             with sqlite3.connect(self.db_path) as conn:
                 # Get table count
@@ -342,7 +448,7 @@ class DatabaseInitializer:
                     "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
                 )
                 table_count = cursor.fetchone()[0]
-                
+
                 # Get schema version
                 try:
                     cursor = conn.execute(
@@ -352,17 +458,17 @@ class DatabaseInitializer:
                     schema_version = schema_version[0] if schema_version else "unknown"
                 except sqlite3.OperationalError:
                     schema_version = "unknown"
-                
+
                 # Get file size
                 file_size = os.path.getsize(self.db_path)
-                
+
                 return {
                     "exists": True,
                     "path": self.db_path,
                     "table_count": table_count,
                     "schema_version": schema_version,
                     "file_size_bytes": file_size,
-                    "file_size_mb": round(file_size / 1024 / 1024, 2)
+                    "file_size_mb": round(file_size / 1024 / 1024, 2),
                 }
         except Exception as e:
             logger.error(f"Error getting database info: {e}")
@@ -372,21 +478,25 @@ class DatabaseInitializer:
 def main():
     """CLI interface for database initialization"""
     import argparse
-    
-    parser = argparse.ArgumentParser(description="Initialize AI Documentation Cache database")
-    parser.add_argument("--db-path", help="Database file path (uses config if not specified)")
+
+    parser = argparse.ArgumentParser(
+        description="Initialize AI Documentation Cache database"
+    )
+    parser.add_argument(
+        "--db-path", help="Database file path (uses config if not specified)"
+    )
     parser.add_argument("--force", action="store_true", help="Force recreate database")
     parser.add_argument("--info", action="store_true", help="Show database information")
-    
+
     args = parser.parse_args()
-    
+
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    
+
     initializer = DatabaseInitializer(args.db_path)
-    
+
     if args.info:
         info = initializer.get_database_info()
         print("Database Information:")

@@ -2,8 +2,8 @@
 Text Extraction Handlers.
 Implements PRD-006: Extracts text from PDF, DOCX, TXT, Markdown, and HTML documents.
 """
+
 import logging
-from typing import Optional, Dict, Any, List
 from fastapi import HTTPException
 from src.document_processing.models import DocumentFormat
 import aiofiles
@@ -11,6 +11,7 @@ import markdown
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
+
 
 class TextExtractor:
     """
@@ -34,7 +35,9 @@ class TextExtractor:
                 return await self.extract_html_text(file_path)
             else:
                 logger.error(f"Unsupported document format: {format}")
-                raise HTTPException(status_code=415, detail="Unsupported document format")
+                raise HTTPException(
+                    status_code=415, detail="Unsupported document format"
+                )
         except HTTPException:
             raise
         except Exception as e:
@@ -47,6 +50,7 @@ class TextExtractor:
         """
         try:
             import PyPDF2
+
             async with aiofiles.open(file_path, "rb") as f:
                 pdf_bytes = await f.read()
             reader = PyPDF2.PdfReader(pdf_bytes)
@@ -64,9 +68,11 @@ class TextExtractor:
         """
         try:
             import docx
+
             async with aiofiles.open(file_path, "rb") as f:
                 docx_bytes = await f.read()
             from io import BytesIO
+
             doc = docx.Document(BytesIO(docx_bytes))
             text = "\n".join([para.text for para in doc.paragraphs])
             return text

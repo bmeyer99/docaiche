@@ -1,6 +1,5 @@
 """ResponseGenerator: Main entry point for intelligent response generation (PRD-011)."""
 
-import asyncio
 import logging
 from typing import Any, Dict, Optional
 
@@ -12,6 +11,7 @@ from src.response.template_engine import TemplateEngine
 from src.response.validator import ResponseValidator
 
 logger = logging.getLogger(__name__)
+
 
 class ResponseGenerator:
     """Coordinates the full response generation workflow."""
@@ -51,8 +51,12 @@ class ResponseGenerator:
             )
 
             template_name = context.get("template_name", "default")
-            render_ctx = {"query": query, "content": synthesized_content, **context.get("meta", {})}
-            
+            render_ctx = {
+                "query": query,
+                "content": synthesized_content,
+                **context.get("meta", {}),
+            }
+
             rendered = await self.template_engine.render(template_name, render_ctx)
             response_obj["rendered"] = rendered
 

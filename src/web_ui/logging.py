@@ -5,6 +5,7 @@ import sys
 import json
 import uuid
 
+
 class JsonFormatter(logging.Formatter):
     def format(self, record):
         log_record = {
@@ -18,12 +19,14 @@ class JsonFormatter(logging.Formatter):
             log_record["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_record)
 
+
 class CorrelationIdFilter(logging.Filter):
     def filter(self, record):
         # Attach a correlation ID if not present
         if not hasattr(record, "correlation_id"):
             record.correlation_id = str(uuid.uuid4())
         return True
+
 
 def setup_logging():
     """Configure structured logging for the Web UI Service."""
@@ -34,5 +37,6 @@ def setup_logging():
     root_logger.handlers = [handler]
     root_logger.addFilter(CorrelationIdFilter())
     # TODO: IMPLEMENTATION ENGINEER - Add correlation ID, JSON formatting, and external log sinks as needed
+
 
 setup_logging()

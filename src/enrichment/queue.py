@@ -7,6 +7,7 @@ from src.enrichment.models import EnrichmentTask
 
 logger = logging.getLogger(__name__)
 
+
 class EnrichmentTaskQueue(ABC):
     """
     Abstract base class for managing the queue of enrichment tasks.
@@ -41,6 +42,7 @@ class EnrichmentTaskQueue(ABC):
         """
         pass
 
+
 class InMemoryEnrichmentTaskQueue(EnrichmentTaskQueue):
     """
     Simple in-memory implementation of EnrichmentTaskQueue for PRD-010.
@@ -56,14 +58,18 @@ class InMemoryEnrichmentTaskQueue(EnrichmentTaskQueue):
             self.logger.info(f"Task {task.task_id} already in queue, skipping enqueue.")
             return
         self._queue.append(task)
-        self.logger.info(f"Enqueued task {task.task_id}. Queue size: {len(self._queue)}")
+        self.logger.info(
+            f"Enqueued task {task.task_id}. Queue size: {len(self._queue)}"
+        )
 
     async def dequeue(self) -> Optional[EnrichmentTask]:
         if not self._queue:
             self.logger.info("Queue is empty on dequeue.")
             return None
         task = self._queue.pop(0)
-        self.logger.info(f"Dequeued task {task.task_id}. Queue size: {len(self._queue)}")
+        self.logger.info(
+            f"Dequeued task {task.task_id}. Queue size: {len(self._queue)}"
+        )
         return task
 
     async def size(self) -> int:

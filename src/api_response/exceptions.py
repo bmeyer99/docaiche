@@ -1,5 +1,6 @@
 """Custom exceptions for the API Response Pipeline."""
 
+
 class APIResponseError(Exception):
     """
     Base exception for API response pipeline errors.
@@ -15,6 +16,7 @@ class APIResponseError(Exception):
         super().__init__(message)
         self.message = message
 
+
 class FormattingError(APIResponseError):
     """
     Raised when response formatting fails.
@@ -28,6 +30,7 @@ class FormattingError(APIResponseError):
             message: Error message.
         """
         super().__init__(message)
+
 
 class CacheError(APIResponseError):
     """

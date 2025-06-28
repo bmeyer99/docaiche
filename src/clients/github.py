@@ -13,7 +13,7 @@ Implementation Engineer: Fill in all TODOs per docstrings and PRD-006 requiremen
 
 import logging
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 import aiohttp
 import base64
 
@@ -31,21 +31,24 @@ logger = logging.getLogger(__name__)
 
 # --- Data Models ---
 
+
 class RateLimitStatus(BaseModel):
     """GitHub API rate limit status model.
-    
+
     Attributes:
         limit: Maximum number of requests allowed in the current window.
         remaining: Number of requests remaining in the current window.
         reset: Time at which the current rate limit window resets (epoch seconds).
     """
+
     limit: int
     remaining: int
     reset: int
 
+
 class RepositoryInfo(BaseModel):
     """Repository metadata model.
-    
+
     Attributes:
         id: Repository unique identifier.
         name: Repository name.
@@ -57,6 +60,7 @@ class RepositoryInfo(BaseModel):
         owner: Owner username.
         metadata: Additional metadata.
     """
+
     id: int
     name: str
     full_name: str
@@ -67,9 +71,10 @@ class RepositoryInfo(BaseModel):
     owner: str
     metadata: Optional[Dict[str, Any]] = None
 
+
 class FileInfo(BaseModel):
     """File metadata model for repository contents.
-    
+
     Attributes:
         path: File path in the repository.
         type: File type (file, dir, symlink, submodule).
@@ -77,38 +82,44 @@ class FileInfo(BaseModel):
         sha: File SHA hash.
         url: API URL for file.
     """
+
     path: str
     type: str
     size: Optional[int]
     sha: str
     url: str
 
+
 class FileContent(BaseModel):
     """File content model.
-    
+
     Attributes:
         path: File path in the repository.
         content: Decoded file content (UTF-8).
         encoding: Content encoding (e.g., 'utf-8').
         sha: File SHA hash.
     """
+
     path: str
     content: str
     encoding: str
     sha: str
 
+
 # --- Circuit Breaker Helper ---
+
 
 class CircuitBreaker:
     """Simple circuit breaker for GitHub API requests.
-    
+
     Args:
         failure_threshold: Number of failures before opening the circuit.
         recovery_timeout: Seconds to wait before attempting recovery.
-    
+
     Usage:
         Use as a decorator or context manager for API calls.
     """
+
     def __init__(self, failure_threshold: int, recovery_timeout: int):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
@@ -119,22 +130,30 @@ class CircuitBreaker:
     def __call__(self, func):
         async def wrapper(*args, **kwargs):
             import time
+
             # Check if circuit is open
             if self.state == "OPEN":
-                if self.last_failure_time and (time.time() - self.last_failure_time) > self.recovery_timeout:
+                if (
+                    self.last_failure_time
+                    and (time.time() - self.last_failure_time) > self.recovery_timeout
+                ):
                     # Move to HALF-OPEN, try the request
                     self.state = "HALF-OPEN"
                 else:
                     raise CircuitBreakerError("Circuit breaker is open")
             try:
                 result = await func(*args, **kwargs)
-            except Exception as e:
+            except Exception:
                 self.failure_count += 1
                 self.last_failure_time = time.time()
                 if self.failure_count >= self.failure_threshold:
                     self.state = "OPEN"
-                    logger.error(f"Circuit breaker opened after {self.failure_count} failures.")
-                    raise CircuitBreakerError("Circuit breaker is open due to repeated failures")
+                    logger.error(
+                        f"Circuit breaker opened after {self.failure_count} failures."
+                    )
+                    raise CircuitBreakerError(
+                        "Circuit breaker is open due to repeated failures"
+                    )
                 logger.warning(f"Circuit breaker failure count: {self.failure_count}")
                 raise
             else:
@@ -144,17 +163,20 @@ class CircuitBreaker:
                 self.failure_count = 0
                 self.last_failure_time = None
                 return result
+
         return wrapper
+
 
 # --- GitHub Client ---
 
+
 class GitHubClient:
     """Async GitHub API client with circuit breaker and dependency injection.
-    
+
     Args:
         config: GitHubConfig instance (PRD-003)
         db_manager: DatabaseManager instance (PRD-002)
-    
+
     Attributes:
         session: aiohttp.ClientSession for HTTP requests
         circuit_breaker: CircuitBreaker instance for API calls
@@ -191,112 +213,146 @@ class GitHubClient:
 
     async def get_rate_limit_status(self) -> RateLimitStatus:
         """Fetch current GitHub API rate limit status.
-        
+
         Returns:
             RateLimitStatus: Current rate limit info.
-        
+
         Raises:
             GitHubClientError: On API or network failure.
             CircuitBreakerError: If circuit is open.
         """
+
         async def api_call():
             url = "https://api.github.com/rate_limit"
             headers = {
                 "Authorization": f"token {self.config.api_token}",
                 "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "DocaicheBot/1.0"
+                "User-Agent": "DocaicheBot/1.0",
             }
-            
+
             try:
                 async with self.session.get(url, headers=headers, timeout=30) as resp:
                     if resp.status == 401:
                         self.logger.error("GitHub authentication failed")
-                        raise GitHubClientError("Authentication failed", status_code=401)
-                    
+                        raise GitHubClientError(
+                            "Authentication failed", status_code=401
+                        )
+
                     if resp.status == 403:
                         # Rate limit exceeded or forbidden
                         reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
                         remaining = int(resp.headers.get("X-RateLimit-Remaining", "0"))
                         limit = int(resp.headers.get("X-RateLimit-Limit", "0"))
-                        self.logger.warning("GitHub API rate limit exceeded or forbidden")
+                        self.logger.warning(
+                            "GitHub API rate limit exceeded or forbidden"
+                        )
                         raise GitHubClientError(
                             "Rate limit exceeded or forbidden",
                             status_code=403,
-                            error_context={"limit": limit, "remaining": remaining, "reset": reset}
+                            error_context={
+                                "limit": limit,
+                                "remaining": remaining,
+                                "reset": reset,
+                            },
                         )
-                    
+
                     if resp.status >= 500:
                         self.logger.error(f"GitHub server error: {resp.status}")
-                        raise GitHubClientError("GitHub server error", status_code=resp.status)
-                    
+                        raise GitHubClientError(
+                            "GitHub server error", status_code=resp.status
+                        )
+
                     if resp.status != 200:
-                        self.logger.error(f"Unexpected GitHub API status: {resp.status}")
-                        raise GitHubClientError("Unexpected GitHub API status", status_code=resp.status)
-                    
+                        self.logger.error(
+                            f"Unexpected GitHub API status: {resp.status}"
+                        )
+                        raise GitHubClientError(
+                            "Unexpected GitHub API status", status_code=resp.status
+                        )
+
                     data = await resp.json()
                     core = data.get("resources", {}).get("core", {})
                     return RateLimitStatus(
                         limit=core.get("limit", 0),
                         remaining=core.get("remaining", 0),
-                        reset=core.get("reset", 0)
+                        reset=core.get("reset", 0),
                     )
-                    
+
             except aiohttp.ClientError as e:
                 self.logger.error(f"Network error during rate limit check: {e}")
-                raise GitHubClientError("Network error during rate limit check", status_code=503)
+                raise GitHubClientError(
+                    "Network error during rate limit check", status_code=503
+                )
             except Exception as e:
                 self.logger.error(f"Unexpected error during rate limit check: {e}")
-                raise GitHubClientError("Unexpected error during rate limit check", status_code=500)
-        
+                raise GitHubClientError(
+                    "Unexpected error during rate limit check", status_code=500
+                )
+
         return await self.circuit_breaker(api_call)()
 
     async def get_repository_info(self, owner: str, repo: str) -> RepositoryInfo:
         """Fetch repository metadata.
-        
+
         Args:
             owner: Repository owner username.
             repo: Repository name.
-        
+
         Returns:
             RepositoryInfo: Repository metadata.
-        
+
         Raises:
             GitHubClientError: On API or network failure.
             CircuitBreakerError: If circuit is open.
-        
+
         TODO: IMPLEMENTATION ENGINEER - Implement GitHub repo info API call with circuit breaker.
         """
+
         async def api_call():
             url = f"https://api.github.com/repos/{owner}/{repo}"
             headers = {
                 "Authorization": f"token {self.config.api_token}",
                 "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "DocaicheBot/1.0"
+                "User-Agent": "DocaicheBot/1.0",
             }
             try:
                 async with self.session.get(url, headers=headers, timeout=30) as resp:
                     if resp.status == 401:
                         self.logger.error("GitHub authentication failed")
-                        raise GitHubClientError("Authentication failed", status_code=401)
+                        raise GitHubClientError(
+                            "Authentication failed", status_code=401
+                        )
                     if resp.status == 403:
                         reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
                         remaining = int(resp.headers.get("X-RateLimit-Remaining", "0"))
                         limit = int(resp.headers.get("X-RateLimit-Limit", "0"))
-                        self.logger.warning("GitHub API rate limit exceeded or forbidden")
+                        self.logger.warning(
+                            "GitHub API rate limit exceeded or forbidden"
+                        )
                         raise GitHubClientError(
                             "Rate limit exceeded or forbidden",
                             status_code=403,
-                            error_context={"limit": limit, "remaining": remaining, "reset": reset}
+                            error_context={
+                                "limit": limit,
+                                "remaining": remaining,
+                                "reset": reset,
+                            },
                         )
                     if resp.status == 404:
                         self.logger.error("Repository not found")
                         raise GitHubClientError("Repository not found", status_code=404)
                     if resp.status >= 500:
                         self.logger.error(f"GitHub server error: {resp.status}")
-                        raise GitHubClientError("GitHub server error", status_code=resp.status)
+                        raise GitHubClientError(
+                            "GitHub server error", status_code=resp.status
+                        )
                     if resp.status != 200:
-                        self.logger.error(f"Unexpected GitHub API status: {resp.status}")
-                        raise GitHubClientError("Unexpected GitHub API status", status_code=resp.status)
+                        self.logger.error(
+                            f"Unexpected GitHub API status: {resp.status}"
+                        )
+                        raise GitHubClientError(
+                            "Unexpected GitHub API status", status_code=resp.status
+                        )
                     data = await resp.json()
                     return RepositoryInfo(
                         id=data.get("id"),
@@ -313,43 +369,47 @@ class GitHubClient:
                             "pushed_at": data.get("pushed_at"),
                             "language": data.get("language"),
                             "topics": data.get("topics"),
-                        }
+                        },
                     )
             except aiohttp.ClientError as e:
                 self.logger.error(f"Network error during repository info fetch: {e}")
-                raise GitHubClientError("Network error during repository info fetch", status_code=503)
+                raise GitHubClientError(
+                    "Network error during repository info fetch", status_code=503
+                )
             except Exception as e:
                 self.logger.error(f"Unexpected error during repository info fetch: {e}")
-                raise GitHubClientError("Unexpected error during repository info fetch", status_code=500)
+                raise GitHubClientError(
+                    "Unexpected error during repository info fetch", status_code=500
+                )
+
         return await self.circuit_breaker(api_call)()
 
     async def list_repository_contents(
-        self, 
-        owner: str, 
-        repo: str, 
-        path: str = "", 
-        ref: Optional[str] = None
+        self, owner: str, repo: str, path: str = "", ref: Optional[str] = None
     ) -> List[FileInfo]:
         """List contents of a repository directory.
-        
+
         Args:
             owner: Repository owner username.
             repo: Repository name.
             path: Directory path (empty for root).
             ref: Git reference (branch/tag/commit).
-        
+
         Returns:
             List[FileInfo]: List of files and directories.
-        
+
         Raises:
             GitHubClientError: On API or network failure.
             CircuitBreakerError: If circuit is open.
-        
+
         TODO: IMPLEMENTATION ENGINEER - Implement GitHub contents API call with circuit breaker.
         """
+
         async def api_call():
             # Caching key
-            cache_key = f"github:contents:{owner}/{repo}:{path or 'root'}:{ref or 'default'}"
+            cache_key = (
+                f"github:contents:{owner}/{repo}:{path or 'root'}:{ref or 'default'}"
+            )
             if self.cache_manager:
                 cached = await self.cache_manager.get(cache_key)
                 if cached:
@@ -358,133 +418,186 @@ class GitHubClient:
                     except Exception as e:
                         self.logger.warning(f"Cache decode error: {e}")
 
-            url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}" if path else f"https://api.github.com/repos/{owner}/{repo}/contents"
+            url = (
+                f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+                if path
+                else f"https://api.github.com/repos/{owner}/{repo}/contents"
+            )
             headers = {
                 "Authorization": f"token {self.config.api_token}",
                 "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "DocaicheBot/1.0"
+                "User-Agent": "DocaicheBot/1.0",
             }
             params = {}
             if ref:
                 params["ref"] = ref
 
             try:
-                async with self.session.get(url, headers=headers, params=params, timeout=30) as resp:
+                async with self.session.get(
+                    url, headers=headers, params=params, timeout=30
+                ) as resp:
                     if resp.status == 401:
                         self.logger.error("GitHub authentication failed")
-                        raise GitHubClientError("Authentication failed", status_code=401)
+                        raise GitHubClientError(
+                            "Authentication failed", status_code=401
+                        )
                     if resp.status == 403:
                         reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
                         remaining = int(resp.headers.get("X-RateLimit-Remaining", "0"))
                         limit = int(resp.headers.get("X-RateLimit-Limit", "0"))
-                        self.logger.warning("GitHub API rate limit exceeded or forbidden")
+                        self.logger.warning(
+                            "GitHub API rate limit exceeded or forbidden"
+                        )
                         raise GitHubClientError(
                             "Rate limit exceeded or forbidden",
                             status_code=403,
-                            error_context={"limit": limit, "remaining": remaining, "reset": reset}
+                            error_context={
+                                "limit": limit,
+                                "remaining": remaining,
+                                "reset": reset,
+                            },
                         )
                     if resp.status == 404:
                         self.logger.error("Repository or path not found")
-                        raise GitHubClientError("Repository or path not found", status_code=404)
+                        raise GitHubClientError(
+                            "Repository or path not found", status_code=404
+                        )
                     if resp.status >= 500:
                         self.logger.error(f"GitHub server error: {resp.status}")
-                        raise GitHubClientError("GitHub server error", status_code=resp.status)
+                        raise GitHubClientError(
+                            "GitHub server error", status_code=resp.status
+                        )
                     if resp.status != 200:
-                        self.logger.error(f"Unexpected GitHub API status: {resp.status}")
-                        raise GitHubClientError("Unexpected GitHub API status", status_code=resp.status)
+                        self.logger.error(
+                            f"Unexpected GitHub API status: {resp.status}"
+                        )
+                        raise GitHubClientError(
+                            "Unexpected GitHub API status", status_code=resp.status
+                        )
                     data = await resp.json()
                     # If it's a file, wrap in a list
                     if isinstance(data, dict) and data.get("type") == "file":
                         data = [data]
                     result = []
                     for item in data:
-                        result.append(FileInfo(
-                            path=item.get("path"),
-                            type=item.get("type"),
-                            size=item.get("size"),
-                            sha=item.get("sha"),
-                            url=item.get("url"),
-                        ))
+                        result.append(
+                            FileInfo(
+                                path=item.get("path"),
+                                type=item.get("type"),
+                                size=item.get("size"),
+                                sha=item.get("sha"),
+                                url=item.get("url"),
+                            )
+                        )
                     # Cache result
                     if self.cache_manager:
                         try:
-                            await self.cache_manager.set(cache_key, [f.dict() for f in result], ttl=600)
+                            await self.cache_manager.set(
+                                cache_key, [f.dict() for f in result], ttl=600
+                            )
                         except Exception as e:
                             self.logger.warning(f"Cache set error: {e}")
                     return result
             except aiohttp.ClientError as e:
-                self.logger.error(f"Network error during repository contents listing: {e}")
-                raise GitHubClientError("Network error during repository contents listing", status_code=503)
+                self.logger.error(
+                    f"Network error during repository contents listing: {e}"
+                )
+                raise GitHubClientError(
+                    "Network error during repository contents listing", status_code=503
+                )
             except Exception as e:
-                self.logger.error(f"Unexpected error during repository contents listing: {e}")
-                raise GitHubClientError("Unexpected error during repository contents listing", status_code=500)
+                self.logger.error(
+                    f"Unexpected error during repository contents listing: {e}"
+                )
+                raise GitHubClientError(
+                    "Unexpected error during repository contents listing",
+                    status_code=500,
+                )
+
         return await self.circuit_breaker(api_call)()
 
     async def get_file_content(
-        self, 
-        owner: str, 
-        repo: str, 
-        path: str, 
-        ref: Optional[str] = None
+        self, owner: str, repo: str, path: str, ref: Optional[str] = None
     ) -> FileContent:
         """Fetch file content from repository.
-        
+
         Args:
             owner: Repository owner username.
             repo: Repository name.
             path: File path in repository.
             ref: Git reference (branch/tag/commit).
-        
+
         Returns:
             FileContent: File content and metadata.
-        
+
         Raises:
             GitHubClientError: On API or network failure.
             CircuitBreakerError: If circuit is open.
-        
+
         TODO: IMPLEMENTATION ENGINEER - Implement GitHub file content API call with circuit breaker.
         """
+
         async def api_call():
             url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
             headers = {
                 "Authorization": f"token {self.config.api_token}",
                 "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "DocaicheBot/1.0"
+                "User-Agent": "DocaicheBot/1.0",
             }
             params = {}
             if ref:
                 params["ref"] = ref
             try:
-                async with self.session.get(url, headers=headers, params=params, timeout=30) as resp:
+                async with self.session.get(
+                    url, headers=headers, params=params, timeout=30
+                ) as resp:
                     if resp.status == 401:
                         self.logger.error("GitHub authentication failed")
-                        raise GitHubClientError("Authentication failed", status_code=401)
+                        raise GitHubClientError(
+                            "Authentication failed", status_code=401
+                        )
                     if resp.status == 403:
                         reset = int(resp.headers.get("X-RateLimit-Reset", "0"))
                         remaining = int(resp.headers.get("X-RateLimit-Remaining", "0"))
                         limit = int(resp.headers.get("X-RateLimit-Limit", "0"))
-                        self.logger.warning("GitHub API rate limit exceeded or forbidden")
+                        self.logger.warning(
+                            "GitHub API rate limit exceeded or forbidden"
+                        )
                         raise GitHubClientError(
                             "Rate limit exceeded or forbidden",
                             status_code=403,
-                            error_context={"limit": limit, "remaining": remaining, "reset": reset}
+                            error_context={
+                                "limit": limit,
+                                "remaining": remaining,
+                                "reset": reset,
+                            },
                         )
                     if resp.status == 404:
                         self.logger.error("File not found")
                         raise GitHubClientError("File not found", status_code=404)
                     if resp.status >= 500:
                         self.logger.error(f"GitHub server error: {resp.status}")
-                        raise GitHubClientError("GitHub server error", status_code=resp.status)
+                        raise GitHubClientError(
+                            "GitHub server error", status_code=resp.status
+                        )
                     if resp.status != 200:
-                        self.logger.error(f"Unexpected GitHub API status: {resp.status}")
-                        raise GitHubClientError("Unexpected GitHub API status", status_code=resp.status)
+                        self.logger.error(
+                            f"Unexpected GitHub API status: {resp.status}"
+                        )
+                        raise GitHubClientError(
+                            "Unexpected GitHub API status", status_code=resp.status
+                        )
                     data = await resp.json()
                     if data.get("encoding") == "base64":
                         try:
-                            decoded = base64.b64decode(data.get("content", "")).decode("utf-8", errors="replace")
+                            decoded = base64.b64decode(data.get("content", "")).decode(
+                                "utf-8", errors="replace"
+                            )
                         except Exception as e:
                             self.logger.error(f"Base64 decode error: {e}")
-                            raise GitHubClientError("File content decode error", status_code=500)
+                            raise GitHubClientError(
+                                "File content decode error", status_code=500
+                            )
                         encoding = "utf-8"
                     else:
                         decoded = data.get("content", "")
@@ -497,10 +610,15 @@ class GitHubClient:
                     )
             except aiohttp.ClientError as e:
                 self.logger.error(f"Network error during file content fetch: {e}")
-                raise GitHubClientError("Network error during file content fetch", status_code=503)
+                raise GitHubClientError(
+                    "Network error during file content fetch", status_code=503
+                )
             except Exception as e:
                 self.logger.error(f"Unexpected error during file content fetch: {e}")
-                raise GitHubClientError("Unexpected error during file content fetch", status_code=500)
+                raise GitHubClientError(
+                    "Unexpected error during file content fetch", status_code=500
+                )
+
         return await self.circuit_breaker(api_call)()
 
     async def close(self):

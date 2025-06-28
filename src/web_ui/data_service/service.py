@@ -2,11 +2,17 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config.models import (
-    SystemConfiguration, AppConfig, ContentConfig, AnythingLLMConfig,
-    GitHubConfig, ScrapingConfig, RedisConfig, AIConfig, EnrichmentConfig
+    SystemConfiguration,
+    AppConfig,
+    ContentConfig,
+    AnythingLLMConfig,
+    GitHubConfig,
+    ScrapingConfig,
+    RedisConfig,
+    AIConfig,
+    EnrichmentConfig,
 )
 import logging
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +25,12 @@ _default_system_config = SystemConfiguration(
     scraping=ScrapingConfig(),
     redis=RedisConfig(),
     ai=AIConfig(),
-    enrichment=EnrichmentConfig()
+    enrichment=EnrichmentConfig(),
 )
 
 # In-memory store for system configuration (simulates persistent storage)
 _system_config_store = _default_system_config.model_copy()
+
 
 class DataService:
     def __init__(self, db_session: AsyncSession):
@@ -47,7 +54,7 @@ class DataService:
             "llm_provider": system_config.ai.primary_provider,
             "llm_model": system_config.ai.ollama.model,
             "temperature": system_config.ai.ollama.temperature,
-            "max_tokens": system_config.ai.ollama.max_tokens
+            "max_tokens": system_config.ai.ollama.max_tokens,
         }
 
     async def fetch_system_config(self) -> SystemConfiguration:
@@ -62,7 +69,7 @@ class DataService:
         logger.info(f"Updating legacy configuration with: {config}")
         # Convert legacy config to SystemConfiguration format and update
         current_config = await self.fetch_system_config()
-        
+
         # Map legacy fields to SystemConfiguration structure
         if "environment" in config:
             current_config.app.environment = config["environment"]
@@ -80,15 +87,17 @@ class DataService:
             current_config.ai.ollama.temperature = config["temperature"]
         if "max_tokens" in config:
             current_config.ai.ollama.max_tokens = config["max_tokens"]
-        
+
         # Update the store
         global _system_config_store
         _system_config_store = current_config
-        
+
         # Return legacy format
         return await self.fetch_config()
 
-    async def update_system_config(self, config: SystemConfiguration) -> SystemConfiguration:
+    async def update_system_config(
+        self, config: SystemConfiguration
+    ) -> SystemConfiguration:
         """Update full system configuration."""
         logger.info("Updating system configuration")
         # In real implementation, this would persist to database
@@ -101,7 +110,9 @@ class DataService:
     async def fetch_collections(self) -> list:
         """Fetch content collections."""
         logger.info("Fetching collections")
-        return [{"id": "collection1", "name": "Sample Collection", "content_id": "doc1"}]
+        return [
+            {"id": "collection1", "name": "Sample Collection", "content_id": "doc1"}
+        ]
 
     async def delete_content(self, content_id: str) -> dict:
         """Delete or flag content for removal."""

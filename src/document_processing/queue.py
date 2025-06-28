@@ -2,13 +2,15 @@
 Processing Queue Management.
 Implements PRD-006: Manages asynchronous document processing, error handling, retry logic, and progress tracking.
 """
+
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional
 from fastapi import HTTPException
 from src.document_processing.models import ProcessingJob, ProcessingStatus
 import json
 
 logger = logging.getLogger(__name__)
+
 
 class ProcessingQueueManager:
     """
@@ -49,7 +51,9 @@ class ProcessingQueueManager:
             logger.error(f"Failed to dequeue job: {e}")
             raise HTTPException(status_code=500, detail="Failed to dequeue job")
 
-    async def update_job_status(self, job_id: str, status: ProcessingStatus, progress: float):
+    async def update_job_status(
+        self, job_id: str, status: ProcessingStatus, progress: float
+    ):
         """
         Updates the status and progress of a processing job.
         """
@@ -57,7 +61,9 @@ class ProcessingQueueManager:
             status_key = f"{self.status_prefix}{job_id}"
             status_data = {"status": status, "progress": progress}
             await self.cache_manager.set(status_key, json.dumps(status_data))
-            logger.info(f"Updated status for job {job_id}: {status}, progress={progress}")
+            logger.info(
+                f"Updated status for job {job_id}: {status}, progress={progress}"
+            )
         except Exception as e:
             logger.error(f"Failed to update job status for {job_id}: {e}")
             raise HTTPException(status_code=500, detail="Failed to update job status")

@@ -11,14 +11,21 @@ import asyncio
 import aiohttp
 from typing import Any, Dict, Optional
 
-from .base_provider import BaseLLMProvider, LLMProviderError, LLMProviderTimeoutError, LLMProviderUnavailableError
+from .base_provider import (
+    BaseLLMProvider,
+    LLMProviderError,
+    LLMProviderTimeoutError,
+    LLMProviderUnavailableError,
+)
 
 logger = logging.getLogger(__name__)
+
 
 class CircuitBreaker:
     """
     Minimal stateful circuit breaker for PRD-005 contract compliance.
     """
+
     def __init__(self, failure_threshold=3, recovery_timeout=60):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
@@ -28,6 +35,7 @@ class CircuitBreaker:
 
     def record_failure(self, now=None):
         import time
+
         now = now or time.time()
         self.failures += 1
         self.last_failure_time = now
@@ -41,21 +49,27 @@ class CircuitBreaker:
 
     def is_open(self, now=None):
         import time
+
         now = now or time.time()
         if self.state == "open":
-            if self.last_failure_time and (now - self.last_failure_time) > self.recovery_timeout:
+            if (
+                self.last_failure_time
+                and (now - self.last_failure_time) > self.recovery_timeout
+            ):
                 self.state = "half_open"
             else:
                 return True
         return False
 
+
 class OllamaProvider(BaseLLMProvider):
     """
     Ollama-specific LLM provider implementing PRD-005 requirements.
-    
+
     Makes POST requests to Ollama's /api/generate endpoint with internal
     service circuit breaker configuration (failure_threshold=3, recovery_timeout=60).
     """
+
     def __init__(self, config: Optional[Dict[str, Any]] = None, cache_manager=None):
         """
         Initialize Ollama provider with configuration.
@@ -66,11 +80,11 @@ class OllamaProvider(BaseLLMProvider):
         """
         config = config or {}
         super().__init__(config, cache_manager)
-        self.endpoint = config.get('endpoint', 'http://localhost:11434').rstrip('/')
-        self.model = config.get('model', 'llama2')
-        self.temperature = config.get('temperature', 0.7)
-        self.max_tokens = config.get('max_tokens', 4096)
-        self.timeout = config.get('timeout_seconds', 60)
+        self.endpoint = config.get("endpoint", "http://localhost:11434").rstrip("/")
+        self.model = config.get("model", "llama2")
+        self.temperature = config.get("temperature", 0.7)
+        self.max_tokens = config.get("max_tokens", 4096)
+        self.timeout = config.get("timeout_seconds", 60)
         self.session: aiohttp.ClientSession = None
         self._circuit_breaker = self._create_circuit_breaker()
 
@@ -91,9 +105,9 @@ class OllamaProvider(BaseLLMProvider):
                 timeout=timeout,
                 connector=connector,
                 headers={
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'AI-Documentation-Cache/1.0'
-                }
+                    "Content-Type": "application/json",
+                    "User-Agent": "AI-Documentation-Cache/1.0",
+                },
             )
 
     async def _make_request(self, prompt: str, **kwargs) -> str:
@@ -103,10 +117,10 @@ class OllamaProvider(BaseLLMProvider):
         Args:
             prompt: Formatted prompt text
             **kwargs: Additional parameters (temperature, max_tokens, etc.)
-            
+
         Returns:
             Raw response text from Ollama
-            
+
         Raises:
             LLMProviderError: When request fails
             LLMProviderTimeoutError: When request times out
@@ -115,18 +129,18 @@ class OllamaProvider(BaseLLMProvider):
         if self._circuit_breaker.is_open():
             raise LLMProviderUnavailableError("Circuit breaker is open")
         payload = {
-            'model': kwargs.get('model', self.model),
-            'prompt': prompt,
-            'stream': False,
-            'options': {
-                'temperature': kwargs.get('temperature', self.temperature),
-                'num_predict': kwargs.get('max_tokens', self.max_tokens),
-            }
+            "model": kwargs.get("model", self.model),
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": kwargs.get("temperature", self.temperature),
+                "num_predict": kwargs.get("max_tokens", self.max_tokens),
+            },
         }
-        if 'top_p' in kwargs:
-            payload['options']['top_p'] = kwargs['top_p']
-        if 'top_k' in kwargs:
-            payload['options']['top_k'] = kwargs['top_k']
+        if "top_p" in kwargs:
+            payload["options"]["top_p"] = kwargs["top_p"]
+        if "top_k" in kwargs:
+            payload["options"]["top_k"] = kwargs["top_k"]
 
         url = f"{self.endpoint}/api/generate"
         try:
@@ -134,7 +148,9 @@ class OllamaProvider(BaseLLMProvider):
             async with self.session.post(url, json=payload) as response:
                 if response.status == 404:
                     self._circuit_breaker.record_failure()
-                    raise LLMProviderError(f"Ollama model '{payload['model']}' not found")
+                    raise LLMProviderError(
+                        f"Ollama model '{payload['model']}' not found"
+                    )
                 elif response.status == 500:
                     self._circuit_breaker.record_failure()
                     error_text = await response.text()
@@ -142,15 +158,19 @@ class OllamaProvider(BaseLLMProvider):
                 elif response.status != 200:
                     self._circuit_breaker.record_failure()
                     error_text = await response.text()
-                    raise LLMProviderError(f"Ollama request failed with status {response.status}: {error_text}")
+                    raise LLMProviderError(
+                        f"Ollama request failed with status {response.status}: {error_text}"
+                    )
                 response_data = await response.json()
-                if 'error' in response_data:
+                if "error" in response_data:
                     self._circuit_breaker.record_failure()
                     raise LLMProviderError(f"Ollama error: {response_data['error']}")
-                if 'response' not in response_data:
+                if "response" not in response_data:
                     self._circuit_breaker.record_failure()
-                    raise LLMProviderError("Invalid Ollama response format: missing 'response' field")
-                response_text = response_data['response']
+                    raise LLMProviderError(
+                        "Invalid Ollama response format: missing 'response' field"
+                    )
+                response_text = response_data["response"]
                 if not response_text or not response_text.strip():
                     self._circuit_breaker.record_failure()
                     raise LLMProviderError("Empty response from Ollama")
@@ -160,7 +180,9 @@ class OllamaProvider(BaseLLMProvider):
         except asyncio.TimeoutError:
             self._circuit_breaker.record_failure()
             logger.error(f"Ollama request timeout after {self.timeout}s")
-            raise LLMProviderTimeoutError(f"Ollama request timed out after {self.timeout}s")
+            raise LLMProviderTimeoutError(
+                f"Ollama request timed out after {self.timeout}s"
+            )
         except aiohttp.ClientError as e:
             self._circuit_breaker.record_failure()
             logger.error(f"Ollama client error: {e}")
@@ -184,21 +206,21 @@ class OllamaProvider(BaseLLMProvider):
                 if response.status == 200:
                     data = await response.json()
                     return {
-                        'models': [model['name'] for model in data.get('models', [])],
-                        'count': len(data.get('models', [])),
-                        'endpoint': self.endpoint
+                        "models": [model["name"] for model in data.get("models", [])],
+                        "count": len(data.get("models", [])),
+                        "endpoint": self.endpoint,
                     }
                 else:
                     return {
-                        'models': [],
-                        'count': 0,
-                        'error': f"Failed to fetch models: HTTP {response.status}"
+                        "models": [],
+                        "count": 0,
+                        "error": f"Failed to fetch models: HTTP {response.status}",
                     }
         except Exception as e:
             return {
-                'models': [],
-                'count': 0,
-                'error': f"Error fetching models: {str(e)}"
+                "models": [],
+                "count": 0,
+                "error": f"Error fetching models: {str(e)}",
             }
 
     async def health_check(self) -> Dict[str, Any]:
@@ -212,28 +234,24 @@ class OllamaProvider(BaseLLMProvider):
             await self._ensure_session()
             url = f"{self.endpoint}/api/generate"
             test_payload = {
-                'model': self.model,
-                'prompt': 'Respond with just: OK',
-                'stream': False,
-                'options': {
-                    'num_predict': 10,
-                    'temperature': 0.1
-                }
+                "model": self.model,
+                "prompt": "Respond with just: OK",
+                "stream": False,
+                "options": {"num_predict": 10, "temperature": 0.1},
             }
             async with asyncio.wait_for(
-                self.session.post(url, json=test_payload),
-                timeout=10.0
+                self.session.post(url, json=test_payload), timeout=10.0
             ) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if 'response' in data:
+                    if "response" in data:
                         self._circuit_breaker.record_success()
                         return {
                             "provider": "ollama",
                             "status": "healthy",
                             "endpoint": self.endpoint,
                             "model": self.model,
-                            "circuit_breaker": self._circuit_breaker.state
+                            "circuit_breaker": self._circuit_breaker.state,
                         }
                 self._circuit_breaker.record_failure()
                 return {
@@ -241,25 +259,25 @@ class OllamaProvider(BaseLLMProvider):
                     "status": "unhealthy",
                     "error": f"Unexpected response status: {response.status}",
                     "endpoint": self.endpoint,
-                    "circuit_breaker": self._circuit_breaker.state
+                    "circuit_breaker": self._circuit_breaker.state,
                 }
         except asyncio.TimeoutError:
             self._circuit_breaker.record_failure()
             return {
-                "provider": "ollama", 
+                "provider": "ollama",
                 "status": "unhealthy",
                 "error": "Health check timeout",
                 "endpoint": self.endpoint,
-                "circuit_breaker": self._circuit_breaker.state
+                "circuit_breaker": self._circuit_breaker.state,
             }
         except Exception as e:
             self._circuit_breaker.record_failure()
             return {
                 "provider": "ollama",
-                "status": "unhealthy", 
+                "status": "unhealthy",
                 "error": str(e),
                 "endpoint": self.endpoint,
-                "circuit_breaker": self._circuit_breaker.state
+                "circuit_breaker": self._circuit_breaker.state,
             }
 
     async def close(self):

@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, Optional
 
+
 class ResponseValidator:
     """Validates responses for quality, structure, and completeness."""
 
@@ -16,7 +17,9 @@ class ResponseValidator:
 
         if schema:
             for key, expected_type in schema.items():
-                if key not in response or not isinstance(response.get(key), expected_type):
+                if key not in response or not isinstance(
+                    response.get(key), expected_type
+                ):
                     return False
-        
+
         return True

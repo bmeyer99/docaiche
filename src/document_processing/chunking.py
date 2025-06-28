@@ -2,14 +2,16 @@
 Document Chunking Strategies.
 Implements PRD-006: Splits documents into manageable chunks for processing and storage.
 """
+
 import logging
-from typing import Optional, Dict, Any, List
+from typing import List
 from fastapi import HTTPException
 from src.document_processing.models import DocumentChunk
 import uuid
 import re
 
 logger = logging.getLogger(__name__)
+
 
 class DocumentChunker:
     """
@@ -39,7 +41,7 @@ class DocumentChunker:
                     content=chunk_text,
                     chunk_index=idx,
                     start_offset=start,
-                    end_offset=end
+                    end_offset=end,
                 )
                 chunks.append(chunk)
                 idx += 1
@@ -49,12 +51,14 @@ class DocumentChunker:
             logger.error(f"Chunking failed: {e}")
             raise HTTPException(status_code=500, detail="Chunking failed")
 
-    async def semantic_chunking(self, text: str, document_id: str) -> List[DocumentChunk]:
+    async def semantic_chunking(
+        self, text: str, document_id: str
+    ) -> List[DocumentChunk]:
         """
         Splits text into chunks based on sentence boundaries (simple heuristic).
         """
         try:
-            sentences = re.split(r'(?<=[.!?]) +', text)
+            sentences = re.split(r"(?<=[.!?]) +", text)
             chunks = []
             chunk_text = ""
             idx = 0
@@ -68,7 +72,7 @@ class DocumentChunker:
                         content=chunk_text.strip(),
                         chunk_index=idx,
                         start_offset=start_offset,
-                        end_offset=start_offset + len(chunk_text)
+                        end_offset=start_offset + len(chunk_text),
                     )
                     chunks.append(chunk)
                     idx += 1
@@ -83,7 +87,7 @@ class DocumentChunker:
                     content=chunk_text.strip(),
                     chunk_index=idx,
                     start_offset=start_offset,
-                    end_offset=start_offset + len(chunk_text)
+                    end_offset=start_offset + len(chunk_text),
                 )
                 chunks.append(chunk)
             return chunks

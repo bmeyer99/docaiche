@@ -1,12 +1,13 @@
 # src/enrichment/analyzers.py
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 import logging
 from abc import ABC, abstractmethod
 from src.enrichment.models import GapAnalysisResult, EnrichmentTask
 from src.enrichment.exceptions import GapAnalysisException
 
 logger = logging.getLogger(__name__)
+
 
 class GapAnalyzer(ABC):
     """
@@ -29,6 +30,7 @@ class GapAnalyzer(ABC):
         # TODO: IMPLEMENTATION ENGINEER - Implement gap analysis logic:
         """
         pass
+
 
 class SimpleGapAnalyzer(GapAnalyzer):
     """

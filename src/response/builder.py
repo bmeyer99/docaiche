@@ -2,10 +2,12 @@
 
 Responsible for assembling response objects from synthesized content and templates.
 """
+
 from typing import Any, Dict, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class ResponseBuilder:
     """Builds structured response objects from content and templates.
@@ -35,7 +37,7 @@ class ResponseBuilder:
         meta: Optional[Dict[str, Any]] = None,
         *,
         data: Any = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """Build a structured response object.
 
@@ -57,7 +59,11 @@ class ResponseBuilder:
             # Accept meta as a keyword argument, default to {}
             meta = meta if meta is not None else kwargs.get("meta", {})
             # Accept template_name as a keyword argument, default to "default"
-            template_name = template_name if template_name is not None else kwargs.get("template_name", "default")
+            template_name = (
+                template_name
+                if template_name is not None
+                else kwargs.get("template_name", "default")
+            )
             if content is None:
                 raise ValueError("Synthesized content/data is required.")
             if meta is not None and not isinstance(meta, dict):

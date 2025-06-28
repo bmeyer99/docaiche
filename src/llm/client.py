@@ -5,9 +5,9 @@ Main client class that instantiates correct provider based on configuration
 Implements failover logic between primary/fallback providers, manages provider
 selection and health monitoring as specified in PRD-005.
 """
+
 import logging
-import asyncio
-from typing import Any, Dict, Optional, Type, TypeVar, Union, List
+from typing import Any, Dict, Optional, Type, TypeVar, List
 from enum import Enum
 
 from .base_provider import BaseLLMProvider, LLMProviderError
@@ -24,14 +24,17 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T', EvaluationResult, EnrichmentStrategy, QualityAssessment)
+T = TypeVar("T", EvaluationResult, EnrichmentStrategy, QualityAssessment)
+
 
 class ProviderStatus(Enum):
     """Provider health status enumeration"""
+
     HEALTHY = "healthy"
     UNHEALTHY = "unhealthy"
     RATE_LIMITED = "rate_limited"
     UNKNOWN = "unknown"
+
 
 class LLMProviderClient:
     """
@@ -56,7 +59,7 @@ class LLMProviderClient:
         self.status: LLMProviderStatus = get_provider_status(self.config)
         self.primary_provider_name = getattr(self.status, "primary_provider", None)
         self.fallback_provider_name = getattr(self.status, "fallback_provider", None)
-        self.enable_failover = self.config.get('enable_failover', True)
+        self.enable_failover = self.config.get("enable_failover", True)
 
         # Provider instances
         self.providers: Dict[str, BaseLLMProvider] = {}
@@ -66,8 +69,12 @@ class LLMProviderClient:
         self._initialize_providers()
 
         # Store actual provider objects for patching/mocking
-        self._primary_provider: Optional[BaseLLMProvider] = self.providers.get(self.primary_provider_name)
-        self._fallback_provider: Optional[BaseLLMProvider] = self.providers.get(self.fallback_provider_name)
+        self._primary_provider: Optional[BaseLLMProvider] = self.providers.get(
+            self.primary_provider_name
+        )
+        self._fallback_provider: Optional[BaseLLMProvider] = self.providers.get(
+            self.fallback_provider_name
+        )
 
         # Health monitoring
         self._last_health_check = 0
@@ -76,20 +83,32 @@ class LLMProviderClient:
     def _initialize_providers(self):
         """Initialize available LLM providers based on configuration."""
         # Ollama
-        ollama_cfg = self.config.get('ollama', {})
-        if ollama_cfg.get('enabled') and ollama_cfg.get('endpoint') and ollama_cfg.get('model'):
+        ollama_cfg = self.config.get("ollama", {})
+        if (
+            ollama_cfg.get("enabled")
+            and ollama_cfg.get("endpoint")
+            and ollama_cfg.get("model")
+        ):
             try:
-                self.providers['ollama'] = OllamaProvider(ollama_cfg, self.cache_manager)
-                self.provider_status['ollama'] = ProviderStatus.UNKNOWN
+                self.providers["ollama"] = OllamaProvider(
+                    ollama_cfg, self.cache_manager
+                )
+                self.provider_status["ollama"] = ProviderStatus.UNKNOWN
                 logger.info("Ollama provider initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize Ollama provider: {e}")
         # OpenAI
-        openai_cfg = self.config.get('openai', {})
-        if openai_cfg.get('enabled') and openai_cfg.get('api_key') and openai_cfg.get('model'):
+        openai_cfg = self.config.get("openai", {})
+        if (
+            openai_cfg.get("enabled")
+            and openai_cfg.get("api_key")
+            and openai_cfg.get("model")
+        ):
             try:
-                self.providers['openai'] = OpenAIProvider(openai_cfg, self.cache_manager)
-                self.provider_status['openai'] = ProviderStatus.UNKNOWN
+                self.providers["openai"] = OpenAIProvider(
+                    openai_cfg, self.cache_manager
+                )
+                self.provider_status["openai"] = ProviderStatus.UNKNOWN
                 logger.info("OpenAI provider initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI provider: {e}")
@@ -98,10 +117,7 @@ class LLMProviderClient:
             logger.warning("No LLM providers were successfully initialized")
 
     async def generate_structured(
-        self,
-        prompt: str,
-        response_model: Type[T],
-        **kwargs
+        self, prompt: str, response_model: Type[T], **kwargs
     ) -> T:
         """
         Generate structured response with automatic failover.
@@ -127,7 +143,9 @@ class LLMProviderClient:
 
         if not providers_to_try:
             logger.warning("No LLM providers are available for structured generation")
-            raise LLMProviderUnavailableError("No LLM providers are configured or available")
+            raise LLMProviderUnavailableError(
+                "No LLM providers are configured or available"
+            )
 
         last_error = None
 
@@ -137,8 +155,10 @@ class LLMProviderClient:
                 continue
 
             # Skip unhealthy providers unless it's the last option
-            if (self.provider_status.get(provider_name) == ProviderStatus.UNHEALTHY
-                and provider_name != providers_to_try[-1]):
+            if (
+                self.provider_status.get(provider_name) == ProviderStatus.UNHEALTHY
+                and provider_name != providers_to_try[-1]
+            ):
                 logger.debug(f"Skipping unhealthy provider: {provider_name}")
                 continue
 
@@ -146,7 +166,9 @@ class LLMProviderClient:
                 logger.info(f"Attempting LLM generation with {provider_name}")
 
                 # Make request with provider
-                result = await provider.generate_structured(prompt, response_model, **kwargs)
+                result = await provider.generate_structured(
+                    prompt, response_model, **kwargs
+                )
 
                 # Mark provider as healthy on success
                 self.provider_status[provider_name] = ProviderStatus.HEALTHY
@@ -186,7 +208,9 @@ class LLMProviderClient:
             except Exception as e:
                 # Unexpected errors
                 self.provider_status[provider_name] = ProviderStatus.UNHEALTHY
-                last_error = LLMProviderError(f"Unexpected error from {provider_name}: {str(e)}")
+                last_error = LLMProviderError(
+                    f"Unexpected error from {provider_name}: {str(e)}"
+                )
                 logger.error(f"Unexpected error from {provider_name}: {e}")
 
                 if not self.enable_failover:
@@ -196,7 +220,9 @@ class LLMProviderClient:
         if last_error:
             raise last_error
         else:
-            raise LLMProviderUnavailableError("All LLM providers failed or are unavailable")
+            raise LLMProviderUnavailableError(
+                "All LLM providers failed or are unavailable"
+            )
 
     def _get_provider_order(self) -> List[str]:
         """
@@ -208,16 +234,19 @@ class LLMProviderClient:
         providers_to_try = []
         if self.primary_provider_name and self.primary_provider_name in self.providers:
             providers_to_try.append(self.primary_provider_name)
-        if (self.enable_failover
+        if (
+            self.enable_failover
             and self.fallback_provider_name
             and self.fallback_provider_name in self.providers
-            and self.fallback_provider_name != self.primary_provider_name):
+            and self.fallback_provider_name != self.primary_provider_name
+        ):
             providers_to_try.append(self.fallback_provider_name)
         return providers_to_try
 
     async def _maybe_check_health(self):
         """Perform periodic health checks on providers."""
         import time
+
         current_time = time.time()
 
         if current_time - self._last_health_check > self._health_check_interval:
@@ -230,9 +259,9 @@ class LLMProviderClient:
             try:
                 health_result = await provider.health_check()
 
-                if health_result.get('status') == 'healthy':
+                if health_result.get("status") == "healthy":
                     self.provider_status[provider_name] = ProviderStatus.HEALTHY
-                elif health_result.get('status') == 'rate_limited':
+                elif health_result.get("status") == "rate_limited":
                     self.provider_status[provider_name] = ProviderStatus.RATE_LIMITED
                 else:
                     self.provider_status[provider_name] = ProviderStatus.UNHEALTHY
@@ -257,21 +286,22 @@ class LLMProviderClient:
                 health_result = await provider.health_check()
                 provider_health[provider_name] = {
                     **health_result,
-                    'status_enum': self.provider_status[provider_name].value,
-                    'is_primary': provider_name == self.primary_provider_name,
-                    'is_fallback': provider_name == self.fallback_provider_name
+                    "status_enum": self.provider_status[provider_name].value,
+                    "is_primary": provider_name == self.primary_provider_name,
+                    "is_fallback": provider_name == self.fallback_provider_name,
                 }
             except Exception as e:
                 provider_health[provider_name] = {
-                    'status': 'error',
-                    'error': str(e),
-                    'status_enum': ProviderStatus.UNHEALTHY.value,
-                    'is_primary': provider_name == self.primary_provider_name,
-                    'is_fallback': provider_name == self.fallback_provider_name
+                    "status": "error",
+                    "error": str(e),
+                    "status_enum": ProviderStatus.UNHEALTHY.value,
+                    "is_primary": provider_name == self.primary_provider_name,
+                    "is_fallback": provider_name == self.fallback_provider_name,
                 }
 
         healthy_providers = [
-            name for name, status in self.provider_status.items()
+            name
+            for name, status in self.provider_status.items()
             if status == ProviderStatus.HEALTHY
         ]
 
@@ -279,15 +309,15 @@ class LLMProviderClient:
         fallback_health = provider_health.get(self.fallback_provider_name, {})
 
         return {
-            'overall_status': 'healthy' if healthy_providers else 'degraded',
-            'providers': provider_health,
-            'primary_provider': self.primary_provider_name,
-            'fallback_provider': self.fallback_provider_name,
-            'failover_enabled': self.enable_failover,
-            'healthy_providers': healthy_providers,
-            'provider_count': len(self.providers),
-            'primary': primary_health,
-            'fallback': fallback_health
+            "overall_status": "healthy" if healthy_providers else "degraded",
+            "providers": provider_health,
+            "primary_provider": self.primary_provider_name,
+            "fallback_provider": self.fallback_provider_name,
+            "failover_enabled": self.enable_failover,
+            "healthy_providers": healthy_providers,
+            "provider_count": len(self.providers),
+            "primary": primary_health,
+            "fallback": fallback_health,
         }
 
     async def list_models(self, provider_name: Optional[str] = None) -> Dict[str, Any]:
@@ -302,7 +332,7 @@ class LLMProviderClient:
         """
         if provider_name:
             if provider_name not in self.providers:
-                return {'error': f'Provider {provider_name} not found'}
+                return {"error": f"Provider {provider_name} not found"}
 
             provider = self.providers[provider_name]
             return await provider.list_models()
@@ -314,7 +344,7 @@ class LLMProviderClient:
                 models_info = await provider.list_models()
                 all_models[name] = models_info
             except Exception as e:
-                all_models[name] = {'error': str(e)}
+                all_models[name] = {"error": str(e)}
 
         return all_models
 
@@ -335,7 +365,9 @@ class LLMProviderClient:
         """
         if not self.status.any_provider_available:
             logger.info("LLM evaluation unavailable: no providers enabled")
-            raise LLMProviderUnavailableError("No LLM providers are configured or available")
+            raise LLMProviderUnavailableError(
+                "No LLM providers are configured or available"
+            )
 
         from .prompt_manager import get_prompt_manager, PromptTemplateError
 
@@ -358,15 +390,17 @@ class LLMProviderClient:
             raise LLMProviderError("Unexpected error formatting prompt")
 
         try:
-            return await self.generate_structured(
-                prompt, EvaluationResult
-            )
+            return await self.generate_structured(prompt, EvaluationResult)
         except Exception as e:
             logger.error(f"LLM response parsing error: {e}")
             return None
 
     async def generate_enrichment_strategy(
-        self, original_query: str, missing_aspects: list, current_results: str, domain: str
+        self,
+        original_query: str,
+        missing_aspects: list,
+        current_results: str,
+        domain: str,
     ) -> Optional[EnrichmentStrategy]:
         """
         Generate enrichment strategy using the strategy.prompt template.
@@ -383,7 +417,9 @@ class LLMProviderClient:
         """
         if not self.status.any_provider_available:
             logger.info("LLM enrichment unavailable: no providers enabled")
-            raise LLMProviderUnavailableError("No LLM providers are configured or available")
+            raise LLMProviderUnavailableError(
+                "No LLM providers are configured or available"
+            )
 
         from .prompt_manager import get_prompt_manager, PromptTemplateError
 
@@ -408,9 +444,7 @@ class LLMProviderClient:
             raise LLMProviderError("Unexpected error formatting prompt")
 
         try:
-            return await self.generate_structured(
-                prompt, EnrichmentStrategy
-            )
+            return await self.generate_structured(prompt, EnrichmentStrategy)
         except Exception as e:
             logger.error(f"LLM response parsing error: {e}")
             return None
@@ -433,7 +467,9 @@ class LLMProviderClient:
         """
         if not self.status.any_provider_available:
             logger.info("LLM quality assessment unavailable: no providers enabled")
-            raise LLMProviderUnavailableError("No LLM providers are configured or available")
+            raise LLMProviderUnavailableError(
+                "No LLM providers are configured or available"
+            )
 
         from .prompt_manager import get_prompt_manager, PromptTemplateError
 
@@ -458,9 +494,7 @@ class LLMProviderClient:
             raise LLMProviderError("Unexpected error formatting prompt")
 
         try:
-            return await self.generate_structured(
-                prompt, QualityAssessment
-            )
+            return await self.generate_structured(prompt, QualityAssessment)
         except Exception as e:
             logger.error(f"LLM response parsing error: {e}")
             return None
@@ -474,6 +508,7 @@ class LLMProviderClient:
             Sanitized string
         """
         import re
+
         sanitized = re.sub(r"[{}]", "", value)
         sanitized = re.sub(r"[\x00-\x1f\x7f]", " ", sanitized)
         sanitized = sanitized.strip()
@@ -492,7 +527,10 @@ class LLMProviderClient:
 
         logger.info("LLM provider client closed")
 
-async def create_llm_client(ai_config: Optional[Dict[str, Any]] = None, cache_manager=None) -> LLMProviderClient:
+
+async def create_llm_client(
+    ai_config: Optional[Dict[str, Any]] = None, cache_manager=None
+) -> LLMProviderClient:
     """
     Factory function to create LLMProviderClient with configuration integration.
 

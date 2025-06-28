@@ -5,9 +5,10 @@ import logging
 from abc import ABC, abstractmethod
 from src.enrichment.models import EnrichmentTask
 from src.enrichment.enricher import KnowledgeEnricher
-from src.enrichment.exceptions import BackgroundTaskException, EnrichmentException
+from src.enrichment.exceptions import BackgroundTaskException
 
 logger = logging.getLogger(__name__)
+
 
 class BackgroundEnrichmentTask(ABC):
     """
@@ -31,6 +32,7 @@ class BackgroundEnrichmentTask(ABC):
         # TODO: IMPLEMENTATION ENGINEER - Implement background task execution:
         """
         pass
+
 
 class SimpleBackgroundEnrichmentTask(BackgroundEnrichmentTask):
     """

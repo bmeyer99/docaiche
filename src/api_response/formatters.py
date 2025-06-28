@@ -6,6 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class BaseAPIFormatter(ABC):
     """
     Abstract base class for API response formatters.
@@ -31,6 +32,7 @@ class BaseAPIFormatter(ABC):
         # OUTPUT: Formatted response (e.g., JSON serializable).
         """
         pass
+
 
 class JSONAPIFormatter(BaseAPIFormatter):
     """
@@ -63,6 +65,7 @@ class JSONAPIFormatter(BaseAPIFormatter):
         except Exception as e:
             logger.error(f"JSONAPIFormatter failed: {e}", exc_info=True)
             raise
+
 
 class SimpleJSONFormatter(BaseAPIFormatter):
     """

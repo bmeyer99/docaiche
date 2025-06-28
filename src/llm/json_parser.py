@@ -9,21 +9,25 @@ against expected Pydantic model schemas as specified in PRD-005.
 import logging
 import json
 import re
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Optional, Type, TypeVar
 from pydantic import BaseModel, ValidationError
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T', bound=BaseModel)
+T = TypeVar("T", bound=BaseModel)
 
 
 class JSONParsingError(Exception):
     """Raised when JSON cannot be extracted or parsed from LLM response"""
+
     pass
+
 
 class JSONValidationError(Exception):
     """Raised when JSON doesn't match expected Pydantic model schema"""
+
     pass
+
 
 class JSONParser:
     """
@@ -119,7 +123,7 @@ class JSONParser:
     @staticmethod
     def _extract_from_markdown(text: str) -> Optional[str]:
         """Extract JSON from markdown code blocks."""
-        json_pattern = r'```(?:json)?\s*\n?(.*?)\n?```'
+        json_pattern = r"```(?:json)?\s*\n?(.*?)\n?```"
         matches = re.findall(json_pattern, text, re.DOTALL | re.IGNORECASE)
 
         for match in matches:
@@ -132,7 +136,7 @@ class JSONParser:
     @staticmethod
     def _extract_by_braces(text: str) -> Optional[str]:
         """Extract JSON by finding balanced brace boundaries."""
-        start_pos = text.find('{')
+        start_pos = text.find("{")
         if start_pos == -1:
             return None
 
@@ -140,16 +144,16 @@ class JSONParser:
         end_pos = start_pos
 
         for i, char in enumerate(text[start_pos:], start_pos):
-            if char == '{':
+            if char == "{":
                 brace_count += 1
-            elif char == '}':
+            elif char == "}":
                 brace_count -= 1
                 if brace_count == 0:
                     end_pos = i
                     break
 
         if brace_count == 0:
-            candidate = text[start_pos:end_pos + 1]
+            candidate = text[start_pos : end_pos + 1]
             if JSONParser._is_valid_json_structure(candidate):
                 return candidate
 
@@ -163,15 +167,15 @@ class JSONParser:
             return False
 
         # Must start and end with braces
-        if not (text.startswith('{') and text.endswith('}')):
+        if not (text.startswith("{") and text.endswith("}")):
             return False
 
         # Basic brace balance check
         brace_count = 0
         for char in text:
-            if char == '{':
+            if char == "{":
                 brace_count += 1
-            elif char == '}':
+            elif char == "}":
                 brace_count -= 1
                 if brace_count < 0:
                     return False
@@ -189,25 +193,25 @@ class JSONParser:
         - Unquoted keys
         """
         # Remove explanatory text before and after JSON-like content
-        lines = text.split('\n')
+        lines = text.split("\n")
         json_lines = []
         in_json = False
 
         for line in lines:
             line_stripped = line.strip()
-            if '{' in line_stripped:
+            if "{" in line_stripped:
                 in_json = True
 
             if in_json:
                 json_lines.append(line)
 
-            if '}' in line_stripped and in_json:
+            if "}" in line_stripped and in_json:
                 break
 
         if not json_lines:
             return None
 
-        candidate = '\n'.join(json_lines).strip()
+        candidate = "\n".join(json_lines).strip()
 
         # Try to fix common issues
         candidate = JSONParser._fix_trailing_commas(candidate)
@@ -226,14 +230,14 @@ class JSONParser:
     @staticmethod
     def _fix_trailing_commas(text: str) -> str:
         """Remove trailing commas before closing braces/brackets."""
-        text = re.sub(r',\s*}', '}', text)
-        text = re.sub(r',\s*]', ']', text)
+        text = re.sub(r",\s*}", "}", text)
+        text = re.sub(r",\s*]", "]", text)
         return text
 
     @staticmethod
     def _fix_missing_quotes(text: str) -> str:
         """Add quotes around unquoted keys (basic attempt)."""
-        text = re.sub(r'(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', text)
+        text = re.sub(r"(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:", r'\1"\2":', text)
         return text
 
     @staticmethod
@@ -241,14 +245,14 @@ class JSONParser:
         """Add missing closing braces if needed."""
         brace_count = 0
         for char in text:
-            if char == '{':
+            if char == "{":
                 brace_count += 1
-            elif char == '}':
+            elif char == "}":
                 brace_count -= 1
 
         # Add missing closing braces
         if brace_count > 0:
-            text += '}' * brace_count
+            text += "}" * brace_count
 
         return text
 

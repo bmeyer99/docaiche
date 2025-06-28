@@ -5,13 +5,16 @@ Health check and statistics endpoints
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, Request, Query
 
 from .middleware import limiter
 from .dependencies import (
-    get_database_manager, get_cache_manager, get_anythingllm_client, get_search_orchestrator
+    get_database_manager,
+    get_cache_manager,
+    get_anythingllm_client,
+    get_search_orchestrator,
 )
 from src.database.connection import DatabaseManager, CacheManager
 from src.clients.anythingllm import AnythingLLMClient
@@ -23,12 +26,13 @@ logger = logging.getLogger(__name__)
 # Create router for health endpoints
 router = APIRouter()
 
+
 @router.get("/health", tags=["health"])
 async def health_check(
     db_manager: DatabaseManager = Depends(get_database_manager),
     cache_manager: CacheManager = Depends(get_cache_manager),
     anythingllm_client: AnythingLLMClient = Depends(get_anythingllm_client),
-    search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator)
+    search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator),
 ):
     """
     GET /api/v1/health - Reports the health of the system and its dependencies
@@ -41,7 +45,7 @@ async def health_check(
     features = {
         "document_processing": "available",
         "search": "available",
-        "llm_enhancement": "available"
+        "llm_enhancement": "available",
     }
     overall_status = "healthy"
     version = "1.0.0"
@@ -51,68 +55,113 @@ async def health_check(
     try:
         db_health = await db_manager.health_check()
         db_status = "healthy" if db_health.get("status") == "healthy" else "unhealthy"
-        db_msg = db_health.get("message", "Connected" if db_status == "healthy" else "Unknown error")
+        db_msg = db_health.get(
+            "message", "Connected" if db_status == "healthy" else "Unknown error"
+        )
         components["database"] = {"status": db_status, "message": db_msg}
         if db_status != "healthy":
             overall_status = "degraded"
     except Exception as e:
-        components["database"] = {"status": "unavailable", "message": f"Connection failed: {e}"}
+        components["database"] = {
+            "status": "unavailable",
+            "message": f"Connection failed: {e}",
+        }
         overall_status = "degraded"
 
     # Redis/Cache
     try:
         cache_health = await cache_manager.health_check()
-        cache_status = "healthy" if cache_health.get("status") == "healthy" else "unavailable"
-        cache_msg = cache_health.get("message", "Connected" if cache_status == "healthy" else "Unavailable")
+        cache_status = (
+            "healthy" if cache_health.get("status") == "healthy" else "unavailable"
+        )
+        cache_msg = cache_health.get(
+            "message", "Connected" if cache_status == "healthy" else "Unavailable"
+        )
         components["redis"] = {"status": cache_status, "message": cache_msg}
         if cache_status != "healthy":
             overall_status = "degraded"
             features["search"] = "unavailable"
     except Exception as e:
-        components["redis"] = {"status": "unavailable", "message": f"Connection failed: {e}"}
+        components["redis"] = {
+            "status": "unavailable",
+            "message": f"Connection failed: {e}",
+        }
         overall_status = "degraded"
         features["search"] = "unavailable"
 
     # AnythingLLM
     try:
         llm_health = await anythingllm_client.health_check()
-        llm_status = "healthy" if llm_health.get("status") == "healthy" else "unavailable"
-        llm_msg = llm_health.get("message", "Connected" if llm_status == "healthy" else "Service not configured")
+        llm_status = (
+            "healthy" if llm_health.get("status") == "healthy" else "unavailable"
+        )
+        llm_msg = llm_health.get(
+            "message",
+            "Connected" if llm_status == "healthy" else "Service not configured",
+        )
         components["anythingllm"] = {"status": llm_status, "message": llm_msg}
         if llm_status != "healthy":
             features["llm_enhancement"] = "unavailable"
-    except Exception as e:
-        components["anythingllm"] = {"status": "unavailable", "message": "Service not configured"}
+    except Exception:
+        components["anythingllm"] = {
+            "status": "unavailable",
+            "message": "Service not configured",
+        }
         features["llm_enhancement"] = "unavailable"
 
     # LLM Providers (Ollama/OpenAI/etc)
     try:
         config = get_system_configuration()
         ai_config = getattr(config, "ai", None)
-        if ai_config and (getattr(ai_config, "ollama", None) or getattr(ai_config, "openai", None)):
-            components["llm_providers"] = {"status": "configured", "message": "LLM providers enabled"}
+        if ai_config and (
+            getattr(ai_config, "ollama", None) or getattr(ai_config, "openai", None)
+        ):
+            components["llm_providers"] = {
+                "status": "configured",
+                "message": "LLM providers enabled",
+            }
         else:
-            components["llm_providers"] = {"status": "none_configured", "message": "No LLM providers enabled"}
+            components["llm_providers"] = {
+                "status": "none_configured",
+                "message": "No LLM providers enabled",
+            }
             features["llm_enhancement"] = "unavailable"
     except Exception:
-        components["llm_providers"] = {"status": "none_configured", "message": "No LLM providers enabled"}
+        components["llm_providers"] = {
+            "status": "none_configured",
+            "message": "No LLM providers enabled",
+        }
         features["llm_enhancement"] = "unavailable"
 
     # Search Orchestrator
     try:
         search_health = await search_orchestrator.health_check()
-        search_status = "healthy" if search_health.get("status") == "healthy" else "degraded"
-        search_msg = search_health.get("message", "Connected" if search_status == "healthy" else "Degraded")
-        components["search_orchestrator"] = {"status": search_status, "message": search_msg}
+        search_status = (
+            "healthy" if search_health.get("status") == "healthy" else "degraded"
+        )
+        search_msg = search_health.get(
+            "message", "Connected" if search_status == "healthy" else "Degraded"
+        )
+        components["search_orchestrator"] = {
+            "status": search_status,
+            "message": search_msg,
+        }
         if search_status != "healthy" and overall_status == "healthy":
             overall_status = "degraded"
     except Exception as e:
-        components["search_orchestrator"] = {"status": "degraded", "message": f"Error: {e}"}
+        components["search_orchestrator"] = {
+            "status": "degraded",
+            "message": f"Error: {e}",
+        }
         if overall_status == "healthy":
             overall_status = "degraded"
 
     # If all major components are unavailable, mark as unhealthy
-    unavailable_count = sum(1 for c in ["database", "redis", "anythingllm"] if components.get(c, {}).get("status") in ["unavailable", "unhealthy"])
+    unavailable_count = sum(
+        1
+        for c in ["database", "redis", "anythingllm"]
+        if components.get(c, {}).get("status") in ["unavailable", "unhealthy"]
+    )
     if unavailable_count == 3:
         overall_status = "unhealthy"
 
@@ -123,7 +172,7 @@ async def health_check(
         "timestamp": now,
         "version": version,
         "components": components,
-        "features": features
+        "features": features,
     }
 
 
@@ -132,7 +181,7 @@ async def health_check(
 async def get_stats(
     request: Request,
     db_manager: DatabaseManager = Depends(get_database_manager),
-    cache_manager: CacheManager = Depends(get_cache_manager)
+    cache_manager: CacheManager = Depends(get_cache_manager),
 ):
     """
     GET /api/v1/stats - Provides usage and performance statistics
@@ -141,6 +190,7 @@ async def get_stats(
         StatsResponse with system statistics
     """
     from .schemas import StatsResponse
+
     try:
         # Mock statistics data conforming to schema
         return StatsResponse(
@@ -149,33 +199,34 @@ async def get_stats(
                 "avg_response_time_ms": 125,
                 "cache_hit_rate": 0.73,
                 "successful_searches": 1189,
-                "failed_searches": 58
+                "failed_searches": 58,
             },
             cache_stats={
                 "hit_rate": 0.73,
                 "miss_rate": 0.27,
                 "total_keys": 3456,
                 "memory_usage_mb": 256,
-                "evictions": 12
+                "evictions": 12,
             },
             content_stats={
                 "total_documents": 15432,
                 "total_chunks": 89765,
                 "avg_quality_score": 0.82,
                 "workspaces": 12,
-                "last_enrichment": datetime.utcnow()
+                "last_enrichment": datetime.utcnow(),
             },
             system_stats={
                 "uptime_seconds": 86400,
                 "cpu_usage_percent": 15.3,
                 "memory_usage_mb": 512,
-                "disk_usage_mb": 2048
+                "disk_usage_mb": 2048,
             },
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
     except Exception as e:
         logger.error(f"Stats retrieval failed: {e}")
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail="Statistics unavailable")
 
 
@@ -183,7 +234,9 @@ async def get_stats(
 @limiter.limit("30/minute")
 async def get_analytics(
     request: Request,
-    timeRange: str = Query("24h", description="Time range for analytics (24h, 7d, 30d)")
+    timeRange: str = Query(
+        "24h", description="Time range for analytics (24h, 7d, 30d)"
+    ),
 ) -> Dict[str, Any]:
     """
     GET /api/v1/analytics - Get system analytics data
@@ -193,7 +246,9 @@ async def get_analytics(
         return {
             "timeRange": timeRange,
             "searchMetrics": {
-                "totalSearches": 1247 if timeRange == "30d" else 89 if timeRange == "7d" else 12,
+                "totalSearches": (
+                    1247 if timeRange == "30d" else 89 if timeRange == "7d" else 12
+                ),
                 "avgResponseTime": 125,
                 "successRate": 0.95,
                 "topQueries": [
@@ -201,8 +256,8 @@ async def get_analytics(
                     {"query": "react hooks", "count": 32},
                     {"query": "docker compose", "count": 28},
                     {"query": "fastapi tutorial", "count": 22},
-                    {"query": "typescript types", "count": 19}
-                ]
+                    {"query": "typescript types", "count": 19},
+                ],
             },
             "contentMetrics": {
                 "totalDocuments": 15432,
@@ -213,37 +268,41 @@ async def get_analytics(
                     {"technology": "JavaScript", "count": 3245},
                     {"technology": "React", "count": 2876},
                     {"technology": "TypeScript", "count": 2156},
-                    {"technology": "Docker", "count": 1789}
+                    {"technology": "Docker", "count": 1789},
                 ],
                 "contentGrowth": [
                     {"date": "2025-06-27", "documents": 145, "chunks": 892},
                     {"date": "2025-06-26", "documents": 132, "chunks": 789},
-                    {"date": "2025-06-25", "documents": 98, "chunks": 567}
-                ]
+                    {"date": "2025-06-25", "documents": 98, "chunks": 567},
+                ],
             },
             "userMetrics": {
-                "activeUsers": 156 if timeRange == "30d" else 23 if timeRange == "7d" else 8,
-                "totalSessions": 892 if timeRange == "30d" else 67 if timeRange == "7d" else 15,
+                "activeUsers": (
+                    156 if timeRange == "30d" else 23 if timeRange == "7d" else 8
+                ),
+                "totalSessions": (
+                    892 if timeRange == "30d" else 67 if timeRange == "7d" else 15
+                ),
                 "avgSessionDuration": 245,
                 "bounceRate": 0.12,
                 "userGrowth": [
                     {"date": "2025-06-27", "users": 23, "sessions": 45},
                     {"date": "2025-06-26", "users": 19, "sessions": 38},
-                    {"date": "2025-06-25", "users": 21, "sessions": 42}
-                ]
+                    {"date": "2025-06-25", "users": 21, "sessions": 42},
+                ],
             },
             "systemMetrics": {
                 "apiResponseTime": 125,
                 "cacheHitRate": 0.73,
                 "errorRate": 0.02,
-                "uptime": 99.8
+                "uptime": 99.8,
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
     except Exception as e:
         logger.error(f"Failed to get analytics: {e}")
         return {
             "error": "Failed to get analytics data",
             "timeRange": timeRange,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }

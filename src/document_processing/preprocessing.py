@@ -2,12 +2,13 @@
 Content Preprocessing.
 Implements PRD-006: Cleans and normalizes extracted text for downstream processing.
 """
+
 import logging
-from typing import Optional, Dict, Any, List
 from fastapi import HTTPException
 import re
 
 logger = logging.getLogger(__name__)
+
 
 class ContentPreprocessor:
     """
@@ -31,10 +32,12 @@ class ContentPreprocessor:
         Normalizes whitespace in text.
         """
         try:
-            return re.sub(r'\s+', ' ', text).strip()
+            return re.sub(r"\s+", " ", text).strip()
         except Exception as e:
             logger.error(f"Whitespace normalization failed: {e}")
-            raise HTTPException(status_code=500, detail="Whitespace normalization failed")
+            raise HTTPException(
+                status_code=500, detail="Whitespace normalization failed"
+            )
 
     async def remove_artifacts(self, text: str) -> str:
         """
@@ -42,11 +45,11 @@ class ContentPreprocessor:
         """
         try:
             # Remove null bytes and control characters except \n, \t
-            text = re.sub(r'[\x00-\x08\x0b-\x1f\x7f]', '', text)
+            text = re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", "", text)
             # Remove repeated hyphens or underscores
-            text = re.sub(r'[-_]{3,}', '', text)
+            text = re.sub(r"[-_]{3,}", "", text)
             # Remove page numbers (simple heuristic)
-            text = re.sub(r'\n?\s*Page \d+\s*\n?', '', text, flags=re.IGNORECASE)
+            text = re.sub(r"\n?\s*Page \d+\s*\n?", "", text, flags=re.IGNORECASE)
             return text
         except Exception as e:
             logger.error(f"Artifact removal failed: {e}")
