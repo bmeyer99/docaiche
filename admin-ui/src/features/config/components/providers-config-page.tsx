@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,11 +22,7 @@ export default function ProvidersConfigPage() {
   const { toast } = useToast();
   const apiClient = new DocaicheApiClient();
 
-  useEffect(() => {
-    loadProviderConfigurations();
-  }, []);
-
-  const loadProviderConfigurations = async () => {
+  const loadProviderConfigurations = useCallback(async () => {
     setLoading(true);
     try {
       const data = await apiClient.getProviderConfigurations();
@@ -53,7 +49,11 @@ export default function ProvidersConfigPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient, toast]);
+
+  useEffect(() => {
+    loadProviderConfigurations();
+  }, [loadProviderConfigurations]);
 
   const saveConfiguration = async (providerId: string, config: Partial<ProviderConfiguration>) => {
     setLoading(true);
@@ -116,65 +116,7 @@ export default function ProvidersConfigPage() {
     }, {} as Record<string, Array<ProviderDefinition>>);
   };
 
-  const renderProviderCard = (provider: ProviderDefinition) => {
-    const config = configurations[provider.id] || {};
-    const isConfigured = config.enabled && (provider.requiresApiKey ? !!config.config?.api_key : true);
-    
-    return (
-      <Card key={provider.id} className="cursor-pointer hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-4 h-4 rounded" 
-                style={{ backgroundColor: provider.color || '#6b7280' }}
-              />
-              <CardTitle className="text-lg">{provider.displayName}</CardTitle>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={isConfigured ? "default" : "secondary"}>
-                {isConfigured ? "Configured" : "Not Configured"}
-              </Badge>
-              {config.enabled && (
-                <Badge variant="outline">Enabled</Badge>
-              )}
-            </div>
-          </div>
-          <CardDescription>{provider.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {provider.supportsEmbedding && (
-              <Badge variant="outline">Embeddings</Badge>
-            )}
-            {provider.supportsChat && (
-              <Badge variant="outline">Chat</Badge>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setActiveProvider(provider.id)}
-            >
-              Configure
-            </Button>
-            {isConfigured && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => testConnection(provider.id)}
-                disabled={loading}
-              >
-                <Icons.settings className="w-4 h-4 mr-1" />
-                Test
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  
 
   const renderConfigurationForm = (provider: ProviderDefinition & { id: string }) => {
     const config = configurations[provider.id] || {};

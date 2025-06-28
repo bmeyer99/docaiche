@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
@@ -38,11 +38,7 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const apiClient = new DocaicheApiClient();
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       const [statsData, activityData] = await Promise.all([
         apiClient.getDashboardStats(),
@@ -52,12 +48,15 @@ export default function OverviewPage() {
       setStats(statsData);
       setRecentActivity(activityData || []);
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
       // Leave stats and activity as null/empty on error
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const formatUptime = (seconds: number) => {
     const days = Math.floor(seconds / 86400);

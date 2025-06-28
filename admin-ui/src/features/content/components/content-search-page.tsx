@@ -4,10 +4,8 @@ import { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/icons';
 import { DocaicheApiClient } from '@/lib/utils/api-client';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +38,6 @@ export default function ContentSearchPage() {
   const [totalResults, setTotalResults] = useState(0);
   const [searchTime, setSearchTime] = useState(0);
   const { toast } = useToast();
-  const apiClient = new DocaicheApiClient();
 
   const performSearch = useCallback(async (searchQuery: string, searchFilters: SearchFilters = {}) => {
     if (!searchQuery.trim()) {
@@ -51,6 +48,7 @@ export default function ContentSearchPage() {
 
     setLoading(true);
     const startTime = Date.now();
+    const apiClient = new DocaicheApiClient();
 
     try {
       const response = await apiClient.searchContent({
@@ -73,7 +71,7 @@ export default function ContentSearchPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiClient, toast]);
+  }, [toast]);
 
   const handleSearch = () => {
     performSearch(query, filters);

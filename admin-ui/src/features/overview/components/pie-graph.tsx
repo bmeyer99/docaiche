@@ -53,11 +53,7 @@ export function PieGraph() {
   const [error, setError] = React.useState<string | null>(null);
   const apiClient = new DocaicheApiClient();
 
-  React.useEffect(() => {
-    loadContentDistribution();
-  }, []);
-
-  const loadContentDistribution = async () => {
+  const loadContentDistribution = React.useCallback(async () => {
     try {
       // Try to get collections data to understand content distribution
       const collections = await apiClient.getCollections();
@@ -70,7 +66,7 @@ export function PieGraph() {
       }, {});
 
       // Convert to chart format
-      const data = Object.entries(techCounts).map(([tech, count], index) => ({
+      const data = Object.entries(techCounts).map(([tech, count]) => ({
         technology: tech,
         documents: count,
         fill: `url(#fill${tech})`
@@ -79,13 +75,16 @@ export function PieGraph() {
       setChartData(data);
       setError(null);
     } catch (err) {
-      console.error('Failed to load content distribution:', err);
       setError('Unable to load content distribution');
       setChartData([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient]);
+
+  React.useEffect(() => {
+    loadContentDistribution();
+  }, [loadContentDistribution]);
 
   const totalDocuments = React.useMemo(() => {
     return chartData.reduce((acc, curr) => acc + curr.documents, 0);

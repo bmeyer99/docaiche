@@ -47,11 +47,7 @@ export function BarGraph() {
     [chartData]
   );
 
-  React.useEffect(() => {
-    loadChartData();
-  }, []);
-
-  const loadChartData = async () => {
+  const loadChartData = React.useCallback(async () => {
     try {
       // Try to get analytics data - this endpoint may not exist yet
       const analytics = await apiClient.getAnalytics('30d');
@@ -70,13 +66,16 @@ export function BarGraph() {
       setChartData(analytics.daily_stats || mockData);
       setError(null);
     } catch (err) {
-      console.error('Failed to load chart data:', err);
       setError('Unable to load analytics data');
       setChartData([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient]);
+
+  React.useEffect(() => {
+    loadChartData();
+  }, [loadChartData]);
 
   if (loading) {
     return (

@@ -8,7 +8,6 @@
 import { 
   API_CONFIG, 
   API_ENDPOINTS, 
-  type ApiResponse,
   type ConfigurationResponse,
   type ConfigurationUpdateRequest,
   type HealthResponse,
@@ -17,8 +16,7 @@ import {
   type AdminSearchParams,
   type AdminSearchResponse,
   type UploadResponse,
-  type ProblemDetail,
-  HTTP_STATUS
+  type ProblemDetail
 } from '../config/api';
 
 // Request options interface
@@ -276,17 +274,17 @@ export class DocaicheApiClient {
    * Provider Management
    */
   async getProviderConfigurations(): Promise<any[]> {
-    return this.get<any[]>('/providers');
+    return this.get<any[]>('/api/v1/providers');
   }
 
   async updateProviderConfiguration(providerId: string, config: any): Promise<any> {
-    return this.post<any>(`/providers/${providerId}/config`, config);
+    return this.post<any>(`/api/v1/providers/${providerId}/config`, config);
   }
 
   async testProviderConnection(providerId: string, config: any): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.post<{ success: boolean; message: string }>(
-        `/providers/${providerId}/test`,
+        `/api/v1/providers/${providerId}/test`,
         config,
         { timeout: API_CONFIG.TIMEOUTS.CONNECTION_TEST }
       );
@@ -303,33 +301,33 @@ export class DocaicheApiClient {
    * Health and Monitoring Methods
    */
   async getSystemHealth(): Promise<any> {
-    return this.get<any>('/system/health');
+    return this.get<any>('/api/v1/system/health');
   }
 
   async getSystemMetrics(): Promise<any> {
-    return this.get<any>('/system/metrics');
+    return this.get<any>('/api/v1/system/metrics');
   }
 
   async getDashboardStats(): Promise<any> {
-    return this.get<any>('/stats');
+    return this.get<any>('/api/v1/stats');
   }
 
   async getRecentActivity(): Promise<any[]> {
-    return this.get<any[]>('/admin/activity/recent');
+    return this.get<any[]>('/api/v1/admin/activity/recent');
   }
 
 
 
   async createCollection(data: any): Promise<any> {
-    return this.post<any>('/content/collections', data);
+    return this.post<any>('/api/v1/content/collections', data);
   }
 
   async deleteCollection(collectionId: string): Promise<void> {
-    return this.delete<void>(`/content/collections/${collectionId}`);
+    return this.delete<void>(`/api/v1/content/collections/${collectionId}`);
   }
 
   async reindexCollection(collectionId: string): Promise<any> {
-    return this.post<any>(`/content/collections/${collectionId}/reindex`, {});
+    return this.post<any>(`/api/v1/content/collections/${collectionId}/reindex`, {});
   }
 
 
@@ -337,7 +335,7 @@ export class DocaicheApiClient {
    * Analytics Methods
    */
   async getAnalytics(timeRange: string = '24h'): Promise<any> {
-    return this.get<any>(`/analytics?timeRange=${timeRange}`);
+    return this.get<any>(`/api/v1/analytics?timeRange=${timeRange}`);
   }
 }
 

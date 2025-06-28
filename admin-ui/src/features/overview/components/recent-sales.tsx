@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardHeader,
@@ -25,11 +25,7 @@ export function RecentSales() {
   const [error, setError] = useState<string | null>(null);
   const apiClient = new DocaicheApiClient();
 
-  useEffect(() => {
-    loadRecentSearches();
-  }, []);
-
-  const loadRecentSearches = async () => {
+  const loadRecentSearches = useCallback(async () => {
     try {
       // This would ideally be a separate endpoint for recent searches
       // For now, we'll try to get recent activity and filter for searches
@@ -48,13 +44,16 @@ export function RecentSales() {
       setRecentSearches(searchActivity);
       setError(null);
     } catch (err) {
-      console.error('Failed to load recent searches:', err);
       setError('Unable to load recent search data');
       setRecentSearches([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient]);
+
+  useEffect(() => {
+    loadRecentSearches();
+  }, [loadRecentSearches]);
 
   const formatTimeAgo = (timestamp: string) => {
     const date = new Date(timestamp);

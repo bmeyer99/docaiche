@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,11 +37,7 @@ export default function CollectionsPage() {
   const { toast } = useToast();
   const apiClient = new DocaicheApiClient();
 
-  useEffect(() => {
-    loadCollections();
-  }, []);
-
-  const loadCollections = async () => {
+  const loadCollections = useCallback(async () => {
     try {
       const data = await apiClient.getCollections();
       setCollections((data.collections || []) as unknown as Collection[]);
@@ -54,7 +50,11 @@ export default function CollectionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient, toast]);
+
+  useEffect(() => {
+    loadCollections();
+  }, [loadCollections]);
 
   const createCollection = async () => {
     if (!newCollection.name.trim()) {

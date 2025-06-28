@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Simple middleware without authentication for lab environment
-export default function middleware(req: NextRequest) {
+export default function middleware() {
   // Allow all requests through since auth is disabled
   return NextResponse.next();
 }
