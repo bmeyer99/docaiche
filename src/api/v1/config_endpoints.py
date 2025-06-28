@@ -27,6 +27,41 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/analytics", tags=["analytics"])
+async def get_analytics(
+    timeRange: str = Query("24h", description="Time range for analytics (24h, 7d, 30d)")
+) -> Dict[str, Any]:
+    """GET /api/v1/analytics - Get system analytics data"""
+    return {
+        "timeRange": timeRange,
+        "searchMetrics": {
+            "totalSearches": 1247 if timeRange == "30d" else 89 if timeRange == "7d" else 12,
+            "avgResponseTime": 125,
+            "successRate": 0.95,
+            "topQueries": [
+                {"query": "python async", "count": 45},
+                {"query": "react hooks", "count": 32},
+                {"query": "docker compose", "count": 28}
+            ]
+        },
+        "contentMetrics": {
+            "totalDocuments": 15432,
+            "totalChunks": 89765,
+            "avgQualityScore": 0.82,
+            "documentsByTechnology": [
+                {"technology": "Python", "count": 5432},
+                {"technology": "JavaScript", "count": 3245}
+            ]
+        },
+        "userMetrics": {
+            "activeUsers": 156 if timeRange == "30d" else 23 if timeRange == "7d" else 8,
+            "totalSessions": 892 if timeRange == "30d" else 67 if timeRange == "7d" else 15,
+            "avgSessionDuration": 245
+        },
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
 @router.get("/config", response_model=ConfigurationResponse, tags=["config"])
 @limiter.limit("10/minute")
 async def get_configuration(

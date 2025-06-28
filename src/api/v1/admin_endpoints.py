@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+
+
 @router.get("/admin/search-content", response_model=AdminSearchResponse, tags=["admin"])
 @limiter.limit("20/minute")
 async def admin_search_content(
