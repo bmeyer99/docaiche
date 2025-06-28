@@ -1,196 +1,223 @@
 """
-Consolidated Pydantic schemas for the Docaiche API.
-
-All request/response models in one place for easy maintenance and consistency.
+API Schemas - Consolidated from v1 schemas with additions for missing types
 """
 
-from datetime import datetime
-from typing import List, Optional, Dict, Any, Literal, Union
+from typing import List, Optional, Dict, Literal, Any
 from pydantic import BaseModel, Field
+from datetime import datetime
 
-
-# ============================================================================
-# Error Schemas (RFC 7807 Problem Details)
-# ============================================================================
-
-class ProblemDetail(BaseModel):
-    """Standard error response format following RFC 7807."""
-    type: str = Field(..., description="URI reference identifying the problem type")
-    title: str = Field(..., description="Human-readable summary")
-    status: int = Field(..., description="HTTP status code")
-    detail: Optional[str] = Field(None, description="Human-readable explanation")
-    instance: Optional[str] = Field(None, description="URI reference identifying specific occurrence")
-    error_code: Optional[str] = Field(None, description="Internal error code")
-    trace_id: Optional[str] = Field(None, description="Request trace identifier")
-
-
-# ============================================================================
-# Search Schemas
-# ============================================================================
-
+# Search Models
 class SearchRequest(BaseModel):
-    """Request body for search operations."""
-    query: str = Field(..., min_length=1, max_length=500, description="Search query string")
-    technology_hint: Optional[str] = Field(None, description="Optional technology filter")
-    limit: int = Field(20, ge=1, le=100, description="Maximum number of results")
-    session_id: Optional[str] = Field(None, description="User session identifier")
-
+    """Search query request"""
+    query: str = Field(..., min_length=1, max_length=500)
+    technology_hint: Optional[str] = None
+    limit: int = Field(20, ge=1, le=100)
+    offset: int = Field(0, ge=0)  # Added for pagination
+    session_id: Optional[str] = None
+    # Added missing fields referenced in SearchService
+    content_type_filter: Optional[str] = None
+    source_filter: Optional[str] = None
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
 
 class SearchResult(BaseModel):
-    """Individual search result item."""
-    content_id: str = Field(..., description="Unique content identifier")
-    title: str = Field(..., description="Document or section title")
-    snippet: str = Field(..., description="Relevant content excerpt")
-    source_url: str = Field(..., description="Original source URL")
-    technology: str = Field(..., description="Associated technology/framework")
-    relevance_score: float = Field(..., ge=0.0, le=1.0, description="Relevance score for the query")
-    content_type: str = Field(..., description="Type of content")
-    workspace: str = Field(..., description="AnythingLLM workspace")
-
+    """Individual search result"""
+    content_id: str
+    title: str
+    snippet: str  # Standardized name
+    source_url: str
+    technology: str
+    relevance_score: float = Field(..., ge=0.0, le=1.0)
+    content_type: str
+    workspace: str
+    # Added fields for better compatibility
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 class SearchResponse(BaseModel):
-    """Response body for search operations."""
-    results: List[SearchResult] = Field(..., description="Search results list")
-    total_count: int = Field(..., description="Total matching results")
-    query: str = Field(..., description="Original search query")
-    technology_hint: Optional[str] = Field(None, description="Applied technology filter")
-    execution_time_ms: int = Field(..., description="Search execution time")
-    cache_hit: bool = Field(..., description="Whether served from cache")
-    enrichment_triggered: bool = Field(False, description="Whether knowledge enrichment was triggered")
+    """Search response"""
+    results: List[SearchResult]
+    total_count: int
+    query: str
+    technology_hint: Optional[str] = None
+    execution_time_ms: int
+    cache_hit: bool
+    enrichment_triggered: bool
+    error: Optional[str] = None  # Added for error reporting
 
-
-# ============================================================================
-# Upload Schemas
-# ============================================================================
-
-class UploadResponse(BaseModel):
-    """Response for document upload operations."""
-    upload_id: str = Field(..., description="Unique upload identifier")
-    status: Literal["accepted", "processing", "completed", "failed"] = Field(..., description="Upload processing status")
-    message: Optional[str] = Field(None, description="Status message")
-
-
-# ============================================================================
-# Feedback Schemas
-# ============================================================================
-
-class FeedbackRequest(BaseModel):
-    """Request body for user feedback submission."""
-    content_id: str = Field(..., description="Content being rated")
-    feedback_type: Literal["helpful", "not_helpful", "outdated", "incorrect", "flag"] = Field(..., description="Type of feedback")
-    rating: Optional[int] = Field(None, ge=1, le=5, description="Optional star rating")
-    comment: Optional[str] = Field(None, max_length=1000, description="Optional feedback comment")
-    query_context: Optional[str] = Field(None, description="Search query that led to content")
-    session_id: Optional[str] = Field(None, description="User session identifier")
-
-
-class SignalRequest(BaseModel):
-    """Request body for implicit user interaction signals."""
-    query_id: str = Field(..., description="Search query session ID")
-    session_id: str = Field(..., description="User session ID")
-    signal_type: Literal["click", "dwell", "abandon", "refine", "copy"] = Field(..., description="Type of interaction signal")
-    content_id: Optional[str] = Field(None, description="Interacted content ID")
-    result_position: Optional[int] = Field(None, ge=0, description="Result position (0-based)")
-    dwell_time_ms: Optional[int] = Field(None, ge=0, description="Time spent on result (milliseconds)")
-
-
-# ============================================================================
-# System Health & Stats Schemas
-# ============================================================================
-
-class HealthStatus(BaseModel):
-    """Health status of individual service components."""
-    service: str = Field(..., description="Service component name")
-    status: Literal["healthy", "degraded", "unhealthy"] = Field(..., description="Current health status")
-    response_time_ms: Optional[int] = Field(None, description="Response time in milliseconds")
-    last_check: datetime = Field(..., description="Last health check timestamp")
-    details: Optional[Dict[str, Any]] = Field(None, description="Additional status details")
-
-
-class HealthResponse(BaseModel):
-    """Response body for system health checks."""
-    overall_status: Literal["healthy", "degraded", "unhealthy"] = Field(..., description="Overall system health")
-    services: List[HealthStatus] = Field(..., description="Individual service statuses")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Health check timestamp")
-
-
-class StatsResponse(BaseModel):
-    """Response body for system usage statistics."""
-    search_stats: Dict[str, Any] = Field(..., description="Search performance and usage statistics")
-    cache_stats: Dict[str, Any] = Field(..., description="Cache hit rates and performance")
-    content_stats: Dict[str, Any] = Field(..., description="Content collection and quality statistics")
-    system_stats: Dict[str, Any] = Field(..., description="System resource and performance statistics")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Statistics timestamp")
-
-
-# ============================================================================
-# Collections Schemas
-# ============================================================================
-
-class Collection(BaseModel):
-    """Individual collection/workspace information."""
-    slug: str = Field(..., description="Unique collection identifier")
-    name: str = Field(..., description="Human-readable collection name")
-    technology: str = Field(..., description="Primary technology or framework")
-    document_count: int = Field(..., description="Number of documents in collection")
-    last_updated: datetime = Field(..., description="Last update timestamp")
-    is_active: bool = Field(True, description="Whether collection is actively maintained")
-
-
-class CollectionsResponse(BaseModel):
-    """Response body for available collections listing."""
-    collections: List[Collection] = Field(..., description="Available documentation collections")
-    total_count: int = Field(..., description="Total number of collections")
-
-
-# ============================================================================
-# Configuration Schemas
-# ============================================================================
-
+# Configuration Models
 class ConfigurationItem(BaseModel):
-    """Individual configuration key-value item."""
-    key: str = Field(..., description="Configuration key")
-    value: Any = Field(..., description="Configuration value")
-    schema_version: str = Field("1.0", description="Configuration schema version")
-    description: Optional[str] = Field(None, description="Human-readable description")
-    is_sensitive: bool = Field(False, description="Whether value contains sensitive data")
-
+    """Configuration item"""
+    key: str
+    value: Any
+    description: Optional[str] = None
+    is_sensitive: bool = False
 
 class ConfigurationResponse(BaseModel):
-    """Response body for system configuration retrieval."""
-    items: List[ConfigurationItem] = Field(..., description="Configuration items")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Configuration timestamp")
-
+    """Configuration response"""
+    items: List[ConfigurationItem]
+    timestamp: datetime
 
 class ConfigurationUpdateRequest(BaseModel):
-    """Request body for configuration updates."""
-    key: str = Field(..., description="Configuration key to update")
-    value: Any = Field(..., description="New configuration value")
-    description: Optional[str] = Field(None, description="Optional description of change")
+    """Configuration update request"""
+    key: str
+    value: Any
+    description: Optional[str] = None
 
+# Health Models
+class HealthStatus(BaseModel):
+    """Health status"""
+    service: str
+    status: Literal['healthy', 'degraded', 'unhealthy']
+    response_time_ms: Optional[int] = None
+    last_check: datetime
+    detail: Optional[str] = None  # Simplified from details dict
 
-# ============================================================================
-# Admin Schemas
-# ============================================================================
+class HealthResponse(BaseModel):
+    """Health response"""
+    overall_status: Literal['healthy', 'degraded', 'unhealthy']
+    services: List[HealthStatus]
+    timestamp: datetime
 
+# Feedback Models
+class FeedbackRequest(BaseModel):
+    """Feedback request"""
+    content_id: str
+    feedback_type: str  # Changed from Literal for flexibility
+    rating: Optional[int] = Field(None, ge=1, le=5)
+    comment: Optional[str] = None
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+class FeedbackResponse(BaseModel):
+    """Feedback response - was missing"""
+    feedback_id: str
+    status: str
+    message: str
+
+# Signal/Usage Models
+class SignalRequest(BaseModel):
+    """Signal request"""
+    content_id: str
+    signal_type: str
+    signal_value: Optional[float] = None  # Added for compatibility
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+class UsageSignalRequest(BaseModel):
+    """Usage signal request - was missing"""
+    content_id: str
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    signal_type: str
+    signal_strength: float = 1.0
+    metadata: Optional[Dict[str, Any]] = None
+
+# Content Models - were missing
+class ContentIngestionRequest(BaseModel):
+    """Content ingestion request"""
+    source_url: str
+    title: Optional[str] = None
+    content: Optional[str] = None
+    content_type: str = "document"
+    technology: Optional[str] = None
+    workspace: str = "default"
+    metadata: Optional[Dict[str, Any]] = None
+
+class ContentIngestionResponse(BaseModel):
+    """Content ingestion response"""
+    content_id: str
+    status: str
+    message: str
+
+class ContentMetadata(BaseModel):
+    """Content metadata"""
+    content_id: str
+    title: str
+    source_url: str
+    technology: Optional[str] = None
+    content_type: str
+    workspace: str
+    created_at: datetime
+    updated_at: datetime
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+class ContentCollection(BaseModel):
+    """Content collection"""
+    collection_id: str
+    name: str
+    description: str
+    item_count: int
+    created_at: datetime
+    updated_at: datetime
+
+class ContentStatsResponse(BaseModel):
+    """Content statistics response"""
+    total_documents: int
+    by_technology: Dict[str, int]
+    by_content_type: Dict[str, int]
+    by_workspace: Dict[str, int]
+    last_updated: datetime
+
+class FeedbackStatsResponse(BaseModel):
+    """Feedback statistics response"""
+    total_feedback: int
+    average_rating: float
+    by_type: Dict[str, int]
+    by_rating: Dict[str, int]
+    recent_feedback: List[Dict[str, Any]]
+
+# Upload Models
+class UploadResponse(BaseModel):
+    """Upload response"""
+    upload_id: str
+    status: str
+    message: str
+
+# Stats Models
+class StatsResponse(BaseModel):
+    """Stats response"""
+    search_stats: Dict[str, Any]
+    cache_stats: Dict[str, Any]
+    content_stats: Dict[str, Any]
+    system_stats: Dict[str, Any]
+    timestamp: datetime
+
+# Collection Models
+class Collection(BaseModel):
+    """Collection info"""
+    slug: str
+    name: str
+    technology: str
+    document_count: int
+    last_updated: datetime
+    is_active: bool = True
+
+class CollectionsResponse(BaseModel):
+    """Collections response"""
+    collections: List[Collection]
+    total_count: int
+
+# Admin Models
 class AdminContentItem(BaseModel):
-    """Individual content item with metadata for admin interface."""
-    content_id: str = Field(..., description="Unique content identifier")
-    title: str = Field(..., description="Content title")
-    content_type: str = Field(..., description="Type of content")
-    technology: Optional[str] = Field(None, description="Associated technology/framework")
-    source_url: Optional[str] = Field(None, description="Original source URL")
-    collection_name: str = Field(..., description="Collection this content belongs to")
-    created_at: datetime = Field(..., description="Content creation timestamp")
-    last_updated: datetime = Field(..., description="Last modification timestamp")
-    size_bytes: Optional[int] = Field(None, description="Content size in bytes")
-    status: Literal["active", "flagged", "removed"] = Field(..., description="Current content status")
-
+    """Admin content item"""
+    content_id: str
+    title: str
+    content_type: str
+    technology: Optional[str] = None
+    source_url: Optional[str] = None
+    collection_name: str
+    created_at: datetime
+    last_updated: datetime
+    size_bytes: Optional[int] = None
+    status: str = "active"
 
 class AdminSearchResponse(BaseModel):
-    """Response body for admin content search."""
-    items: List[AdminContentItem] = Field(..., description="Matching content items")
-    total_count: int = Field(..., description="Total matching items")
-    page: int = Field(..., ge=1, description="Current page number (1-based)")
-    page_size: int = Field(..., description="Items per page")
-    has_more: bool = Field(..., description="Whether more pages available")
+    """Admin search response"""
+    items: List[AdminContentItem]
+    total_count: int
+    page: int
+    page_size: int
+    has_more: bool

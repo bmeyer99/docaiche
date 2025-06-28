@@ -10,6 +10,15 @@ const baseConfig: NextConfig = {
   trailingSlash: false,
   skipTrailingSlashRedirect: true,
   
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://api:8000/api/v1/:path*',
+      },
+    ]
+  },
+
   images: {
     remotePatterns: [
       {

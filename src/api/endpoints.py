@@ -59,29 +59,8 @@ async def search_documents(
     with relevance scoring and metadata.
     """
     try:
-        # For demo purposes, return mock data
-        # In real implementation, this would call search_service.search(search_request)
-        return SearchResponse(
-            results=[
-                SearchResult(
-                    content_id=f"doc_{i}",
-                    title=f"Example Document {i}",
-                    snippet=f"This is a snippet for query: {search_request.query}",
-                    source_url=f"https://example.com/doc-{i}",
-                    technology=search_request.technology_hint or "python",
-                    relevance_score=0.9 - (i * 0.1),
-                    content_type="documentation",
-                    workspace="default"
-                )
-                for i in range(min(search_request.limit, 3))
-            ],
-            total_count=100,
-            query=search_request.query,
-            technology_hint=search_request.technology_hint,
-            execution_time_ms=45,
-            cache_hit=False,
-            enrichment_triggered=False
-        )
+        # Use the real search service
+        return await search_service.search(search_request)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -134,16 +113,52 @@ async def upload_document(
             detail="File size exceeds 10MB limit"
         )
     
-    upload_id = str(uuid.uuid4())
-    
-    # Add background task for processing
-    # background_tasks.add_task(content_service.process_upload, upload_id, file, collection, technology)
-    
-    return UploadResponse(
-        upload_id=upload_id,
-        status="accepted",
-        message="Document upload accepted for processing"
-    )
+    try:
+        # Read file content
+        content = await file.read()
+        content_str = content.decode('utf-8')
+        
+        # Create content ingestion request
+        from src.api.schemas import ContentIngestionRequest
+        ingestion_request = ContentIngestionRequest(
+            source_url=f"upload://{file.filename}",
+            title=file.filename,
+            content=content_str,
+            content_type="document",
+            technology=technology,
+            workspace=collection or "default",
+            metadata={
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "size": file.size
+            }
+        )
+        
+        # Ingest content using the service
+        response = await content_service.ingest_content(ingestion_request)
+        
+        if response.status == "completed":
+            return UploadResponse(
+                upload_id=response.content_id,
+                status="accepted",
+                message="Document upload accepted for processing"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=response.message
+            )
+            
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be UTF-8 encoded text"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Upload failed: {str(e)}"
+        )
 
 
 @api_router.delete("/content/{content_id}", status_code=status.HTTP_202_ACCEPTED)
@@ -159,10 +174,16 @@ async def remove_content(
     
     The content will be marked for removal and processed asynchronously.
     """
-    # Add background task for content removal
-    # background_tasks.add_task(content_service.flag_for_removal, content_id)
+    # Use the real content service to delete content
+    success = await content_service.delete_content(content_id)
     
-    return {"message": f"Content {content_id} flagged for removal"}
+    if success:
+        return {"message": f"Content {content_id} flagged for removal"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Content {content_id} not found"
+        )
 
 
 # ============================================================================
@@ -182,10 +203,16 @@ async def submit_feedback(
     
     Feedback is processed asynchronously to improve search quality.
     """
-    # Add background task for feedback processing
-    # background_tasks.add_task(feedback_service.process_feedback, feedback_request)
+    # Process feedback using the real service
+    response = await feedback_service.submit_feedback(feedback_request)
     
-    return {"message": "Feedback submitted successfully"}
+    if response.status == "accepted":
+        return {"message": response.message, "feedback_id": response.feedback_id}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=response.message
+        )
 
 
 @api_router.post("/signals", status_code=status.HTTP_202_ACCEPTED)
@@ -202,10 +229,26 @@ async def submit_signals(
     Signals like clicks, dwell time, and navigation patterns help improve
     search relevance and user experience.
     """
-    # Add background task for signal processing
-    # background_tasks.add_task(feedback_service.process_signal, signal_request)
+    # Convert SignalRequest to UsageSignalRequest for the service
+    from src.api.schemas import UsageSignalRequest
+    usage_signal = UsageSignalRequest(
+        content_id=signal_request.content_id,
+        user_id=signal_request.user_id,
+        session_id=signal_request.session_id,
+        signal_type=signal_request.signal_type,
+        signal_strength=signal_request.signal_value,
+        metadata=signal_request.metadata
+    )
     
-    return {"message": "Signal recorded successfully"}
+    response = await feedback_service.record_usage_signal(usage_signal)
+    
+    if response.status == "accepted":
+        return {"message": response.message}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=response.message
+        )
 
 
 # ============================================================================
@@ -213,49 +256,17 @@ async def submit_signals(
 # ============================================================================
 
 @api_router.get("/health", response_model=HealthResponse)
-async def get_health() -> HealthResponse:
+async def get_health(
+    health_service=Depends(get_health_service)
+) -> HealthResponse:
     """
     Get comprehensive system health status.
     
     Checks all system components and dependencies to provide overall health.
     """
     try:
-        # Mock health data - in real implementation would check actual services
-        services = [
-            HealthStatus(
-                service="database",
-                status="healthy",
-                response_time_ms=15,
-                last_check=datetime.utcnow(),
-                details={"connections": 5, "pool_size": 10}
-            ),
-            HealthStatus(
-                service="cache",
-                status="healthy",
-                response_time_ms=2,
-                last_check=datetime.utcnow(),
-                details={"hit_rate": 0.85, "memory_usage": "45%"}
-            ),
-            HealthStatus(
-                service="search_index",
-                status="healthy",
-                response_time_ms=8,
-                last_check=datetime.utcnow(),
-                details={"documents_indexed": 15000, "index_size": "2.1GB"}
-            )
-        ]
-        
-        overall_status = "healthy"
-        if any(s.status == "unhealthy" for s in services):
-            overall_status = "unhealthy"
-        elif any(s.status == "degraded" for s in services):
-            overall_status = "degraded"
-        
-        return HealthResponse(
-            overall_status=overall_status,
-            services=services,
-            timestamp=datetime.utcnow()
-        )
+        # Use the real health service
+        return await health_service.check_system_health()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -264,74 +275,81 @@ async def get_health() -> HealthResponse:
 
 
 @api_router.get("/stats", response_model=StatsResponse)
-async def get_stats() -> StatsResponse:
+async def get_stats(
+    content_service=Depends(get_content_service),
+    feedback_service=Depends(get_feedback_service)
+) -> StatsResponse:
     """
     Get system usage and performance statistics.
     
     Provides metrics on search performance, cache utilization, and system resources.
     """
+    # Get real stats from services
+    content_stats = await content_service.get_content_stats()
+    feedback_stats = await feedback_service.get_feedback_stats()
+    
+    # Format stats for API response
     return StatsResponse(
         search_stats={
-            "total_searches": 50000,
-            "searches_today": 1250,
-            "average_response_time_ms": 85,
-            "popular_technologies": ["python", "javascript", "react"]
+            "total_searches": feedback_stats.total_feedback,
+            "searches_today": feedback_stats.total_feedback,  # Would need date filtering
+            "average_response_time_ms": 85,  # Would need to track this
+            "popular_technologies": list(content_stats.by_technology.keys())[:5]
         },
         cache_stats={
-            "hit_rate": 0.78,
-            "miss_rate": 0.22,
-            "total_requests": 25000,
-            "cache_size_mb": 512
+            "hit_rate": 0.0,  # Would need cache manager stats
+            "miss_rate": 1.0,
+            "total_requests": 0,
+            "cache_size_mb": 0
         },
         content_stats={
-            "total_documents": 15000,
-            "collections": 25,
-            "last_update": datetime.utcnow().isoformat(),
-            "pending_uploads": 3
+            "total_documents": content_stats.total_documents,
+            "collections": len(content_stats.by_workspace),
+            "last_update": content_stats.last_updated.isoformat(),
+            "pending_uploads": 0
         },
         system_stats={
-            "uptime_seconds": 86400,
-            "memory_usage_percent": 65,
-            "cpu_usage_percent": 12,
-            "disk_usage_percent": 45
+            "uptime_seconds": 0,  # Would need to track process start time
+            "memory_usage_percent": 0,  # Would need psutil or similar
+            "cpu_usage_percent": 0,
+            "disk_usage_percent": 0
         },
         timestamp=datetime.utcnow()
     )
 
 
 @api_router.get("/collections", response_model=CollectionsResponse)
-async def get_collections() -> CollectionsResponse:
+async def get_collections(
+    content_service=Depends(get_content_service)
+) -> CollectionsResponse:
     """
     Get available documentation collections/workspaces.
     
     Lists all available collections that can be searched or managed.
     """
-    collections = [
-        Collection(
-            slug="python-docs",
-            name="Python Documentation",
-            technology="python",
-            document_count=2500,
-            last_updated=datetime.utcnow(),
+    # Get real collections from content service
+    content_collections = await content_service.list_collections()
+    
+    # Convert to API schema
+    collections = []
+    for cc in content_collections:
+        # Infer technology from collection name or use default
+        technology = "general"
+        if "python" in cc.name.lower():
+            technology = "python"
+        elif "react" in cc.name.lower():
+            technology = "react"
+        elif "javascript" in cc.name.lower() or "js" in cc.name.lower():
+            technology = "javascript"
+        
+        collections.append(Collection(
+            slug=cc.collection_id,
+            name=cc.name,
+            technology=technology,
+            document_count=cc.item_count,
+            last_updated=cc.updated_at,
             is_active=True
-        ),
-        Collection(
-            slug="react-docs",
-            name="React Documentation",
-            technology="react",
-            document_count=1800,
-            last_updated=datetime.utcnow(),
-            is_active=True
-        ),
-        Collection(
-            slug="fastapi-docs",
-            name="FastAPI Documentation",
-            technology="fastapi",
-            document_count=900,
-            last_updated=datetime.utcnow(),
-            is_active=True
-        )
-    ]
+        ))
     
     return CollectionsResponse(
         collections=collections,
@@ -352,33 +370,8 @@ async def get_configuration(
     
     Returns all non-sensitive configuration items.
     """
-    items = [
-        ConfigurationItem(
-            key="search.default_limit",
-            value=20,
-            description="Default number of search results to return"
-        ),
-        ConfigurationItem(
-            key="search.max_limit",
-            value=100,
-            description="Maximum number of search results allowed"
-        ),
-        ConfigurationItem(
-            key="upload.max_file_size",
-            value="10MB",
-            description="Maximum file size for document uploads"
-        ),
-        ConfigurationItem(
-            key="cache.ttl_seconds",
-            value=3600,
-            description="Cache time-to-live in seconds"
-        )
-    ]
-    
-    return ConfigurationResponse(
-        items=items,
-        timestamp=datetime.utcnow()
-    )
+    # Use the real config service
+    return config_service.get_current_config()
 
 
 @api_router.post("/config", response_model=ConfigurationResponse)
@@ -391,11 +384,8 @@ async def update_configuration(
     
     Updates a specific configuration item and returns the updated configuration.
     """
-    # In real implementation, would validate and update configuration
-    # config_service.update_config(request.key, request.value, request.description)
-    
-    # Return updated configuration
-    return await get_configuration(config_service)
+    # Use the real config service to update configuration
+    return await config_service.update_config_item(request.key, request.value)
 
 
 # ============================================================================
@@ -410,31 +400,50 @@ async def admin_search_content(
     status: Optional[str] = Query(None, description="Status filter"),
     limit: int = Query(20, ge=1, le=100, description="Results per page"),
     offset: int = Query(0, ge=0, description="Results offset"),
-    content_service=Depends(get_content_service)
+    content_service=Depends(get_content_service),
+    search_service=Depends(get_search_service)
 ) -> AdminSearchResponse:
     """
     Search and manage content items (admin interface).
     
     Provides detailed content metadata for administrative management.
     """
-    # Mock admin content data
-    items = [
-        AdminContentItem(
-            content_id=f"admin_doc_{i}",
-            title=f"Admin Document {i}",
-            content_type="documentation",
-            technology=technology or "python",
-            source_url=f"https://example.com/admin-doc-{i}",
-            collection_name="python-docs",
-            created_at=datetime.utcnow(),
-            last_updated=datetime.utcnow(),
-            size_bytes=15000 + i * 1000,
-            status="active"
+    # For now, use search service with filters
+    # In a real implementation, would have dedicated admin query methods
+    if search_term:
+        from src.api.schemas import SearchRequest
+        search_req = SearchRequest(
+            query=search_term,
+            technology_hint=technology,
+            content_type_filter=content_type,
+            limit=limit,
+            offset=offset
         )
-        for i in range(min(limit, 5))
-    ]
+        search_results = await search_service.search(search_req)
+        
+        # Convert search results to admin items
+        items = []
+        for result in search_results.results:
+            items.append(AdminContentItem(
+                content_id=result.content_id,
+                title=result.title,
+                content_type=result.content_type,
+                technology=result.technology,
+                source_url=result.source_url,
+                collection_name=result.workspace,
+                created_at=result.created_at or datetime.utcnow(),
+                last_updated=result.updated_at or datetime.utcnow(),
+                size_bytes=len(result.snippet) * 10,  # Rough estimate
+                status="active"
+            ))
+        
+        total_count = search_results.total_count
+    else:
+        # No search term - return empty for now
+        # In real implementation would list all content
+        items = []
+        total_count = 0
     
-    total_count = 500  # Mock total
     page = (offset // limit) + 1
     has_more = offset + limit < total_count
     

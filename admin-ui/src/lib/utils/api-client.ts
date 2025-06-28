@@ -32,8 +32,7 @@ export class DocaicheApiClient {
   private defaultHeaders: Record<string, string>;
 
   constructor() {
-    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, '');
-    this.baseUrl = `${base}/api/v1`;
+    this.baseUrl = '/api/v1';
     this.defaultHeaders = {
       'Content-Type': 'application/json',
     };
@@ -47,14 +46,13 @@ export class DocaicheApiClient {
     options: RequestInit & RequestOptions = {}
   ): Promise<T> {
     const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = API_CONFIG.RETRY.MAX_ATTEMPTS, ...fetchOptions } = options;
+    let lastError: Error = new Error('Unknown error');
     
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       ...this.defaultHeaders,
       ...options.headers
     };
-
-    let lastError: Error = new Error('Unknown error');
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
