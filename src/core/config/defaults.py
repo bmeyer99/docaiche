@@ -32,6 +32,8 @@ def get_environment_overrides() -> Dict[str, Any]:
         "APP_API_PORT": ("app.api_port", int),
         "APP_WEB_PORT": ("app.web_port", int),
         "APP_WORKERS": ("app.workers", int),
+        "APP_DATA_DIR": "app.data_dir",
+        "DATA_DIR": "app.data_dir",  # Alternative env var name
         # Redis configuration
         "REDIS_HOST": "redis.host",
         "REDIS_PORT": ("redis.port", int),

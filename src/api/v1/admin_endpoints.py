@@ -62,9 +62,10 @@ async def admin_search_content(
             where_clauses.append("(title LIKE :search_term OR content_id LIKE :search_term)")
             params["search_term"] = f"%{search_term}%"
         
-        if content_type:
-            where_clauses.append("content_type = :content_type")
-            params["content_type"] = content_type
+        # Note: content_type column doesn't exist in current schema
+        # if content_type:
+        #     where_clauses.append("content_type = :content_type")
+        #     params["content_type"] = content_type
             
         if technology:
             where_clauses.append("technology = :technology")
@@ -82,7 +83,7 @@ async def admin_search_content(
         SELECT 
             content_id,
             title,
-            content_type,
+            'documentation' as content_type,  -- Default value since column doesn't exist
             technology,
             source_url,
             anythingllm_workspace as collection_name,

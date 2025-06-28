@@ -55,41 +55,31 @@ async def get_recent_activity(
             if activity_type == "search":
                 query = """
                 SELECT 
-                    'search_' || id as id,
+                    'search_' || query_hash as id,
                     'search' as type,
-                    'Search: ' || query_text as message,
+                    'Search: ' || original_query as message,
                     created_at as timestamp,
-                    'Query hash: ' || query_hash as details
-                FROM search_queries
+                    'Results: ' || result_count || ', Time: ' || execution_time_ms || 'ms' as details
+                FROM search_cache
                 ORDER BY created_at DESC
                 LIMIT ?
                 """
             elif activity_type == "config":
                 query = """
                 SELECT 
-                    'config_' || config_key as id,
+                    'config_' || key as id,
                     'config' as type,
-                    'Configuration: ' || config_key as message,
+                    'Configuration: ' || key as message,
                     updated_at as timestamp,
-                    'Value: ' || config_value as details
+                    'Value: ' || substr(value, 1, 50) as details
                 FROM system_config
                 WHERE updated_at IS NOT NULL
                 ORDER BY updated_at DESC
                 LIMIT ?
                 """
             elif activity_type == "error":
-                query = """
-                SELECT 
-                    'error_' || id as id,
-                    'error' as type,
-                    error_type || ': ' || error_message as message,
-                    created_at as timestamp,
-                    'Context: ' || error_context as details
-                FROM system_metrics
-                WHERE metric_type = 'error'
-                ORDER BY created_at DESC
-                LIMIT ?
-                """
+                # system_metrics table doesn't exist, return empty for now
+                return []
             else:
                 # For other types, return empty list for now
                 return []
@@ -166,32 +156,32 @@ async def get_recent_searches(
     GET /api/v1/admin/activity/searches - Get recent search queries
     """
     try:
-        # First check if search_queries table exists
+        # First check if search_cache table exists
         tables_check = """
             SELECT COUNT(*) as count 
             FROM sqlite_master 
-            WHERE type='table' AND name='search_queries'
+            WHERE type='table' AND name='search_cache'
         """
         try:
             table_check_result = await db_manager.fetch_one(tables_check)
             table_exists = (table_check_result.get("count", 0) > 0) if table_check_result else False
             if not table_exists:
-                logger.warning("search_queries table not found")
+                logger.warning("search_cache table not found")
                 # Return empty list if table doesn't exist
                 return []
         except Exception as e:
-            logger.warning(f"Failed to check search_queries table: {e}")
+            logger.warning(f"Failed to check search_cache table: {e}")
             return []
             
-        # Get real search data from database
+        # Get real search data from search_cache table
         query = """
         SELECT 
-            'search_' || id as id,
+            'search_' || query_hash as id,
             'search' as type,
-            'Search: ' || query_text as message,
+            'Search: ' || original_query as message,
             created_at as timestamp,
-            'Query performed' as details
-        FROM search_queries
+            'Results: ' || result_count || ', Cached: ' || CASE WHEN cache_hit THEN 'Yes' ELSE 'No' END as details
+        FROM search_cache
         ORDER BY created_at DESC
         LIMIT 20
         """
@@ -231,36 +221,9 @@ async def get_recent_errors(
     GET /api/v1/admin/activity/errors - Get recent system errors
     """
     try:
-        # Get real error data from system_metrics table
-        query = """
-        SELECT 
-            'error_' || id as id,
-            'error' as type,
-            error_type || ': ' || error_message as message,
-            created_at as timestamp,
-            'Context: ' || COALESCE(error_context, 'None') as details
-        FROM system_metrics
-        WHERE metric_type = 'error'
-        ORDER BY created_at DESC
-        LIMIT :limit
-        """
-        
-        results = await db_manager.fetch_all(query, {"limit": limit})
-        
-        # Convert to ActivityItem objects
-        error_activities = []
-        for row in results or []:
-            error_activities.append(
-                ActivityItem(
-                    id=row["id"],
-                    type=row["type"],
-                    message=row["message"],
-                    timestamp=row["timestamp"],
-                    details=row["details"],
-                )
-            )
-        
-        return error_activities
+        # system_metrics table doesn't exist in current schema
+        # Return empty list for now
+        return []
 
     except Exception as e:
         logger.error(f"Failed to get recent errors: {e}")
@@ -351,7 +314,7 @@ async def get_dashboard_data(
                     "id": row["id"],
                     "type": row["type"],
                     "message": row["message"],
-                    "timestamp": row["timestamp"].isoformat() if row["timestamp"] else datetime.utcnow().isoformat(),
+                    "timestamp": row["timestamp"] if row["timestamp"] else datetime.utcnow().isoformat(),
                 }
                 for row in (activity_results or [])
             ],

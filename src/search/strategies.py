@@ -386,14 +386,25 @@ class WorkspaceSearchStrategy:
             rows = await self.db_manager.fetch_all(query)
 
             workspaces = []
-            for row in rows:
-                workspace = {
-                    "slug": row.slug,
-                    "technology": row.technology,
-                    "last_updated": row.last_updated,
-                    "document_count": row.document_count,
-                }
-                workspaces.append(workspace)
+            if rows:
+                for row in rows:
+                    # Handle both dict and Row object cases
+                    if isinstance(row, dict):
+                        workspace = {
+                            "slug": row.get("slug"),
+                            "technology": row.get("technology"),
+                            "last_updated": row.get("last_updated"),
+                            "document_count": row.get("document_count"),
+                        }
+                    else:
+                        # Row object case - access by column name
+                        workspace = {
+                            "slug": row["slug"],
+                            "technology": row["technology"],
+                            "last_updated": row["last_updated"],
+                            "document_count": row["document_count"],
+                        }
+                    workspaces.append(workspace)
 
             return workspaces
 

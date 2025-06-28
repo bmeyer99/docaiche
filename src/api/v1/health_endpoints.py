@@ -317,25 +317,25 @@ async def get_analytics(
         else:
             start_date = end_date - timedelta(hours=24)
         
-        # Get search metrics
+        # Get search metrics from search_cache table
         search_query = """
         SELECT 
             COUNT(*) as total_searches,
-            AVG(response_time_ms) as avg_response_time,
-            SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) as success_rate
-        FROM search_queries
+            AVG(execution_time_ms) as avg_response_time,
+            1.0 as success_rate  -- All cached searches are successful
+        FROM search_cache
         WHERE created_at >= :start_date AND created_at <= :end_date
         """
         search_result = await db_manager.fetch_one(
             search_query, {"start_date": start_date, "end_date": end_date}
         )
         
-        # Get top queries
+        # Get top queries from search_cache
         top_queries_query = """
-        SELECT query_text, COUNT(*) as count
-        FROM search_queries
+        SELECT original_query as query_text, SUM(access_count) as count
+        FROM search_cache
         WHERE created_at >= :start_date AND created_at <= :end_date
-        GROUP BY query_text
+        GROUP BY original_query
         ORDER BY count DESC
         LIMIT 5
         """
@@ -369,14 +369,14 @@ async def get_analytics(
             tech_query, {"start_date": start_date, "end_date": end_date}
         )
         
-        # Get user metrics (from usage_signals table)
+        # Get user metrics from usage_signals table
         user_query = """
         SELECT 
-            COUNT(DISTINCT user_id) as active_users,
-            COUNT(DISTINCT session_id) as total_sessions,
-            AVG(duration_ms) as avg_session_duration
+            COUNT(DISTINCT user_session_id) as active_users,
+            COUNT(DISTINCT user_session_id) as total_sessions,
+            0 as avg_session_duration  -- duration not tracked in current schema
         FROM usage_signals
-        WHERE timestamp >= :start_date AND timestamp <= :end_date
+        WHERE created_at >= :start_date AND created_at <= :end_date
         """
         user_result = await db_manager.fetch_one(
             user_query, {"start_date": start_date, "end_date": end_date}
@@ -386,8 +386,8 @@ async def get_analytics(
             "timeRange": timeRange,
             "searchMetrics": {
                 "totalSearches": search_result.get("total_searches", 0) if search_result else 0,
-                "avgResponseTime": float(search_result.get("avg_response_time", 0)) if search_result else 0,
-                "successRate": float(search_result.get("success_rate", 0)) if search_result else 0,
+                "avgResponseTime": float(search_result.get("avg_response_time") or 0) if search_result else 0,
+                "successRate": float(search_result.get("success_rate") or 0) if search_result else 0,
                 "topQueries": [
                     {"query": q.get("query_text", ""), "count": q.get("count", 0)} 
                     for q in (top_queries or [])
@@ -396,7 +396,7 @@ async def get_analytics(
             "contentMetrics": {
                 "totalDocuments": content_result.get("total_documents", 0) if content_result else 0,
                 "totalChunks": content_result.get("total_chunks", 0) if content_result else 0,
-                "avgQualityScore": float(content_result.get("avg_quality_score", 0)) if content_result else 0,
+                "avgQualityScore": float(content_result.get("avg_quality_score") or 0) if content_result else 0,
                 "documentsByTechnology": [
                     {"technology": t.get("technology", ""), "count": t.get("count", 0)}
                     for t in (tech_docs or [])
@@ -405,7 +405,7 @@ async def get_analytics(
             "userMetrics": {
                 "activeUsers": user_result.get("active_users", 0) if user_result else 0,
                 "totalSessions": user_result.get("total_sessions", 0) if user_result else 0,
-                "avgSessionDuration": float(user_result.get("avg_session_duration", 0)) if user_result else 0,
+                "avgSessionDuration": float(user_result.get("avg_session_duration") or 0) if user_result else 0,
             },
             "timestamp": datetime.utcnow().isoformat(),
         }
