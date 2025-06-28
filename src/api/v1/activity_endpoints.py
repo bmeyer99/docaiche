@@ -32,45 +32,100 @@ async def get_recent_activity(
     GET /api/v1/admin/activity/recent - Get recent system activity
     """
     try:
-        # Mock recent activity data for now
-        # In real implementation, query from activity logs table
-        recent_activities = [
-            ActivityItem(
-                id=f"activity_{i}",
-                type="search",
-                message="User performed search query: 'python async'",
-                timestamp=datetime.utcnow() - timedelta(minutes=i * 5),
-                details=f"Query returned {10-i} results",
-            )
-            for i in range(1, min(limit, 6))
-        ]
-
-        recent_activities.extend(
-            [
-                ActivityItem(
-                    id="config_update",
-                    type="config",
-                    message="System configuration updated",
-                    timestamp=datetime.utcnow() - timedelta(hours=2),
-                    details="Updated LLM provider settings",
-                ),
-                ActivityItem(
-                    id="index_update",
-                    type="index",
-                    message="Document collection reindexed",
-                    timestamp=datetime.utcnow() - timedelta(hours=6),
-                    details="Python documentation collection updated",
-                ),
-            ]
-        )
-
-        # Filter by type if requested
+        # Build query based on activity type
         if activity_type:
-            recent_activities = [
-                a for a in recent_activities if a.type == activity_type
-            ]
-
-        return recent_activities[:limit]
+            # Get activities from multiple tables based on type
+            if activity_type == "search":
+                query = """
+                SELECT 
+                    'search_' || id as id,
+                    'search' as type,
+                    'Search: ' || query_text as message,
+                    created_at as timestamp,
+                    'Query hash: ' || query_hash as details
+                FROM search_queries
+                ORDER BY created_at DESC
+                LIMIT :limit
+                """
+            elif activity_type == "config":
+                query = """
+                SELECT 
+                    'config_' || config_key as id,
+                    'config' as type,
+                    'Configuration: ' || config_key as message,
+                    updated_at as timestamp,
+                    'Value: ' || config_value as details
+                FROM system_config
+                WHERE updated_at IS NOT NULL
+                ORDER BY updated_at DESC
+                LIMIT :limit
+                """
+            elif activity_type == "error":
+                query = """
+                SELECT 
+                    'error_' || id as id,
+                    'error' as type,
+                    error_type || ': ' || error_message as message,
+                    created_at as timestamp,
+                    'Context: ' || error_context as details
+                FROM system_metrics
+                WHERE metric_type = 'error'
+                ORDER BY created_at DESC
+                LIMIT :limit
+                """
+            else:
+                # For other types, return empty list for now
+                return []
+        else:
+            # Get mixed recent activities from all sources
+            query = """
+            WITH all_activities AS (
+                SELECT 
+                    'search_' || id as id,
+                    'search' as type,
+                    'Search: ' || query_text as message,
+                    created_at as timestamp,
+                    'Query' as details
+                FROM search_queries
+                UNION ALL
+                SELECT 
+                    'config_' || config_key as id,
+                    'config' as type,
+                    'Config: ' || config_key as message,
+                    updated_at as timestamp,
+                    config_value as details
+                FROM system_config
+                WHERE updated_at IS NOT NULL
+                UNION ALL
+                SELECT 
+                    'content_' || content_id as id,
+                    'content' as type,
+                    'Document: ' || title as message,
+                    created_at as timestamp,
+                    'Workspace: ' || workspace as details
+                FROM content_metadata
+            )
+            SELECT * FROM all_activities
+            ORDER BY timestamp DESC
+            LIMIT :limit
+            """
+        
+        results = await db_manager.fetch_all(query, {"limit": limit})
+        
+        # Convert to ActivityItem objects
+        activities = []
+        for row in results or []:
+            activities.append(
+                ActivityItem(
+                    id=row["id"],
+                    type=row["type"],
+                    message=row["message"],
+                    timestamp=row["timestamp"],
+                    details=row.get("details", ""),
+                )
+            )
+        
+        return activities
 
     except Exception as e:
         logger.error(f"Failed to get recent activity: {e}")
@@ -92,27 +147,35 @@ async def get_recent_searches(
     GET /api/v1/admin/activity/searches - Get recent search queries
     """
     try:
-        # Mock search activity data
-        search_activities = [
-            ActivityItem(
-                id=f"search_{i}",
-                type="search",
-                message=f"Search: '{query}'",
-                timestamp=datetime.utcnow() - timedelta(minutes=i * 3),
-                details=f"Technology: {tech}, Results: {results}",
+        # Get real search data from database
+        query = """
+        SELECT 
+            'search_' || id as id,
+            'search' as type,
+            'Search: ' || query_text as message,
+            created_at as timestamp,
+            'Query performed' as details
+        FROM search_queries
+        ORDER BY created_at DESC
+        LIMIT :limit
+        """
+        
+        results = await db_manager.fetch_all(query, {"limit": limit})
+        
+        # Convert to ActivityItem objects
+        search_activities = []
+        for row in results or []:
+            search_activities.append(
+                ActivityItem(
+                    id=row["id"],
+                    type=row["type"],
+                    message=row["message"],
+                    timestamp=row["timestamp"],
+                    details=row["details"],
+                )
             )
-            for i, (query, tech, results) in enumerate(
-                [
-                    ("python async patterns", "python", 15),
-                    ("react hooks tutorial", "react", 23),
-                    ("docker compose setup", "docker", 8),
-                    ("fastapi authentication", "python", 12),
-                    ("javascript promises", "javascript", 19),
-                ]
-            )
-        ]
-
-        return search_activities[:limit]
+        
+        return search_activities
 
     except Exception as e:
         logger.error(f"Failed to get recent searches: {e}")

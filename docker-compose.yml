@@ -33,15 +33,13 @@ services:
       context: ./admin-ui
       dockerfile: Dockerfile
       args:
-        
-        - NEXT_PUBLIC_APP_NAME=Docaiche Admin
+        - NEXT_PUBLIC_APP_NAME=DocAIche Admin
         - NEXT_PUBLIC_ENABLE_AUTH=false
     ports:
       - "4080:3000"
     environment:
       - NODE_ENV=production
-      
-      - NEXT_PUBLIC_APP_NAME=Docaiche Admin
+      - NEXT_PUBLIC_APP_NAME=DocAIche Admin
       - NEXT_PUBLIC_ENABLE_AUTH=false
       - NEXT_PUBLIC_SENTRY_DISABLED=true
     depends_on:

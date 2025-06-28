@@ -4,7 +4,7 @@ Health check and statistics endpoints
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, Request, Query
@@ -192,35 +192,91 @@ async def get_stats(
     from .schemas import StatsResponse
 
     try:
-        # Mock statistics data conforming to schema
+        # Get real search statistics from database
+        # Note: search_queries table has limited fields, so we'll get what we can
+        search_stats_query = """
+        SELECT 
+            COUNT(*) as total_searches
+        FROM search_queries
+        """
+        search_result = await db_manager.fetch_one(search_stats_query)
+        
+        search_stats = {
+            "total_searches": search_result.get("total_searches", 0) if search_result else 0,
+            "avg_response_time_ms": 0,  # Not available in current schema
+            "cache_hit_rate": 0,  # Would need to be calculated from cache_entries
+            "successful_searches": search_result.get("total_searches", 0) if search_result else 0,  # Assume all are successful
+            "failed_searches": 0,  # Not tracked in current schema
+        }
+        
+        # Get real cache statistics
+        cache_stats = {}
+        if cache_manager:
+            try:
+                cache_info = await cache_manager.get_stats()
+                cache_stats = {
+                    "hit_rate": cache_info.get("hit_rate", 0),
+                    "miss_rate": cache_info.get("miss_rate", 0),
+                    "total_keys": cache_info.get("total_keys", 0),
+                    "memory_usage_mb": cache_info.get("memory_usage_mb", 0),
+                    "evictions": cache_info.get("evictions", 0),
+                }
+            except:
+                cache_stats = {
+                    "hit_rate": 0,
+                    "miss_rate": 0,
+                    "total_keys": 0,
+                    "memory_usage_mb": 0,
+                    "evictions": 0,
+                }
+        
+        # Get real content statistics
+        content_stats_query = """
+        SELECT 
+            COUNT(DISTINCT cm.content_id) as total_documents,
+            COUNT(dc.chunk_id) as total_chunks,
+            AVG(cm.quality_score) as avg_quality_score,
+            COUNT(DISTINCT cm.workspace) as workspaces,
+            MAX(cm.enriched_at) as last_enrichment
+        FROM content_metadata cm
+        LEFT JOIN document_chunks dc ON cm.content_id = dc.content_id
+        """
+        content_result = await db_manager.fetch_one(content_stats_query)
+        
+        content_stats = {
+            "total_documents": content_result.get("total_documents", 0) if content_result else 0,
+            "total_chunks": content_result.get("total_chunks", 0) if content_result else 0,
+            "avg_quality_score": float(content_result.get("avg_quality_score", 0)) if content_result else 0,
+            "workspaces": content_result.get("workspaces", 0) if content_result else 0,
+            "last_enrichment": content_result.get("last_enrichment") or datetime.utcnow(),
+        }
+        
+        # Get real system statistics
+        try:
+            import psutil
+            import time
+            
+            system_stats = {
+                "uptime_seconds": int(time.time() - psutil.boot_time()),
+                "cpu_usage_percent": psutil.cpu_percent(interval=0.1),
+                "memory_usage_mb": psutil.virtual_memory().used / 1024 / 1024,
+                "disk_usage_mb": psutil.disk_usage('/').used / 1024 / 1024,
+            }
+        except ImportError:
+            # psutil not installed, return defaults
+            import time
+            system_stats = {
+                "uptime_seconds": int(time.time()),
+                "cpu_usage_percent": 0,
+                "memory_usage_mb": 0,
+                "disk_usage_mb": 0,
+            }
+        
         return StatsResponse(
-            search_stats={
-                "total_searches": 1247,
-                "avg_response_time_ms": 125,
-                "cache_hit_rate": 0.73,
-                "successful_searches": 1189,
-                "failed_searches": 58,
-            },
-            cache_stats={
-                "hit_rate": 0.73,
-                "miss_rate": 0.27,
-                "total_keys": 3456,
-                "memory_usage_mb": 256,
-                "evictions": 12,
-            },
-            content_stats={
-                "total_documents": 15432,
-                "total_chunks": 89765,
-                "avg_quality_score": 0.82,
-                "workspaces": 12,
-                "last_enrichment": datetime.utcnow(),
-            },
-            system_stats={
-                "uptime_seconds": 86400,
-                "cpu_usage_percent": 15.3,
-                "memory_usage_mb": 512,
-                "disk_usage_mb": 2048,
-            },
+            search_stats=search_stats,
+            cache_stats=cache_stats,
+            content_stats=content_stats,
+            system_stats=system_stats,
             timestamp=datetime.utcnow(),
         )
     except Exception as e:
@@ -237,65 +293,112 @@ async def get_analytics(
     timeRange: str = Query(
         "24h", description="Time range for analytics (24h, 7d, 30d)"
     ),
+    db_manager: DatabaseManager = Depends(get_database_manager),
 ) -> Dict[str, Any]:
     """
     GET /api/v1/analytics - Get system analytics data
     """
     try:
-        # Return analytics data based on time range
+        # Calculate date range
+        end_date = datetime.utcnow()
+        if timeRange == "24h":
+            start_date = end_date - timedelta(hours=24)
+        elif timeRange == "7d":
+            start_date = end_date - timedelta(days=7)
+        elif timeRange == "30d":
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(hours=24)
+        
+        # Get search metrics
+        search_query = """
+        SELECT 
+            COUNT(*) as total_searches,
+            AVG(response_time_ms) as avg_response_time,
+            SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) * 1.0 / COUNT(*) as success_rate
+        FROM search_queries
+        WHERE created_at >= :start_date AND created_at <= :end_date
+        """
+        search_result = await db_manager.fetch_one(
+            search_query, {"start_date": start_date, "end_date": end_date}
+        )
+        
+        # Get top queries
+        top_queries_query = """
+        SELECT query, COUNT(*) as count
+        FROM search_queries
+        WHERE created_at >= :start_date AND created_at <= :end_date
+        GROUP BY query
+        ORDER BY count DESC
+        LIMIT 5
+        """
+        top_queries = await db_manager.fetch_all(
+            top_queries_query, {"start_date": start_date, "end_date": end_date}
+        )
+        
+        # Get content metrics
+        content_query = """
+        SELECT 
+            COUNT(DISTINCT content_id) as total_documents,
+            COUNT(*) as total_chunks,
+            AVG(quality_score) as avg_quality_score
+        FROM content_metadata
+        WHERE created_at >= :start_date AND created_at <= :end_date
+        """
+        content_result = await db_manager.fetch_one(
+            content_query, {"start_date": start_date, "end_date": end_date}
+        )
+        
+        # Get documents by technology
+        tech_query = """
+        SELECT technology, COUNT(*) as count
+        FROM content_metadata
+        WHERE created_at >= :start_date AND created_at <= :end_date
+        GROUP BY technology
+        ORDER BY count DESC
+        LIMIT 5
+        """
+        tech_docs = await db_manager.fetch_all(
+            tech_query, {"start_date": start_date, "end_date": end_date}
+        )
+        
+        # Get user metrics (from usage_signals table)
+        user_query = """
+        SELECT 
+            COUNT(DISTINCT user_id) as active_users,
+            COUNT(DISTINCT session_id) as total_sessions,
+            AVG(duration_ms) as avg_session_duration
+        FROM usage_signals
+        WHERE timestamp >= :start_date AND timestamp <= :end_date
+        """
+        user_result = await db_manager.fetch_one(
+            user_query, {"start_date": start_date, "end_date": end_date}
+        )
+        
         return {
             "timeRange": timeRange,
             "searchMetrics": {
-                "totalSearches": (
-                    1247 if timeRange == "30d" else 89 if timeRange == "7d" else 12
-                ),
-                "avgResponseTime": 125,
-                "successRate": 0.95,
+                "totalSearches": search_result.get("total_searches", 0) if search_result else 0,
+                "avgResponseTime": float(search_result.get("avg_response_time", 0)) if search_result else 0,
+                "successRate": float(search_result.get("success_rate", 0)) if search_result else 0,
                 "topQueries": [
-                    {"query": "python async", "count": 45},
-                    {"query": "react hooks", "count": 32},
-                    {"query": "docker compose", "count": 28},
-                    {"query": "fastapi tutorial", "count": 22},
-                    {"query": "typescript types", "count": 19},
+                    {"query": q["query"], "count": q["count"]} 
+                    for q in (top_queries or [])
                 ],
             },
             "contentMetrics": {
-                "totalDocuments": 15432,
-                "totalChunks": 89765,
-                "avgQualityScore": 0.82,
+                "totalDocuments": content_result.get("total_documents", 0) if content_result else 0,
+                "totalChunks": content_result.get("total_chunks", 0) if content_result else 0,
+                "avgQualityScore": float(content_result.get("avg_quality_score", 0)) if content_result else 0,
                 "documentsByTechnology": [
-                    {"technology": "Python", "count": 5432},
-                    {"technology": "JavaScript", "count": 3245},
-                    {"technology": "React", "count": 2876},
-                    {"technology": "TypeScript", "count": 2156},
-                    {"technology": "Docker", "count": 1789},
-                ],
-                "contentGrowth": [
-                    {"date": "2025-06-27", "documents": 145, "chunks": 892},
-                    {"date": "2025-06-26", "documents": 132, "chunks": 789},
-                    {"date": "2025-06-25", "documents": 98, "chunks": 567},
+                    {"technology": t["technology"], "count": t["count"]}
+                    for t in (tech_docs or [])
                 ],
             },
             "userMetrics": {
-                "activeUsers": (
-                    156 if timeRange == "30d" else 23 if timeRange == "7d" else 8
-                ),
-                "totalSessions": (
-                    892 if timeRange == "30d" else 67 if timeRange == "7d" else 15
-                ),
-                "avgSessionDuration": 245,
-                "bounceRate": 0.12,
-                "userGrowth": [
-                    {"date": "2025-06-27", "users": 23, "sessions": 45},
-                    {"date": "2025-06-26", "users": 19, "sessions": 38},
-                    {"date": "2025-06-25", "users": 21, "sessions": 42},
-                ],
-            },
-            "systemMetrics": {
-                "apiResponseTime": 125,
-                "cacheHitRate": 0.73,
-                "errorRate": 0.02,
-                "uptime": 99.8,
+                "activeUsers": user_result.get("active_users", 0) if user_result else 0,
+                "totalSessions": user_result.get("total_sessions", 0) if user_result else 0,
+                "avgSessionDuration": float(user_result.get("avg_session_duration", 0)) if user_result else 0,
             },
             "timestamp": datetime.utcnow().isoformat(),
         }

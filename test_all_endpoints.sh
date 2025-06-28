@@ -11,7 +11,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-BASE_URL="${API_BASE_URL:-http://localhost:8000/api/v1}"
+BASE_URL="${API_BASE_URL:-http://localhost:4000/api/v1}"
 DELAY_BETWEEN_TESTS=1  # Delay in seconds to respect rate limiting
 
 # Test counter

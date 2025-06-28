@@ -26,6 +26,7 @@ _cache_manager: Optional[CacheManager] = None
 _anythingllm_client: Optional[AnythingLLMClient] = None
 _search_orchestrator: Optional[SearchOrchestrator] = None
 _configuration_manager: Optional[ConfigurationManager] = None
+_knowledge_enricher = None  # Type: Optional[KnowledgeEnricher]
 
 
 class StubDatabaseManager:
@@ -247,12 +248,53 @@ async def get_configuration_manager() -> ConfigurationManager:
     return _configuration_manager
 
 
+async def get_knowledge_enricher():
+    """
+    Dependency to get KnowledgeEnricher instance
+    """
+    global _knowledge_enricher
+    
+    if _knowledge_enricher is None:
+        try:
+            # Import here to avoid circular imports
+            from src.enrichment.factory import create_knowledge_enricher_with_integrated_config
+            from src.llm.client import LLMClient
+            
+            # Get required dependencies
+            db_manager = await get_database_manager()
+            cache_manager = await get_cache_manager()
+            anythingllm_client = await get_anythingllm_client()
+            config_manager = await get_configuration_manager()
+            
+            # Create LLM client
+            config = config_manager.get_configuration()
+            llm_client = LLMClient(config.ai)
+            
+            # Create enricher with all dependencies
+            _knowledge_enricher = await create_knowledge_enricher_with_integrated_config(
+                db_manager=db_manager,
+                cache_manager=cache_manager,
+                anythingllm_client=anythingllm_client,
+                llm_client=llm_client,
+                shutdown_timeout=30.0
+            )
+            
+            logger.info("Knowledge enricher initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize knowledge enricher: {e}")
+            raise HTTPException(
+                status_code=503, detail="Knowledge enricher not available"
+            )
+    
+    return _knowledge_enricher
+
+
 # Cleanup function for application shutdown
 async def cleanup_dependencies():
     """
     Cleanup all dependency instances on application shutdown
     """
-    global _db_manager, _cache_manager, _anythingllm_client, _search_orchestrator, _configuration_manager
+    global _db_manager, _cache_manager, _anythingllm_client, _search_orchestrator, _configuration_manager, _knowledge_enricher
 
     try:
         if _db_manager and hasattr(_db_manager, "disconnect"):
@@ -267,12 +309,18 @@ async def cleanup_dependencies():
             await _anythingllm_client.disconnect()
             logger.info("AnythingLLM client disconnected")
 
+        # Cleanup knowledge enricher
+        if _knowledge_enricher and hasattr(_knowledge_enricher, "shutdown"):
+            await _knowledge_enricher.shutdown()
+            logger.info("Knowledge enricher shut down")
+
         # Reset global instances
         _db_manager = None
         _cache_manager = None
         _anythingllm_client = None
         _search_orchestrator = None
         _configuration_manager = None
+        _knowledge_enricher = None
 
         logger.info("All dependencies cleaned up successfully")
 

@@ -23,7 +23,7 @@ class Colors:
     BOLD = '\033[1m'
 
 class APITester:
-    def __init__(self, base_url: str = "http://localhost:8000/api/v1"):
+    def __init__(self, base_url: str = "http://localhost:4000/api/v1"):
         self.base_url = base_url
         self.passed = 0
         self.failed = 0
@@ -256,8 +256,8 @@ class APITester:
 
 def main():
     parser = argparse.ArgumentParser(description='Test Docaiche API endpoints')
-    parser.add_argument('--base-url', default='http://localhost:8000/api/v1',
-                       help='Base URL for the API (default: http://localhost:8000/api/v1)')
+    parser.add_argument('--base-url', default='http://localhost:4000/api/v1',
+                       help='Base URL for the API (default: http://localhost:4000/api/v1)')
     parser.add_argument('--verbose', action='store_true',
                        help='Enable verbose output')
     
