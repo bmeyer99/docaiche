@@ -34,6 +34,7 @@ services:
       retries: 10
     volumes:
       - db_data:/data
+      - ./config.yaml:/app/config.yaml:ro
     restart: unless-stopped
 
   admin-ui:

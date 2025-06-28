@@ -693,3 +693,52 @@ class SearchOrchestrator:
             "timestamp": datetime.utcnow().isoformat(),
             "response_time_ms": total_time,
         }
+    
+    async def search(
+        self,
+        query: str,
+        technology_hint: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+        session_id: Optional[str] = None,
+        background_tasks: Optional[BackgroundTasks] = None
+    ) -> "SearchResponse":
+        """
+        Main search method for API compatibility.
+        
+        Args:
+            query: Search query string
+            technology_hint: Optional technology filter
+            limit: Maximum results to return
+            offset: Pagination offset
+            session_id: Optional session ID
+            background_tasks: Optional background tasks
+            
+        Returns:
+            SearchResponse compatible with API schema
+        """
+        # Import here to avoid circular imports
+        from src.api.v1.schemas import SearchResponse as APISearchResponse
+        
+        # Create internal SearchQuery
+        search_query = SearchQuery(
+            query=query,
+            filters={
+                "technology": technology_hint
+            } if technology_hint else {},
+            limit=limit,
+            offset=offset
+        )
+        
+        # Execute search
+        results, _ = await self.execute_search(search_query, background_tasks)
+        
+        # Convert to API response format
+        return APISearchResponse(
+            results=results.results[:limit],
+            total_count=results.total_count,
+            query=query,
+            search_time_ms=results.query_time_ms,
+            cached=results.from_cache,
+            metadata=results.metadata or {}
+        )

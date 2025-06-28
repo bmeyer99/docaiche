@@ -83,9 +83,10 @@ class LLMProviderClient:
     def _initialize_providers(self):
         """Initialize available LLM providers based on configuration."""
         # Ollama
-        ollama_cfg = self.config.get("ollama", {})
+        ollama_cfg = self.config.get("ollama") if self.config else None
         if (
-            ollama_cfg.get("enabled")
+            ollama_cfg
+            and ollama_cfg.get("enabled", True)  # Default to enabled if not specified
             and ollama_cfg.get("endpoint")
             and ollama_cfg.get("model")
         ):
@@ -98,9 +99,10 @@ class LLMProviderClient:
             except Exception as e:
                 logger.error(f"Failed to initialize Ollama provider: {e}")
         # OpenAI
-        openai_cfg = self.config.get("openai", {})
+        openai_cfg = self.config.get("openai") if self.config else None
         if (
-            openai_cfg.get("enabled")
+            openai_cfg
+            and openai_cfg.get("enabled")
             and openai_cfg.get("api_key")
             and openai_cfg.get("model")
         ):
@@ -243,6 +245,49 @@ class LLMProviderClient:
             providers_to_try.append(self.fallback_provider_name)
         return providers_to_try
 
+    async def generate(self, prompt: str, **kwargs) -> str:
+        """
+        Simple text generation method for convenience.
+        
+        Args:
+            prompt: Text prompt
+            **kwargs: Additional provider parameters
+            
+        Returns:
+            Generated text response
+        """
+        # Create a simple response model for text generation
+        from pydantic import BaseModel, Field
+        
+        class TextResponse(BaseModel):
+            text: str = Field(..., description="Generated text response")
+        
+        # Wrap prompt to request JSON response
+        json_prompt = f"""{prompt}
+
+Return your response as JSON in this format:
+{{
+    "text": "Your response here"
+}}"""
+        
+        try:
+            response = await self.generate_structured(json_prompt, TextResponse, **kwargs)
+            return response.text
+        except Exception as e:
+            # Fallback: try to extract text from any response
+            logger.warning(f"Structured generation failed, attempting direct generation: {e}")
+            
+            # Try direct generation with first available provider
+            for provider_name, provider in self.providers.items():
+                try:
+                    raw_response = await provider._make_request(prompt, **kwargs)
+                    return raw_response
+                except Exception as provider_error:
+                    logger.debug(f"Provider {provider_name} failed: {provider_error}")
+                    continue
+            
+            raise LLMProviderError("Failed to generate response with any provider")
+    
     async def _maybe_check_health(self):
         """Perform periodic health checks on providers."""
         import time

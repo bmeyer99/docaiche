@@ -12,6 +12,22 @@ from pydantic import ValidationError
 from src.api.schemas import ProblemDetail
 
 
+# Custom exceptions for processing errors
+class ProcessingError(Exception):
+    """Base exception for processing errors"""
+    pass
+
+
+class DocumentProcessingError(ProcessingError):
+    """Exception for document processing errors"""
+    pass
+
+
+class EnrichmentError(ProcessingError):
+    """Exception for enrichment processing errors"""
+    pass
+
+
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle Pydantic validation errors."""
     trace_id = getattr(request.state, "trace_id", "unknown")

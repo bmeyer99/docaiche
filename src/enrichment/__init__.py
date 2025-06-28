@@ -14,6 +14,9 @@ from .queue import EnrichmentTaskQueue
 # Analysis components
 from .analyzers import GapAnalyzer
 
+# LLM-enhanced components
+from .llm_source_finder import LLMSourceFinder, DocumentationSource
+
 # Data models
 from .models import EnrichmentTask, EnrichmentStatus, GapAnalysisResult
 
@@ -52,6 +55,9 @@ __all__ = [
     "EnrichmentTaskQueue",
     # Analysis components
     "GapAnalyzer",
+    # LLM-enhanced components
+    "LLMSourceFinder",
+    "DocumentationSource",
     # Data models
     "EnrichmentTask",
     "EnrichmentStatus",

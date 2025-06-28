@@ -52,3 +52,13 @@ class ProcessingJob(BaseModel):
     error_message: Optional[str] = None
     created_at: str
     updated_at: str
+
+
+class DocumentContent(BaseModel):
+    """Document content with metadata"""
+    content_id: str
+    title: str
+    text: str
+    source_url: str
+    metadata: Optional[dict] = None
+    format: Optional[str] = "markdown"

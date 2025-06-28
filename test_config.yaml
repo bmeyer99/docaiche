@@ -1,0 +1,49 @@
+# Test configuration for intelligent pipeline
+app:
+  version: "1.0.0"
+  environment: "testing"
+  debug: true
+  log_level: "INFO"
+  data_dir: "./test_data"  # Use local directory instead of /app
+  api_host: "0.0.0.0"
+  api_port: 8080
+  
+# AI Provider Configuration - Use Ollama at 192.168.4.204
+ai:
+  primary_provider: "ollama"
+  fallback_provider: null
+  enable_failover: false
+  cache_ttl_seconds: 3600
+  
+  ollama:
+    endpoint: "http://192.168.4.204:11434"  # Ollama API endpoint
+    model: "llama3.1:8b"  # Use available model
+    temperature: 0.3  # Lower for consistent parsing
+    max_tokens: 4096
+    timeout_seconds: 60
+    enabled: true
+    
+  openai:
+    enabled: false  # Disabled for testing
+    
+# AnythingLLM Configuration
+anythingllm:
+  endpoint: "http://192.168.4.204:3001"  # AnythingLLM API endpoint
+  api_key: "test-key"
+  
+# Redis Configuration (simplified for testing)
+redis:
+  host: "localhost"
+  port: 6379
+  password: null
+  db: 0
+  
+# Database Configuration
+database:
+  db_path: "./test_data/docaiche.db"  # Use local path
+  
+# Content Processing
+content:
+  chunk_size_default: 1000
+  chunk_overlap: 100
+  quality_threshold: 0.3

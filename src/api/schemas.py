@@ -12,15 +12,15 @@ class SearchRequest(BaseModel):
     """Search query request"""
 
     query: str = Field(
-        ..., min_length=1, max_length=500, regex=r'^[^<>&"\'\x00-\x1f]+$'
+        ..., min_length=1, max_length=500, pattern=r'^[^<>&"\'\x00-\x1f]+$'
     )  # Prevent XSS and control chars
-    technology_hint: Optional[str] = Field(None, regex=r"^[a-zA-Z0-9\-_]+$")
+    technology_hint: Optional[str] = Field(None, pattern=r"^[a-zA-Z0-9\-_]+$")
     limit: int = Field(20, ge=1, le=100)
     offset: int = Field(0, ge=0)  # Added for pagination
-    session_id: Optional[str] = Field(None, regex=r"^[a-zA-Z0-9\-_]+$")
+    session_id: Optional[str] = Field(None, pattern=r"^[a-zA-Z0-9\-_]+$")
     # Added missing fields referenced in SearchService
-    content_type_filter: Optional[str] = Field(None, regex=r"^[a-zA-Z0-9\-_]+$")
-    source_filter: Optional[str] = Field(None, regex=r"^[a-zA-Z0-9\-_.]+$")
+    content_type_filter: Optional[str] = Field(None, pattern=r"^[a-zA-Z0-9\-_]+$")
+    source_filter: Optional[str] = Field(None, pattern=r"^[a-zA-Z0-9\-_.]+$")
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
 
@@ -102,16 +102,16 @@ class HealthResponse(BaseModel):
 class FeedbackRequest(BaseModel):
     """Feedback request"""
 
-    content_id: str = Field(..., regex=r"^[a-zA-Z0-9\-_]+$")
+    content_id: str = Field(..., pattern=r"^[a-zA-Z0-9\-_]+$")
     feedback_type: str = Field(
-        ..., regex=r"^[a-zA-Z0-9_]+$"
+        ..., pattern=r"^[a-zA-Z0-9_]+$"
     )  # Changed from Literal for flexibility
     rating: Optional[int] = Field(None, ge=1, le=5)
     comment: Optional[str] = Field(
-        None, max_length=1000, regex=r'^[^<>&"\'\x00-\x1f]*$'
+        None, max_length=1000, pattern=r'^[^<>&"\'\x00-\x1f]*$'
     )
-    user_id: Optional[str] = Field(None, regex=r"^[a-zA-Z0-9\-_]+$")
-    session_id: Optional[str] = Field(None, regex=r"^[a-zA-Z0-9\-_]+$")
+    user_id: Optional[str] = Field(None, pattern=r"^[a-zA-Z0-9\-_]+$")
+    session_id: Optional[str] = Field(None, pattern=r"^[a-zA-Z0-9\-_]+$")
     metadata: Optional[Dict[str, Any]] = None
 
 
@@ -249,6 +249,18 @@ class CollectionsResponse(BaseModel):
 
     collections: List[Collection]
     total_count: int
+
+
+# Error Models
+class ProblemDetail(BaseModel):
+    """RFC 7807 Problem Details"""
+    
+    type: str = Field(..., description="A URI reference that identifies the problem type")
+    title: str = Field(..., description="A short, human-readable summary of the problem type")
+    status: int = Field(..., ge=100, le=599, description="The HTTP status code")
+    detail: Optional[str] = Field(None, description="A human-readable explanation specific to this occurrence")
+    instance: Optional[str] = Field(None, description="A URI reference that identifies the specific occurrence")
+    errors: Optional[Dict[str, Any]] = Field(None, description="Additional errors or validation issues")
 
 
 # Admin Models

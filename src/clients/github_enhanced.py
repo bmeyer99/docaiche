@@ -18,8 +18,17 @@ logger = logging.getLogger(__name__)
 class SmartGitHubClient(GitHubClient):
     """Enhanced GitHub client with intelligent documentation discovery"""
     
-    def __init__(self, llm_client: LLMProviderClient, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, llm_client: LLMProviderClient, config=None, db_manager=None):
+        # Create a minimal config object if not provided
+        if config is None:
+            from types import SimpleNamespace
+            config = SimpleNamespace(
+                api_token=None,
+                circuit_breaker_failure_threshold=5,
+                circuit_breaker_recovery_timeout=300,
+                circuit_breaker_timeout_seconds=30
+            )
+        super().__init__(config, db_manager)
         self.llm = llm_client
         
     def _parse_github_url(self, url: str) -> Tuple[str, str]:
