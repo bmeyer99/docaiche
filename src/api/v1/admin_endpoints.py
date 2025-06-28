@@ -54,43 +54,74 @@ async def admin_search_content(
             f"Admin content search: term='{search_term}', type='{content_type}', tech='{technology}'"
         )
 
-        # Mock admin content data conforming to schema
-        items = [
-            AdminContentItem(
-                content_id="admin_doc_001",
-                title="FastAPI Tutorial Introduction",
-                content_type="documentation",
-                technology="python",
-                source_url="https://fastapi.tiangolo.com/tutorial/",
-                collection_name="python-docs",
-                created_at=datetime.utcnow(),
-                last_updated=datetime.utcnow(),
-                size_bytes=15432,
-                status="active",
-            ),
-            AdminContentItem(
-                content_id="admin_doc_002",
-                title="React Hooks Guide",
-                content_type="documentation",
-                technology="react",
-                source_url="https://reactjs.org/docs/hooks-intro.html",
-                collection_name="react-docs",
-                created_at=datetime.utcnow(),
-                last_updated=datetime.utcnow(),
-                size_bytes=23456,
-                status="active",
-            ),
-        ]
-
-        # Apply pagination
-        paginated_items = items[offset : offset + limit]
+        # Build query with filters
+        where_clauses = []
+        params = {}
+        
+        if search_term:
+            where_clauses.append("(title LIKE :search_term OR content_id LIKE :search_term)")
+            params["search_term"] = f"%{search_term}%"
+        
+        if content_type:
+            where_clauses.append("content_type = :content_type")
+            params["content_type"] = content_type
+            
+        if technology:
+            where_clauses.append("technology = :technology")
+            params["technology"] = technology
+        
+        where_clause = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+        
+        # Get total count
+        count_query = f"SELECT COUNT(*) as total FROM content_metadata {where_clause}"
+        count_result = await db_manager.fetch_one(count_query, params)
+        total_count = count_result.get("total", 0) if count_result else 0
+        
+        # Get paginated results
+        query = f"""
+        SELECT 
+            content_id,
+            title,
+            content_type,
+            technology,
+            source_url,
+            anythingllm_workspace as collection_name,
+            created_at,
+            updated_at as last_updated,
+            chunk_count * 1000 as size_bytes,  -- Approximate size
+            'active' as status
+        FROM content_metadata
+        {where_clause}
+        ORDER BY created_at DESC
+        LIMIT :limit OFFSET :offset
+        """
+        params["limit"] = limit
+        params["offset"] = offset
+        
+        results = await db_manager.fetch_all(query, params)
+        
+        # Convert to AdminContentItem objects
+        items = []
+        for row in results or []:
+            items.append(AdminContentItem(
+                content_id=row["content_id"],
+                title=row["title"] or "Untitled",
+                content_type=row["content_type"] or "document",
+                technology=row["technology"] or "unknown",
+                source_url=row["source_url"] or "",
+                collection_name=row["collection_name"] or "default",
+                created_at=row["created_at"] or datetime.utcnow(),
+                last_updated=row["last_updated"] or datetime.utcnow(),
+                size_bytes=row["size_bytes"] or 0,
+                status=row["status"] or "active",
+            ))
 
         return AdminSearchResponse(
-            items=paginated_items,
-            total_count=len(items),
+            items=items,
+            total_count=total_count,
             page=(offset // limit) + 1,
             page_size=limit,
-            has_more=offset + limit < len(items),
+            has_more=offset + limit < total_count,
         )
 
     except Exception as e:

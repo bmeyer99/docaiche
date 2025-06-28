@@ -278,25 +278,48 @@ async def get_knowledge_enricher():
         try:
             # Import here to avoid circular imports
             from src.enrichment.factory import create_knowledge_enricher_with_integrated_config
-            from src.llm.client import LLMClient
+            from src.clients.github import GitHubClient
+            from src.clients.webscraper import WebScrapingClient
+            from src.processors.content_processor import ContentProcessingPipeline
             
             # Get required dependencies
             db_manager = await get_database_manager()
-            cache_manager = await get_cache_manager()
-            anythingllm_client = await get_anythingllm_client()
+            search_orchestrator = await get_search_orchestrator()
             config_manager = await get_configuration_manager()
-            
-            # Create LLM client
             config = config_manager.get_configuration()
-            llm_client = LLMClient(config.ai)
             
-            # Create enricher with all dependencies
-            _knowledge_enricher = await create_knowledge_enricher_with_integrated_config(
+            # Create required clients
+            # GitHub client needs GitHubConfig specifically
+            github_config = getattr(config, 'github', None)
+            if not github_config:
+                # Create default GitHub config
+                from src.core.config.models import GitHubConfig
+                github_config = GitHubConfig()
+            
+            github_client = GitHubClient(config=github_config, db_manager=db_manager)
+            
+            # WebScraper client needs ScrapingConfig
+            scraping_config = getattr(config, 'scraping', None)
+            if not scraping_config:
+                # Create default scraping config
+                from src.core.config.models import ScrapingConfig
+                scraping_config = ScrapingConfig()
+            
+            webscraper_client = WebScrapingClient(config=scraping_config)
+            content_processor = ContentProcessingPipeline(
                 db_manager=db_manager,
-                cache_manager=cache_manager,
-                anythingllm_client=anythingllm_client,
-                llm_client=llm_client,
-                shutdown_timeout=30.0
+                cache_manager=await get_cache_manager(),
+                anythingllm_client=await get_anythingllm_client()
+            )
+            
+            # Create enricher with all dependencies (not async)
+            _knowledge_enricher = create_knowledge_enricher_with_integrated_config(
+                db_manager=db_manager,
+                github_client=github_client,
+                webscraper_client=webscraper_client,
+                content_processor=content_processor,
+                search_orchestrator=search_orchestrator,
+                config=config.enrichment.model_dump() if hasattr(config.enrichment, 'model_dump') else {}
             )
             
             logger.info("Knowledge enricher initialized successfully")

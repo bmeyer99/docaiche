@@ -3,8 +3,7 @@ services:
     build:
       context: .
       dockerfile: src/api/Dockerfile
-    ports:
-      - "4000:8000"
+    # Port not exposed - access through admin-ui proxy on port 4080
     depends_on:
       db:
         condition: service_healthy
@@ -12,10 +11,18 @@ services:
         condition: service_healthy
       anythingllm:
         condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ANYTHINGLLM_URL=http://anythingllm:3001
+      - DATABASE_URL=sqlite+aiosqlite:///data/docaiche.db
+      - DB_PATH=/data/docaiche.db
+      - ENVIRONMENT=production
+      - DATA_DIR=/data
     command: >
       sh -c "
         alembic upgrade head &&
-        python src/database/init_db.py --db-path /data/docaiche.db --force &&
+        python src/database/init_db.py --db-path /data/docaiche.db &&
         uvicorn src.main:app --host 0.0.0.0 --port 8000
       "
     networks:

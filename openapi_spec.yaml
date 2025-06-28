@@ -25,6 +25,12 @@ info:
     - Technology adoption trends
     - Real-time activity feeds
     
+    ## Monitoring Integration
+    - **Loki**: Centralized log aggregation for all services
+    - **Grafana**: Pre-configured dashboards accessible at `/grafana/`
+    - **Structured Logging**: JSON-formatted logs with correlation IDs
+    - **Metrics Collection**: Real-time performance and usage metrics
+    
   version: 2.0.0
   contact:
     name: Docaiche Support
@@ -34,10 +40,10 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: http://localhost:4000/api/v1
-    description: Local development server (direct API access)
   - url: http://localhost:4080/api/v1
-    description: Production server (through admin-ui proxy)
+    description: Production server (through admin-ui proxy) - Primary access point
+  - url: http://localhost:4000/api/v1
+    description: Local development server (direct API access) - Not exposed in production
 
 tags:
   - name: search
@@ -114,6 +120,9 @@ paths:
         - Content statistics: document counts, quality scores, workspace distribution
         - System statistics: CPU, memory, disk usage, uptime
         - Cache statistics: hit/miss rates, memory usage, evictions
+        
+        **Note:** Currently returns real statistics from the database when available,
+        with graceful fallback to empty/zero values if tables are not yet populated.
       operationId: getStats
       responses:
         '200':
@@ -147,6 +156,10 @@ paths:
         - Supports 24h, 7d, and 30d time ranges
         - Returns aggregated metrics suitable for visualization
         - Includes top-N lists for queries and technologies
+        
+        **Current Status:** Returns demonstration data showing the structure
+        and types of analytics available. Will return real data as the system
+        accumulates usage metrics.
       operationId: getAnalytics
       parameters:
         - name: timeRange

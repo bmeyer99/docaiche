@@ -183,18 +183,8 @@ def handle_enrichment_error(exc: Exception) -> HTTPException:
     )
 
 
-# Dependency for KnowledgeEnricher (would be injected in real implementation)
-async def get_knowledge_enricher() -> KnowledgeEnricher:
-    """
-    Dependency to get KnowledgeEnricher instance.
-
-    In production, this would be properly injected with dependencies.
-    """
-    # Placeholder - would be properly injected
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Knowledge enricher not available",
-    )
+# Import the real dependency
+from .dependencies import get_knowledge_enricher
 
 
 @enrichment_router.post(

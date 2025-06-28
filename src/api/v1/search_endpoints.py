@@ -57,33 +57,31 @@ async def search_documents_post(
         import time
         start_time = time.time()
         
-        # For now, return mock data until search orchestrator integration is complete
-        mock_results = [
-            SearchResult(
-                content_id="doc_001",
-                title="Getting Started with FastAPI",
-                snippet="FastAPI is a modern, fast web framework for building APIs with Python 3.7+ based on standard Python type hints...",
-                source_url="https://fastapi.tiangolo.com/tutorial/",
-                technology="python",
-                relevance_score=0.95,
-                content_type="documentation",
-                workspace="python-docs",
-            ),
-            SearchResult(
-                content_id="doc_002",
-                title="FastAPI Request Body",
-                snippet="When you need to send data from a client to your API, you send it as a request body...",
-                source_url="https://fastapi.tiangolo.com/tutorial/body/",
-                technology="python",
-                relevance_score=0.87,
-                content_type="documentation",
-                workspace="python-docs",
-            ),
-        ]
-
-        results = mock_results[: search_request.limit]
+        # Execute real search through the orchestrator
+        search_response = await search_orchestrator.search(
+            query=search_request.query,
+            technology_hint=search_request.technology_hint,
+            limit=search_request.limit,
+            offset=search_request.offset,
+            session_id=search_request.session_id
+        )
+        
+        # Convert orchestrator results to API schema
+        results = []
+        for result in search_response.results[:search_request.limit]:
+            results.append(SearchResult(
+                content_id=result.content_id,
+                title=result.title or "Untitled",
+                snippet=result.snippet or "",
+                source_url=result.source_url or "",
+                technology=result.technology or "unknown",
+                relevance_score=result.relevance_score,
+                content_type=result.content_type or "document",
+                workspace=result.workspace or "default",
+            ))
+        
         execution_time = (time.time() - start_time) * 1000  # Convert to ms
-        cache_hit = False  # Mock data is never from cache
+        cache_hit = getattr(search_response, 'cache_hit', False)
         
         # Log search metrics
         metrics.log_search_query(
@@ -97,12 +95,12 @@ async def search_documents_post(
 
         return SearchResponse(
             results=results,
-            total_count=len(mock_results),
+            total_count=len(search_response.results),
             query=search_request.query,
             technology_hint=search_request.technology_hint,
             execution_time_ms=int(execution_time),
             cache_hit=cache_hit,
-            enrichment_triggered=False,
+            enrichment_triggered=getattr(search_response, 'enrichment_triggered', False),
         )
 
     except Exception as e:

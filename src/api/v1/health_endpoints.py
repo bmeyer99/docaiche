@@ -199,7 +199,11 @@ async def get_stats(
             COUNT(*) as total_searches
         FROM search_cache
         """
-        search_result = await db_manager.fetch_one(search_stats_query)
+        try:
+            search_result = await db_manager.fetch_one(search_stats_query)
+        except Exception as e:
+            logger.warning(f"Failed to query search_cache table: {e}")
+            search_result = None
         
         search_stats = {
             "total_searches": search_result.get("total_searches", 0) if search_result else 0,
@@ -240,7 +244,11 @@ async def get_stats(
             MAX(updated_at) as last_enrichment
         FROM content_metadata
         """
-        content_result = await db_manager.fetch_one(content_stats_query)
+        try:
+            content_result = await db_manager.fetch_one(content_stats_query)
+        except Exception as e:
+            logger.warning(f"Failed to query content_metadata table: {e}")
+            content_result = None
         
         content_stats = {
             "total_documents": content_result.get("total_documents", 0) if content_result else 0,
