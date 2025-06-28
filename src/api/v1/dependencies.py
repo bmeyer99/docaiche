@@ -29,6 +29,14 @@ _configuration_manager: Optional[ConfigurationManager] = None
 _knowledge_enricher = None  # Type: Optional[KnowledgeEnricher]
 
 
+def _reset_dependent_instances():
+    """Reset all dependent instances when database is reinitialized"""
+    global _search_orchestrator, _knowledge_enricher
+    _search_orchestrator = None
+    _knowledge_enricher = None
+    logger.info("Reset dependent instances due to database reinitialization")
+
+
 class StubDatabaseManager:
     """Stub database manager for degraded operation"""
 
@@ -148,6 +156,17 @@ async def get_database_manager() -> DatabaseManager:
             logger.warning(f"Failed to initialize database manager: {e}")
             logger.info("Using stub database manager for degraded operation")
             _db_manager = StubDatabaseManager()
+    else:
+        # Database should already be initialized at startup
+        # Just log a warning if we detect issues but don't auto-reinitialize
+        try:
+            # Simple connection verification
+            result = await _db_manager.fetch_one("SELECT COUNT(*) as count FROM sqlite_master WHERE type='table'")
+            table_count = result.get("count", 0) if result else 0
+            if table_count < 8:
+                logger.warning(f"Database appears incomplete (found {table_count} tables). Database should be initialized at startup.")
+        except Exception as e:
+            logger.warning(f"Database connection verification failed: {e}")
 
     return _db_manager
 
@@ -207,7 +226,8 @@ async def get_search_orchestrator(
     """
     global _search_orchestrator
 
-    if _search_orchestrator is None:
+    # Always recreate if db_manager was reinitialized or is different
+    if _search_orchestrator is None or (hasattr(_search_orchestrator, 'db_manager') and _search_orchestrator.db_manager != db_manager):
         try:
             _search_orchestrator = SearchOrchestrator(
                 db_manager=db_manager,

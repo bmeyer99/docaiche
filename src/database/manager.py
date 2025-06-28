@@ -614,10 +614,10 @@ async def create_database_manager(
                 system_config = get_system_configuration()
                 db_path = f"{system_config.app.data_dir}/docaiche.db"
             else:
-                db_path = "./data/docaiche.db"
+                db_path = "/data/docaiche.db"
         except ImportError:
             logger.warning("Could not load configuration, using default")
-            db_path = "./data/docaiche.db"
+            db_path = "/data/docaiche.db"
     else:
         db_path = config.get("db_path", "/app/data/docaiche.db")
 

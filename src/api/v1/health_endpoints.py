@@ -193,11 +193,11 @@ async def get_stats(
 
     try:
         # Get real search statistics from database
-        # Note: search_queries table has limited fields, so we'll get what we can
+        # Using search_cache table which is what we have in our schema
         search_stats_query = """
         SELECT 
             COUNT(*) as total_searches
-        FROM search_queries
+        FROM search_cache
         """
         search_result = await db_manager.fetch_one(search_stats_query)
         
@@ -230,14 +230,14 @@ async def get_stats(
                     "evictions": 0,
                 }
         
-        # Get real content statistics (document_chunks table doesn't exist yet)
+        # Get real content statistics using correct field names from our schema
         content_stats_query = """
         SELECT 
             COUNT(DISTINCT content_id) as total_documents,
-            0 as total_chunks,
+            SUM(chunk_count) as total_chunks,
             AVG(quality_score) as avg_quality_score,
-            COUNT(DISTINCT workspace) as workspaces,
-            MAX(enriched_at) as last_enrichment
+            COUNT(DISTINCT anythingllm_workspace) as workspaces,
+            MAX(updated_at) as last_enrichment
         FROM content_metadata
         """
         content_result = await db_manager.fetch_one(content_stats_query)

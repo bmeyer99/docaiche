@@ -45,7 +45,7 @@ async def get_recent_activity(
                     'Query hash: ' || query_hash as details
                 FROM search_queries
                 ORDER BY created_at DESC
-                LIMIT :limit
+                LIMIT ?
                 """
             elif activity_type == "config":
                 query = """
@@ -58,7 +58,7 @@ async def get_recent_activity(
                 FROM system_config
                 WHERE updated_at IS NOT NULL
                 ORDER BY updated_at DESC
-                LIMIT :limit
+                LIMIT ?
                 """
             elif activity_type == "error":
                 query = """
@@ -71,29 +71,31 @@ async def get_recent_activity(
                 FROM system_metrics
                 WHERE metric_type = 'error'
                 ORDER BY created_at DESC
-                LIMIT :limit
+                LIMIT ?
                 """
             else:
                 # For other types, return empty list for now
                 return []
+            
+            results = await db_manager.fetch_all(query, (limit,))
         else:
             # Get mixed recent activities from all sources
             query = """
             WITH all_activities AS (
                 SELECT 
-                    'search_' || id as id,
+                    'search_' || query_hash as id,
                     'search' as type,
-                    'Search: ' || query_text as message,
+                    'Search: ' || original_query as message,
                     created_at as timestamp,
                     'Query' as details
-                FROM search_queries
+                FROM search_cache
                 UNION ALL
                 SELECT 
-                    'config_' || config_key as id,
+                    'config_' || key as id,
                     'config' as type,
-                    'Config: ' || config_key as message,
+                    'Config: ' || key as message,
                     updated_at as timestamp,
-                    config_value as details
+                    value as details
                 FROM system_config
                 WHERE updated_at IS NOT NULL
                 UNION ALL
@@ -102,15 +104,15 @@ async def get_recent_activity(
                     'content' as type,
                     'Document: ' || title as message,
                     created_at as timestamp,
-                    'Workspace: ' || workspace as details
+                    'Workspace: ' || COALESCE(anythingllm_workspace, 'None') as details
                 FROM content_metadata
             )
             SELECT * FROM all_activities
             ORDER BY timestamp DESC
-            LIMIT :limit
+            LIMIT 20
             """
         
-        results = await db_manager.fetch_all(query, {"limit": limit})
+            results = await db_manager.fetch_all(query)
         
         # Convert to ActivityItem objects
         activities = []
@@ -157,10 +159,10 @@ async def get_recent_searches(
             'Query performed' as details
         FROM search_queries
         ORDER BY created_at DESC
-        LIMIT :limit
+        LIMIT 20
         """
         
-        results = await db_manager.fetch_all(query, {"limit": limit})
+        results = await db_manager.fetch_all(query)
         
         # Convert to ActivityItem objects
         search_activities = []

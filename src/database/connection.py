@@ -136,10 +136,15 @@ class DatabaseManager:
                 self.engine, class_=AsyncSession, expire_on_commit=False
             )
 
-            # Test connection and enable foreign key constraints
+            # Test connection and configure SQLite for proper isolation
             async with self.engine.begin() as conn:
                 # CRITICAL: Enable foreign key constraints for data integrity
                 await conn.execute(text("PRAGMA foreign_keys = ON"))
+                # Ensure we can see changes from other connections
+                await conn.execute(text("PRAGMA journal_mode = WAL"))
+                await conn.execute(text("PRAGMA synchronous = NORMAL"))
+                # Force a checkpoint to ensure we see all committed changes
+                await conn.execute(text("PRAGMA wal_checkpoint(PASSIVE)"))
                 await conn.execute(text("SELECT 1"))
 
             self._connected = True
@@ -190,13 +195,13 @@ class DatabaseManager:
             logger.error(f"Query execution failed: {query[:100]}... Error: {e}")
             raise
 
-    async def fetch_one(self, query: str, params: Tuple = ()) -> Optional[Row]:
+    async def fetch_one(self, query: str, params = None) -> Optional[Row]:
         """
         Fetch single row from query result.
 
         Args:
-            query: SQL query string with ? placeholders for positional parameters
-            params: Query parameters as tuple
+            query: SQL query string with :named or ? placeholders
+            params: Query parameters as tuple (for ? placeholders) or dict (for :named placeholders)
 
         Returns:
             Single row or None if no results
@@ -209,15 +214,25 @@ class DatabaseManager:
 
         try:
             async with self.session_factory() as session:
-                # Convert positional parameters to dictionary for SQLAlchemy text()
-                if params:
-                    # For ? placeholders, convert to numbered parameters
-                    param_dict = {f"param_{i}": param for i, param in enumerate(params)}
-                    # Replace ? with :param_0, :param_1, etc.
-                    query_modified = query
-                    for i in range(len(params)):
-                        query_modified = query_modified.replace("?", f":param_{i}", 1)
-                    result = await session.execute(text(query_modified), param_dict)
+                if params is not None:
+                    if isinstance(params, dict):
+                        # Named parameters - use as-is
+                        result = await session.execute(text(query), params)
+                    elif isinstance(params, (tuple, list)):
+                        # Positional parameters - convert to named parameters
+                        param_dict = {}
+                        query_modified = query
+                        for i, value in enumerate(params):
+                            param_name = f"param_{i}"
+                            param_dict[param_name] = value
+                            # Replace ? with :param_0, :param_1, etc.
+                            query_modified = query_modified.replace("?", f":{param_name}", 1)
+                        result = await session.execute(text(query_modified), param_dict)
+                    else:
+                        # Single parameter value
+                        param_dict = {"param_0": params}
+                        query_modified = query.replace("?", ":param_0", 1)
+                        result = await session.execute(text(query_modified), param_dict)
                 else:
                     result = await session.execute(text(query))
                 row = result.fetchone()
@@ -227,13 +242,13 @@ class DatabaseManager:
             logger.error(f"Query fetch_one failed: {query[:100]}... Error: {e}")
             raise
 
-    async def fetch_all(self, query: str, params: Tuple = ()) -> List[Row]:
+    async def fetch_all(self, query: str, params = None) -> List[Row]:
         """
         Fetch all rows from query result.
 
         Args:
-            query: SQL query string with ? placeholders for positional parameters
-            params: Query parameters as tuple
+            query: SQL query string with :named or ? placeholders
+            params: Query parameters as tuple (for ? placeholders) or dict (for :named placeholders)
 
         Returns:
             List of rows
@@ -246,15 +261,25 @@ class DatabaseManager:
 
         try:
             async with self.session_factory() as session:
-                # Convert positional parameters to dictionary for SQLAlchemy text()
-                if params:
-                    # For ? placeholders, convert to numbered parameters
-                    param_dict = {f"param_{i}": param for i, param in enumerate(params)}
-                    # Replace ? with :param_0, :param_1, etc.
-                    query_modified = query
-                    for i in range(len(params)):
-                        query_modified = query_modified.replace("?", f":param_{i}", 1)
-                    result = await session.execute(text(query_modified), param_dict)
+                if params is not None:
+                    if isinstance(params, dict):
+                        # Named parameters - use as-is
+                        result = await session.execute(text(query), params)
+                    elif isinstance(params, (tuple, list)):
+                        # Positional parameters - convert to named parameters
+                        param_dict = {}
+                        query_modified = query
+                        for i, value in enumerate(params):
+                            param_name = f"param_{i}"
+                            param_dict[param_name] = value
+                            # Replace ? with :param_0, :param_1, etc.
+                            query_modified = query_modified.replace("?", f":{param_name}", 1)
+                        result = await session.execute(text(query_modified), param_dict)
+                    else:
+                        # Single parameter value
+                        param_dict = {"param_0": params}
+                        query_modified = query.replace("?", ":param_0", 1)
+                        result = await session.execute(text(query_modified), param_dict)
                 else:
                     result = await session.execute(text(query))
                 rows = result.fetchall()
@@ -660,10 +685,10 @@ async def create_database_manager(
                 system_config = get_system_configuration()
                 db_path = f"{system_config.app.data_dir}/docaiche.db"
             else:
-                db_path = "./data/docaiche.db"
+                db_path = "/data/docaiche.db"
         except Exception as e:
             logger.warning(f"Could not load configuration, using default: {e}")
-            db_path = "./data/docaiche.db"
+            db_path = "/data/docaiche.db"
     else:
         db_path = config.get("db_path", "/data/docaiche.db")
 
