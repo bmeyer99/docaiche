@@ -28,12 +28,15 @@ interface RequestOptions {
 
 // API Client Class
 export class DocaicheApiClient {
-  private baseURL: string;
+  private baseUrl: string;
   private defaultHeaders: Record<string, string>;
 
-  constructor(baseURL?: string) {
-    this.baseURL = baseURL || API_CONFIG.BASE_URL;
-    this.defaultHeaders = { ...API_CONFIG.HEADERS };
+  constructor() {
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, '');
+    this.baseUrl = `${base}/api/v1`;
+    this.defaultHeaders = {
+      'Content-Type': 'application/json',
+    };
   }
 
   /**
@@ -45,7 +48,7 @@ export class DocaicheApiClient {
   ): Promise<T> {
     const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = API_CONFIG.RETRY.MAX_ATTEMPTS, ...fetchOptions } = options;
     
-    const url = `${this.baseURL}${endpoint}`;
+    const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       ...this.defaultHeaders,
       ...options.headers
