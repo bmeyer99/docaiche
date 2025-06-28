@@ -12,7 +12,12 @@ import hashlib
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Type, TypeVar
 
-from .models import EvaluationResult, EnrichmentStrategy, QualityAssessment
+from .models import (
+    EvaluationResult, EnrichmentStrategy, QualityAssessment,
+    ProviderCapabilities, ProviderCategory, ModelInfo, ModelDiscoveryResult,
+    TextGenerationRequest, TextGenerationResponse,
+    EmbeddingRequest, EmbeddingResponse
+)
 from .json_parser import parse_llm_response, JSONParsingError, JSONValidationError
 
 logger = logging.getLogger(__name__)
@@ -40,24 +45,60 @@ class LLMProviderUnavailableError(LLMProviderError):
 
 class BaseLLMProvider(ABC):
     """
-    Abstract base class for LLM providers implementing PRD-005 requirements.
+    Enhanced abstract base class for LLM providers implementing PRD-005 requirements
+    and multi-provider architecture support.
 
-    Defines common interface for Ollama and OpenAI providers with circuit breaker
-    integration, structured logging, and error handling patterns.
+    Defines common interface for all providers with circuit breaker integration,
+    structured logging, error handling patterns, and provider registry compatibility.
     """
+    
+    # Provider metadata (to be overridden by subclasses)
+    _provider_id: str = None
+    _display_name: str = None
+    _description: str = None
+    _category: ProviderCategory = ProviderCategory.CLOUD
 
     def __init__(self, config: Optional[Dict[str, Any]] = None, cache_manager=None):
         """
         Initialize base LLM provider.
 
         Args:
-            config: Provider-specific configuration (optional)
+            config: Provider-specific configuration (required for multi-provider system)
             cache_manager: Optional cache manager for response caching
         """
-        self.config = config or {}
+        if config is None:
+            raise ValueError("Configuration is required for provider initialization")
+            
+        self.config = config
         self.cache_manager = cache_manager
         self.provider_name = self.__class__.__name__.replace("Provider", "").lower()
+        
+        # Initialize provider-specific attributes
+        self._models_cache: Optional[ModelDiscoveryResult] = None
+        self._last_model_discovery: Optional[float] = None
 
+    @classmethod
+    @abstractmethod
+    def get_static_capabilities(cls) -> ProviderCapabilities:
+        """
+        Get static capabilities supported by this provider.
+        
+        Returns:
+            ProviderCapabilities: Static capabilities of the provider
+        """
+        pass
+    
+    @classmethod
+    @abstractmethod
+    def get_config_schema(cls) -> Dict[str, Any]:
+        """
+        Get JSON schema for provider configuration validation.
+        
+        Returns:
+            Dict containing JSON schema for configuration
+        """
+        pass
+    
     @abstractmethod
     def _create_circuit_breaker(self):
         """Create provider-specific circuit breaker configuration."""
@@ -79,6 +120,109 @@ class BaseLLMProvider(ABC):
             LLMProviderError: When request fails
         """
         pass
+    
+    @abstractmethod
+    async def generate_text(self, request: TextGenerationRequest) -> TextGenerationResponse:
+        """
+        Generate text using the provider's text generation capabilities.
+        
+        Args:
+            request: Text generation request
+            
+        Returns:
+            Text generation response
+            
+        Raises:
+            LLMProviderError: When generation fails
+        """
+        pass
+    
+    async def generate_embeddings(self, request: EmbeddingRequest) -> EmbeddingResponse:
+        """
+        Generate embeddings using the provider's embedding capabilities.
+        
+        Args:
+            request: Embedding generation request
+            
+        Returns:
+            Embedding response
+            
+        Raises:
+            LLMProviderError: When provider doesn't support embeddings
+        """
+        capabilities = self.get_static_capabilities()
+        if not capabilities.embeddings:
+            raise LLMProviderError(f"Provider {self.provider_name} does not support embeddings")
+        
+        raise NotImplementedError("Embedding generation not implemented for this provider")
+    
+    async def discover_models(self, config: Dict[str, Any]) -> ModelDiscoveryResult:
+        """
+        Discover available models from the provider.
+        
+        Args:
+            config: Provider configuration for model discovery
+            
+        Returns:
+            Model discovery result
+            
+        Raises:
+            LLMProviderError: When model discovery fails
+        """
+        capabilities = self.get_static_capabilities()
+        if not capabilities.model_discovery:
+            # Return static model list if dynamic discovery not supported
+            return ModelDiscoveryResult(
+                text_models=self._get_static_text_models(),
+                embedding_models=self._get_static_embedding_models(),
+                source="static"
+            )
+        
+        # Implement provider-specific model discovery
+        raise NotImplementedError("Model discovery not implemented for this provider")
+    
+    async def test_connection(self, config: Dict[str, Any]) -> bool:
+        """
+        Test connection to the provider with given configuration.
+        
+        Args:
+            config: Configuration to test
+            
+        Returns:
+            True if connection successful
+            
+        Raises:
+            LLMProviderError: When connection fails
+        """
+        try:
+            # Simple test request
+            test_request = TextGenerationRequest(
+                prompt="Say 'OK' if you can hear me",
+                max_tokens=10,
+                temperature=0.0
+            )
+            response = await self.generate_text(test_request)
+            return len(response.text.strip()) > 0
+        except Exception as e:
+            raise LLMProviderError(f"Connection test failed: {str(e)}")
+    
+    def _get_static_text_models(self) -> List[ModelInfo]:
+        """
+        Get static list of text models when dynamic discovery is not available.
+        
+        Returns:
+            List of static text models
+        """
+        return []
+    
+    def _get_static_embedding_models(self) -> List[ModelInfo]:
+        """
+        Get static list of embedding models when dynamic discovery is not available.
+        
+        Returns:
+            List of static embedding models
+        """
+        return []
 
     async def generate_structured(
         self, prompt: str, response_model: Type[T], **kwargs

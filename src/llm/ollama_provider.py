@@ -9,13 +9,18 @@ tolerance settings as specified in PRD-005 lines 244-250.
 import logging
 import asyncio
 import aiohttp
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
+from datetime import datetime
 
 from .base_provider import (
     BaseLLMProvider,
     LLMProviderError,
     LLMProviderTimeoutError,
     LLMProviderUnavailableError,
+)
+from .models import (
+    ProviderCapabilities, ProviderCategory, ModelInfo, ModelType,
+    ModelDiscoveryResult, TextGenerationRequest, TextGenerationResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -64,21 +69,26 @@ class CircuitBreaker:
 
 class OllamaProvider(BaseLLMProvider):
     """
-    Ollama-specific LLM provider implementing PRD-005 requirements.
+    Ollama-specific LLM provider implementing PRD-005 requirements and multi-provider interface.
 
     Makes POST requests to Ollama's /api/generate endpoint with internal
     service circuit breaker configuration (failure_threshold=3, recovery_timeout=60).
     """
+    
+    # Provider metadata
+    _provider_id = "ollama"
+    _display_name = "Ollama"
+    _description = "Local Ollama server for running LLM models"
+    _category = ProviderCategory.LOCAL
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None, cache_manager=None):
+    def __init__(self, config: Dict[str, Any], cache_manager=None):
         """
         Initialize Ollama provider with configuration.
 
         Args:
-            config: Ollama configuration from OllamaConfig
+            config: Ollama configuration (required)
             cache_manager: Optional cache manager for response caching
         """
-        config = config or {}
         super().__init__(config, cache_manager)
         self.endpoint = config.get("endpoint", "http://localhost:11434").rstrip("/")
         self.model = config.get("model", "llama2")
@@ -88,6 +98,64 @@ class OllamaProvider(BaseLLMProvider):
         self.session: aiohttp.ClientSession = None
         self._circuit_breaker = self._create_circuit_breaker()
 
+    @classmethod
+    def get_static_capabilities(cls) -> ProviderCapabilities:
+        """Get static capabilities for Ollama provider."""
+        return ProviderCapabilities(
+            text_generation=True,
+            embeddings=False,  # Ollama embeddings require separate endpoint
+            streaming=True,
+            function_calling=False,
+            local=True,
+            model_discovery=True,
+            prompt_caching=False,
+            system_prompts=True,
+            json_mode=True,
+            vision=False
+        )
+    
+    @classmethod
+    def get_config_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Ollama configuration."""
+        return {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string",
+                    "default": "http://localhost:11434",
+                    "description": "Ollama server endpoint URL"
+                },
+                "model": {
+                    "type": "string", 
+                    "default": "llama2",
+                    "description": "Default model name"
+                },
+                "temperature": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 2.0,
+                    "default": 0.7,
+                    "description": "Sampling temperature"
+                },
+                "max_tokens": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32768,
+                    "default": 4096,
+                    "description": "Maximum tokens to generate"
+                },
+                "timeout_seconds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 300,
+                    "default": 60,
+                    "description": "Request timeout in seconds"
+                }
+            },
+            "required": ["endpoint"],
+            "additionalProperties": True
+        }
+    
     def _create_circuit_breaker(self):
         # Real stateful circuit breaker for contract compliance
         return CircuitBreaker(failure_threshold=3, recovery_timeout=60)
@@ -280,6 +348,124 @@ class OllamaProvider(BaseLLMProvider):
                 "circuit_breaker": self._circuit_breaker.state,
             }
 
+    async def generate_text(self, request: TextGenerationRequest) -> TextGenerationResponse:
+        """
+        Generate text using Ollama.
+        
+        Args:
+            request: Text generation request
+            
+        Returns:
+            Text generation response
+        """
+        start_time = datetime.utcnow()
+        
+        # Build generation parameters
+        kwargs = {
+            "model": request.model_id or self.model,
+            "temperature": request.temperature or self.temperature,
+            "max_tokens": request.max_tokens or self.max_tokens
+        }
+        
+        if request.top_p is not None:
+            kwargs["top_p"] = request.top_p
+        
+        # Use system prompt if provided
+        prompt = request.prompt
+        if request.system_prompt:
+            prompt = f"System: {request.system_prompt}\n\nUser: {prompt}"
+        
+        try:
+            response_text = await self._make_request(prompt, **kwargs)
+            
+            # Calculate metrics
+            end_time = datetime.utcnow()
+            latency_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Estimate token usage (rough approximation)
+            tokens_used = len(prompt.split()) + len(response_text.split())
+            
+            return TextGenerationResponse(
+                text=response_text,
+                finish_reason="stop",  # Ollama doesn't provide detailed finish reasons
+                tokens_used=tokens_used,
+                latency_ms=latency_ms,
+                model_id=kwargs["model"],
+                provider_id=self._provider_id,
+                cost_usd=None,  # Local model has no cost
+                metadata=request.metadata
+            )
+            
+        except Exception as e:
+            raise LLMProviderError(f"Text generation failed: {str(e)}")
+    
+    async def discover_models(self, config: Dict[str, Any]) -> ModelDiscoveryResult:
+        """
+        Discover available models from Ollama server.
+        
+        Args:
+            config: Provider configuration
+            
+        Returns:
+            Model discovery result
+        """
+        try:
+            models_info = await self.list_models()
+            
+            text_models = []
+            for model_name in models_info.get("models", []):
+                text_models.append(ModelInfo(
+                    model_id=model_name,
+                    display_name=model_name,
+                    model_type=ModelType.TEXT,
+                    context_window=None,  # Would need to query each model
+                    max_tokens=None,
+                    cost_per_token=None,  # Local models are free
+                    capabilities={"local": True, "streaming": True},
+                    deprecated=False
+                ))
+            
+            return ModelDiscoveryResult(
+                text_models=text_models,
+                embedding_models=[],  # Ollama embeddings use different endpoint
+                source="api"
+            )
+            
+        except Exception as e:
+            logger.warning(f"Model discovery failed: {e}")
+            # Return static fallback
+            return ModelDiscoveryResult(
+                text_models=self._get_static_text_models(),
+                embedding_models=[],
+                source="static"
+            )
+    
+    def _get_static_text_models(self) -> List[ModelInfo]:
+        """Get static list of common Ollama models."""
+        return [
+            ModelInfo(
+                model_id="llama2",
+                display_name="Llama 2",
+                model_type=ModelType.TEXT,
+                context_window=4096,
+                capabilities={"local": True, "streaming": True}
+            ),
+            ModelInfo(
+                model_id="llama3.1:8b",
+                display_name="Llama 3.1 8B",
+                model_type=ModelType.TEXT,
+                context_window=8192,
+                capabilities={"local": True, "streaming": True}
+            ),
+            ModelInfo(
+                model_id="mistral",
+                display_name="Mistral",
+                model_type=ModelType.TEXT,
+                context_window=4096,
+                capabilities={"local": True, "streaming": True}
+            )
+        ]
+    
     async def close(self):
         """Close HTTP session and cleanup resources."""
         if self.session and not self.session.closed:

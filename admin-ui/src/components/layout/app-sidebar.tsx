@@ -167,9 +167,9 @@ export default function AppSidebar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href='/dashboard/config/system'>
+                    <Link href='/dashboard/health'>
                       <IconSettings className='mr-2 h-4 w-4' />
-                      System Settings
+                      System Health
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
