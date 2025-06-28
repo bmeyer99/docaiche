@@ -8,7 +8,6 @@ following async patterns with proper error handling and circuit breakers.
 
 from .anythingllm import AnythingLLMClient
 from .github import GitHubClient
-from .github_enhanced import SmartGitHubClient
 from .exceptions import (
     AnythingLLMError,
     AnythingLLMConnectionError,
@@ -22,7 +21,6 @@ from .exceptions import (
 __all__ = [
     "AnythingLLMClient",
     "GitHubClient",
-    "SmartGitHubClient",
     "AnythingLLMError",
     "AnythingLLMConnectionError",
     "AnythingLLMAuthenticationError",

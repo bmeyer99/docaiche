@@ -29,7 +29,6 @@ from .exceptions import (
 )
 from .factory import create_search_orchestrator
 from .llm_query_analyzer import LLMQueryAnalyzer, QueryIntent
-from .orchestrator_enhanced import EnhancedSearchOrchestrator
 
 __all__ = [
     # Core classes
@@ -56,5 +55,4 @@ __all__ = [
     # LLM-enhanced components
     "LLMQueryAnalyzer",
     "QueryIntent",
-    "EnhancedSearchOrchestrator",
 ]

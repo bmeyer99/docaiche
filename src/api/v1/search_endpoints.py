@@ -62,7 +62,7 @@ async def search_documents_post(
             query=search_request.query,
             technology_hint=search_request.technology_hint,
             limit=search_request.limit,
-            offset=search_request.offset,
+            offset=0,  # Default offset as it's not in SearchRequest
             session_id=search_request.session_id
         )
         

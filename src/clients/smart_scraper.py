@@ -12,15 +12,19 @@ import markdownify
 from src.llm.client import LLMProviderClient
 from src.search.llm_query_analyzer import QueryIntent
 from src.document_processing.models import DocumentContent
-from src.clients.webscraper import WebScraperClient
+from src.clients.webscraper import WebScrapingClient
 
 logger = logging.getLogger(__name__)
 
 
-class SmartWebScraper(WebScraperClient):
+class SmartWebScraper(WebScrapingClient):
     """Enhanced web scraper with intelligent content extraction"""
     
     def __init__(self, llm_client: LLMProviderClient, config=None):
+        # Create default config if not provided
+        if config is None:
+            from src.core.config.models import ScrapingConfig
+            config = ScrapingConfig()
         super().__init__(config)
         self.llm = llm_client
         

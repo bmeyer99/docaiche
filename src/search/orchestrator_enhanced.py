@@ -14,8 +14,6 @@ from src.search.orchestrator import SearchOrchestrator
 from src.api.schemas import SearchResponse
 from src.search.llm_query_analyzer import LLMQueryAnalyzer, QueryIntent
 from src.enrichment.llm_source_finder import LLMSourceFinder, DocumentationSource
-from src.clients.github_enhanced import SmartGitHubClient
-from src.clients.smart_scraper import SmartWebScraper
 from src.ingestion.smart_pipeline import SmartIngestionPipeline
 from src.llm.client import LLMProviderClient
 from src.clients.anythingllm import AnythingLLMClient
@@ -48,6 +46,11 @@ class EnhancedSearchOrchestrator(SearchOrchestrator):
         self.llm_client = llm_client
         self.query_analyzer = LLMQueryAnalyzer(llm_client)
         self.source_finder = LLMSourceFinder(llm_client)
+        
+        # Import here to avoid circular imports
+        from src.clients.github_enhanced import SmartGitHubClient
+        from src.clients.smart_scraper import SmartWebScraper
+        
         self.github_client = SmartGitHubClient(llm_client)
         self.web_scraper = SmartWebScraper(llm_client)
         self.pipeline = SmartIngestionPipeline(
@@ -56,13 +59,25 @@ class EnhancedSearchOrchestrator(SearchOrchestrator):
             db_manager=db_manager
         )
         
-    async def search(self, query: str, limit: int = 10) -> SearchResponse:
+    async def search(
+        self, 
+        query: str, 
+        limit: int = 10,
+        technology_hint: Optional[str] = None,
+        offset: int = 0,
+        session_id: Optional[str] = None,
+        background_tasks: Optional[Any] = None
+    ) -> SearchResponse:
         """
         Perform intelligent search with dynamic documentation discovery
         
         Args:
             query: Search query
             limit: Maximum number of results
+            technology_hint: Optional technology filter (used in intent analysis)
+            offset: Pagination offset (not used in current implementation)
+            session_id: Session ID for tracking (not used in current implementation)
+            background_tasks: Background tasks for enrichment
             
         Returns:
             SearchResponse with results
@@ -70,17 +85,37 @@ class EnhancedSearchOrchestrator(SearchOrchestrator):
         start_time = time.time()
         
         try:
-            # 1. Check cache first
-            cached_response = await self._check_cache(query)
-            if cached_response:
-                logger.info(f"Cache hit for query: {query}")
-                return cached_response
+            # 1. Check cache first (using inherited method from base class)
+            try:
+                # Use SearchQuery object for cache compatibility
+                from src.search.models import SearchQuery
+                search_query = SearchQuery(query=query, filters={}, limit=limit)
+                
+                cached_results = await self.search_cache.get_cached_results(search_query)
+                if cached_results:
+                    logger.info(f"Cache hit for query: {query}")
+                    # Convert to SearchResponse format
+                    return SearchResponse(
+                        query=query,
+                        results=cached_results.results[:limit],
+                        total_count=cached_results.total_count,
+                        search_time_ms=cached_results.query_time_ms,
+                        cached=True,
+                        metadata=cached_results.metadata or {}
+                    )
+            except Exception as e:
+                logger.warning(f"Cache check failed: {e}")
             
             logger.info(f"Cache miss for query: {query}")
             
             # 2. Analyze query intent using LLM
             logger.info("Analyzing query intent...")
             intent = await self.query_analyzer.analyze_query(query)
+            
+            # Override technology if hint provided
+            if technology_hint:
+                intent.technology = technology_hint
+                
             logger.info(f"Query intent: technology={intent.technology}, "
                        f"topics={intent.topics}, doc_type={intent.doc_type}")
             
@@ -365,3 +400,34 @@ class EnhancedSearchOrchestrator(SearchOrchestrator):
             
         except Exception as e:
             logger.error(f"Failed to track search: {e}")
+    
+    async def _cache_results(self, query: str, response: SearchResponse):
+        """
+        Cache search results for future requests
+        
+        Args:
+            query: Search query
+            response: Search response to cache
+        """
+        try:
+            from src.search.models import SearchQuery, SearchResults
+            
+            # Convert response back to SearchResults for caching
+            search_query = SearchQuery(query=query, filters={}, limit=len(response.results))
+            
+            search_results = SearchResults(
+                results=response.results,
+                total_count=response.total_count,
+                query_time_ms=response.search_time_ms,
+                strategy_used="enhanced",
+                cache_hit=False,
+                workspaces_searched=[],
+                enrichment_triggered=False,
+                metadata=response.metadata
+            )
+            
+            await self.search_cache.cache_results(search_query, search_results)
+            logger.info(f"Cached search results for query: {query}")
+            
+        except Exception as e:
+            logger.warning(f"Failed to cache results: {e}")

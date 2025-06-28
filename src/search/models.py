@@ -85,6 +85,9 @@ class SearchResults(BaseModel):
     enrichment_triggered: bool = Field(
         False, description="Whether enrichment was triggered"
     )
+    metadata: Optional[Dict[str, Any]] = Field(
+        None, description="Additional metadata"
+    )
 
 
 class WorkspaceInfo(BaseModel):

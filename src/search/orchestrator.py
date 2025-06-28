@@ -718,7 +718,7 @@ class SearchOrchestrator:
             SearchResponse compatible with API schema
         """
         # Import here to avoid circular imports
-        from src.api.v1.schemas import SearchResponse as APISearchResponse
+        from src.api.schemas import SearchResponse as APISearchResponse
         
         # Create internal SearchQuery
         search_query = SearchQuery(
@@ -738,7 +738,8 @@ class SearchOrchestrator:
             results=results.results[:limit],
             total_count=results.total_count,
             query=query,
-            search_time_ms=results.query_time_ms,
-            cached=results.from_cache,
-            metadata=results.metadata or {}
+            technology_hint=technology_hint,
+            execution_time_ms=results.query_time_ms,
+            cache_hit=results.cache_hit,
+            enrichment_triggered=results.enrichment_triggered
         )
