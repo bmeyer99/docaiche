@@ -12,6 +12,8 @@ import { Progress } from '@/components/ui/progress';
 import { Icons } from '@/components/icons';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
+import { useCircuitBreaker } from '@/lib/hooks/use-circuit-breaker';
+import { CircuitBreakerIndicator } from '@/components/ui/circuit-breaker-indicator';
 
 interface Collection {
   id: string;
@@ -36,12 +38,32 @@ export default function CollectionsPage() {
   });
   const { toast } = useToast();
   const apiClient = useApiClient();
+  const collectionsCircuitBreaker = useCircuitBreaker('collections-api', {
+    failureThreshold: 3,
+    resetTimeoutMs: 30000,
+  });
 
   const loadCollections = useCallback(async () => {
+    if (!collectionsCircuitBreaker.canMakeRequest) {
+      const state = collectionsCircuitBreaker.getCircuitState();
+      console.warn(`🚫 Collections API blocked by circuit breaker (${state})`);
+      toast({
+        title: "Backend Connection Issue",
+        description: `Collections API is temporarily unavailable (Circuit: ${state})`,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       const data = await apiClient.getCollections();
+      collectionsCircuitBreaker.recordSuccess();
       setCollections((data.collections || []) as unknown as Collection[]);
     } catch (error) {
+      collectionsCircuitBreaker.recordFailure();
+      console.error('🔥 Collections API request failed:', error);
+      
       toast({
         title: "Error",
         description: "Failed to load collections",
@@ -50,7 +72,7 @@ export default function CollectionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiClient, toast]);
+  }, [apiClient, toast, collectionsCircuitBreaker]);
 
   useEffect(() => {
     loadCollections();
@@ -226,6 +248,12 @@ export default function CollectionsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Circuit Breaker Status */}
+      <CircuitBreakerIndicator 
+        identifier="collections-api" 
+        onReset={loadCollections}
+      />
 
       {/* Collections Grid */}
       {loading ? (

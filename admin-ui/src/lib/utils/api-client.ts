@@ -28,10 +28,22 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
+// Circuit breaker state
+interface CircuitBreakerState {
+  isOpen: boolean;
+  failureCount: number;
+  lastFailureTime: number;
+  nextAttemptTime: number;
+}
+
 // API Client Class
 export class DocaicheApiClient {
   private baseUrl: string;
   private defaultHeaders: Record<string, string>;
+  private circuitBreaker: Map<string, CircuitBreakerState> = new Map();
+  private readonly CIRCUIT_BREAKER_THRESHOLD = 5;
+  private readonly CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds
+  private readonly CIRCUIT_BREAKER_RESET_TIMEOUT = 60000; // 1 minute
 
   constructor() {
     this.baseUrl = '/api/v1';
@@ -41,13 +53,78 @@ export class DocaicheApiClient {
   }
 
   /**
+   * Check circuit breaker state for an endpoint
+   */
+  private checkCircuitBreaker(endpoint: string): boolean {
+    const state = this.circuitBreaker.get(endpoint);
+    if (!state) {
+      this.circuitBreaker.set(endpoint, {
+        isOpen: false,
+        failureCount: 0,
+        lastFailureTime: 0,
+        nextAttemptTime: 0
+      });
+      return false;
+    }
+
+    const now = Date.now();
+    
+    // If circuit is open and reset timeout has passed, try half-open state
+    if (state.isOpen && now >= state.nextAttemptTime) {
+      state.isOpen = false;
+      state.failureCount = 0;
+      return false;
+    }
+
+    return state.isOpen;
+  }
+
+  /**
+   * Record success for circuit breaker
+   */
+  private recordSuccess(endpoint: string): void {
+    const state = this.circuitBreaker.get(endpoint);
+    if (state) {
+      state.failureCount = 0;
+      state.isOpen = false;
+      state.lastFailureTime = 0;
+      state.nextAttemptTime = 0;
+    }
+  }
+
+  /**
+   * Record failure for circuit breaker
+   */
+  private recordFailure(endpoint: string): void {
+    const state = this.circuitBreaker.get(endpoint);
+    if (!state) return;
+
+    state.failureCount++;
+    state.lastFailureTime = Date.now();
+
+    if (state.failureCount >= this.CIRCUIT_BREAKER_THRESHOLD) {
+      state.isOpen = true;
+      state.nextAttemptTime = Date.now() + this.CIRCUIT_BREAKER_RESET_TIMEOUT;
+      console.warn(`Circuit breaker opened for endpoint: ${endpoint}`);
+    }
+  }
+
+  /**
    * Generic HTTP request method with retry logic and error handling
    */
   private async request<T>(
     endpoint: string,
     options: RequestInit & RequestOptions = {}
   ): Promise<T> {
-    const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = API_CONFIG.RETRY.MAX_ATTEMPTS, ...fetchOptions } = options;
+    // Check circuit breaker
+    if (this.checkCircuitBreaker(endpoint)) {
+      throw this.createApiError(
+        'Circuit Breaker Open',
+        `Circuit breaker is open for endpoint: ${endpoint}. Too many recent failures.`
+      );
+    }
+
+    const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = Math.min(API_CONFIG.RETRY.MAX_ATTEMPTS, 3), ...fetchOptions } = options;
     let lastError: Error = new Error('Unknown error');
     
     const url = `${this.baseUrl}${endpoint}`;
@@ -71,6 +148,7 @@ export class DocaicheApiClient {
 
         // Handle response based on content type and status
         const result = await this.handleResponse<T>(response);
+        this.recordSuccess(endpoint);
         return result;
 
       } catch (error) {
@@ -78,17 +156,32 @@ export class DocaicheApiClient {
         
         // Don't retry on certain errors
         if (error instanceof TypeError || (error as Error).name === 'AbortError') {
+          this.recordFailure(endpoint);
           throw this.createApiError('Network Error', (error as Error).message);
+        }
+
+        // For server errors (5xx), record failure and limit retries more aggressively
+        if (lastError.message.includes('500') || lastError.message.includes('502') || lastError.message.includes('503')) {
+          this.recordFailure(endpoint);
+          
+          // Break early for server errors to prevent overwhelming the server
+          if (attempt >= 2) {
+            break;
+          }
         }
 
         // Wait before retry (exponential backoff)
         if (attempt < retries) {
-          const delay = API_CONFIG.RETRY.DELAY_MS * Math.pow(API_CONFIG.RETRY.BACKOFF_MULTIPLIER, attempt - 1);
+          const delay = Math.min(
+            API_CONFIG.RETRY.DELAY_MS * Math.pow(API_CONFIG.RETRY.BACKOFF_MULTIPLIER, attempt - 1),
+            10000 // Cap at 10 seconds
+          );
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
 
+    this.recordFailure(endpoint);
     throw this.createApiError('Request Failed', `Failed after ${retries} attempts: ${lastError.message}`);
   }
 
@@ -113,7 +206,10 @@ export class DocaicheApiClient {
       }
       
       // Handle other error formats
-      throw this.createApiError('API Error', data.message || data.error || 'Unknown error');
+      throw this.createApiError(
+        `API Error ${response.status}`, 
+        data.message || data.error || `Server returned ${response.status} error`
+      );
     }
     
     // Handle non-JSON responses
@@ -125,7 +221,7 @@ export class DocaicheApiClient {
     // Handle HTTP errors without JSON body
     throw this.createApiError(
       `HTTP ${response.status}`,
-      response.statusText || 'Unknown error'
+      response.statusText || `Server error: ${response.status}`
     );
   }
 
@@ -277,17 +373,26 @@ export class DocaicheApiClient {
    * Provider Management
    */
   async getProviderConfigurations(): Promise<any[]> {
-    return this.get<any[]>('/api/v1/providers');
+    try {
+      return await this.get<any[]>('/providers');
+    } catch (error) {
+      // Return empty array on circuit breaker or repeated failures
+      if (error instanceof Error && error.message.includes('Circuit Breaker')) {
+        console.warn('Provider configurations unavailable due to circuit breaker');
+        return [];
+      }
+      throw error;
+    }
   }
 
   async updateProviderConfiguration(providerId: string, config: ProviderConfiguration): Promise<ProviderConfiguration> {
-    return this.post<any>(`/api/v1/providers/${providerId}/config`, config);
+    return this.post<any>(`/providers/${providerId}/config`, config);
   }
 
   async testProviderConnection(providerId: string, config: Record<string, string | number>): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.post<{ success: boolean; message: string }>(
-        `/api/v1/providers/${providerId}/test`,
+        `/providers/${providerId}/test`,
         config,
         { timeout: API_CONFIG.TIMEOUTS.CONNECTION_TEST }
       );
@@ -304,33 +409,33 @@ export class DocaicheApiClient {
    * Health and Monitoring Methods
    */
   async getSystemHealth(): Promise<any> {
-    return this.get<any>('/api/v1/system/health');
+    return this.get<any>('/system/health');
   }
 
   async getSystemMetrics(): Promise<any> {
-    return this.get<any>('/api/v1/system/metrics');
+    return this.get<any>('/system/metrics');
   }
 
   async getDashboardStats(): Promise<any> {
-    return this.get<any>('/api/v1/stats');
+    return this.get<any>('/stats');
   }
 
   async getRecentActivity(): Promise<ActivityItem[]> {
-    return this.get<ActivityItem[]>('/api/v1/admin/activity/recent');
+    return this.get<ActivityItem[]>('/admin/activity/recent');
   }
 
 
 
   async createCollection(data: { name: string; description?: string; metadata?: Record<string, unknown> }): Promise<{ id: string; name: string; description?: string; created_at: string }> {
-    return this.post<any>('/api/v1/content/collections', data);
+    return this.post<any>('/content/collections', data);
   }
 
   async deleteCollection(collectionId: string): Promise<void> {
-    return this.delete<void>(`/api/v1/content/collections/${collectionId}`);
+    return this.delete<void>(`/content/collections/${collectionId}`);
   }
 
   async reindexCollection(collectionId: string): Promise<any> {
-    return this.post<any>(`/api/v1/content/collections/${collectionId}/reindex`, {});
+    return this.post<any>(`/content/collections/${collectionId}/reindex`, {});
   }
 
 
@@ -338,7 +443,7 @@ export class DocaicheApiClient {
    * Analytics Methods
    */
   async getAnalytics(timeRange: string = '24h'): Promise<any> {
-    return this.get<any>(`/api/v1/analytics?timeRange=${timeRange}`);
+    return this.get<any>(`/analytics?timeRange=${timeRange}`);
   }
 }
 

@@ -13,6 +13,8 @@ import { Icons } from '@/components/icons';
 import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/config/providers';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
+import { useCircuitBreaker } from '@/lib/hooks/use-circuit-breaker';
+import { CircuitBreakerIndicator } from '@/components/ui/circuit-breaker-indicator';
 
 export default function ProvidersConfigPage() {
   const [configurations, setConfigurations] = useState<Record<string, ProviderConfiguration>>({});
@@ -20,11 +22,29 @@ export default function ProvidersConfigPage() {
   const [activeProvider, setActiveProvider] = useState('ollama');
   const { toast } = useToast();
   const apiClient = useApiClient();
+  const providerCircuitBreaker = useCircuitBreaker('providers-api', {
+    failureThreshold: 3,
+    resetTimeoutMs: 30000,
+  });
 
   const loadProviderConfigurations = useCallback(async () => {
+    // Check circuit breaker before making request
+    if (!providerCircuitBreaker.canMakeRequest) {
+      const state = providerCircuitBreaker.getCircuitState();
+      console.warn(`🚫 Providers API blocked by circuit breaker (${state})`);
+      toast({
+        title: "Backend Connection Issue",
+        description: `Providers API is temporarily unavailable (Circuit: ${state})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await apiClient.getProviderConfigurations();
+      providerCircuitBreaker.recordSuccess();
+      
       // Convert array response to Record format expected by the component
       const configRecord = Array.isArray(data) 
         ? data.reduce((acc, provider) => {
@@ -40,6 +60,9 @@ export default function ProvidersConfigPage() {
         : data || {};
       setConfigurations(configRecord);
     } catch (error) {
+      providerCircuitBreaker.recordFailure();
+      console.error('🔥 Providers API request failed:', error);
+      
       toast({
         title: "Error",
         description: "Failed to load provider configurations",
@@ -48,23 +71,38 @@ export default function ProvidersConfigPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiClient, toast]);
+  }, [apiClient, toast, providerCircuitBreaker]);
 
   useEffect(() => {
     loadProviderConfigurations();
   }, [loadProviderConfigurations]);
 
   const saveConfiguration = async (providerId: string, config: Partial<ProviderConfiguration>) => {
+    if (!providerCircuitBreaker.canMakeRequest) {
+      const state = providerCircuitBreaker.getCircuitState();
+      toast({
+        title: "Backend Connection Issue",
+        description: `Cannot save configuration - API unavailable (Circuit: ${state})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const updatedConfig = { ...configurations[providerId], ...config };
       await apiClient.updateProviderConfiguration(providerId, updatedConfig);
+      providerCircuitBreaker.recordSuccess();
+      
       setConfigurations(prev => ({ ...prev, [providerId]: updatedConfig }));
       toast({
         title: "Success",
         description: `${AI_PROVIDERS[providerId]?.displayName} configuration saved`,
       });
     } catch (error) {
+      providerCircuitBreaker.recordFailure();
+      console.error('🔥 Provider configuration save failed:', error);
+      
       toast({
         title: "Error",
         description: "Failed to save configuration",
@@ -76,6 +114,16 @@ export default function ProvidersConfigPage() {
   };
 
   const testConnection = async (providerId: string) => {
+    if (!providerCircuitBreaker.canMakeRequest) {
+      const state = providerCircuitBreaker.getCircuitState();
+      toast({
+        title: "Backend Connection Issue",
+        description: `Cannot test connection - API unavailable (Circuit: ${state})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Get the provider config for testing
       const providerConfig = configurations[providerId];
@@ -93,12 +141,22 @@ export default function ProvidersConfigPage() {
         api_key: String(providerConfig.config?.api_key || ""),
         model: String(providerConfig.config?.model || "")
       });
+      
+      if (result.success) {
+        providerCircuitBreaker.recordSuccess();
+      } else {
+        providerCircuitBreaker.recordFailure();
+      }
+      
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,
         variant: result.success ? "default" : "destructive",
       });
     } catch (error) {
+      providerCircuitBreaker.recordFailure();
+      console.error('🔥 Provider connection test failed:', error);
+      
       toast({
         title: "Error",
         description: "Failed to test connection",
@@ -290,6 +348,12 @@ export default function ProvidersConfigPage() {
           Configure and manage AI providers for text generation and embeddings
         </p>
       </div>
+
+      {/* Circuit Breaker Status */}
+      <CircuitBreakerIndicator 
+        identifier="providers-api" 
+        onReset={loadProviderConfigurations}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
