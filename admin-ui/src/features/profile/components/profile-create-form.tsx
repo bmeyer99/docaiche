@@ -36,13 +36,13 @@ interface ProfileFormType {
 }
 
 const ProfileCreateForm: React.FC<ProfileFormType> = ({ initialData }) => {
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
   const title = initialData ? 'Edit product' : 'Create Your Profile';
   const description = initialData
     ? 'Edit a product.'
     : 'To create your resume, we first need some basic information about you.';
   const [currentStep, setCurrentStep] = useState(0);
+  const [loading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const defaultValues = {
     jobs: [
@@ -73,7 +73,7 @@ const ProfileCreateForm: React.FC<ProfileFormType> = ({ initialData }) => {
     name: 'jobs'
   });
 
-  const processForm: SubmitHandler<ProfileFormValues> = (data) => {
+  const processForm: SubmitHandler<ProfileFormValues> = () => {
     // Process form data
     // Handle form submission - could send to API
     // api call and reset

@@ -19,7 +19,7 @@ import {
   ChartTooltipContent
 } from '@/components/ui/chart';
 import { Icons } from '@/components/icons';
-import { useApiClient } from '@/hooks/use-api-client';
+import { useApiClient } from '@/lib/hooks/use-api-client';
 
 const chartConfig = {
   documents: {

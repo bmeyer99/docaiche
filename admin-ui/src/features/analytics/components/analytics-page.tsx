@@ -48,17 +48,6 @@ export default function AnalyticsPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const apiClient = useApiClient();
 
-  useEffect(() => {
-    loadAnalytics();
-  }, [loadAnalytics]);
-
-  useEffect(() => {
-    if (!autoRefresh) return;
-    
-    const interval = setInterval(loadAnalytics, 60000); // Refresh every minute
-    return () => clearInterval(interval);
-  }, [autoRefresh, loadAnalytics]);
-
   const loadAnalytics = useCallback(async () => {
     try {
       const data = await apiClient.getAnalytics(timeRange);
@@ -69,6 +58,17 @@ export default function AnalyticsPage() {
       setLoading(false);
     }
   }, [apiClient, timeRange]);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [loadAnalytics]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(loadAnalytics, 60000); // Refresh every minute
+    return () => clearInterval(interval);
+  }, [autoRefresh, loadAnalytics]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;

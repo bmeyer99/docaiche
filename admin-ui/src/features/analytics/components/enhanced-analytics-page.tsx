@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/icons';
-import { useApiClient } from '@/hooks/use-api-client';
+import { useApiClient } from '@/lib/hooks/use-api-client';
 import {
   LineChart,
   Line,
@@ -88,60 +88,6 @@ export default function EnhancedAnalyticsPage() {
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('area');
   const [showDetails, setShowDetails] = useState(false);
   const apiClient = useApiClient();
-
-  useEffect(() => {
-    loadAnalytics();
-  }, [loadAnalytics]);
-
-  useEffect(() => {
-    if (!autoRefresh) return;
-    
-    const interval = setInterval(loadAnalytics, 60000); // Refresh every minute
-    return () => clearInterval(interval);
-  }, [autoRefresh, loadAnalytics]);
-
-  const loadAnalytics = useCallback(async () => {
-    try {
-      const data = await apiClient.getAnalytics(timeRange);
-      
-      // Enhance data with additional mock data for demonstration
-      const enhancedData: AnalyticsData = {
-        ...data,
-        searchMetrics: {
-          ...data.searchMetrics,
-          queriesByDay: generateMockDailyData(),
-          queriesByHour: data.searchMetrics.queriesByHour || generateMockHourlyData()
-        },
-        contentMetrics: {
-          ...data.contentMetrics,
-          documentsByTechnology: [
-            { technology: 'React', count: 1250, color: '#61dafb' },
-            { technology: 'Python', count: 980, color: '#3776ab' },
-            { technology: 'JavaScript', count: 875, color: '#f7df1e' },
-            { technology: 'TypeScript', count: 720, color: '#3178c6' },
-            { technology: 'Node.js', count: 650, color: '#339933' },
-            { technology: 'Docker', count: 480, color: '#2496ed' }
-          ]
-        },
-        providerMetrics: {
-          ...data.providerMetrics,
-          latencyTrend: generateMockLatencyData()
-        },
-        systemMetrics: {
-          ...data.systemMetrics,
-          performanceTrend: generateMockPerformanceData()
-        }
-      };
-      
-      setAnalytics(enhancedData);
-    } catch (error) {
-      // Error handled, could show toast notification
-      // Fallback to mock data for demonstration
-      setAnalytics(generateMockAnalyticsData());
-    } finally {
-      setLoading(false);
-    }
-  }, [apiClient, timeRange]);
 
   const generateMockHourlyData = (): Array<{ hour: number; count: number; responseTime: number }> => {
     const data: Array<{ hour: number; count: number; responseTime: number }> = [];
@@ -256,6 +202,62 @@ export default function EnhancedAnalyticsPage() {
       performanceTrend: generateMockPerformanceData()
     }
   });
+
+  const loadAnalytics = useCallback(async () => {
+    try {
+      const data = await apiClient.getAnalytics(timeRange);
+      
+      // Enhance data with additional mock data for demonstration
+      const enhancedData: AnalyticsData = {
+        ...data,
+        searchMetrics: {
+          ...data.searchMetrics,
+          queriesByDay: generateMockDailyData(),
+          queriesByHour: data.searchMetrics.queriesByHour || generateMockHourlyData()
+        },
+        contentMetrics: {
+          ...data.contentMetrics,
+          documentsByTechnology: [
+            { technology: 'React', count: 1250, color: '#61dafb' },
+            { technology: 'Python', count: 980, color: '#3776ab' },
+            { technology: 'JavaScript', count: 875, color: '#f7df1e' },
+            { technology: 'TypeScript', count: 720, color: '#3178c6' },
+            { technology: 'Node.js', count: 650, color: '#339933' },
+            { technology: 'Docker', count: 480, color: '#2496ed' }
+          ]
+        },
+        providerMetrics: {
+          ...data.providerMetrics,
+          latencyTrend: generateMockLatencyData()
+        },
+        systemMetrics: {
+          ...data.systemMetrics,
+          performanceTrend: generateMockPerformanceData()
+        }
+      };
+      
+      setAnalytics(enhancedData);
+    } catch (error) {
+      // Error handled, could show toast notification
+      // Fallback to mock data for demonstration
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      setAnalytics(generateMockAnalyticsData());
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiClient, timeRange]);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [loadAnalytics]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(loadAnalytics, 60000); // Refresh every minute
+    return () => clearInterval(interval);
+  }, [autoRefresh, loadAnalytics]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
