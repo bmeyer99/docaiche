@@ -43,10 +43,10 @@ export const useAppStore = create<AppStore>()(
         partialize: (state) => ({
           user: state.user,
           ui: {
-            sidebar: state.ui.sidebar,
+            sidebar: state.ui?.sidebar,
           },
           providers: {
-            modelSelection: state.providers.modelSelection,
+            modelSelection: state.providers?.modelSelection,
           },
         }),
         // Custom storage for different data types

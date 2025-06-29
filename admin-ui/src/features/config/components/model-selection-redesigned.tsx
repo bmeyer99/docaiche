@@ -61,8 +61,8 @@ export default function ModelSelectionRedesigned() {
     loadData();
   }, [apiClient]);
 
-  // Note: Models should only be loaded when user clicks "Test Connection"
-  // No automatic loading on page mount
+  // IMPORTANT: Models should only be loaded when user clicks "Test Connection"
+  // No automatic model loading on page mount to prevent 500 errors
 
   const getEnabledProviders = (): (ProviderDefinition & { id: string })[] => {
     return Object.entries(AI_PROVIDERS).map(([id, provider]) => ({

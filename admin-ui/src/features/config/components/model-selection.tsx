@@ -89,35 +89,26 @@ export default function ModelSelection() {
   }, [apiClient]);
 
   // Load models for non-queryable providers on mount
+  // DISABLED: No automatic model loading on mount to prevent 500 errors
   useEffect(() => {
-    const loadInitialModels = async () => {
-      const nonQueryableProviders = Object.keys(AI_PROVIDERS).filter(
-        id => !queryableProviders.includes(id.toLowerCase())
-      );
-
-      for (const providerId of nonQueryableProviders) {
-        try {
-          const response = await apiClient.getProviderModels(providerId);
-          setProviderModels(prev => ({
-            ...prev,
-            [providerId]: response
-          }));
-        } catch (error) {
-          // Use empty models on error
-          setProviderModels(prev => ({
-            ...prev,
-            [providerId]: {
-              provider: providerId,
-              models: [],
-              queryable: false
-            }
-          }));
-        }
-      }
-    };
-
-    loadInitialModels();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Models should only be loaded when user explicitly tests a provider
+    // Automatic loading causes 500 errors for unconfigured providers
+    
+    // COMMENTED OUT TO FIX AUTOMATIC MODEL LOADING ISSUE:
+    // const loadInitialModels = async () => {
+    //   const nonQueryableProviders = Object.keys(AI_PROVIDERS).filter(
+    //     id => !queryableProviders.includes(id.toLowerCase())
+    //   );
+    //   for (const providerId of nonQueryableProviders) {
+    //     try {
+    //       const response = await apiClient.getProviderModels(providerId);
+    //       setProviderModels(prev => ({ ...prev, [providerId]: response }));
+    //     } catch (error) {
+    //       // Use empty models on error
+    //     }
+    //   }
+    // };
+    // loadInitialModels();
   }, [apiClient]);
 
   // Check if a provider is configured
