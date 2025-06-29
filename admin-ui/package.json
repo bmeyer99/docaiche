@@ -115,6 +115,10 @@
   },
   "overrides": {
     "@types/react": "19.0.1",
-    "@types/react-dom": "19.0.2"
+    "@types/react-dom": "19.0.2",
+    "@ampproject/remapping": "2.2.1",
+    "@jridgewell/trace-mapping": "0.3.20",
+    "@jridgewell/sourcemap-codec": "1.4.15",
+    "@jridgewell/gen-mapping": "0.3.5"
   }
 }

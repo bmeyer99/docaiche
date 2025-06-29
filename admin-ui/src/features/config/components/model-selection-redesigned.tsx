@@ -61,26 +61,8 @@ export default function ModelSelectionRedesigned() {
     loadData();
   }, [apiClient]);
 
-  // Load static models for non-queryable providers on mount
-  useEffect(() => {
-    const queryableProviders = ['ollama', 'lmstudio', 'openrouter'];
-    const loadStaticModels = async () => {
-      for (const [providerId] of Object.entries(AI_PROVIDERS)) {
-        if (!queryableProviders.includes(providerId.toLowerCase())) {
-          try {
-            const response = await apiClient.getProviderModels(providerId);
-            if (response?.models) {
-              testCache.setProviderTested(providerId, response.models, {});
-            }
-          } catch {
-            // Ignore errors for static providers
-          }
-        }
-      }
-    };
-
-    loadStaticModels();
-  }, [apiClient, testCache]);
+  // Note: Models should only be loaded when user clicks "Test Connection"
+  // No automatic loading on page mount
 
   const getEnabledProviders = (): (ProviderDefinition & { id: string })[] => {
     return Object.entries(AI_PROVIDERS).map(([id, provider]) => ({

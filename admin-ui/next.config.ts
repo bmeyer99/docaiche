@@ -10,6 +10,25 @@ const baseConfig: NextConfig = {
   trailingSlash: false,
   skipTrailingSlashRedirect: true,
   
+  // Experimental features for Docker ESM compatibility
+  experimental: {
+    esmExternals: 'loose',
+  },
+  
+  // Webpack configuration for Docker ESM compatibility
+  webpack: (config, { isServer }) => {
+    // Handle ESM packages in Docker builds
+    if (!isServer) {
+      config.externals = config.externals || []
+      config.externals.push({
+        '@jridgewell/trace-mapping': 'commonjs @jridgewell/trace-mapping',
+        '@jridgewell/sourcemap-codec': 'commonjs @jridgewell/sourcemap-codec',
+        '@ampproject/remapping': 'commonjs @ampproject/remapping',
+      })
+    }
+    return config
+  },
+  
   async rewrites() {
     return [
       {
