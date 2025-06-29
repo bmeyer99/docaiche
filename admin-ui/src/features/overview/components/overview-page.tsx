@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
-import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/lib/hooks/use-api-client';
 import { AI_PROVIDERS } from '@/lib/config/providers';
 import { OverviewLoading } from './overview-loading';
 import { GradientHeader } from '@/components/ui/gradient-header';
@@ -38,7 +38,7 @@ export default function OverviewPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   const loadDashboardData = useCallback(async () => {
     try {

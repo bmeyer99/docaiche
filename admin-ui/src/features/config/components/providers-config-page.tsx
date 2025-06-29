@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/icons';
 import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/config/providers';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProvidersConfigPage() {
@@ -20,7 +19,7 @@ export default function ProvidersConfigPage() {
   const [loading, setLoading] = useState(false);
   const [activeProvider, setActiveProvider] = useState('ollama');
   const { toast } = useToast();
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   const loadProviderConfigurations = useCallback(async () => {
     setLoading(true);

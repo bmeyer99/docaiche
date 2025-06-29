@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Icons } from '@/components/icons';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/lib/hooks/use-api-client';
 
 interface AnalyticsData {
   searchMetrics: {
@@ -46,29 +46,29 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('24h');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   useEffect(() => {
     loadAnalytics();
-  }, [timeRange]);
+  }, [loadAnalytics]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     
     const interval = setInterval(loadAnalytics, 60000); // Refresh every minute
     return () => clearInterval(interval);
-  }, [autoRefresh, timeRange]);
+  }, [autoRefresh, loadAnalytics]);
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       const data = await apiClient.getAnalytics(timeRange);
       setAnalytics(data);
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      // Error silently handled, could show toast notification here
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient, timeRange]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
