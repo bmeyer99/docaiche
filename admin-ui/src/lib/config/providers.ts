@@ -396,7 +396,7 @@ export interface ProviderConfiguration {
   providerId: string;
   name: string;
   enabled: boolean;
-  config: Record<string, any>;
+  config: Record<string, string | number | boolean>;
   status: ProviderStatus;
   lastTested?: string;
   models?: string[];

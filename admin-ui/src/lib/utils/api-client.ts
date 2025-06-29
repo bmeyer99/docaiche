@@ -16,8 +16,10 @@ import {
   type AdminSearchParams,
   type AdminSearchResponse,
   type UploadResponse,
-  type ProblemDetail
+  type ProblemDetail,
+  type ActivityItem
 } from '../config/api';
+import { type ProviderConfiguration } from '../config/providers';
 
 // Request options interface
 interface RequestOptions {
@@ -130,8 +132,8 @@ export class DocaicheApiClient {
   /**
    * Check if response data matches RFC 7807 Problem Details format
    */
-  private isProblemDetail(data: any): data is ProblemDetail {
-    return data && typeof data === 'object' && 'type' in data && 'title' in data && 'status' in data;
+  private isProblemDetail(data: unknown): data is ProblemDetail {
+    return !!(data && typeof data === 'object' && 'type' in data && 'title' in data && 'status' in data);
   }
 
   /**
@@ -158,7 +160,7 @@ export class DocaicheApiClient {
     return this.request<T>(endpoint, { method: 'GET', ...options });
   }
 
-  async post<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
@@ -166,7 +168,7 @@ export class DocaicheApiClient {
     });
   }
 
-  async put<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
@@ -278,11 +280,11 @@ export class DocaicheApiClient {
     return this.get<any[]>('/api/v1/providers');
   }
 
-  async updateProviderConfiguration(providerId: string, config: any): Promise<any> {
+  async updateProviderConfiguration(providerId: string, config: ProviderConfiguration): Promise<ProviderConfiguration> {
     return this.post<any>(`/api/v1/providers/${providerId}/config`, config);
   }
 
-  async testProviderConnection(providerId: string, config: any): Promise<{ success: boolean; message: string }> {
+  async testProviderConnection(providerId: string, config: Record<string, string | number>): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.post<{ success: boolean; message: string }>(
         `/api/v1/providers/${providerId}/test`,
@@ -313,13 +315,13 @@ export class DocaicheApiClient {
     return this.get<any>('/api/v1/stats');
   }
 
-  async getRecentActivity(): Promise<any[]> {
-    return this.get<any[]>('/api/v1/admin/activity/recent');
+  async getRecentActivity(): Promise<ActivityItem[]> {
+    return this.get<ActivityItem[]>('/api/v1/admin/activity/recent');
   }
 
 
 
-  async createCollection(data: any): Promise<any> {
+  async createCollection(data: { name: string; description?: string; metadata?: Record<string, unknown> }): Promise<{ id: string; name: string; description?: string; created_at: string }> {
     return this.post<any>('/api/v1/content/collections', data);
   }
 

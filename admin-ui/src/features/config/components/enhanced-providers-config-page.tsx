@@ -94,9 +94,9 @@ export default function EnhancedProvidersConfigPage() {
       
       const startTime = Date.now();
       const result = await apiClient.testProviderConnection(providerId, {
-        base_url: providerConfig.config?.base_url || "",
-        api_key: providerConfig.config?.api_key || "",
-        model: providerConfig.config?.model || ""
+        base_url: String(providerConfig.config?.base_url || ""),
+        api_key: String(providerConfig.config?.api_key || ""),
+        model: String(providerConfig.config?.model || "")
       });
       const responseTime = Date.now() - startTime;
 
@@ -335,7 +335,7 @@ export default function EnhancedProvidersConfigPage() {
             <Label htmlFor="baseUrl">Base URL</Label>
             <Input
               id="baseUrl"
-              value={config.config?.base_url || provider.defaultBaseUrl || ''}
+              value={String(config.config?.base_url || provider.defaultBaseUrl || '')}
               onChange={(e) => 
                 setConfigurations(prev => ({
                   ...prev,
@@ -358,7 +358,7 @@ export default function EnhancedProvidersConfigPage() {
               <Input
                 id="apiKey"
                 type="password"
-                value={config.config?.api_key || ''}
+                value={String(config.config?.api_key || '')}
                 onChange={(e) => 
                   setConfigurations(prev => ({
                     ...prev,
@@ -385,7 +385,7 @@ export default function EnhancedProvidersConfigPage() {
               {field.type === 'textarea' ? (
                 <Textarea
                   id={field.key}
-                  value={config.config?.[field.key] || ''}
+                  value={String(config.config?.[field.key] || '')}
                   onChange={(e) => 
                     setConfigurations(prev => ({
                       ...prev,
@@ -404,7 +404,7 @@ export default function EnhancedProvidersConfigPage() {
                 <Input
                   id={field.key}
                   type="number"
-                  value={config.config?.[field.key] || ''}
+                  value={String(config.config?.[field.key] || '')}
                   onChange={(e) => 
                     setConfigurations(prev => ({
                       ...prev,
@@ -422,7 +422,7 @@ export default function EnhancedProvidersConfigPage() {
               ) : (
                 <Input
                   id={field.key}
-                  value={config.config?.[field.key] || ''}
+                  value={String(config.config?.[field.key] || '')}
                   onChange={(e) => 
                     setConfigurations(prev => ({
                       ...prev,

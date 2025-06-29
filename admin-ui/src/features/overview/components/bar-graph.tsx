@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { memo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 
 import {
@@ -32,7 +33,7 @@ const chartConfig = {
   }
 } satisfies ChartConfig;
 
-export function BarGraph() {
+export const BarGraph = memo(function BarGraph() {
   const [chartData, setChartData] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -227,4 +228,4 @@ export function BarGraph() {
       </CardContent>
     </Card>
   );
-}
+});

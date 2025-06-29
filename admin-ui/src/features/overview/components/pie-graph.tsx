@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { memo } from 'react';
 import { IconTrendingUp } from '@tabler/icons-react';
 import { Label, Pie, PieChart } from 'recharts';
 
@@ -47,7 +48,7 @@ const chartConfig = {
   }
 } satisfies ChartConfig;
 
-export function PieGraph() {
+export const PieGraph = memo(function PieGraph() {
   const [chartData, setChartData] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -59,7 +60,7 @@ export function PieGraph() {
       const collections = await apiClient.getCollections();
       
       // Group by technology
-      const techCounts = collections.collections.reduce((acc: any, collection: any) => {
+      const techCounts = collections.collections.reduce((acc: Record<string, number>, collection) => {
         const tech = collection.technology || 'other';
         acc[tech] = (acc[tech] || 0) + collection.document_count;
         return acc;
@@ -246,4 +247,4 @@ export function PieGraph() {
       </CardFooter>
     </Card>
   );
-}
+});

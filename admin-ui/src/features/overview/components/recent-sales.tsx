@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import {
   Card,
   CardHeader,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { useApiClient } from '@/lib/hooks/use-api-client';
+import { type ActivityItem } from '@/lib/config/api';
 
 interface RecentSearch {
   id: string;
@@ -19,7 +20,7 @@ interface RecentSearch {
   technology_hint?: string;
 }
 
-export function RecentSales() {
+export const RecentSales = memo(function RecentSales() {
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +32,9 @@ export function RecentSales() {
       // For now, we'll try to get recent activity and filter for searches
       const activity = await apiClient.getRecentActivity();
       const searchActivity = activity
-        .filter((item: any) => item.type === 'search')
+        .filter((item: ActivityItem) => item.type === 'search')
         .slice(0, 5)
-        .map((item: any) => ({
+        .map((item: ActivityItem) => ({
           id: item.id,
           query: item.message || 'Search query',
           timestamp: item.timestamp,
@@ -128,4 +129,4 @@ export function RecentSales() {
       </CardContent>
     </Card>
   );
-}
+});

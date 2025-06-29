@@ -280,7 +280,7 @@ export default function EnhancedAnalyticsPage() {
     return `${minutes}m`;
   };
 
-  const renderChart = (data: any[], type: string, dataKey: string, name?: string) => {
+  const renderChart = (data: Array<Record<string, string | number>>, type: string, dataKey: string, name?: string) => {
     const ChartComponent = chartType === 'line' ? LineChart : 
                           chartType === 'area' ? AreaChart : BarChart;
     
@@ -506,7 +506,7 @@ export default function EnhancedAnalyticsPage() {
             <h3 className="text-lg font-semibold">Search Activity Trends</h3>
             <div className="flex items-center gap-2">
               <Label className="text-sm">Chart type:</Label>
-              <Select value={chartType} onValueChange={(value: any) => setChartType(value)}>
+              <Select value={chartType} onValueChange={(value) => setChartType(value as 'line' | 'area' | 'bar')}>
                 <SelectTrigger className="w-24">
                   <SelectValue />
                 </SelectTrigger>

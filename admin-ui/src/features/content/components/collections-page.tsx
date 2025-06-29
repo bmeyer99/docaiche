@@ -70,7 +70,9 @@ export default function CollectionsPage() {
       await apiClient.createCollection({
         name: newCollection.name,
         description: newCollection.description,
-        technology: newCollection.technology.split(',').map(t => t.trim()).filter(Boolean)
+        metadata: {
+          technology: newCollection.technology.split(',').map(t => t.trim()).filter(Boolean)
+        }
       });
 
       toast({

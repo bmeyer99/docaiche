@@ -75,7 +75,7 @@ export interface ApiResponse<T = any> {
 // Configuration Response Types
 export interface ConfigurationItem {
   key: string;
-  value: any;
+  value: string | number | boolean | Record<string, unknown> | unknown[];
   schema_version?: string;
   description?: string;
   is_sensitive?: boolean;
@@ -88,7 +88,7 @@ export interface ConfigurationResponse {
 
 export interface ConfigurationUpdateRequest {
   key: string;
-  value: any;
+  value: string | number | boolean | Record<string, unknown> | unknown[];
   description?: string;
 }
 
@@ -98,7 +98,7 @@ export interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
   response_time_ms?: number;
   last_check: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export interface HealthResponse {
@@ -109,10 +109,10 @@ export interface HealthResponse {
 
 // Stats Response Types
 export interface StatsResponse {
-  search_stats: Record<string, any>;
-  cache_stats: Record<string, any>;
-  content_stats: Record<string, any>;
-  system_stats: Record<string, any>;
+  search_stats: Record<string, number | string>;
+  cache_stats: Record<string, number | string>;
+  content_stats: Record<string, number | string>;
+  system_stats: Record<string, number | string>;
   timestamp: string;
 }
 
@@ -167,6 +167,17 @@ export interface UploadResponse {
   upload_id: string;
   status: 'accepted' | 'processing' | 'completed' | 'failed';
   message?: string;
+}
+
+// Activity Types
+export interface ActivityItem {
+  id: string;
+  type: 'search' | 'index' | 'config' | 'error';
+  message: string;
+  timestamp: string;
+  details?: string;
+  user_id?: string;
+  metadata?: Record<string, unknown>;
 }
 
 // Error Types based on RFC 7807 Problem Details

@@ -32,7 +32,7 @@ import { useState } from 'react';
 import { SubmitHandler, useFieldArray, useForm } from 'react-hook-form';
 
 interface ProfileFormType {
-  initialData: any | null;
+  initialData: ProfileFormValues | null;
 }
 
 const ProfileCreateForm: React.FC<ProfileFormType> = ({ initialData }) => {
@@ -42,7 +42,6 @@ const ProfileCreateForm: React.FC<ProfileFormType> = ({ initialData }) => {
     : 'To create your resume, we first need some basic information about you.';
   const [currentStep, setCurrentStep] = useState(0);
   const [loading] = useState(false);
-  const [open, setOpen] = useState(false);
 
   const defaultValues = {
     jobs: [
@@ -142,7 +141,7 @@ const ProfileCreateForm: React.FC<ProfileFormType> = ({ initialData }) => {
             disabled={loading}
             variant='destructive'
             size='sm'
-            onClick={() => setOpen(true)}
+onClick={() => {}}
           >
             <IconTrash className='h-4 w-4' />
           </Button>

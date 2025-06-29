@@ -22,7 +22,12 @@ interface DashboardStats {
   system_stats: {
     uptime_seconds?: number;
   };
-  cache_stats?: any;
+  cache_stats?: {
+    hit_rate?: number;
+    total_hits?: number;
+    total_misses?: number;
+    size?: number;
+  };
 }
 
 interface RecentActivity {
