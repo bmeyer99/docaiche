@@ -57,6 +57,8 @@ async def search_documents_post(
         import time
         start_time = time.time()
         
+        logger.info(f"Search request: query={search_request.query!r}, tech_hint={search_request.technology_hint!r} (type: {type(search_request.technology_hint)}), limit={search_request.limit!r}")
+        
         # Execute real search through the orchestrator
         search_response = await search_orchestrator.search(
             query=search_request.query,
@@ -93,6 +95,8 @@ async def search_documents_post(
             session_id=search_request.session_id
         )
 
+        logger.debug(f"Creating SearchResponse with technology_hint={search_request.technology_hint!r} (type: {type(search_request.technology_hint)})")
+        
         return SearchResponse(
             results=results,
             total_count=len(search_response.results),

@@ -137,15 +137,18 @@ async def health_check(
     try:
         search_health = await search_orchestrator.health_check()
         search_status = (
-            "healthy" if search_health.get("status") == "healthy" else "degraded"
+            "healthy" if search_health.get("overall_status") == "healthy" else "degraded"
         )
         search_msg = search_health.get(
-            "message", "Connected" if search_status == "healthy" else "Degraded"
+            "message", "Connected" if search_status == "healthy" else f"Status: {search_health.get('overall_status', 'unknown')}"
         )
-        components["search_orchestrator"] = {
+        search_component = {
             "status": search_status,
             "message": search_msg,
         }
+        if search_status == "degraded" and search_health:
+            search_component["details"] = search_health
+        components["search_orchestrator"] = search_component
         if search_status != "healthy" and overall_status == "healthy":
             overall_status = "degraded"
     except Exception as e:

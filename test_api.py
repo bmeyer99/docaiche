@@ -23,7 +23,7 @@ class Colors:
     BOLD = '\033[1m'
 
 class APITester:
-    def __init__(self, base_url: str = "http://localhost:4000/api/v1"):
+    def __init__(self, base_url: str = "http://localhost:4080/api/v1"):
         self.base_url = base_url
         self.passed = 0
         self.failed = 0
@@ -165,6 +165,9 @@ class APITester:
         self.test_endpoint("GET", "/providers",
                           description="List Providers")
         
+        self.test_endpoint("GET", "/provider-registry-status",
+                          description="Provider Registry Status")
+        
         self.test_endpoint("POST", "/providers/ollama/test",
                           data={
                               "base_url": "http://localhost:11434/api"
@@ -177,6 +180,27 @@ class APITester:
                               "api_key": "sk-test-key"
                           },
                           description="Test OpenAI Provider")
+        
+        self.test_endpoint("POST", "/providers/openrouter/test",
+                          data={
+                              "api_key": "test-key",
+                              "base_url": "https://openrouter.ai/api/v1"
+                          },
+                          description="Test OpenRouter Provider")
+        
+        self.test_endpoint("POST", "/providers/anthropic/test",
+                          data={
+                              "api_key": "test-key",
+                              "base_url": "https://api.anthropic.com"
+                          },
+                          description="Test Anthropic Provider")
+        
+        self.test_endpoint("POST", "/providers/litellm/test",
+                          data={
+                              "base_url": "http://localhost:4000",
+                              "api_key": ""
+                          },
+                          description="Test LiteLLM Provider")
         
         # 5. Admin Endpoints
         self.print_header("ADMIN ENDPOINTS")
@@ -256,8 +280,8 @@ class APITester:
 
 def main():
     parser = argparse.ArgumentParser(description='Test Docaiche API endpoints')
-    parser.add_argument('--base-url', default='http://localhost:4000/api/v1',
-                       help='Base URL for the API (default: http://localhost:4000/api/v1)')
+    parser.add_argument('--base-url', default='http://localhost:4080/api/v1',
+                       help='Base URL for the API (default: http://localhost:4080/api/v1)')
     parser.add_argument('--verbose', action='store_true',
                        help='Enable verbose output')
     

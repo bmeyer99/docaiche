@@ -28,7 +28,7 @@ export default function ProfileViewPage() {
             </div>
             <div className='flex justify-between'>
               <span>API Endpoint:</span>
-              <code className='text-sm'>http://api:8000/api/v1</code>
+              <code className='text-sm'>http://localhost:4080/api/v1</code>
             </div>
           </CardContent>
         </Card>

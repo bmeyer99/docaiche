@@ -717,6 +717,7 @@ class SearchOrchestrator:
         Returns:
             SearchResponse compatible with API schema
         """
+        logger.debug(f"Search called with: query={query!r}, technology_hint={technology_hint!r} (type: {type(technology_hint)}), limit={limit!r}, offset={offset!r}")
         # Import here to avoid circular imports
         from src.api.schemas import SearchResponse as APISearchResponse
         
@@ -734,12 +735,24 @@ class SearchOrchestrator:
         results, _ = await self.execute_search(search_query, background_tasks)
         
         # Convert to API response format
-        return APISearchResponse(
-            results=results.results[:limit],
-            total_count=results.total_count,
-            query=query,
-            technology_hint=technology_hint,
-            execution_time_ms=results.query_time_ms,
-            cache_hit=results.cache_hit,
-            enrichment_triggered=results.enrichment_triggered
-        )
+        # Ensure technology_hint is always a string or None to prevent type errors
+        if technology_hint is not None and not isinstance(technology_hint, str):
+            logger.warning(f"Invalid technology_hint type: {type(technology_hint)}, value: {technology_hint!r}, converting to string")
+            tech_hint = str(technology_hint) if technology_hint else None
+        else:
+            tech_hint = technology_hint
+        
+        try:
+            return APISearchResponse(
+                results=results.results[:limit],
+                total_count=results.total_count,
+                query=query,
+                technology_hint=tech_hint,
+                execution_time_ms=results.query_time_ms,
+                cache_hit=results.cache_hit,
+                enrichment_triggered=results.enrichment_triggered
+            )
+        except Exception as e:
+            logger.error(f"Failed to create SearchResponse: {e}")
+            logger.error(f"Parameters: query={query!r}, tech_hint={tech_hint!r} (type: {type(tech_hint)}), limit={limit}")
+            raise

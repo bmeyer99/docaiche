@@ -31,7 +31,7 @@ export interface ProviderDefinition {
 export interface ProviderConfigField {
   key: string;
   label: string;
-  type: 'text' | 'password' | 'url' | 'number' | 'select';
+  type: 'text' | 'password' | 'url' | 'number' | 'select' | 'textarea';
   required: boolean;
   placeholder?: string;
   description?: string;

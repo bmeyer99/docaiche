@@ -11,7 +11,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-BASE_URL="${API_BASE_URL:-http://localhost:4000/api/v1}"
+BASE_URL="${API_BASE_URL:-http://localhost:4080/api/v1}"
 DELAY_BETWEEN_TESTS=1  # Delay in seconds to respect rate limiting
 
 # Test counter
@@ -123,12 +123,26 @@ print_header "PROVIDER MANAGEMENT ENDPOINTS"
 
 test_endpoint "GET" "/providers" "" "200" "List Providers"
 
+test_endpoint "GET" "/provider-registry-status" "" "200" "Provider Registry Status"
+
 test_endpoint "POST" "/providers/ollama/test" \
     '{"base_url": "http://localhost:11434/api"}' \
     "200" "Test Ollama Provider"
 
+test_endpoint "POST" "/providers/openrouter/test" \
+    '{"api_key": "test-key", "base_url": "https://openrouter.ai/api/v1"}' \
+    "200" "Test OpenRouter Provider"
+
+test_endpoint "POST" "/providers/anthropic/test" \
+    '{"api_key": "test-key", "base_url": "https://api.anthropic.com"}' \
+    "200" "Test Anthropic Provider"
+
+test_endpoint "POST" "/providers/litellm/test" \
+    '{"base_url": "http://localhost:4000", "api_key": ""}' \
+    "200" "Test LiteLLM Provider"
+
 test_endpoint "POST" "/providers/ollama/config" \
-    '{"base_url": "http://localhost:11434/api", "model": "llama2"}' \
+    '{"base_url": "http://localhost:11434/api", "model": "llama3.1:8b"}' \
     "200" "Update Provider Config"
 
 # 5. Admin Endpoints

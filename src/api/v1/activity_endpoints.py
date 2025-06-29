@@ -299,7 +299,7 @@ async def get_dashboard_data(
                 "content_stats": {
                     "total_documents": content_result.get("total_documents", 0) if content_result else 0,
                     "collections": content_result.get("collections", 0) if content_result else 0,
-                    "last_update": content_result.get("last_update", datetime.utcnow()).isoformat() if content_result and content_result.get("last_update") else datetime.utcnow().isoformat(),
+                    "last_update": content_result.get("last_update") if content_result and content_result.get("last_update") else datetime.utcnow().isoformat(),
                     "pending_uploads": 0,  # Not tracked in current schema
                 },
                 "system_stats": {
@@ -314,7 +314,7 @@ async def get_dashboard_data(
                     "id": row["id"],
                     "type": row["type"],
                     "message": row["message"],
-                    "timestamp": row["timestamp"] if row["timestamp"] else datetime.utcnow().isoformat(),
+                    "timestamp": str(row["timestamp"]) if row["timestamp"] else datetime.utcnow().isoformat(),
                 }
                 for row in (activity_results or [])
             ],

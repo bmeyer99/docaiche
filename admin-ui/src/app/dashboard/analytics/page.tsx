@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import AnalyticsPage from "@/features/analytics/components/analytics-page";
+import EnhancedAnalyticsPage from "@/features/analytics/components/enhanced-analytics-page";
 
 export const metadata: Metadata = {
   title: "Analytics Dashboard",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <AnalyticsPage />;
+  return <EnhancedAnalyticsPage />;
 }

@@ -1,5 +1,5 @@
-import ProvidersConfigPage from '@/features/config/components/providers-config-page';
+import EnhancedProvidersConfigPage from '@/features/config/components/enhanced-providers-config-page';
 
 export default function ProvidersPage() {
-  return <ProvidersConfigPage />;
+  return <EnhancedProvidersConfigPage />;
 }
