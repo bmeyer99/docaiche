@@ -418,6 +418,8 @@ export class DocaicheApiClient {
   }
 
   async getProviderModels(providerId: string): Promise<{ provider: string; models: string[]; queryable: boolean; custom_count?: number }> {
+    console.trace('[DEBUG] getProviderModels called for:', providerId);
+    console.log('[DEBUG] Call stack:', new Error().stack);
     return this.get<any>(`/providers/${providerId}/models`);
   }
 
