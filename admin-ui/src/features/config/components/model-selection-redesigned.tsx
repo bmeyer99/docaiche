@@ -405,9 +405,12 @@ export default function ModelSelectionRedesigned() {
     );
   };
 
-  // Count how many providers are tested
+  // Count how many providers are tested successfully
   const testedProviders = Object.values(testCache.testedProviders).filter(p => p.status === 'tested');
   const totalProviders = Object.keys(AI_PROVIDERS).length;
+  
+  // Only count providers that have been successfully tested, not just "configured"
+  const configuredProviders = testedProviders; // This replaces the old logic that was counting untested providers
 
   return (
     <Card>
@@ -423,7 +426,7 @@ export default function ModelSelectionRedesigned() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Configuration Status Alert */}
-        {testedProviders.length === 0 ? (
+        {configuredProviders.length === 0 ? (
           <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
             <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertDescription className="text-amber-800 dark:text-amber-200">
@@ -440,9 +443,9 @@ export default function ModelSelectionRedesigned() {
           <Alert>
             <CheckCircle2 className="h-4 w-4 text-green-600" />
             <AlertDescription>
-              <strong>{testedProviders.length} of {totalProviders} providers tested successfully.</strong> 
-              {' '}Models discovered: {testedProviders.reduce((sum, p) => sum + p.models.length, 0)}
-              {testedProviders.length < totalProviders && (
+              <strong>{configuredProviders.length} of {totalProviders} providers tested successfully.</strong> 
+              {' '}Models discovered: {configuredProviders.reduce((sum, p) => sum + p.models.length, 0)}
+              {configuredProviders.length < totalProviders && (
                 <button
                   onClick={scrollToProviderConfig}
                   className="block mt-1 text-sm underline text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
