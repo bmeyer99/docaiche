@@ -199,6 +199,19 @@ async def update_configuration(
                 logger.error(f"Configuration update failed: {config_request.key} - {e}")
 
         background_tasks.add_task(update_config)
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log successful initiation of config update
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="configuration_update_initiated",
+                target=config_request.key,
+                impact_level="high",
+                client_ip=client_ip,
+                duration_ms=duration_ms,
+                trace_id=trace_id,
+                status="accepted"
+            )
 
         return {
             "message": f"Configuration update for '{config_request.key}' queued",
@@ -207,8 +220,33 @@ async def update_configuration(
         }
 
     except HTTPException:
+        # Log validation errors
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="configuration_update_validation_failed",
+                target=config_request.key,
+                impact_level="low",
+                client_ip=client_ip,
+                trace_id=trace_id,
+                error_message="Validation failed"
+            )
         raise
     except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log configuration update system failure
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="configuration_update_system_failed",
+                target=config_request.key,
+                impact_level="medium",
+                client_ip=client_ip,
+                error_message=str(e),
+                duration_ms=duration_ms,
+                trace_id=trace_id,
+                requires_review=True
+            )
+        
         logger.error(f"Configuration update failed: {e}")
         raise HTTPException(status_code=500, detail="Configuration update failed")
 

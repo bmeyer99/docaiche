@@ -4,17 +4,28 @@ Admin search content and content management endpoints
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import Optional, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
 
 from .schemas import AdminSearchResponse, AdminContentItem
-from .middleware import limiter
+from .middleware import limiter, get_trace_id
 from .dependencies import get_database_manager
 from src.database.connection import DatabaseManager
 
 logger = logging.getLogger(__name__)
+
+# Import enhanced logging for admin security monitoring
+try:
+    from src.logging_config import SecurityLogger, BusinessMetricsLogger
+    _security_logger = SecurityLogger(logger)
+    _business_logger = BusinessMetricsLogger(logger)
+except ImportError:
+    _security_logger = None
+    _business_logger = None
+    logger.warning("Enhanced admin security logging not available")
 
 # Create router for admin endpoints
 router = APIRouter()
@@ -49,7 +60,25 @@ async def admin_search_content(
     Returns:
         AdminSearchResponse with content items and pagination
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
     try:
+        # Log admin action with security context
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="content_search",
+                target="content_metadata",
+                impact_level="low",
+                client_ip=client_ip,
+                search_term=search_term,
+                technology=technology,
+                limit=limit,
+                offset=offset,
+                trace_id=trace_id
+            )
+            
         logger.info(
             f"Admin content search: term='{search_term}', type='{content_type}', tech='{technology}'"
         )
@@ -117,6 +146,21 @@ async def admin_search_content(
                 status=row["status"] or "active",
             ))
 
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log business metrics for admin search
+        if _business_logger:
+            _business_logger.log_content_operation(
+                operation="admin_search",
+                content_id="multiple",
+                content_type="admin_query",
+                result_count=len(items),
+                total_available=total_count,
+                duration_ms=duration_ms,
+                client_ip=client_ip,
+                trace_id=trace_id
+            )
+        
         return AdminSearchResponse(
             items=items,
             total_count=total_count,
@@ -126,6 +170,20 @@ async def admin_search_content(
         )
 
     except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log admin action failure
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="content_search_failed",
+                target="content_metadata",
+                impact_level="low",
+                client_ip=client_ip,
+                error_message=str(e),
+                duration_ms=duration_ms,
+                trace_id=trace_id
+            )
+        
         logger.error(f"Admin content search failed: {e}")
         raise HTTPException(status_code=500, detail="Admin content search failed")
 
@@ -150,18 +208,85 @@ async def flag_content(
     Returns:
         Confirmation message with HTTP 202
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
     try:
+        # Log high-impact admin action - content deletion
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="content_deletion_request",
+                target=content_id,
+                impact_level="high",
+                client_ip=client_ip,
+                trace_id=trace_id,
+                requires_audit=True
+            )
+            
         logger.info(f"Content flagged for removal: {content_id}")
 
         # Add background task to flag content (placeholder)
         def flag_content_task():
+            task_start = time.time()
             logger.info(f"Flagging content for removal: {content_id}")
+            
+            # Log business metrics for content flagging
+            if _business_logger:
+                _business_logger.log_content_operation(
+                    operation="content_flagged",
+                    content_id=content_id,
+                    content_type="admin_action",
+                    client_ip=client_ip,
+                    trace_id=trace_id,
+                    background_task=True
+                )
+            
             # TODO: Implement content flagging logic
+            
+            task_duration = (time.time() - task_start) * 1000
+            if _security_logger:
+                _security_logger.log_admin_action(
+                    action="content_flagging_completed",
+                    target=content_id,
+                    impact_level="high",
+                    client_ip=client_ip,
+                    duration_ms=task_duration,
+                    trace_id=trace_id
+                )
 
         background_tasks.add_task(flag_content_task)
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log successful admin action
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="content_deletion_initiated",
+                target=content_id,
+                impact_level="high",
+                client_ip=client_ip,
+                duration_ms=duration_ms,
+                trace_id=trace_id,
+                status="success"
+            )
 
         return {"message": f"Content {content_id} flagged for review"}
 
     except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log admin action failure with high severity
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="content_deletion_failed",
+                target=content_id,
+                impact_level="medium",
+                client_ip=client_ip,
+                error_message=str(e),
+                duration_ms=duration_ms,
+                trace_id=trace_id,
+                requires_review=True
+            )
+        
         logger.error(f"Content flagging failed: {e}")
         raise HTTPException(status_code=500, detail="Content flagging failed")

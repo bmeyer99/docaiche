@@ -20,6 +20,16 @@ from slowapi.errors import RateLimitExceeded
 
 logger = logging.getLogger(__name__)
 
+# Import enhanced logging for security monitoring
+try:
+    from src.logging_config import SecurityLogger, MetricsLogger
+    _security_logger = SecurityLogger(logger)
+    _metrics_logger = MetricsLogger(logger)
+except ImportError:
+    _security_logger = None
+    _metrics_logger = None
+    logger.warning("Enhanced security logging not available")
+
 # Create rate limiter instance for API-005
 limiter = Limiter(key_func=get_remote_address)
 
@@ -93,6 +103,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             request: The incoming request
             trace_id: Request trace identifier
         """
+        client_ip = request.client.host if request.client else "unknown"
+        
         log_data = {
             "event": "request_started",
             "trace_id": trace_id,
@@ -100,14 +112,39 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             "url": str(request.url),
             "path": request.url.path,
             "query_params": dict(request.query_params),
-            "client_ip": request.client.host if request.client else None,
+            "client_ip": client_ip,
             "user_agent": request.headers.get("user-agent"),
             "content_type": request.headers.get("content-type"),
             "content_length": request.headers.get("content-length"),
             "timestamp": time.time(),
         }
-
-        logger.info("Request started", extra={"structured_log": json.dumps(log_data)})
+        
+        # Log security-sensitive operations
+        sensitive_paths = ["/admin", "/config", "/provider", "/analytics"]
+        if any(sens_path in request.url.path for sens_path in sensitive_paths):
+            if _security_logger:
+                _security_logger.log_sensitive_operation(
+                    operation="api_access",
+                    resource=request.url.path,
+                    client_ip=client_ip,
+                    user_agent=request.headers.get("user-agent", "unknown"),
+                    method=request.method,
+                    trace_id=trace_id
+                )
+        
+        # Use enhanced metrics logger if available
+        if _metrics_logger:
+            _metrics_logger.log_api_request(
+                request_id=trace_id,
+                method=request.method,
+                path=request.url.path,
+                status_code=0,  # Will be updated in response
+                duration=0,  # Will be updated in response
+                client_ip=client_ip,
+                user_agent=request.headers.get("user-agent")
+            )
+        else:
+            logger.info("Request started", extra={"structured_log": json.dumps(log_data)})
 
     def _log_response(
         self, request: Request, response: Response, trace_id: str, process_time: float
@@ -121,6 +158,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             trace_id: Request trace identifier
             process_time: Request processing time in seconds
         """
+        client_ip = request.client.host if request.client else "unknown"
+        
         log_data = {
             "event": "request_completed",
             "trace_id": trace_id,
@@ -131,23 +170,60 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             "response_size": len(response.body) if hasattr(response, "body") else None,
             "timestamp": time.time(),
         }
-
-        # Determine log level based on status code
-        if response.status_code >= 500:
-            logger.error(
-                "Request completed with server error",
-                extra={"structured_log": json.dumps(log_data)},
-            )
-        elif response.status_code >= 400:
-            logger.warning(
-                "Request completed with client error",
-                extra={"structured_log": json.dumps(log_data)},
+        
+        # Log security events for failed authentication attempts
+        if response.status_code == 401:
+            if _security_logger:
+                _security_logger.log_sensitive_operation(
+                    operation="authentication_failure",
+                    resource=request.url.path,
+                    client_ip=client_ip,
+                    status_code=response.status_code,
+                    trace_id=trace_id
+                )
+        
+        # Log access to sensitive endpoints with detailed context
+        sensitive_paths = ["/admin", "/config", "/provider", "/analytics"]
+        if any(sens_path in request.url.path for sens_path in sensitive_paths):
+            if _security_logger:
+                _security_logger.log_admin_action(
+                    action=f"{request.method}_{request.url.path.replace('/', '_')}",
+                    target=request.url.path,
+                    impact_level="medium" if response.status_code < 400 else "low",
+                    client_ip=client_ip,
+                    status_code=response.status_code,
+                    duration_ms=round(process_time * 1000, 2),
+                    trace_id=trace_id
+                )
+        
+        # Use enhanced metrics logger if available
+        if _metrics_logger:
+            _metrics_logger.log_api_request(
+                request_id=trace_id,
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code,
+                duration=process_time,
+                client_ip=client_ip,
+                response_size=len(response.body) if hasattr(response, "body") else None
             )
         else:
-            logger.info(
-                "Request completed successfully",
-                extra={"structured_log": json.dumps(log_data)},
-            )
+            # Determine log level based on status code
+            if response.status_code >= 500:
+                logger.error(
+                    "Request completed with server error",
+                    extra={"structured_log": json.dumps(log_data)},
+                )
+            elif response.status_code >= 400:
+                logger.warning(
+                    "Request completed with client error",
+                    extra={"structured_log": json.dumps(log_data)},
+                )
+            else:
+                logger.info(
+                    "Request completed successfully",
+                    extra={"structured_log": json.dumps(log_data)},
+                )
 
     def _log_error(
         self, request: Request, error: Exception, trace_id: str, process_time: float
@@ -208,6 +284,51 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     from .schemas import ProblemDetail
 
     trace_id = get_trace_id(request)
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Log rate limiting violation with security context
+    if _security_logger:
+        # Extract rate limit details from exception
+        rate_limit_detail = str(exc.detail) if exc.detail else "Rate limit exceeded"
+        current_rate = 0
+        limit = 0
+        window = "1 minute"  # Default window
+        
+        # Try to parse rate limit details from exception
+        try:
+            if hasattr(exc, 'detail') and isinstance(exc.detail, str):
+                # Parse details like "Rate limit exceeded: 5 per 1 minute"
+                import re
+                match = re.search(r'(\d+)\s+per\s+(\d+\s+\w+)', exc.detail)
+                if match:
+                    limit = int(match.group(1))
+                    window = match.group(2)
+                    current_rate = limit + 1  # Estimate current rate as exceeded limit
+        except Exception:
+            pass  # Use defaults if parsing fails
+        
+        _security_logger.log_rate_limit_violation(
+            endpoint=request.url.path,
+            client_ip=client_ip,
+            current_rate=current_rate,
+            limit=limit,
+            window=window,
+            user_agent=request.headers.get("user-agent", "unknown"),
+            method=request.method,
+            trace_id=trace_id,
+            retry_after=exc.retry_after if exc.retry_after else 60
+        )
+    
+    # Log with enhanced metrics if available
+    if _metrics_logger:
+        _metrics_logger.log_error(
+            error_type="RATE_LIMIT_EXCEEDED",
+            error_message=str(exc.detail),
+            request_id=trace_id,
+            client_ip=client_ip,
+            endpoint=request.url.path,
+            status_code=429
+        )
 
     problem_detail = ProblemDetail(
         type="https://docs.example.com/errors/rate-limit-exceeded",

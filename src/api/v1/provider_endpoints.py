@@ -53,8 +53,33 @@ async def get_provider_registry_stats(
     GET /api/v1/providers/registry/stats - Get provider registry statistics
     This endpoint tests if the new provider registry system is working
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
     try:
+        # Log access to provider registry status (sensitive operation)
+        if _security_logger:
+            _security_logger.log_sensitive_operation(
+                operation="provider_registry_access",
+                resource="provider_stats",
+                client_ip=client_ip,
+                trace_id=trace_id
+            )
+        
         if not registry or not REGISTRY_AVAILABLE:
+            duration_ms = (time.time() - start_time) * 1000
+            
+            if _service_logger:
+                _service_logger.log_service_call(
+                    service="provider_registry",
+                    endpoint="stats",
+                    method="GET",
+                    duration_ms=duration_ms,
+                    status_code=503,
+                    registry_available=False
+                )
+            
             return {
                 "registry_available": False,
                 "message": "Provider registry system not available",
@@ -63,6 +88,18 @@ async def get_provider_registry_stats(
             }
         
         stats = registry.get_registry_stats()
+        duration_ms = (time.time() - start_time) * 1000
+        
+        if _service_logger:
+            _service_logger.log_service_call(
+                service="provider_registry",
+                endpoint="stats",
+                method="GET",
+                duration_ms=duration_ms,
+                status_code=200,
+                registry_available=True,
+                provider_count=stats.get("total_providers", 0)
+            )
         
         return {
             "registry_available": True,
@@ -72,6 +109,18 @@ async def get_provider_registry_stats(
         }
         
     except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        
+        if _service_logger:
+            _service_logger.log_service_call(
+                service="provider_registry",
+                endpoint="stats",
+                method="GET",
+                duration_ms=duration_ms,
+                status_code=500,
+                error_message=str(e)
+            )
+        
         logger.error(f"Failed to get registry stats: {e}")
         return {
             "registry_available": False,
@@ -90,7 +139,20 @@ async def list_providers(
     """
     GET /api/v1/providers - List all available LLM providers with their status
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
     try:
+        # Log access to provider list (sensitive operation)
+        if _security_logger:
+            _security_logger.log_sensitive_operation(
+                operation="provider_list_access",
+                resource="provider_configurations",
+                client_ip=client_ip,
+                trace_id=trace_id
+            )
+        
         # Get all configured providers - comprehensive list
         providers = [
             ProviderResponse(
@@ -232,6 +294,18 @@ async def test_provider_connection(
                         models=[model.get("name", "") for model in models[:5]],
                     )
                 else:
+                    duration_ms = (time.time() - start_time) * 1000
+                    
+                    # Log failed Ollama provider test
+                    if _service_logger:
+                        _service_logger.log_service_call(
+                            service=provider_id,
+                            endpoint=endpoint,
+                            method="GET",
+                            duration_ms=duration_ms,
+                            status_code=response.status_code
+                        )
+                    
                     return ProviderTestResponse(
                         success=False,
                         message=f"Connection failed: HTTP {response.status_code}",
@@ -248,6 +322,19 @@ async def test_provider_connection(
 
                 if response.status_code == 200:
                     models = response.json().get("data", [])
+                    duration_ms = (time.time() - start_time) * 1000
+                    
+                    # Log successful OpenAI provider test
+                    if _service_logger:
+                        _service_logger.log_service_call(
+                            service=provider_id,
+                            endpoint=endpoint,
+                            method="GET",
+                            duration_ms=duration_ms,
+                            status_code=200,
+                            model_count=len(models)
+                        )
+                    
                     return ProviderTestResponse(
                         success=True,
                         message="Connection successful",

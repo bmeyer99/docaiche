@@ -9,6 +9,7 @@ circuit breaker pattern, async HTTP operations, and comprehensive error handling
 import aiohttp
 import asyncio
 import logging
+import time
 from typing import List, Optional, Dict, Any
 
 try:
@@ -42,6 +43,16 @@ from .exceptions import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Import enhanced logging for external service monitoring
+try:
+    from src.logging_config import ExternalServiceLogger, SecurityLogger
+    _service_logger = ExternalServiceLogger(logger)
+    _security_logger = SecurityLogger(logger)
+except ImportError:
+    _service_logger = None
+    _security_logger = None
+    logger.warning("Enhanced service logging not available")
 
 
 class AsyncRequestContext:
@@ -230,6 +241,9 @@ class AnythingLLMClient:
         self.base_url = config.endpoint.rstrip("/")
         self.api_key = config.api_key
         self.session: Optional[aiohttp.ClientSession] = None
+        self._request_count = 0
+        self._rate_limit_remaining = None
+        self._rate_limit_reset = None
 
         # Circuit breaker configuration for internal service
         self.circuit_breaker = circuit(
@@ -251,6 +265,8 @@ class AnythingLLMClient:
 
     async def connect(self) -> None:
         """Initialize HTTP session with proper headers and timeouts"""
+        start_time = time.time()
+        
         timeout = aiohttp.ClientTimeout(
             total=self.config.circuit_breaker.timeout_seconds
         )
@@ -265,7 +281,18 @@ class AnythingLLMClient:
             headers=headers,
             connector=aiohttp.TCPConnector(limit=10, limit_per_host=5),
         )
+        
+        connection_duration = (time.time() - start_time) * 1000
         logger.info("AnythingLLM client session initialized")
+        
+        if _service_logger:
+            _service_logger.log_service_call(
+                service="anythingllm",
+                endpoint=self.base_url,
+                method="CONNECT",
+                duration_ms=connection_duration,
+                status_code=200
+            )
 
     async def disconnect(self) -> None:
         """Clean up HTTP session"""
@@ -276,9 +303,11 @@ class AnythingLLMClient:
     @circuit
     async def health_check(self) -> Dict[str, Any]:
         """Check AnythingLLM service health and circuit breaker status"""
+        start_time = time.time()
         try:
             async with self._make_request("GET", "/api/health") as response:
                 health_data = await _safe_extract_json(response)
+                duration_ms = (time.time() - start_time) * 1000
 
                 # Ensure health_data is a dict, create if empty
                 if not health_data:
@@ -305,12 +334,33 @@ class AnythingLLMClient:
                     "failure_count": getattr(cb, "failure_count", 0),
                     "last_failure": getattr(cb, "last_failure_time", None),
                 }
+                
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service="anythingllm",
+                        endpoint="/api/health",
+                        method="GET",
+                        duration_ms=duration_ms,
+                        status_code=200,
+                        circuit_state=state_name
+                    )
 
                 return health_data
 
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.error(f"AnythingLLM health check failed: {e}")
             cb = getattr(self.health_check, "circuit_breaker", self.circuit_breaker)
+            
+            if _service_logger:
+                _service_logger.log_service_call(
+                    service="anythingllm",
+                    endpoint="/api/health",
+                    method="GET",
+                    duration_ms=duration_ms,
+                    status_code=500,
+                    error_message=str(e)
+                )
 
             # Safely extract circuit breaker state
             try:
@@ -335,8 +385,21 @@ class AnythingLLMClient:
     @circuit
     async def list_workspaces(self) -> List[Dict[str, Any]]:
         """List all available workspaces"""
+        start_time = time.time()
         async with self._make_request("GET", "/api/workspaces") as response:
             data = await _safe_extract_json(response)
+            duration_ms = (time.time() - start_time) * 1000
+            
+            if _service_logger:
+                _service_logger.log_service_call(
+                    service="anythingllm",
+                    endpoint="/api/workspaces",
+                    method="GET",
+                    duration_ms=duration_ms,
+                    status_code=200,
+                    result_count=len(data.get("workspaces", []))
+                )
+            
             return data.get("workspaces", [])
 
     @circuit
@@ -446,6 +509,7 @@ class AnythingLLMClient:
         """Upload a single document chunk with retry logic"""
         max_retries = 3
         base_delay = 1.0
+        start_time = time.time()
 
         for attempt in range(max_retries):
             try:
@@ -468,6 +532,21 @@ class AnythingLLMClient:
                     json=chunk_data,
                 ) as response:
                     response_status = _safe_extract_status(response)
+                    duration_ms = (time.time() - start_time) * 1000
+
+                    # Log upload attempt
+                    if _service_logger:
+                        _service_logger.log_service_call(
+                            service="anythingllm",
+                            endpoint=f"/api/workspace/{workspace_slug}/upload-text",
+                            method="POST",
+                            duration_ms=duration_ms,
+                            status_code=response_status,
+                            workspace=workspace_slug,
+                            chunk_id=chunk.id,
+                            chunk_size=len(chunk.content),
+                            attempt=attempt + 1
+                        )
 
                     # CRITICAL FIX: Properly detect success vs failure
                     if response_status in [200, 201]:
@@ -511,6 +590,7 @@ class AnythingLLMClient:
         self, workspace_slug: str, query: str, limit: int = 20
     ) -> List[Dict[str, Any]]:
         """Execute vector search against workspace"""
+        start_time = time.time()
         search_data = {
             "message": query,
             "limit": limit,
@@ -521,7 +601,22 @@ class AnythingLLMClient:
             "POST", f"/api/workspace/{workspace_slug}/search", json=search_data
         ) as response:
             data = await _safe_extract_json(response)
-            return data.get("results", [])
+            duration_ms = (time.time() - start_time) * 1000
+            results = data.get("results", [])
+            
+            if _service_logger:
+                _service_logger.log_service_call(
+                    service="anythingllm",
+                    endpoint=f"/api/workspace/{workspace_slug}/search",
+                    method="POST",
+                    duration_ms=duration_ms,
+                    status_code=200,
+                    workspace=workspace_slug,
+                    query_length=len(query),
+                    result_count=len(results)
+                )
+            
+            return results
 
     @circuit
     async def list_workspace_documents(
@@ -565,11 +660,18 @@ class AnythingLLMClient:
         )
 
         async def make_request():
+            request_start = time.time()
             try:
+                self._request_count += 1
                 response = await self.session.request(method, url, **kwargs)
 
                 # Log response status - use safe extraction for proper logging
                 status = _safe_extract_status(response)
+                request_duration = (time.time() - request_start) * 1000
+                
+                # Check for rate limit headers
+                self._extract_rate_limit_info(response)
+                
                 logger.debug(
                     f"AnythingLLM response: {status}", extra={"trace_id": trace_id}
                 )
@@ -597,6 +699,25 @@ class AnythingLLMClient:
                         error_text = f"HTTP {status} Error"
 
                     logger.error(f"AnythingLLM API error {status}: {error_text}")
+
+                    # Log security events for authentication issues
+                    if status == 401 and _security_logger:
+                        _security_logger.log_sensitive_operation(
+                            operation="api_key_validation",
+                            resource=f"anythingllm:{url}",
+                            client_ip="localhost",
+                            status="failed",
+                            error=error_text
+                        )
+                    
+                    # Check for rate limiting
+                    if status == 429 and _service_logger:
+                        _service_logger.log_rate_limit_event(
+                            service="anythingllm",
+                            remaining=self._rate_limit_remaining or 0,
+                            total=100,  # Estimate if not provided
+                            reset_time=self._rate_limit_reset
+                        )
 
                     # CRITICAL FIX: Always raise exceptions for >= 400 status codes
                     # This ensures proper error handling even when circuit breaker is bypassed in tests
@@ -654,10 +775,35 @@ class AnythingLLMClient:
                     },
                 )
             except aiohttp.ClientError as e:
+                request_duration = (time.time() - request_start) * 1000
                 logger.error(f"AnythingLLM client error: {e}")
+                
+                # Log circuit breaker event if needed
+                if _service_logger:
+                    _service_logger.log_circuit_breaker_event(
+                        service="anythingllm",
+                        state="half_open",
+                        failure_count=getattr(self.circuit_breaker, 'failure_count', 1),
+                        error_type=type(e).__name__
+                    )
+                
                 raise AnythingLLMConnectionError(
                     f"Client error: {str(e)}",
                     error_context={"url": url, "method": method},
                 )
 
         return AsyncRequestContext(make_request())
+    
+    def _extract_rate_limit_info(self, response) -> None:
+        """Extract rate limit information from response headers"""
+        try:
+            if hasattr(response, 'headers'):
+                headers = response.headers
+                if hasattr(headers, 'get'):
+                    self._rate_limit_remaining = headers.get('X-RateLimit-Remaining')
+                    self._rate_limit_reset = headers.get('X-RateLimit-Reset')
+                elif isinstance(headers, dict):
+                    self._rate_limit_remaining = headers.get('X-RateLimit-Remaining')
+                    self._rate_limit_reset = headers.get('X-RateLimit-Reset')
+        except Exception:
+            pass  # Gracefully handle any header parsing errors

@@ -7,6 +7,7 @@ selection and health monitoring as specified in PRD-005.
 """
 
 import logging
+import time
 from typing import Any, Dict, Optional, Type, TypeVar, List
 from enum import Enum
 
@@ -23,6 +24,16 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Import enhanced logging for LLM provider monitoring
+try:
+    from src.logging_config import ExternalServiceLogger, SecurityLogger
+    _service_logger = ExternalServiceLogger(logger)
+    _security_logger = SecurityLogger(logger)
+except ImportError:
+    _service_logger = None
+    _security_logger = None
+    logger.warning("Enhanced service logging not available")
 
 T = TypeVar("T", EvaluationResult, EnrichmentStrategy, QualityAssessment)
 
@@ -54,6 +65,12 @@ class LLMProviderClient:
         """
         self.config = ai_config or {}
         self.cache_manager = cache_manager
+        self._request_metrics = {
+            "total_requests": 0,
+            "successful_requests": 0,
+            "failed_requests": 0,
+            "rate_limited_requests": 0
+        }
 
         # Provider configuration
         self.status: LLMProviderStatus = get_provider_status(self.config)
@@ -79,6 +96,19 @@ class LLMProviderClient:
         # Health monitoring
         self._last_health_check = 0
         self._health_check_interval = 60  # seconds
+        
+        # Rate limiting tracking
+        self._rate_limits = {}
+        
+        if _service_logger:
+            _service_logger.log_service_call(
+                service="llm_client",
+                endpoint="initialization",
+                method="INIT",
+                duration_ms=0,
+                status_code=200,
+                provider_count=len(self.providers)
+            )
 
     def _initialize_providers(self):
         """Initialize available LLM providers based on configuration."""
@@ -96,8 +126,27 @@ class LLMProviderClient:
                 )
                 self.provider_status["ollama"] = ProviderStatus.UNKNOWN
                 logger.info("Ollama provider initialized")
+                
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service="ollama",
+                        endpoint=ollama_cfg.get("endpoint", "unknown"),
+                        method="INIT",
+                        duration_ms=0,
+                        status_code=200,
+                        model=ollama_cfg.get("model")
+                    )
             except Exception as e:
                 logger.error(f"Failed to initialize Ollama provider: {e}")
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service="ollama",
+                        endpoint=ollama_cfg.get("endpoint", "unknown") if ollama_cfg else "unknown",
+                        method="INIT",
+                        duration_ms=0,
+                        status_code=500,
+                        error_message=str(e)
+                    )
         # OpenAI
         openai_cfg = self.config.get("openai") if self.config else None
         if (
@@ -112,8 +161,27 @@ class LLMProviderClient:
                 )
                 self.provider_status["openai"] = ProviderStatus.UNKNOWN
                 logger.info("OpenAI provider initialized")
+                
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service="openai",
+                        endpoint="https://api.openai.com",
+                        method="INIT",
+                        duration_ms=0,
+                        status_code=200,
+                        model=openai_cfg.get("model")
+                    )
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI provider: {e}")
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service="openai",
+                        endpoint="https://api.openai.com",
+                        method="INIT",
+                        duration_ms=0,
+                        status_code=500,
+                        error_message=str(e)
+                    )
 
         if not self.providers:
             logger.warning("No LLM providers were successfully initialized")
@@ -164,6 +232,9 @@ class LLMProviderClient:
                 logger.debug(f"Skipping unhealthy provider: {provider_name}")
                 continue
 
+            start_time = time.time()
+            self._request_metrics["total_requests"] += 1
+            
             try:
                 logger.info(f"Attempting LLM generation with {provider_name}")
 
@@ -171,9 +242,25 @@ class LLMProviderClient:
                 result = await provider.generate_structured(
                     prompt, response_model, **kwargs
                 )
+                
+                duration_ms = (time.time() - start_time) * 1000
+                self._request_metrics["successful_requests"] += 1
 
                 # Mark provider as healthy on success
                 self.provider_status[provider_name] = ProviderStatus.HEALTHY
+                
+                # Log successful LLM generation
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service=provider_name,
+                        endpoint="generate_structured",
+                        method="POST",
+                        duration_ms=duration_ms,
+                        status_code=200,
+                        model=response_model.__name__,
+                        prompt_length=len(prompt),
+                        **self._request_metrics
+                    )
 
                 # Update _primary_provider and _fallback_provider object refs for patching/mocking
                 if provider_name == self.primary_provider_name:
@@ -185,22 +272,63 @@ class LLMProviderClient:
                 return result
 
             except LLMProviderUnavailableError as e:
+                duration_ms = (time.time() - start_time) * 1000
+                self._request_metrics["failed_requests"] += 1
+                
                 # Circuit breaker is open - mark as unhealthy
                 self.provider_status[provider_name] = ProviderStatus.UNHEALTHY
                 last_error = e
                 logger.warning(f"Provider {provider_name} circuit breaker open: {e}")
+                
+                if _service_logger:
+                    _service_logger.log_circuit_breaker_event(
+                        service=provider_name,
+                        state="open",
+                        failure_count=getattr(provider, '_failure_count', 1),
+                        error_message=str(e)
+                    )
+                    _service_logger.log_service_call(
+                        service=provider_name,
+                        endpoint="generate_structured",
+                        method="POST",
+                        duration_ms=duration_ms,
+                        status_code=503,
+                        error_message=str(e)
+                    )
 
                 if not self.enable_failover:
                     raise
 
             except LLMProviderError as e:
+                duration_ms = (time.time() - start_time) * 1000
+                
                 # Other provider errors - try to determine if it's rate limiting
                 if "rate limit" in str(e).lower():
+                    self._request_metrics["rate_limited_requests"] += 1
                     self.provider_status[provider_name] = ProviderStatus.RATE_LIMITED
                     logger.warning(f"Provider {provider_name} rate limited: {e}")
+                    
+                    if _service_logger:
+                        _service_logger.log_rate_limit_event(
+                            service=provider_name,
+                            remaining=0,
+                            total=100,  # Estimate
+                            reset_time=None
+                        )
                 else:
+                    self._request_metrics["failed_requests"] += 1
                     self.provider_status[provider_name] = ProviderStatus.UNHEALTHY
                     logger.warning(f"Provider {provider_name} failed: {e}")
+                
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service=provider_name,
+                        endpoint="generate_structured",
+                        method="POST",
+                        duration_ms=duration_ms,
+                        status_code=429 if "rate limit" in str(e).lower() else 500,
+                        error_message=str(e)
+                    )
 
                 last_error = e
 
@@ -208,12 +336,25 @@ class LLMProviderClient:
                     raise
 
             except Exception as e:
+                duration_ms = (time.time() - start_time) * 1000
+                self._request_metrics["failed_requests"] += 1
+                
                 # Unexpected errors
                 self.provider_status[provider_name] = ProviderStatus.UNHEALTHY
                 last_error = LLMProviderError(
                     f"Unexpected error from {provider_name}: {str(e)}"
                 )
                 logger.error(f"Unexpected error from {provider_name}: {e}")
+                
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service=provider_name,
+                        endpoint="generate_structured",
+                        method="POST",
+                        duration_ms=duration_ms,
+                        status_code=500,
+                        error_message=str(e)
+                    )
 
                 if not self.enable_failover:
                     raise last_error
@@ -301,19 +442,45 @@ Return your response as JSON in this format:
     async def _check_all_providers_health(self):
         """Check health of all providers and update status."""
         for provider_name, provider in self.providers.items():
+            start_time = time.time()
             try:
                 health_result = await provider.health_check()
+                duration_ms = (time.time() - start_time) * 1000
 
                 if health_result.get("status") == "healthy":
                     self.provider_status[provider_name] = ProviderStatus.HEALTHY
+                    status_code = 200
                 elif health_result.get("status") == "rate_limited":
                     self.provider_status[provider_name] = ProviderStatus.RATE_LIMITED
+                    status_code = 429
                 else:
                     self.provider_status[provider_name] = ProviderStatus.UNHEALTHY
+                    status_code = 503
+                
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service=provider_name,
+                        endpoint="health_check",
+                        method="GET",
+                        duration_ms=duration_ms,
+                        status_code=status_code,
+                        **health_result
+                    )
 
             except Exception as e:
+                duration_ms = (time.time() - start_time) * 1000
                 self.provider_status[provider_name] = ProviderStatus.UNHEALTHY
                 logger.debug(f"Health check failed for {provider_name}: {e}")
+                
+                if _service_logger:
+                    _service_logger.log_service_call(
+                        service=provider_name,
+                        endpoint="health_check",
+                        method="GET",
+                        duration_ms=duration_ms,
+                        status_code=500,
+                        error_message=str(e)
+                    )
 
     async def health_check(self) -> Dict[str, Any]:
         """
@@ -353,7 +520,7 @@ Return your response as JSON in this format:
         primary_health = provider_health.get(self.primary_provider_name, {})
         fallback_health = provider_health.get(self.fallback_provider_name, {})
 
-        return {
+        health_data = {
             "overall_status": "healthy" if healthy_providers else "degraded",
             "providers": provider_health,
             "primary_provider": self.primary_provider_name,
@@ -363,7 +530,21 @@ Return your response as JSON in this format:
             "provider_count": len(self.providers),
             "primary": primary_health,
             "fallback": fallback_health,
+            "request_metrics": self._request_metrics,
         }
+        
+        if _service_logger:
+            _service_logger.log_service_call(
+                service="llm_client",
+                endpoint="health_check",
+                method="GET",
+                duration_ms=0,
+                status_code=200 if healthy_providers else 503,
+                healthy_count=len(healthy_providers),
+                total_providers=len(self.providers)
+            )
+        
+        return health_data
 
     async def list_models(self, provider_name: Optional[str] = None) -> Dict[str, Any]:
         """

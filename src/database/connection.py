@@ -10,6 +10,7 @@ import logging
 import gzip
 import json
 import os
+import time
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any, List, Tuple, AsyncContextManager
 from datetime import datetime
@@ -33,6 +34,15 @@ try:
     from src.core.config import get_system_configuration
 except ImportError:
     get_system_configuration = None
+
+# Import enhanced logging for database operations
+try:
+    from src.logging_config import DatabaseLogger, setup_structured_logging
+    # Initialize database logger
+    _db_logger = DatabaseLogger(logger)
+except ImportError:
+    _db_logger = None
+    logger.warning("DatabaseLogger not available - using basic logging")
 
 
 # Canonical data models from PRD-002
@@ -116,10 +126,14 @@ class DatabaseManager:
         self.engine: Optional[AsyncEngine] = None
         self.session_factory: Optional[async_sessionmaker] = None
         self._connected = False
+        self._connection_pool_stats = {"active": 0, "idle": 0, "size": 1}
 
     async def connect(self) -> None:
         """Establish async database connection with proper connection pooling"""
+        start_time = time.time()
         try:
+            if _db_logger:
+                _db_logger.log_connection_event("connection_attempt", client_ip="localhost")
             # Create async engine with SQLite-specific configuration
             self.engine = create_async_engine(
                 self.database_url,
@@ -148,20 +162,40 @@ class DatabaseManager:
                 await conn.execute(text("SELECT 1"))
 
             self._connected = True
+            connection_duration = (time.time() - start_time) * 1000
             logger.info(
                 "Database connection established successfully with foreign key constraints enabled"
             )
+            if _db_logger:
+                _db_logger.log_connection_event(
+                    "connection_established", 
+                    pool_stats=self._connection_pool_stats,
+                    duration_ms=connection_duration,
+                    client_ip="localhost"
+                )
 
         except Exception as e:
+            connection_duration = (time.time() - start_time) * 1000
             logger.error(f"Failed to connect to database: {e}")
+            if _db_logger:
+                _db_logger.log_connection_event(
+                    "connection_failed", 
+                    error_message=str(e),
+                    duration_ms=connection_duration,
+                    client_ip="localhost"
+                )
             raise
 
     async def disconnect(self) -> None:
         """Close database connections and cleanup resources"""
         if self.engine:
+            if _db_logger:
+                _db_logger.log_connection_event("disconnection_initiated", client_ip="localhost")
             await self.engine.dispose()
             self._connected = False
             logger.info("Database connection closed")
+            if _db_logger:
+                _db_logger.log_connection_event("disconnection_completed", client_ip="localhost")
 
     async def execute(self, query: str, params: Tuple = ()) -> None:
         """
@@ -177,6 +211,10 @@ class DatabaseManager:
         if not self._connected:
             await self.connect()
 
+        start_time = time.time()
+        operation_type = query.strip().split()[0].upper()
+        table_name = self._extract_table_name(query)
+        
         try:
             async with self.session_factory() as session:
                 # Convert positional parameters to dictionary for SQLAlchemy text()
@@ -191,8 +229,32 @@ class DatabaseManager:
                 else:
                     await session.execute(text(query))
                 await session.commit()
+                
+                # Log successful execution
+                duration_ms = (time.time() - start_time) * 1000
+                if _db_logger:
+                    _db_logger.log_query_performance(
+                        operation=operation_type,
+                        table=table_name,
+                        duration_ms=duration_ms,
+                        rows_affected=1,  # Estimate for execute operations
+                        query_hash=hash(query) % 10000,
+                        client_ip="localhost"
+                    )
+                    
         except SQLAlchemyError as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.error(f"Query execution failed: {query[:100]}... Error: {e}")
+            if _db_logger:
+                _db_logger.log_query_performance(
+                    operation=f"{operation_type}_ERROR",
+                    table=table_name,
+                    duration_ms=duration_ms,
+                    rows_affected=0,
+                    error_message=str(e),
+                    query_hash=hash(query) % 10000,
+                    client_ip="localhost"
+                )
             raise
 
     async def fetch_one(self, query: str, params = None) -> Optional[Row]:
@@ -212,6 +274,10 @@ class DatabaseManager:
         if not self._connected:
             await self.connect()
 
+        start_time = time.time()
+        operation_type = "SELECT_ONE"
+        table_name = self._extract_table_name(query)
+        
         try:
             async with self.session_factory() as session:
                 if params is not None:
@@ -236,10 +302,36 @@ class DatabaseManager:
                 else:
                     result = await session.execute(text(query))
                 row = result.fetchone()
+                
+                # Log successful fetch
+                duration_ms = (time.time() - start_time) * 1000
+                rows_returned = 1 if row else 0
+                if _db_logger:
+                    _db_logger.log_query_performance(
+                        operation=operation_type,
+                        table=table_name,
+                        duration_ms=duration_ms,
+                        rows_affected=rows_returned,
+                        query_hash=hash(query) % 10000,
+                        client_ip="localhost"
+                    )
+                
                 # Convert Row to dict for easier access
                 return dict(row._mapping) if row else None
+                
         except SQLAlchemyError as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.error(f"Query fetch_one failed: {query[:100]}... Error: {e}")
+            if _db_logger:
+                _db_logger.log_query_performance(
+                    operation=f"{operation_type}_ERROR",
+                    table=table_name,
+                    duration_ms=duration_ms,
+                    rows_affected=0,
+                    error_message=str(e),
+                    query_hash=hash(query) % 10000,
+                    client_ip="localhost"
+                )
             raise
 
     async def fetch_all(self, query: str, params = None) -> List[Row]:
@@ -259,6 +351,10 @@ class DatabaseManager:
         if not self._connected:
             await self.connect()
 
+        start_time = time.time()
+        operation_type = "SELECT_ALL"
+        table_name = self._extract_table_name(query)
+        
         try:
             async with self.session_factory() as session:
                 if params is not None:
@@ -283,10 +379,36 @@ class DatabaseManager:
                 else:
                     result = await session.execute(text(query))
                 rows = result.fetchall()
+                
+                # Log successful fetch
+                duration_ms = (time.time() - start_time) * 1000
+                rows_returned = len(rows)
+                if _db_logger:
+                    _db_logger.log_query_performance(
+                        operation=operation_type,
+                        table=table_name,
+                        duration_ms=duration_ms,
+                        rows_affected=rows_returned,
+                        query_hash=hash(query) % 10000,
+                        client_ip="localhost"
+                    )
+                
                 # Convert Rows to list of dicts for easier access
                 return [dict(row._mapping) for row in rows]
+                
         except SQLAlchemyError as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.error(f"Query fetch_all failed: {query[:100]}... Error: {e}")
+            if _db_logger:
+                _db_logger.log_query_performance(
+                    operation=f"{operation_type}_ERROR",
+                    table=table_name,
+                    duration_ms=duration_ms,
+                    rows_affected=0,
+                    error_message=str(e),
+                    query_hash=hash(query) % 10000,
+                    client_ip="localhost"
+                )
             raise
 
     async def execute_transaction(self, queries: List[Tuple[str, Tuple]]) -> bool:
@@ -302,6 +424,12 @@ class DatabaseManager:
         if not self._connected:
             await self.connect()
 
+        start_time = time.time()
+        transaction_id = f"tx_{int(time.time() * 1000000) % 1000000}"
+        
+        if _db_logger:
+            _db_logger.log_transaction_event("begin", transaction_id, query_count=len(queries), client_ip="localhost")
+        
         try:
             async with self.session_factory() as session:
                 async with session.begin():
@@ -322,9 +450,31 @@ class DatabaseManager:
                         else:
                             await session.execute(text(query))
                     # Commit is automatic with async context manager
+                
+                # Log successful transaction
+                duration_ms = (time.time() - start_time) * 1000
+                if _db_logger:
+                    _db_logger.log_transaction_event(
+                        "commit", 
+                        transaction_id, 
+                        duration_ms=duration_ms,
+                        query_count=len(queries),
+                        client_ip="localhost"
+                    )
                 return True
+                
         except SQLAlchemyError as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.error(f"Transaction failed: {e}")
+            if _db_logger:
+                _db_logger.log_transaction_event(
+                    "rollback", 
+                    transaction_id, 
+                    duration_ms=duration_ms,
+                    error_message=str(e),
+                    query_count=len(queries),
+                    client_ip="localhost"
+                )
             return False
 
     @asynccontextmanager
@@ -344,11 +494,35 @@ class DatabaseManager:
         if not self._connected:
             await self.connect()
 
+        start_time = time.time()
+        transaction_id = f"ctx_tx_{int(time.time() * 1000000) % 1000000}"
+        
+        if _db_logger:
+            _db_logger.log_transaction_event("context_begin", transaction_id, client_ip="localhost")
+
         async with self.session_factory() as session:
             async with session.begin():
                 try:
                     yield session
-                except Exception:
+                    # Log successful context transaction
+                    duration_ms = (time.time() - start_time) * 1000
+                    if _db_logger:
+                        _db_logger.log_transaction_event(
+                            "context_commit", 
+                            transaction_id, 
+                            duration_ms=duration_ms,
+                            client_ip="localhost"
+                        )
+                except Exception as e:
+                    duration_ms = (time.time() - start_time) * 1000
+                    if _db_logger:
+                        _db_logger.log_transaction_event(
+                            "context_rollback", 
+                            transaction_id, 
+                            duration_ms=duration_ms,
+                            error_message=str(e),
+                            client_ip="localhost"
+                        )
                     await session.rollback()
                     raise
 
@@ -425,6 +599,7 @@ class DatabaseManager:
         Returns:
             Dictionary with health status and connection info
         """
+        start_time = time.time()
         try:
             if not self._connected:
                 await self.connect()
@@ -434,14 +609,81 @@ class DatabaseManager:
                 result = await session.execute(text("SELECT 1 as test"))
                 test_result = result.fetchone()
 
-            return {
+            duration_ms = (time.time() - start_time) * 1000
+            health_status = {
                 "status": "healthy",
                 "connected": self._connected,
                 "database_url": self.database_url.split("://")[0] + "://[REDACTED]",
                 "test_query": test_result.test if test_result else None,
+                "health_check_duration_ms": duration_ms,
             }
+            
+            if _db_logger:
+                _db_logger.log_query_performance(
+                    operation="HEALTH_CHECK",
+                    table="system",
+                    duration_ms=duration_ms,
+                    rows_affected=1,
+                    client_ip="localhost"
+                )
+            
+            return health_status
+            
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            if _db_logger:
+                _db_logger.log_connection_event(
+                    "health_check_failed",
+                    error_message=str(e),
+                    duration_ms=duration_ms,
+                    client_ip="localhost"
+                )
             return {"status": "unhealthy", "connected": False, "error": str(e)}
+    
+    def _extract_table_name(self, query: str) -> str:
+        """
+        Extract table name from SQL query for logging purposes.
+        
+        Args:
+            query: SQL query string
+            
+        Returns:
+            Table name or 'unknown' if not found
+        """
+        try:
+            # Simple regex-free table extraction for common SQL patterns
+            query_upper = query.upper().strip()
+            
+            # Handle SELECT queries
+            if query_upper.startswith('SELECT'):
+                if ' FROM ' in query_upper:
+                    from_part = query_upper.split(' FROM ')[1]
+                    table = from_part.split()[0].strip()
+                    return table.replace('`', '').replace('"', '').replace("'", '')
+            
+            # Handle INSERT queries
+            elif query_upper.startswith('INSERT'):
+                if ' INTO ' in query_upper:
+                    into_part = query_upper.split(' INTO ')[1]
+                    table = into_part.split()[0].strip()
+                    return table.replace('`', '').replace('"', '').replace("'", '')
+                    
+            # Handle UPDATE queries
+            elif query_upper.startswith('UPDATE'):
+                update_part = query_upper.split('UPDATE')[1].strip()
+                table = update_part.split()[0].strip()
+                return table.replace('`', '').replace('"', '').replace("'", '')
+                
+            # Handle DELETE queries
+            elif query_upper.startswith('DELETE'):
+                if ' FROM ' in query_upper:
+                    from_part = query_upper.split(' FROM ')[1]
+                    table = from_part.split()[0].strip()
+                    return table.replace('`', '').replace('"', '').replace("'", '')
+                    
+            return 'unknown'
+        except Exception:
+            return 'unknown'
 
 
 class CacheManager:
@@ -462,10 +704,26 @@ class CacheManager:
         self.redis_config = redis_config
         self.redis_client: Optional[redis.Redis] = None
         self._connected = False
+        
+        # Initialize cache operation logger
+        try:
+            from src.logging_config import ExternalServiceLogger
+            self._cache_logger = ExternalServiceLogger(logger)
+        except ImportError:
+            self._cache_logger = None
 
     async def connect(self) -> None:
         """Establish async Redis connection"""
+        start_time = time.time()
         try:
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint=f"{self.redis_config.get('host', 'redis')}:{self.redis_config.get('port', 6379)}",
+                    method="CONNECT",
+                    duration_ms=0,
+                    status_code=0
+                )
             # Create Redis connection with configuration from CFG-001
             self.redis_client = redis.Redis(
                 host=self.redis_config.get("host", "redis"),
@@ -482,10 +740,31 @@ class CacheManager:
             # Test connection
             await self.redis_client.ping()
             self._connected = True
+            connection_duration = (time.time() - start_time) * 1000
             logger.info("Redis connection established successfully")
+            
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint=f"{self.redis_config.get('host', 'redis')}:{self.redis_config.get('port', 6379)}",
+                    method="CONNECT",
+                    duration_ms=connection_duration,
+                    status_code=200
+                )
 
         except Exception as e:
+            connection_duration = (time.time() - start_time) * 1000
             logger.error(f"Failed to connect to Redis: {e}")
+            
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint=f"{self.redis_config.get('host', 'redis')}:{self.redis_config.get('port', 6379)}",
+                    method="CONNECT",
+                    duration_ms=connection_duration,
+                    status_code=500,
+                    error_message=str(e)
+                )
             raise
 
     async def disconnect(self) -> None:
@@ -505,12 +784,26 @@ class CacheManager:
         Returns:
             Cached value or None if not found or Redis unavailable
         """
+        start_time = time.time()
         try:
             if not self._connected:
                 await self.connect()
 
             data = await self.redis_client.get(key)
+            cache_hit = data is not None
+            
             if data is None:
+                duration_ms = (time.time() - start_time) * 1000
+                if self._cache_logger:
+                    self._cache_logger.log_service_call(
+                        service="redis",
+                        endpoint="GET",
+                        method="GET",
+                        duration_ms=duration_ms,
+                        status_code=404,
+                        cache_key=key,
+                        cache_hit=False
+                    )
                 return None
 
             # Decompress if data is compressed
@@ -520,16 +813,53 @@ class CacheManager:
                 data = gzip.decompress(data)
 
             # Parse JSON
-            return json.loads(data.decode("utf-8"))
+            result = json.loads(data.decode("utf-8"))
+            duration_ms = (time.time() - start_time) * 1000
+            
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint="GET",
+                    method="GET",
+                    duration_ms=duration_ms,
+                    status_code=200,
+                    cache_key=key,
+                    cache_hit=True,
+                    data_size_bytes=len(data)
+                )
+            
+            return result
 
         except (ConnectionError, TimeoutError, OSError) as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.warning(
                 f"Redis connection failed for get({key}): {e}. Gracefully degrading without cache."
             )
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint="GET",
+                    method="GET",
+                    duration_ms=duration_ms,
+                    status_code=503,
+                    cache_key=key,
+                    error_message=str(e)
+                )
             self._connected = False
             return None
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.error(f"Cache get failed for key {key}: {e}")
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint="GET",
+                    method="GET",
+                    duration_ms=duration_ms,
+                    status_code=500,
+                    cache_key=key,
+                    error_message=str(e)
+                )
             return None
 
     async def set(self, key: str, value: Any, ttl: int) -> None:
@@ -541,6 +871,7 @@ class CacheManager:
             value: Value to cache
             ttl: Time to live in seconds
         """
+        start_time = time.time()
         try:
             if not self._connected:
                 await self.connect()
@@ -556,15 +887,50 @@ class CacheManager:
 
             # Set with TTL
             await self.redis_client.setex(key, ttl, data)
+            duration_ms = (time.time() - start_time) * 1000
+            
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint="SET",
+                    method="SET",
+                    duration_ms=duration_ms,
+                    status_code=200,
+                    cache_key=key,
+                    data_size_bytes=len(data),
+                    ttl_seconds=ttl
+                )
 
         except (ConnectionError, TimeoutError, OSError) as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.warning(
                 f"Redis connection failed for set({key}): {e}. Gracefully degrading without cache."
             )
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint="SET",
+                    method="SET",
+                    duration_ms=duration_ms,
+                    status_code=503,
+                    cache_key=key,
+                    error_message=str(e)
+                )
             self._connected = False
             # Don't raise - allow application to continue without cache
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
             logger.error(f"Cache set failed for key {key}: {e}")
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint="SET",
+                    method="SET",
+                    duration_ms=duration_ms,
+                    status_code=500,
+                    cache_key=key,
+                    error_message=str(e)
+                )
             # Don't raise - allow application to continue without cache
 
     async def delete(self, key: str) -> None:
@@ -644,6 +1010,7 @@ class CacheManager:
         Returns:
             Dictionary with health status and connection info
         """
+        start_time = time.time()
         try:
             if not self._connected:
                 await self.connect()
@@ -653,16 +1020,40 @@ class CacheManager:
 
             # Get info
             info = await self.redis_client.info()
-
-            return {
+            duration_ms = (time.time() - start_time) * 1000
+            
+            health_status = {
                 "status": "healthy",
                 "connected": self._connected,
                 "ping": ping_result,
                 "redis_version": info.get("redis_version"),
                 "used_memory": info.get("used_memory_human"),
                 "connected_clients": info.get("connected_clients"),
+                "health_check_duration_ms": duration_ms,
             }
+            
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint="HEALTH_CHECK",
+                    method="PING",
+                    duration_ms=duration_ms,
+                    status_code=200
+                )
+            
+            return health_status
+            
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            if self._cache_logger:
+                self._cache_logger.log_service_call(
+                    service="redis",
+                    endpoint="HEALTH_CHECK",
+                    method="PING",
+                    duration_ms=duration_ms,
+                    status_code=500,
+                    error_message=str(e)
+                )
             return {"status": "unhealthy", "connected": False, "error": str(e)}
 
 
