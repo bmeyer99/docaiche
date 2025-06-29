@@ -19,7 +19,7 @@ def wait_for_service(url: str, service_name: str, max_attempts: int = 60) -> boo
     for attempt in range(max_attempts):
         try:
             response = requests.get(url, timeout=5)
-            if response.status_code < 400:
+            if response.status_code < 500:  # Accept any non-5xx response
                 print(f"✅ {service_name} is ready")
                 return True
         except requests.exceptions.RequestException:

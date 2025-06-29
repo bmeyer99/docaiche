@@ -32,47 +32,42 @@ ingester:
   max_chunk_age: 1h
   chunk_target_size: 1048576
   chunk_retain_period: 30s
-  max_transfer_retries: 0
 
 schema_config:
   configs:
     - from: 2024-01-01
-      store: boltdb-shipper
+      store: tsdb
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
         prefix: index_
         period: 24h
 
 storage_config:
-  boltdb_shipper:
-    active_index_directory: /loki/boltdb-shipper-active
-    cache_location: /loki/boltdb-shipper-cache
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-shipper-active
+    cache_location: /loki/tsdb-shipper-cache
     cache_ttl: 24h
-    shared_store: filesystem
   filesystem:
     directory: /loki/chunks
 
 compactor:
-  working_directory: /loki/boltdb-shipper-compactor
-  shared_store: filesystem
+  working_directory: /loki/tsdb-shipper-compactor
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+  delete_request_store: filesystem
 
 limits_config:
   retention_period: 168h
-  enforce_metric_name: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h
   max_cache_freshness_per_query: 10m
   split_queries_by_interval: 15m
   ingestion_rate_mb: 16
   ingestion_burst_size_mb: 32
-
-chunk_store_config:
-  max_look_back_period: 168h
-
-table_manager:
-  retention_deletes_enabled: true
-  retention_period: 168h
+  per_stream_rate_limit: 3MB
+  per_stream_rate_limit_burst: 15MB
 
 ruler:
   storage:
@@ -88,3 +83,10 @@ ruler:
 
 analytics:
   reporting_enabled: false
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100

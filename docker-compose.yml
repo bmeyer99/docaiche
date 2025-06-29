@@ -26,7 +26,7 @@ services:
         mkdir -p /var/log/docaiche &&
         alembic upgrade head &&
         python src/database/init_db.py --db-path /data/docaiche.db &&
-        python /app/init-anythingllm-workspace.py &&
+        (python /app/init-anythingllm-workspace.py > /var/log/docaiche/workspace-init.log 2>&1 &) &&
         uvicorn src.main:app --host 0.0.0.0 --port 8000
       "
     networks:
@@ -159,6 +159,11 @@ services:
       - docaiche
     depends_on:
       - loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9080/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     labels:
       - "docaiche.service=promtail"
@@ -224,6 +229,11 @@ services:
       - /:/rootfs:ro
     networks:
       - docaiche
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9100/metrics || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     labels:
       - "docaiche.service=node-exporter"
@@ -236,6 +246,11 @@ services:
       - docaiche
     depends_on:
       - redis
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9121/metrics || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     labels:
       - "docaiche.service=redis-exporter"
