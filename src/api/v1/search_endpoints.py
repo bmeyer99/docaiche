@@ -4,6 +4,7 @@ Search, feedback, and signals endpoints
 """
 
 import logging
+import time
 from typing import Optional, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
@@ -15,14 +16,23 @@ from .schemas import (
     FeedbackRequest,
     SignalRequest,
 )
-from .middleware import limiter
+from .middleware import limiter, get_trace_id
 from .dependencies import get_database_manager, get_search_orchestrator
 from src.database.connection import DatabaseManager
 from src.search.orchestrator import SearchOrchestrator
-from src.logging_config import MetricsLogger
+from src.logging_config import MetricsLogger, SecurityLogger, ExternalServiceLogger
 
 logger = logging.getLogger(__name__)
 metrics = MetricsLogger(logger)
+
+# Import enhanced logging for search security monitoring
+try:
+    _security_logger = SecurityLogger(logger)
+    _service_logger = ExternalServiceLogger(logger)
+except ImportError:
+    _security_logger = None
+    _service_logger = None
+    logger.warning("Enhanced search security logging not available")
 
 # Create router for search endpoints
 router = APIRouter()
@@ -53,9 +63,11 @@ async def search_documents_post(
     Raises:
         HTTPException: If search execution fails
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
     try:
-        import time
-        start_time = time.time()
         
         logger.info(f"Search request: query={search_request.query!r}, tech_hint={search_request.technology_hint!r} (type: {type(search_request.technology_hint)}), limit={search_request.limit!r}")
         

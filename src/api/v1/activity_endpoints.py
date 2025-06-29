@@ -4,17 +4,28 @@ Recent activity, audit logs, and system events for admin interface
 """
 
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from .schemas import ActivityItem
-from .middleware import limiter
+from .middleware import limiter, get_trace_id
 from .dependencies import get_database_manager
 from src.database.connection import DatabaseManager
 
 logger = logging.getLogger(__name__)
+
+# Import enhanced logging for admin activity security monitoring
+try:
+    from src.logging_config import SecurityLogger, BusinessMetricsLogger
+    _security_logger = SecurityLogger(logger)
+    _business_logger = BusinessMetricsLogger(logger)
+except ImportError:
+    _security_logger = None
+    _business_logger = None
+    logger.warning("Enhanced activity security logging not available")
 
 # Create router for activity endpoints
 router = APIRouter()
@@ -31,6 +42,22 @@ async def get_recent_activity(
     """
     GET /api/v1/admin/activity/recent - Get recent system activity
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
+    # Log admin access to activity data (sensitive operation)
+    if _security_logger:
+        _security_logger.log_admin_action(
+            action="activity_data_access",
+            target="recent_activity",
+            impact_level="medium",
+            client_ip=client_ip,
+            trace_id=trace_id,
+            activity_type=activity_type,
+            limit=limit
+        )
+    
     try:
         # First check if tables exist to avoid errors
         tables_check = """

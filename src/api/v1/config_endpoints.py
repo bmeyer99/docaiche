@@ -54,6 +54,10 @@ async def get_configuration(request: Request) -> ConfigurationResponse:
     Returns:
         ConfigurationResponse with current configuration items
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
     try:
         # Use ConfigurationManager for hierarchical configuration access
         try:

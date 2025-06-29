@@ -44,7 +44,8 @@ import {
   IconUpload,
   IconUsers,
   IconChartBar,
-  IconRobot
+  IconRobot,
+  IconBolt
 } from '@tabler/icons-react';
 
 export type Icon = React.ComponentType<IconProps>;
@@ -99,5 +100,6 @@ export const Icons = {
   bot: IconRobot,
   checkCircle: IconCheck,
   moreHorizontal: IconDotsVertical,
-  trash2: IconTrash
+  trash2: IconTrash,
+  zap: IconBolt
 };

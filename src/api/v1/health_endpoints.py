@@ -4,12 +4,13 @@ Health check and statistics endpoints
 """
 
 import logging
+import time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, Request, Query
 
-from .middleware import limiter
+from .middleware import limiter, get_trace_id
 from .dependencies import (
     get_database_manager,
     get_cache_manager,
@@ -22,6 +23,16 @@ from src.search.orchestrator import SearchOrchestrator
 from src.core.config import get_system_configuration
 
 logger = logging.getLogger(__name__)
+
+# Import enhanced logging for health monitoring
+try:
+    from src.logging_config import ExternalServiceLogger, MetricsLogger
+    _service_logger = ExternalServiceLogger(logger)
+    _metrics_logger = MetricsLogger(logger)
+except ImportError:
+    _service_logger = None
+    _metrics_logger = None
+    logger.warning("Enhanced health monitoring logging not available")
 
 # Create router for health endpoints
 router = APIRouter()
@@ -264,7 +275,6 @@ async def get_stats(
         # Get real system statistics
         try:
             import psutil
-            import time
             
             system_stats = {
                 "uptime_seconds": int(time.time() - psutil.boot_time()),
@@ -274,7 +284,6 @@ async def get_stats(
             }
         except ImportError:
             # psutil not installed, return defaults
-            import time
             system_stats = {
                 "uptime_seconds": int(time.time()),
                 "cpu_usage_percent": 0,

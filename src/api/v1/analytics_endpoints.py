@@ -4,14 +4,25 @@ System analytics and metrics endpoints
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import Dict, Any
 
 from fastapi import APIRouter, Query, Request
 
-from .middleware import limiter
+from .middleware import limiter, get_trace_id
 
 logger = logging.getLogger(__name__)
+
+# Import enhanced logging for analytics security monitoring
+try:
+    from src.logging_config import SecurityLogger, BusinessMetricsLogger
+    _security_logger = SecurityLogger(logger)
+    _business_logger = BusinessMetricsLogger(logger)
+except ImportError:
+    _security_logger = None
+    _business_logger = None
+    logger.warning("Enhanced analytics security logging not available")
 
 # Create router for analytics endpoints
 router = APIRouter()
@@ -28,6 +39,20 @@ async def get_analytics(
     """
     GET /api/v1/analytics - Get system analytics data
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
+    # Log analytics access (sensitive operation)
+    if _security_logger:
+        _security_logger.log_sensitive_operation(
+            operation="analytics_access",
+            resource="system_metrics",
+            client_ip=client_ip,
+            trace_id=trace_id,
+            time_range=timeRange
+        )
+    
     try:
         # Return analytics data based on time range
         return {
