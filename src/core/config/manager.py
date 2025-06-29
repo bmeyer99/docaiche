@@ -152,18 +152,18 @@ class ConfigurationManager:
         try:
             # Query system_config table for configuration overrides
             rows = await self._db_manager.fetch_all(
-                "SELECT config_key, config_value FROM system_config WHERE is_active = :param_0",
-                (True,),
+                "SELECT key, value FROM system_config",
+                (),
             )
 
             for row in rows:
                 try:
                     # Parse JSON value
-                    value = json.loads(row.config_value)
-                    apply_nested_override(config_dict, row.config_key, value)
+                    value = json.loads(row.value)
+                    apply_nested_override(config_dict, row.key, value)
                 except (json.JSONDecodeError, AttributeError):
                     # Treat as string value
-                    apply_nested_override(config_dict, row.config_key, row.config_value)
+                    apply_nested_override(config_dict, row.key, row.value)
 
             if config_dict:
                 logger.info(f"Loaded {len(rows)} configuration overrides from database")
@@ -326,10 +326,10 @@ class ConfigurationManager:
             # Upsert configuration value
             await self._db_manager.execute(
                 """
-                INSERT OR REPLACE INTO system_config (config_key, config_value, is_active, updated_at)
-                VALUES (:param_0, :param_1, :param_2, :param_3)
+                INSERT OR REPLACE INTO system_config (key, value, updated_at)
+                VALUES (:param_0, :param_1, :param_2)
                 """,
-                (config_key, serialized_value, True, int(time.time())),
+                (config_key, serialized_value, int(time.time())),
             )
 
             logger.info(f"Configuration updated in database: {config_key}")
@@ -358,15 +358,15 @@ class ConfigurationManager:
 
         try:
             row = await self._db_manager.fetch_one(
-                "SELECT config_value FROM system_config WHERE config_key = :param_0 AND is_active = :param_1",
-                (config_key, True),
+                "SELECT value FROM system_config WHERE key = :param_0",
+                (config_key,),
             )
 
             if row:
                 try:
-                    return json.loads(row.config_value)
+                    return json.loads(row.value)
                 except json.JSONDecodeError:
-                    return row.config_value
+                    return row.value
 
             return None
 

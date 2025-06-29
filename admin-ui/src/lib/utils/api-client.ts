@@ -386,7 +386,19 @@ export class DocaicheApiClient {
   }
 
   async updateProviderConfiguration(providerId: string, config: ProviderConfiguration): Promise<ProviderConfiguration> {
-    return this.post<any>(`/providers/${providerId}/config`, config);
+    // Transform frontend ProviderConfiguration to backend ProviderConfigRequest format
+    const backendConfig = {
+      base_url: config.config?.base_url as string || undefined,
+      api_key: config.config?.api_key as string || undefined,
+      model: config.config?.model as string || undefined,
+    };
+    
+    // Remove undefined values to send only provided fields
+    const cleanConfig = Object.fromEntries(
+      Object.entries(backendConfig).filter(([_, value]) => value !== undefined)
+    );
+
+    return this.post<any>(`/providers/${providerId}/config`, cleanConfig);
   }
 
   async testProviderConnection(providerId: string, config: Record<string, string | number>): Promise<{ success: boolean; message: string }> {

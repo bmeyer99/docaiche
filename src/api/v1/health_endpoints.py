@@ -53,14 +53,8 @@ async def health_check(
         JSON with overall status, component statuses, features, timestamp, and version.
     """
     # Always return HTTP 200
-    components = {}
-    features = {
-        "document_processing": "available",
-        "search": "available",
-        "llm_enhancement": "available",
-    }
+    services = []
     overall_status = "healthy"
-    version = "1.0.0"
     now = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
 
     # Database
@@ -70,56 +64,81 @@ async def health_check(
         db_msg = db_health.get(
             "message", "Connected" if db_status == "healthy" else "Unknown error"
         )
-        components["database"] = {"status": db_status, "message": db_msg}
+        services.append({
+            "service": "database",
+            "status": db_status,
+            "response_time_ms": db_health.get("response_time_ms"),
+            "last_check": now,
+            "details": {"message": db_msg}
+        })
         if db_status != "healthy":
             overall_status = "degraded"
     except Exception as e:
-        components["database"] = {
-            "status": "unavailable",
-            "message": f"Connection failed: {e}",
-        }
+        error_msg = f"Connection failed: {e}"
+        services.append({
+            "service": "database",
+            "status": "unhealthy",
+            "last_check": now,
+            "details": {"message": error_msg, "error": str(e)}
+        })
         overall_status = "degraded"
 
     # Redis/Cache
     try:
         cache_health = await cache_manager.health_check()
         cache_status = (
-            "healthy" if cache_health.get("status") == "healthy" else "unavailable"
+            "healthy" if cache_health.get("status") == "healthy" else "unhealthy"
         )
         cache_msg = cache_health.get(
             "message", "Connected" if cache_status == "healthy" else "Unavailable"
         )
-        components["redis"] = {"status": cache_status, "message": cache_msg}
+        services.append({
+            "service": "redis",
+            "status": cache_status,
+            "response_time_ms": cache_health.get("response_time_ms"),
+            "last_check": now,
+            "details": {"message": cache_msg}
+        })
         if cache_status != "healthy":
             overall_status = "degraded"
-            features["search"] = "unavailable"
     except Exception as e:
-        components["redis"] = {
-            "status": "unavailable",
-            "message": f"Connection failed: {e}",
-        }
+        error_msg = f"Connection failed: {e}"
+        services.append({
+            "service": "redis",
+            "status": "unhealthy", 
+            "last_check": now,
+            "details": {"message": error_msg, "error": str(e)}
+        })
         overall_status = "degraded"
-        features["search"] = "unavailable"
 
     # AnythingLLM
     try:
         llm_health = await anythingllm_client.health_check()
         llm_status = (
-            "healthy" if llm_health.get("status") == "healthy" else "unavailable"
+            "healthy" if llm_health.get("status") == "healthy" else "unhealthy"
         )
         llm_msg = llm_health.get(
             "message",
             "Connected" if llm_status == "healthy" else "Service not configured",
         )
-        components["anythingllm"] = {"status": llm_status, "message": llm_msg}
+        services.append({
+            "service": "anythingllm",
+            "status": llm_status,
+            "response_time_ms": llm_health.get("response_time_ms"),
+            "last_check": now,
+            "details": {"message": llm_msg}
+        })
         if llm_status != "healthy":
-            features["llm_enhancement"] = "unavailable"
-    except Exception:
-        components["anythingllm"] = {
-            "status": "unavailable",
-            "message": "Service not configured",
-        }
-        features["llm_enhancement"] = "unavailable"
+            overall_status = "degraded"
+    except Exception as e:
+        error_msg = "Service not configured"
+        services.append({
+            "service": "anythingllm",
+            "status": "unhealthy",
+            "last_check": now,
+            "details": {"message": error_msg, "error": str(e)}
+        })
+        overall_status = "degraded"
 
     # LLM Providers (Ollama/OpenAI/etc)
     try:
@@ -128,22 +147,26 @@ async def health_check(
         if ai_config and (
             getattr(ai_config, "ollama", None) or getattr(ai_config, "openai", None)
         ):
-            components["llm_providers"] = {
-                "status": "configured",
-                "message": "LLM providers enabled",
-            }
+            provider_status = "healthy"
+            provider_msg = "LLM providers enabled"
         else:
-            components["llm_providers"] = {
-                "status": "none_configured",
-                "message": "No LLM providers enabled",
-            }
-            features["llm_enhancement"] = "unavailable"
-    except Exception:
-        components["llm_providers"] = {
-            "status": "none_configured",
-            "message": "No LLM providers enabled",
-        }
-        features["llm_enhancement"] = "unavailable"
+            provider_status = "degraded"
+            provider_msg = "No LLM providers enabled"
+        
+        services.append({
+            "service": "llm_providers",
+            "status": provider_status,
+            "last_check": now,
+            "details": {"message": provider_msg}
+        })
+    except Exception as e:
+        error_msg = "No LLM providers enabled"
+        services.append({
+            "service": "llm_providers", 
+            "status": "degraded",
+            "last_check": now,
+            "details": {"message": error_msg, "error": str(e)}
+        })
 
     # Search Orchestrator
     try:
@@ -154,40 +177,46 @@ async def health_check(
         search_msg = search_health.get(
             "message", "Connected" if search_status == "healthy" else f"Status: {search_health.get('overall_status', 'unknown')}"
         )
-        search_component = {
-            "status": search_status,
-            "message": search_msg,
-        }
+        search_details = {"message": search_msg}
         if search_status == "degraded" and search_health:
-            search_component["details"] = search_health
-        components["search_orchestrator"] = search_component
+            search_details.update(search_health)
+            
+        services.append({
+            "service": "search_orchestrator",
+            "status": search_status,
+            "response_time_ms": search_health.get("response_time_ms"),
+            "last_check": now,
+            "details": search_details
+        })
+        
         if search_status != "healthy" and overall_status == "healthy":
             overall_status = "degraded"
     except Exception as e:
-        components["search_orchestrator"] = {
-            "status": "degraded",
-            "message": f"Error: {e}",
-        }
+        error_msg = f"Error: {e}"
+        services.append({
+            "service": "search_orchestrator",
+            "status": "unhealthy",
+            "last_check": now,
+            "details": {"message": error_msg, "error": str(e)}
+        })
         if overall_status == "healthy":
             overall_status = "degraded"
 
     # If all major components are unavailable, mark as unhealthy
     unavailable_count = sum(
         1
-        for c in ["database", "redis", "anythingllm"]
-        if components.get(c, {}).get("status") in ["unavailable", "unhealthy"]
+        for service in services
+        if service["service"] in ["database", "redis", "anythingllm"] and 
+           service["status"] in ["unavailable", "unhealthy"]
     )
     if unavailable_count == 3:
         overall_status = "unhealthy"
 
-    # Always include "overall_status" for test compatibility
+    # Return clean response matching frontend HealthResponse schema
     return {
-        "status": overall_status,
         "overall_status": overall_status,
+        "services": services,
         "timestamp": now,
-        "version": version,
-        "components": components,
-        "features": features,
     }
 
 
