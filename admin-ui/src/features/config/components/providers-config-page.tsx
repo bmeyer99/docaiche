@@ -179,13 +179,11 @@ export default function ProvidersConfigPage() {
       
       toast({
         title: "Setup Complete!",
-        description: "Your AI provider has been configured. Redirecting to Analytics...",
+        description: "Your AI provider has been configured successfully.",
       });
       
-      // Navigate to analytics after brief delay
-      setTimeout(() => {
-        router.push('/dashboard/analytics');
-      }, 1500);
+      // Switch to advanced mode to show the configured provider
+      setIsQuickSetup(false);
       
     } catch (error) {
       console.error('🔥 Quick setup completion failed:', error);
@@ -331,10 +329,7 @@ export default function ProvidersConfigPage() {
                   Setting up...
                 </>
               ) : (
-                <>
-                  Complete Setup
-                  <Icons.arrowRight className="w-4 h-4 ml-2" />
-                </>
+                "Complete Setup"
               )}
             </Button>
           </div>
@@ -592,8 +587,10 @@ export default function ProvidersConfigPage() {
                   Complete the configuration for your selected provider
                 </CardDescription>
               </CardHeader>
-              <CardContent className="max-h-[400px] overflow-y-auto">
-                {renderConfigurationForm(activeProviderData)}
+              <CardContent>
+                <div className="max-h-[400px] overflow-y-auto pr-4">
+                  {renderConfigurationForm(activeProviderData)}
+                </div>
               </CardContent>
             </Card>
           )}

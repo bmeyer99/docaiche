@@ -36,31 +36,9 @@ const COLORS = [
 export default function WebSocketAnalyticsPage() {
   const [timeRange, setTimeRange] = useState('24h');
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('area');
-  const [providersConfigured, setProvidersConfigured] = useState(false);
-  const [checkingProviders, setCheckingProviders] = useState(true);
-  const apiClient = useApiClient();
   
-  // Check if providers are configured before enabling WebSocket
-  useEffect(() => {
-    const checkProviders = async () => {
-      try {
-        const providers = await apiClient.getProviderConfigurations();
-        const hasConfigured = Array.isArray(providers) && 
-          providers.some((p: any) => p.configured === true || p.enabled === true);
-        setProvidersConfigured(hasConfigured);
-      } catch (error) {
-        console.error('Failed to check providers:', error);
-        setProvidersConfigured(false);
-      } finally {
-        setCheckingProviders(false);
-      }
-    };
-    
-    checkProviders();
-  }, [apiClient]);
-  
-  // Only connect WebSocket if providers are configured
-  const { analytics, stats, isConnected, error } = useAnalyticsWebSocket(timeRange, providersConfigured && !checkingProviders);
+  // Always connect WebSocket - monitoring should always be available
+  const { analytics, stats, isConnected, error } = useAnalyticsWebSocket(timeRange, true);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;

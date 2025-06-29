@@ -44,7 +44,7 @@ export function useWebSocket(
   const shouldReconnect = useRef(reconnect);
 
   const connect = useCallback(() => {
-    if (!url || ws.current?.readyState === WebSocket.OPEN) return;
+    if (!url || ws.current?.readyState === WebSocket.OPEN || ws.current?.readyState === WebSocket.CONNECTING) return;
 
     try {
       ws.current = new WebSocket(url);
@@ -61,18 +61,32 @@ export function useWebSocket(
         setState(prev => ({ ...prev, isConnected: false }));
         onClose?.(event);
 
+        // Clear any existing reconnect timeout
+        if (reconnectTimeoutId.current) {
+          clearTimeout(reconnectTimeoutId.current);
+          reconnectTimeoutId.current = null;
+        }
+
         // Attempt to reconnect if enabled
         if (
           shouldReconnect.current &&
           reconnect &&
           reconnectCount.current < reconnectAttempts &&
-          !event.wasClean
+          !event.wasClean &&
+          event.code !== 1000 // Normal closure
         ) {
+          const backoffDelay = Math.min(reconnectInterval * Math.pow(2, reconnectCount.current), 30000); // Exponential backoff, max 30s
           reconnectTimeoutId.current = setTimeout(() => {
-            console.log(`Attempting to reconnect... (${reconnectCount.current + 1}/${reconnectAttempts})`);
+            console.log(`Attempting to reconnect... (${reconnectCount.current + 1}/${reconnectAttempts}) after ${backoffDelay}ms`);
             reconnectCount.current++;
             connect();
-          }, reconnectInterval);
+          }, backoffDelay);
+        } else if (reconnectCount.current >= reconnectAttempts) {
+          console.log('Max reconnection attempts reached, giving up');
+          setState(prev => ({ 
+            ...prev, 
+            error: new Error(`Failed to connect after ${reconnectAttempts} attempts`) 
+          }));
         }
       };
 

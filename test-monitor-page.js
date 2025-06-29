@@ -56,8 +56,7 @@ async function monitorPage(pageUrl, monitorDuration) {
   console.log(`Started at: ${formatTimestamp()}\n`);
 
   const browser = await puppeteer.launch({
-    headless: false, // Set to true for CI/automated testing
-    devtools: true,  // Opens DevTools automatically
+    headless: 'new', // Use new headless mode
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

@@ -6,6 +6,6 @@
     "monitor": "node ../test-monitor-page.js"
   },
   "dependencies": {
-    "puppeteer": "^22.0.0"
+    "puppeteer": "^22.15.0"
   }
 }
