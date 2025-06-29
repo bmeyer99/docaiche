@@ -7,6 +7,8 @@ import { Icons } from '@/components/icons';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { DocaicheApiClient } from '@/lib/utils/api-client';
 import { AI_PROVIDERS } from '@/lib/config/providers';
+import { OverviewLoading } from './overview-loading';
+import { GradientHeader } from '@/components/ui/gradient-header';
 
 interface DashboardStats {
   search_stats: {
@@ -89,25 +91,21 @@ export default function OverviewPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col gap-6 p-6">
-        <LoadingSkeleton variant="dashboard" />
-      </div>
-    );
+    return <OverviewLoading />;
   }
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard Overview</h1>
-        <p className="text-muted-foreground">
-          Welcome to the Docaiche administration interface
-        </p>
-      </div>
+      <GradientHeader 
+        title="Dashboard Overview"
+        subtitle="Welcome to the Docaiche administration interface"
+        gradient="accent"
+        className="fade-in-sequence"
+      />
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 fade-in-sequence">
+        <Card className="hover-lift transition-smooth">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
             <Icons.fileText className="h-4 w-4 text-muted-foreground" />
@@ -122,7 +120,7 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-lift transition-smooth">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Collections</CardTitle>
             <Icons.folder className="h-4 w-4 text-muted-foreground" />
@@ -137,7 +135,7 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-lift transition-smooth">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Providers</CardTitle>
             <Icons.bot className="h-4 w-4 text-muted-foreground" />
@@ -152,7 +150,7 @@ export default function OverviewPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-lift transition-smooth">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Searches (24h)</CardTitle>
             <Icons.trendingUp className="h-4 w-4 text-muted-foreground" />
@@ -170,7 +168,7 @@ export default function OverviewPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* System Status */}
-        <Card>
+        <Card className="hover-lift transition-smooth">
           <CardHeader>
             <CardTitle>System Status</CardTitle>
             <CardDescription>Current system health and uptime</CardDescription>
@@ -207,7 +205,7 @@ export default function OverviewPage() {
         </Card>
 
         {/* AI Providers Quick Status */}
-        <Card>
+        <Card className="hover-lift transition-smooth">
           <CardHeader>
             <CardTitle>AI Providers</CardTitle>
             <CardDescription>Quick overview of configured providers</CardDescription>
@@ -237,7 +235,7 @@ export default function OverviewPage() {
       </div>
 
       {/* Recent Activity */}
-      <Card>
+      <Card className="hover-lift transition-smooth">
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
           <CardDescription>Latest system events and operations</CardDescription>
@@ -250,7 +248,7 @@ export default function OverviewPage() {
           ) : recentActivity.length > 0 ? (
             <div className="space-y-4">
               {recentActivity.slice(0, 8).map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 pb-3 border-b last:border-b-0">
+                <div key={activity.id} className="flex items-start gap-3 pb-3 border-b last:border-b-0 hover:bg-accent/50 p-2 rounded-lg transition-smooth">
                   <div className={`mt-1 ${getActivityColor(activity.type)}`}>
                     {getActivityIcon(activity.type)}
                   </div>
