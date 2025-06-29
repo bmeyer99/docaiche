@@ -12,9 +12,10 @@ import { Icons } from '@/components/icons';
 import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/config/providers';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
-import ModelSelection from './model-selection';
+import { ProviderTestProvider, useProviderTestCache } from '@/lib/hooks/use-provider-test-cache';
+import ModelSelectionRedesigned from './model-selection-redesigned';
 
-export default function ProvidersConfigPage() {
+function ProvidersConfigPageContent() {
   const [configurations, setConfigurations] = useState<Record<string, ProviderConfiguration>>({});
   const [loading, setLoading] = useState(false);
   const [activeProvider, setActiveProvider] = useState('ollama');
@@ -22,6 +23,7 @@ export default function ProvidersConfigPage() {
   const [savingField, setSavingField] = useState<string | null>(null);
   const { toast } = useToast();
   const apiClient = useApiClient();
+  const testCache = useProviderTestCache();
   const attemptCountRef = useRef(0);
   const hasMountedRef = useRef(false);
 
@@ -130,30 +132,61 @@ export default function ProvidersConfigPage() {
         return;
       }
       
+      // Prepare test config
+      const testConfig = {
+        base_url: providerConfig.config?.base_url ? String(providerConfig.config.base_url) : '',
+        api_key: providerConfig.config?.api_key ? String(providerConfig.config.api_key) : '',
+        ...providerConfig.config
+      };
+      
+      // Set testing state
+      testCache.setProviderTesting(providerId, testConfig);
+      
       // Don't send model parameter - let the test endpoint handle model discovery
       const testParams: Record<string, string> = {};
-      if (providerConfig.config?.base_url) {
-        testParams.base_url = String(providerConfig.config.base_url);
+      if (testConfig.base_url) {
+        testParams.base_url = testConfig.base_url;
       }
-      if (providerConfig.config?.api_key) {
-        testParams.api_key = String(providerConfig.config.api_key);
+      if (testConfig.api_key) {
+        testParams.api_key = testConfig.api_key;
       }
       
       const result = await apiClient.testProviderConnection(providerId, testParams);
       
-      // Show appropriate message based on whether models were discovered
-      let message = result.message;
-      if (result.success && result.models && result.models.length > 0) {
-        message = `${result.message} Found ${result.models.length} models.`;
+      if (result.success) {
+        // Update test cache with successful result
+        testCache.setProviderTested(providerId, result.models || [], testConfig);
+        
+        // Show success message
+        let message = result.message;
+        if (result.models && result.models.length > 0) {
+          message = `${result.message} Found ${result.models.length} models.`;
+        }
+        
+        toast({
+          title: "Success",
+          description: message,
+        });
+      } else {
+        // Update test cache with failed result
+        testCache.setProviderFailed(providerId, result.message || 'Connection test failed', testConfig);
+        
+        toast({
+          title: "Test Failed",
+          description: result.message,
+          variant: "destructive",
+        });
       }
+    } catch (error: any) {
+      // Update test cache with failed result
+      const providerConfig = configurations[providerId];
+      const testConfig = {
+        base_url: providerConfig?.config?.base_url ? String(providerConfig.config.base_url) : '',
+        api_key: providerConfig?.config?.api_key ? String(providerConfig.config.api_key) : '',
+        ...providerConfig?.config
+      };
       
-      toast({
-        title: result.success ? "Success" : "Error",
-        description: message,
-        variant: result.success ? "default" : "destructive",
-      });
-    } catch (error) {
-      // Provider connection test failed
+      testCache.setProviderFailed(providerId, error.message || 'Connection test failed', testConfig);
       
       toast({
         title: "Error",
@@ -337,7 +370,7 @@ export default function ProvidersConfigPage() {
       </div>
 
       {/* Model Selection Interface */}
-      <ModelSelection />
+      <ModelSelectionRedesigned />
 
       {/* Error State */}
       {loadError && (
@@ -451,5 +484,13 @@ export default function ProvidersConfigPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProvidersConfigPage() {
+  return (
+    <ProviderTestProvider>
+      <ProvidersConfigPageContent />
+    </ProviderTestProvider>
   );
 }
