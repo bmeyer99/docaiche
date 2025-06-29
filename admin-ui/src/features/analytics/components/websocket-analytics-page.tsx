@@ -109,6 +109,50 @@ export default function WebSocketAnalyticsPage() {
         </div>
       )}
 
+      {/* System Health Overview */}
+      {analytics?.systemHealth && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Icons.activity className="w-5 h-5" />
+              System Health Overview
+            </CardTitle>
+            <CardDescription>
+              Real-time status of all system components
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(analytics.systemHealth).map(([component, health]: [string, any]) => (
+                <div key={component} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      health.status === 'healthy' ? 'bg-green-500' :
+                      health.status === 'degraded' ? 'bg-yellow-500' :
+                      health.status === 'failed' ? 'bg-red-500' :
+                      'bg-gray-500'
+                    } animate-pulse`} />
+                    <div>
+                      <div className="font-medium capitalize">{component.replace(/_/g, ' ')}</div>
+                      <div className="text-xs text-muted-foreground">{health.message}</div>
+                    </div>
+                  </div>
+                  {health.action && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => window.location.href = health.action.url}
+                    >
+                      {health.action.label}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Key Metrics */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -170,11 +214,21 @@ export default function WebSocketAnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="bg-green-100 text-green-700">
-                  Healthy
+                <Badge variant="secondary" className={
+                  analytics?.systemHealth && Object.values(analytics.systemHealth).every((h: any) => h.status === 'healthy')
+                    ? "bg-green-100 text-green-700"
+                    : analytics?.systemHealth && Object.values(analytics.systemHealth).some((h: any) => h.status === 'failed')
+                    ? "bg-red-100 text-red-700"
+                    : "bg-yellow-100 text-yellow-700"
+                }>
+                  {analytics?.systemHealth && Object.values(analytics.systemHealth).every((h: any) => h.status === 'healthy')
+                    ? "Healthy"
+                    : analytics?.systemHealth && Object.values(analytics.systemHealth).some((h: any) => h.status === 'failed')
+                    ? "Issues Detected"
+                    : "Degraded"}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  All systems operational
+                  {analytics?.systemHealth && Object.values(analytics.systemHealth).filter((h: any) => h.status !== 'healthy').length || 0} components need attention
                 </span>
               </div>
             </CardContent>

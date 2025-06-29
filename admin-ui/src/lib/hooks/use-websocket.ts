@@ -44,9 +44,11 @@ export function useWebSocket(
   const shouldReconnect = useRef(reconnect);
 
   const connect = useCallback(() => {
-    if (!url || ws.current?.readyState === WebSocket.OPEN || ws.current?.readyState === WebSocket.CONNECTING) return;
+    // Prevent multiple connections
+    if (!url || ws.current) return;
 
     try {
+      console.log('Creating new WebSocket connection to:', url);
       ws.current = new WebSocket(url);
 
       ws.current.onopen = (event) => {
@@ -116,6 +118,7 @@ export function useWebSocket(
   }, [url, reconnect, reconnectInterval, reconnectAttempts, onOpen, onClose, onError, onMessage]);
 
   const disconnect = useCallback(() => {
+    console.log('Disconnecting WebSocket');
     shouldReconnect.current = false;
     reconnectCount.current = 0; // Reset reconnect count on manual disconnect
     
@@ -124,10 +127,10 @@ export function useWebSocket(
       reconnectTimeoutId.current = null;
     }
 
-    if (ws.current) {
-      ws.current.close();
-      ws.current = null;
+    if (ws.current && ws.current.readyState !== WebSocket.CLOSED) {
+      ws.current.close(1000, 'Component unmounting');
     }
+    ws.current = null;
   }, []);
 
   const sendMessage = useCallback((message: any) => {
@@ -140,14 +143,14 @@ export function useWebSocket(
 
   // Auto-connect on mount if URL is provided
   useEffect(() => {
-    if (url) {
+    if (url && !ws.current) {
       connect();
     }
 
     return () => {
       disconnect();
     };
-  }, [url, connect, disconnect]);
+  }, [url]); // Remove connect and disconnect from deps to prevent recreation
 
   return {
     ...state,
@@ -161,43 +164,75 @@ export function useWebSocket(
 export function useAnalyticsWebSocket(timeRange: string = '24h', enabled: boolean = true) {
   const [analytics, setAnalytics] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
-  
-  // Use relative path that will be proxied by Next.js
-  const [url, setUrl] = useState<string | null>(null);
-  
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && enabled) {
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      setUrl(`${wsProtocol}//${window.location.host}/ws/analytics`);
-    } else if (!enabled) {
-      setUrl(null); // Don't connect if not enabled
+    if (!enabled || typeof window === 'undefined') {
+      return;
     }
+
+    // Import dynamically to avoid SSR issues
+    import('../websocket-manager').then(({ default: WebSocketManager }) => {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${wsProtocol}//${window.location.host}/ws/analytics`;
+      
+      const manager = WebSocketManager.getInstance(url);
+
+      // Set up event handlers
+      const unsubscribeMessage = manager.onMessage((data) => {
+        if (data.type === 'analytics_update') {
+          setAnalytics(data.data.analytics);
+          setStats(data.data.stats);
+        }
+      });
+
+      const unsubscribeConnect = manager.onConnect(() => {
+        console.log('Analytics WebSocket connected');
+        setIsConnected(true);
+        setError(null);
+        
+        // Send initial time range
+        manager.send({
+          type: 'change_timerange',
+          timeRange,
+        });
+      });
+
+      const unsubscribeError = manager.onError((event) => {
+        console.error('Analytics WebSocket error:', event);
+        setError(new Error('WebSocket connection error'));
+        setIsConnected(false);
+      });
+
+      // Connect
+      manager.connect();
+
+      // Cleanup function
+      return () => {
+        unsubscribeMessage();
+        unsubscribeConnect();
+        unsubscribeError();
+        // Note: We don't disconnect here because other components might be using it
+      };
+    });
   }, [enabled]);
 
-  const { isConnected, error, sendMessage } = useWebSocket(url, {
-    onMessage: (data) => {
-      if (data.type === 'analytics_update') {
-        setAnalytics(data.data.analytics);
-        setStats(data.data.stats);
-      }
-    },
-    onOpen: () => {
-      console.log('Analytics WebSocket connected');
-    },
-    onError: (error) => {
-      console.error('Analytics WebSocket error:', error);
-    },
-  });
-
-  // Send time range change when it updates
+  // Handle time range changes
   useEffect(() => {
-    if (isConnected) {
-      sendMessage({
-        type: 'change_timerange',
-        timeRange,
+    if (isConnected && typeof window !== 'undefined') {
+      import('../websocket-manager').then(({ default: WebSocketManager }) => {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const url = `${wsProtocol}//${window.location.host}/ws/analytics`;
+        const manager = WebSocketManager.getInstance(url);
+        
+        manager.send({
+          type: 'change_timerange',
+          timeRange,
+        });
       });
     }
-  }, [timeRange, isConnected, sendMessage]);
+  }, [timeRange, isConnected]);
 
   return {
     analytics,
