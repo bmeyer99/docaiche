@@ -1,13 +1,12 @@
 apiVersion: 1
 
 providers:
-  - name: 'Docaiche Dashboards'
+  - name: 'default'
     orgId: 1
-    folder: 'Docaiche'
+    folder: ''
     type: file
     disableDeletion: false
     updateIntervalSeconds: 10
     allowUiUpdates: true
     options:
-      path: /var/lib/grafana/dashboards
-      foldersFromFilesStructure: true
+      path: /etc/grafana/provisioning/dashboards

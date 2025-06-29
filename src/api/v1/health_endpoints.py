@@ -477,3 +477,67 @@ async def test_registry_route():
             "registry_available": False,
             "error": str(e)
         }
+
+
+@router.get("/monitoring", tags=["health"])
+async def get_monitoring_info():
+    """
+    GET /api/v1/monitoring - Get monitoring endpoints and dashboard information
+    
+    Returns:
+        Information about available monitoring services and dashboards
+    """
+    return {
+        "services": {
+            "grafana": {
+                "url": "/grafana",
+                "default_credentials": {
+                    "username": "admin",
+                    "password": "admin"
+                },
+                "dashboards": [
+                    {
+                        "name": "DocAIche System Overview",
+                        "uid": "docaiche-overview",
+                        "description": "Overall system health and performance metrics",
+                        "url": "/grafana/d/docaiche-overview/docaiche-system-overview"
+                    }
+                ]
+            },
+            "prometheus": {
+                "url": "/prometheus",
+                "metrics_endpoint": "/prometheus/api/v1/query",
+                "targets": [
+                    "docker",
+                    "node-exporter",
+                    "redis-exporter",
+                    "loki",
+                    "grafana"
+                ]
+            },
+            "loki": {
+                "url": "/loki",
+                "query_endpoint": "/loki/loki/api/v1/query_range",
+                "labels": [
+                    "service_name",
+                    "container_name",
+                    "level",
+                    "job"
+                ]
+            }
+        },
+        "internal_endpoints": {
+            "logs": "/api/v1/logs",
+            "containers": "/api/v1/containers",
+            "metrics": "/api/v1/metrics",
+            "alerts": "/api/v1/alerts"
+        },
+        "features": {
+            "log_aggregation": True,
+            "metrics_collection": True,
+            "container_management": False,  # Not implemented yet
+            "ssh_access": False,  # Not implemented yet
+            "real_time_logs": False  # Not implemented yet
+        },
+        "timestamp": datetime.utcnow().isoformat()
+    }

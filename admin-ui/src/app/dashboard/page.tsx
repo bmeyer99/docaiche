@@ -34,7 +34,7 @@ export default async function Dashboard() {
   } catch (error) {
     // If API is unavailable or error occurs, default to providers page
     // This ensures users can still access the setup page even if backend is down
-    console.error('Dashboard routing error:', error);
+    // Dashboard routing error - fallback to providers page
     redirect('/dashboard/providers');
   }
 }

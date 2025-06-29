@@ -20,6 +20,10 @@ from .ingestion import ingestion_router
 from .provider_endpoints import router as provider_router
 from .activity_endpoints import router as activity_router
 from .websocket_endpoints import router as websocket_router
+from .logs_endpoints import router as logs_router
+from .containers_endpoints import router as containers_router
+from .metrics_endpoints import router as metrics_router
+from .workspace_endpoints import router as workspace_router
 from .middleware import limiter, rate_limit_handler
 from .exceptions import (
     validation_exception_handler,
@@ -42,6 +46,10 @@ api_router.include_router(ingestion_router)
 api_router.include_router(provider_router)
 api_router.include_router(activity_router)
 api_router.include_router(websocket_router)
+api_router.include_router(logs_router)
+api_router.include_router(containers_router)
+api_router.include_router(metrics_router)
+api_router.include_router(workspace_router)
 
 # Add rate limiter state to router
 api_router.state = type("State", (), {"limiter": limiter})()

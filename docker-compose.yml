@@ -15,14 +15,18 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - ANYTHINGLLM_URL=http://anythingllm:3001
+      - ANYTHINGLLM_API_KEY=docaiche-lab-default-key-2025
       - DATABASE_URL=sqlite+aiosqlite:///data/docaiche.db
       - DB_PATH=/data/docaiche.db
-      - ENVIRONMENT=production
+      - ENVIRONMENT=development
       - DATA_DIR=/data
+      - LOG_LEVEL=INFO
     command: >
       sh -c "
+        mkdir -p /var/log/docaiche &&
         alembic upgrade head &&
         python src/database/init_db.py --db-path /data/docaiche.db &&
+        python /app/init-anythingllm-workspace.py &&
         uvicorn src.main:app --host 0.0.0.0 --port 8000
       "
     networks:
@@ -35,7 +39,10 @@ services:
     volumes:
       - db_data:/data
       - ./config.yaml:/app/config.yaml:ro
+      - logs_data:/var/log/docaiche
     restart: unless-stopped
+    labels:
+      - "docaiche.service=api"
 
   admin-ui:
     build:
@@ -62,7 +69,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    volumes:
+      - logs_data:/var/log/docaiche
     restart: unless-stopped
+    labels:
+      - "docaiche.service=admin-ui"
 
   redis:
     image: redis:7-alpine
@@ -78,6 +89,8 @@ services:
       timeout: 4s
       retries: 10
     restart: unless-stopped
+    labels:
+      - "docaiche.service=redis"
 
   db:
     image: alpine:3.18
@@ -92,11 +105,17 @@ services:
       timeout: 4s
       retries: 10
     restart: unless-stopped
+    labels:
+      - "docaiche.service=database"
 
   anythingllm:
     image: mintplexlabs/anythingllm:latest
     environment:
       STORAGE_DIR: /app/server/storage
+      SERVER_PORT: 3001
+      JWT_SECRET: docaiche-lab-jwt-secret-2025
+      AUTH_TOKEN: docaiche-lab-default-key-2025
+      DISABLE_TELEMETRY: "true"
     volumes:
       - anythingllm_data:/app/server/storage
       - anythingllm_exports:/app/server/exports
@@ -108,9 +127,11 @@ services:
       timeout: 4s
       retries: 10
     restart: unless-stopped
+    labels:
+      - "docaiche.service=anythingllm"
 
   loki:
-    image: grafana/loki:2.9.0
+    image: grafana/loki:3.5.0
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - ./loki-config.yaml:/etc/loki/local-config.yaml
@@ -123,22 +144,27 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    labels:
+      - "docaiche.service=loki"
 
   promtail:
-    image: grafana/promtail:2.9.0
+    image: grafana/promtail:3.5.0
     volumes:
       - ./promtail-config.yaml:/etc/promtail/config.yml
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - logs_data:/var/log/docaiche:ro
     command: -config.file=/etc/promtail/config.yml
     networks:
       - docaiche
     depends_on:
       - loki
     restart: unless-stopped
+    labels:
+      - "docaiche.service=promtail"
 
   grafana:
-    image: grafana/grafana:10.0.0
+    image: grafana/grafana:12.0.2
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -154,12 +180,65 @@ services:
       - docaiche
     depends_on:
       - loki
+      - prometheus
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    labels:
+      - "docaiche.service=grafana"
+
+  prometheus:
+    image: prom/prometheus:v3.4.2
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - docaiche
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    labels:
+      - "docaiche.service=prometheus"
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - docaiche
+    restart: unless-stopped
+    labels:
+      - "docaiche.service=node-exporter"
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.66.0
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    networks:
+      - docaiche
+    depends_on:
+      - redis
+    restart: unless-stopped
+    labels:
+      - "docaiche.service=redis-exporter"
 
 networks:
   docaiche:
@@ -171,3 +250,5 @@ volumes:
   anythingllm_exports:
   loki_data:
   grafana_data:
+  prometheus_data:
+  logs_data:

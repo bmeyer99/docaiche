@@ -544,92 +544,92 @@ export const AI_PROVIDERS: Record<string, ProviderDefinition> = {
     documentation: 'https://docs.aws.amazon.com/bedrock/'
   },
 
-  claudecode: {
-    id: 'claudecode',
-    name: 'claudecode',
-    displayName: 'Claude Code',
-    category: 'local',
-    icon: '💻',
-    color: '#ff6b35',
-    description: 'Local Claude Code CLI for development assistance',
-    defaultBaseUrl: '',
-    requiresApiKey: false,
-    supportsEmbedding: false,
-    supportsChat: true,
-    modelTypes: ['text'],
-    configFields: [
-      {
-        key: 'claude_code_path',
-        label: 'Claude Code Path',
-        type: 'text',
-        required: true,
-        placeholder: '/usr/local/bin/claude',
-        description: 'Path to Claude Code CLI executable'
-      },
-      {
-        key: 'timeout',
-        label: 'Timeout (seconds)',
-        type: 'number',
-        required: false,
-        placeholder: '30',
-        description: 'Request timeout in seconds',
-        validation: { min: 5, max: 300 }
-      }
-    ],
-    documentation: 'https://docs.anthropic.com/en/docs/claude-code'
-  },
+  // claudecode: {
+  //   id: 'claudecode',
+  //   name: 'claudecode',
+  //   displayName: 'Claude Code',
+  //   category: 'local',
+  //   icon: '💻',
+  //   color: '#ff6b35',
+  //   description: 'Local Claude Code CLI for development assistance',
+  //   defaultBaseUrl: '',
+  //   requiresApiKey: false,
+  //   supportsEmbedding: false,
+  //   supportsChat: true,
+  //   modelTypes: ['text'],
+  //   configFields: [
+  //     {
+  //       key: 'claude_code_path',
+  //       label: 'Claude Code Path',
+  //       type: 'text',
+  //       required: true,
+  //       placeholder: '/usr/local/bin/claude',
+  //       description: 'Path to Claude Code CLI executable'
+  //     },
+  //     {
+  //       key: 'timeout',
+  //       label: 'Timeout (seconds)',
+  //       type: 'number',
+  //       required: false,
+  //       placeholder: '30',
+  //       description: 'Request timeout in seconds',
+  //       validation: { min: 5, max: 300 }
+  //     }
+  //   ],
+  //   documentation: 'https://docs.anthropic.com/en/docs/claude-code'
+  // },
 
-  geminicli: {
-    id: 'geminicli',
-    name: 'geminicli',
-    displayName: 'Gemini CLI',
-    category: 'local',
-    icon: '⚡',
-    color: '#4285f4',
-    description: 'Local Gemini CLI for terminal-based AI assistance',
-    defaultBaseUrl: '',
-    requiresApiKey: true,
-    supportsEmbedding: false,
-    supportsChat: true,
-    modelTypes: ['text'],
-    configFields: [
-      {
-        key: 'api_key',
-        label: 'Gemini API Key',
-        type: 'password',
-        required: true,
-        placeholder: 'AI...',
-        description: 'Google Gemini API key from ai.google.dev'
-      },
-      {
-        key: 'gemini_cli_path',
-        label: 'Gemini CLI Path',
-        type: 'text',
-        required: false,
-        placeholder: '/usr/local/bin/gemini',
-        description: 'Path to Gemini CLI executable (auto-detected if empty)'
-      },
-      {
-        key: 'max_requests_per_minute',
-        label: 'Max Requests/Minute',
-        type: 'number',
-        required: false,
-        placeholder: '60',
-        description: 'Rate limit for API requests (free tier: 60/min)',
-        validation: { min: 1, max: 1000 }
-      },
-      {
-        key: 'timeout',
-        label: 'Timeout (seconds)',
-        type: 'number',
-        required: false,
-        placeholder: '30',
-        description: 'Request timeout in seconds',
-        validation: { min: 5, max: 300 }
-      }
-    ],
-    documentation: 'https://developers.google.com/gemini-code-assist/docs/gemini-cli'
-  }
+  // geminicli: {
+  //   id: 'geminicli',
+  //   name: 'geminicli',
+  //   displayName: 'Gemini CLI',
+  //   category: 'local',
+  //   icon: '⚡',
+  //   color: '#4285f4',
+  //   description: 'Local Gemini CLI for terminal-based AI assistance',
+  //   defaultBaseUrl: '',
+  //   requiresApiKey: true,
+  //   supportsEmbedding: false,
+  //   supportsChat: true,
+  //   modelTypes: ['text'],
+  //   configFields: [
+  //     {
+  //       key: 'api_key',
+  //       label: 'Gemini API Key',
+  //       type: 'password',
+  //       required: true,
+  //       placeholder: 'AI...',
+  //       description: 'Google Gemini API key from ai.google.dev'
+  //     },
+  //     {
+  //       key: 'gemini_cli_path',
+  //       label: 'Gemini CLI Path',
+  //       type: 'text',
+  //       required: false,
+  //       placeholder: '/usr/local/bin/gemini',
+  //       description: 'Path to Gemini CLI executable (auto-detected if empty)'
+  //     },
+  //     {
+  //       key: 'max_requests_per_minute',
+  //       label: 'Max Requests/Minute',
+  //       type: 'number',
+  //       required: false,
+  //       placeholder: '60',
+  //       description: 'Rate limit for API requests (free tier: 60/min)',
+  //       validation: { min: 1, max: 1000 }
+  //     },
+  //     {
+  //       key: 'timeout',
+  //       label: 'Timeout (seconds)',
+  //       type: 'number',
+  //       required: false,
+  //       placeholder: '30',
+  //       description: 'Request timeout in seconds',
+  //       validation: { min: 5, max: 300 }
+  //     }
+  //   ],
+  //   documentation: 'https://developers.google.com/gemini-code-assist/docs/gemini-cli'
+  // }
 };
 
 // Helper functions

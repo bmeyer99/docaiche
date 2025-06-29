@@ -169,11 +169,21 @@ def validate_environment_variables() -> Dict[str, str]:
     missing_vars = {}
 
     # Check critical environment variables
-    if not os.getenv("ANYTHINGLLM_API_KEY"):
-        missing_vars["ANYTHINGLLM_API_KEY"] = "Required for AnythingLLM integration"
+    environment = os.getenv("ENVIRONMENT", "production")
+    
+    # In development/lab environments, use defaults if not provided
+    if environment == "production":
+        if not os.getenv("ANYTHINGLLM_API_KEY"):
+            missing_vars["ANYTHINGLLM_API_KEY"] = "Required for AnythingLLM integration"
 
-    if not os.getenv("GITHUB_API_TOKEN"):
-        missing_vars["GITHUB_API_TOKEN"] = "Required for GitHub repository access"
+        if not os.getenv("GITHUB_API_TOKEN"):
+            missing_vars["GITHUB_API_TOKEN"] = "Required for GitHub repository access"
+    else:
+        # Set defaults for development/lab environments
+        if not os.getenv("ANYTHINGLLM_API_KEY"):
+            os.environ["ANYTHINGLLM_API_KEY"] = "docaiche-lab-default-key-2025"
+        if not os.getenv("GITHUB_API_TOKEN"):
+            os.environ["GITHUB_API_TOKEN"] = "github-lab-token-placeholder"
 
     # Check AI provider configuration
     primary_provider = os.getenv("AI_PRIMARY_PROVIDER", "ollama")

@@ -9,66 +9,91 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
+  # Docker container logs
   - job_name: containers
     static_configs:
       - targets:
           - localhost
         labels:
-          job: containerlogs
+          job: dockerlogs
           __path__: /var/lib/docker/containers/*/*log
-    
+
     pipeline_stages:
+      # Extract container info from log
       - json:
           expressions:
             output: log
             stream: stream
             attrs:
+      
+      # Extract container labels
       - json:
           expressions:
             tag:
           source: attrs
+      
+      # Parse container name from Docker tag
       - regex:
-          expression: (?P<container_name>(?P<image_name>[^|]+)\|(?P<container_id>[^\s]+))
+          expression: '(?P<container_name>(?:[^|]*))\|(?P<image_name>(?:[^|]*))'
           source: tag
+      
+      # Extract service name from container labels or name
+      - labels:
+          container_label_docaiche_service:
+      
+      # Fallback: extract service name from container name
+      - regex:
+          expression: '^/?(?P<service_name>[^-_]+)'
+          source: container_name
+      
+      # Add timestamp
       - timestamp:
           format: RFC3339Nano
           source: time
+      
+      # Set labels for Loki
       - labels:
           stream:
+          service_name:
           container_name:
-          container_id:
-          image_name:
+      
+      # Parse log levels if present
+      - regex:
+          expression: '(?i)(?P<level>(DEBUG|INFO|WARN|WARNING|ERROR|FATAL))'
+      
+      - labels:
+          level:
+      
+      # Output the actual log message
       - output:
           source: output
 
-  # Special job for Docaiche API logs
+  # DocAIche API logs
   - job_name: docaiche_api
-    pipeline_stages:
-      - regex:
-          expression: '^(?P<timestamp>\S+\s+\S+)\s+\[(?P<request_id>\w+)\]\s+(?P<method>\w+)\s+(?P<path>\S+)\s+-\s+(?P<status>Started|Completed\s+\d+)(?:\s+in\s+(?P<duration>[\d.]+)s)?'
-      - labels:
-          method:
-          path:
-          request_id:
-      - metrics:
-          http_request_duration_seconds:
-            type: Histogram
-            description: "HTTP request duration in seconds"
-            source: duration
-            config:
-              buckets: [0.001, 0.01, 0.1, 0.5, 1.0, 5.0]
     static_configs:
       - targets:
           - localhost
         labels:
-          job: docaiche_api
-          __path__: /var/lib/docker/containers/*/*log
-    
-  # Job for AnythingLLM logs
-  - job_name: anythingllm
+          job: docaiche
+          service: api
+          __path__: /var/log/docaiche/api.log
+
+  # Admin UI logs  
+  - job_name: docaiche_admin
     static_configs:
       - targets:
           - localhost
         labels:
-          job: anythingllm
-          __path__: /var/lib/docker/containers/*/*log
+          job: docaiche
+          service: admin-ui
+          __path__: /var/log/docaiche/admin.log
+
+  # System logs
+  - job_name: syslog
+    journal:
+      max_age: 12h
+      labels:
+        job: systemd-journal
+    relabel_configs:
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'

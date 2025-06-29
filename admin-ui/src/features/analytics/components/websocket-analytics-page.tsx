@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAnalyticsWebSocket } from '@/lib/hooks/use-websocket';
-import { useApiClient } from '@/lib/hooks/use-api-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,8 +22,7 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  Legend
+  ResponsiveContainer
 } from 'recharts';
 
 // Color palette for charts
@@ -67,7 +65,7 @@ export default function WebSocketAnalyticsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-6 h-full overflow-y-auto">
       {/* Header with WebSocket Status */}
       <div className="flex items-center justify-between">
         <div>

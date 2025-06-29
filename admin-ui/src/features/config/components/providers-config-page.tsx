@@ -9,9 +9,10 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/icons';
-import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration, ProviderStatus } from '@/lib/config/providers';
+import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/config/providers';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
+import ModelSelection from './model-selection';
 
 export default function ProvidersConfigPage() {
   const [configurations, setConfigurations] = useState<Record<string, ProviderConfiguration>>({});
@@ -59,7 +60,7 @@ export default function ProvidersConfigPage() {
       // No need for quick setup logic anymore
       
     } catch (error) {
-      console.error(`Provider load attempt ${attemptCountRef.current} failed:`, error);
+      // Provider load attempt failed
       setLoadError(true);
       
       // Only try once more if this was the first attempt
@@ -84,7 +85,7 @@ export default function ProvidersConfigPage() {
       hasMountedRef.current = true;
       loadProviders();
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Manual refresh function
   const handleRefresh = () => {
@@ -102,7 +103,7 @@ export default function ProvidersConfigPage() {
       setConfigurations(prev => ({ ...prev, [providerId]: updatedConfig }));
       // Don't show success toast for individual field saves to avoid spam
     } catch (error) {
-      console.error('Provider configuration save failed:', error);
+      // Provider configuration save failed
       
       toast({
         title: "Save Failed",
@@ -129,19 +130,30 @@ export default function ProvidersConfigPage() {
         return;
       }
       
-      const result = await apiClient.testProviderConnection(providerId, {
-        base_url: String(providerConfig.config?.base_url || ""),
-        api_key: String(providerConfig.config?.api_key || ""),
-        model: String(providerConfig.config?.model || "")
-      });
+      // Don't send model parameter - let the test endpoint handle model discovery
+      const testParams: Record<string, string> = {};
+      if (providerConfig.config?.base_url) {
+        testParams.base_url = String(providerConfig.config.base_url);
+      }
+      if (providerConfig.config?.api_key) {
+        testParams.api_key = String(providerConfig.config.api_key);
+      }
+      
+      const result = await apiClient.testProviderConnection(providerId, testParams);
+      
+      // Show appropriate message based on whether models were discovered
+      let message = result.message;
+      if (result.success && result.models && result.models.length > 0) {
+        message = `${result.message} Found ${result.models.length} models.`;
+      }
       
       toast({
         title: result.success ? "Success" : "Error",
-        description: result.message,
+        description: message,
         variant: result.success ? "default" : "destructive",
       });
     } catch (error) {
-      console.error('Provider connection test failed:', error);
+      // Provider connection test failed
       
       toast({
         title: "Error",
@@ -285,7 +297,7 @@ export default function ProvidersConfigPage() {
           <button 
             type="button"
             onClick={() => testConnection(provider.id)}
-            disabled={loading || !config.enabled}
+            disabled={loading}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icons.activity className="w-4 h-4 mr-2" />
@@ -300,12 +312,12 @@ export default function ProvidersConfigPage() {
   const activeProviderData = AI_PROVIDERS[activeProvider];
 
   return (
-    <div className="flex flex-col gap-6 p-6 h-full overflow-y-auto">
+    <div className="flex flex-col gap-6 p-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold">AI Providers Configuration</h1>
+          <h1 className="text-3xl font-bold">AI Model Configuration</h1>
           <p className="text-muted-foreground">
-            Configure and manage AI providers for text generation and embeddings
+            Select your AI models for text generation and embeddings, then configure individual providers as needed
           </p>
         </div>
         <button
@@ -323,6 +335,9 @@ export default function ProvidersConfigPage() {
           )}
         </button>
       </div>
+
+      {/* Model Selection Interface */}
+      <ModelSelection />
 
       {/* Error State */}
       {loadError && (
@@ -354,6 +369,16 @@ export default function ProvidersConfigPage() {
           </div>
         </div>
       )}
+
+      {/* Individual Provider Configuration Section */}
+      <div className="flex items-center gap-3" data-provider-config>
+        <Separator className="flex-1" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Icons.settings className="w-4 h-4" />
+          <span>Individual Provider Configuration</span>
+        </div>
+        <Separator className="flex-1" />
+      </div>
 
       {/* Main Configuration Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

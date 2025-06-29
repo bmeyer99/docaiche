@@ -391,3 +391,37 @@ async def cleanup_dependencies():
 
     except Exception as e:
         logger.error(f"Error during dependency cleanup: {e}")
+
+
+# Authentication dependencies for monitoring endpoints
+async def get_current_user_optional():
+    """
+    Optional authentication dependency - returns None if no auth configured
+    For now, returns None to allow unauthenticated access during development
+    """
+    # TODO: Implement proper JWT authentication
+    return None
+
+
+def require_role(user: Optional[dict], allowed_roles: list):
+    """
+    Check if user has required role
+    
+    Args:
+        user: User dict from authentication
+        allowed_roles: List of allowed roles
+        
+    Raises:
+        HTTPException: If user doesn't have required role
+    """
+    if not user:
+        # For now, allow access without authentication in development
+        # TODO: Remove this in production
+        return
+    
+    user_role = user.get("role", "viewer")
+    if user_role not in allowed_roles:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Insufficient permissions. Required role: {allowed_roles}"
+        )

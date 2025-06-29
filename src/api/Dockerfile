@@ -21,6 +21,9 @@ COPY alembic/ ./alembic/
 # Copy the entire source code
 COPY src/ ./src/
 
+# Copy workspace initialization script
+COPY init-anythingllm-workspace.py .
+
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
 

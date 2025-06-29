@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,6 @@ import { Progress } from '@/components/ui/progress';
 import { Icons } from '@/components/icons';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
-import { useCircuitBreaker } from '@/lib/hooks/use-circuit-breaker';
 import { CircuitBreakerIndicator } from '@/components/ui/circuit-breaker-indicator';
 import { useDebouncedApi } from '@/lib/hooks/use-debounced-api';
 
@@ -29,7 +28,6 @@ interface Collection {
 }
 
 export default function CollectionsPage() {
-  const [loading, setLoading] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newCollection, setNewCollection] = useState({
     name: '',
@@ -43,7 +41,6 @@ export default function CollectionsPage() {
   const {
     data: collectionsData,
     loading: collectionsLoading,
-    error: collectionsError,
     refetch: refetchCollections,
     canMakeRequest,
     circuitState
@@ -52,11 +49,11 @@ export default function CollectionsPage() {
     'collections-api',
     {
       debounceMs: 2000,
-      onSuccess: (data) => {
+      onSuccess: () => {
         // Data is handled in the component render
       },
       onError: (error) => {
-        console.error('🔥 Collections load failed:', error);
+        // Collections load failed
         toast({
           title: "Error",
           description: "Failed to load collections",
@@ -68,11 +65,6 @@ export default function CollectionsPage() {
   
   const collections = (collectionsData?.collections || []) as unknown as Collection[];
   
-  // Circuit breaker for manual operations
-  const collectionsCircuitBreaker = useCircuitBreaker('collections-manual', {
-    failureThreshold: 2,
-    resetTimeoutMs: 30000,
-  });
 
 
   const createCollection = async () => {

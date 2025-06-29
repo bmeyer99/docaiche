@@ -16,6 +16,7 @@ import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/c
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import ModelSelection from './model-selection';
 
 interface ProviderStatus {
   id: string;
@@ -462,7 +463,7 @@ export default function EnhancedProvidersConfigPage() {
           <Button 
             variant="outline" 
             onClick={() => testProviderConnection(provider.id)}
-            disabled={testing || !config.enabled}
+            disabled={testing}
           >
             <Icons.activity className="w-4 h-4 mr-2" />
             Test Connection
@@ -480,9 +481,9 @@ export default function EnhancedProvidersConfigPage() {
       {/* Header with enhanced styling */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold">AI Providers Configuration</h1>
+          <h1 className="text-3xl font-bold">AI Model Configuration</h1>
           <p className="text-muted-foreground">
-            Configure and manage AI providers for text generation and embeddings
+            Select your AI models for text generation and embeddings, then configure individual providers as needed
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -526,6 +527,9 @@ export default function EnhancedProvidersConfigPage() {
         </div>
       </div>
 
+      {/* Model Selection Interface */}
+      <ModelSelection />
+
       {/* Batch operation progress */}
       {batchOperation && (
         <Card>
@@ -541,6 +545,16 @@ export default function EnhancedProvidersConfigPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Individual Provider Configuration Section */}
+      <div className="flex items-center gap-3">
+        <Separator className="flex-1" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Icons.settings className="w-4 h-4" />
+          <span>Individual Provider Configuration</span>
+        </div>
+        <Separator className="flex-1" />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">

@@ -8,4 +8,4 @@ datasources:
     jsonData:
       maxLines: 1000
     editable: true
-    isDefault: true
+    isDefault: false

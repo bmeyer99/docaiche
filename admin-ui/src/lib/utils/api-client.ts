@@ -395,15 +395,15 @@ export class DocaicheApiClient {
     
     // Remove undefined values to send only provided fields
     const cleanConfig = Object.fromEntries(
-      Object.entries(backendConfig).filter(([_, value]) => value !== undefined)
+      Object.entries(backendConfig).filter(([, value]) => value !== undefined)
     );
 
     return this.post<any>(`/providers/${providerId}/config`, cleanConfig);
   }
 
-  async testProviderConnection(providerId: string, config: Record<string, string | number>): Promise<{ success: boolean; message: string }> {
+  async testProviderConnection(providerId: string, config: Record<string, string | number>): Promise<{ success: boolean; message: string; models?: string[] }> {
     try {
-      const response = await this.post<{ success: boolean; message: string }>(
+      const response = await this.post<{ success: boolean; message: string; models?: string[] }>(
         `/providers/${providerId}/test`,
         config,
         { timeout: API_CONFIG.TIMEOUTS.CONNECTION_TEST }
@@ -414,6 +414,63 @@ export class DocaicheApiClient {
         success: false,
         message: error instanceof Error ? error.message : 'Connection test failed'
       };
+    }
+  }
+
+  async getProviderModels(providerId: string): Promise<{ provider: string; models: string[]; queryable: boolean; custom_count?: number }> {
+    return this.get<any>(`/providers/${providerId}/models`);
+  }
+
+  async addCustomModel(providerId: string, modelName: string): Promise<any> {
+    return this.post<any>(`/providers/${providerId}/models`, { model_name: modelName });
+  }
+
+  async removeCustomModel(providerId: string, modelName: string): Promise<any> {
+    return this.delete<any>(`/providers/${providerId}/models/${encodeURIComponent(modelName)}`);
+  }
+
+  /**
+   * Model Selection Configuration
+   */
+  async updateModelSelection(config: {
+    textGeneration: { provider: string; model: string };
+    embeddings: { provider: string; model: string };
+    sharedProvider: boolean;
+  }): Promise<void> {
+    // Save the complete model selection configuration
+    await this.updateConfiguration({
+      key: 'model_selection',
+      value: config
+    });
+    
+    // Update system AI configuration with primary provider
+    if (config.textGeneration.provider) {
+      await this.updateConfiguration({
+        key: 'ai.primary_provider',
+        value: config.textGeneration.provider
+      });
+      
+      // If using different providers, set fallback provider for embeddings
+      if (!config.sharedProvider && config.embeddings.provider !== config.textGeneration.provider) {
+        await this.updateConfiguration({
+          key: 'ai.embedding_provider',
+          value: config.embeddings.provider
+        });
+      }
+    }
+  }
+
+  async getModelSelection(): Promise<{
+    textGeneration: { provider: string; model: string };
+    embeddings: { provider: string; model: string };
+    sharedProvider: boolean;
+  } | null> {
+    try {
+      const response = await this.get<any>('/config');
+      return response.model_selection || null;
+    } catch (error) {
+      console.warn('Failed to load model selection configuration:', error);
+      return null;
     }
   }
 
