@@ -1,11 +1,5 @@
-import { Metadata } from "next";
-import OverviewPage from "@/features/overview/components/overview-page";
-
-export const metadata: Metadata = {
-  title: "Dashboard Overview",
-  description: "Comprehensive overview of the Docaiche system status and activity",
-};
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <OverviewPage />;
+  redirect('/dashboard/analytics');
 }

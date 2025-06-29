@@ -15,6 +15,7 @@ import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { useCircuitBreaker } from '@/lib/hooks/use-circuit-breaker';
 import { CircuitBreakerIndicator } from '@/components/ui/circuit-breaker-indicator';
+import { useDebouncedApi } from '@/lib/hooks/use-debounced-api';
 
 export default function ProvidersConfigPage() {
   const [configurations, setConfigurations] = useState<Record<string, ProviderConfiguration>>({});
@@ -22,60 +23,52 @@ export default function ProvidersConfigPage() {
   const [activeProvider, setActiveProvider] = useState('ollama');
   const { toast } = useToast();
   const apiClient = useApiClient();
-  const providerCircuitBreaker = useCircuitBreaker('providers-api', {
-    failureThreshold: 3,
+  
+  // Use debounced API hook instead of manual circuit breaker
+  const {
+    data: providerData,
+    loading: providersLoading,
+    error: providersError,
+    refetch: refetchProviders,
+    canMakeRequest,
+    circuitState
+  } = useDebouncedApi(
+    () => apiClient.getProviderConfigurations(),
+    'providers-api',
+    {
+      debounceMs: 2000, // 2 second debounce
+      onSuccess: (data) => {
+        // Convert array response to Record format expected by the component
+        const configRecord = Array.isArray(data) 
+          ? data.reduce((acc, provider) => {
+              acc[provider.id] = {
+                id: provider.id,
+                name: provider.name,
+                type: provider.type,
+                status: provider.status,
+                configured: provider.configured
+              };
+              return acc;
+            }, {} as Record<string, any>)
+          : data || {};
+        setConfigurations(configRecord);
+      },
+      onError: (error) => {
+        console.error('🔥 Provider configurations load failed:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load provider configurations",
+          variant: "destructive",
+        });
+      }
+    }
+  );
+
+  // Circuit breaker for manual operations
+  const providerCircuitBreaker = useCircuitBreaker('providers-manual', {
+    failureThreshold: 2,
     resetTimeoutMs: 30000,
   });
-
-  const loadProviderConfigurations = useCallback(async () => {
-    // Check circuit breaker before making request
-    if (!providerCircuitBreaker.canMakeRequest) {
-      const state = providerCircuitBreaker.getCircuitState();
-      console.warn(`🚫 Providers API blocked by circuit breaker (${state})`);
-      toast({
-        title: "Backend Connection Issue",
-        description: `Providers API is temporarily unavailable (Circuit: ${state})`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const data = await apiClient.getProviderConfigurations();
-      providerCircuitBreaker.recordSuccess();
-      
-      // Convert array response to Record format expected by the component
-      const configRecord = Array.isArray(data) 
-        ? data.reduce((acc, provider) => {
-            acc[provider.id] = {
-              id: provider.id,
-              name: provider.name,
-              type: provider.type,
-              status: provider.status,
-              configured: provider.configured
-            };
-            return acc;
-          }, {} as Record<string, any>)
-        : data || {};
-      setConfigurations(configRecord);
-    } catch (error) {
-      providerCircuitBreaker.recordFailure();
-      console.error('🔥 Providers API request failed:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to load provider configurations",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [apiClient, toast, providerCircuitBreaker]);
-
-  useEffect(() => {
-    loadProviderConfigurations();
-  }, [loadProviderConfigurations]);
 
   const saveConfiguration = async (providerId: string, config: Partial<ProviderConfiguration>) => {
     if (!providerCircuitBreaker.canMakeRequest) {
@@ -352,8 +345,23 @@ export default function ProvidersConfigPage() {
       {/* Circuit Breaker Status */}
       <CircuitBreakerIndicator 
         identifier="providers-api" 
-        onReset={loadProviderConfigurations}
+        onReset={refetchProviders}
       />
+      
+      {/* Show circuit state info */}
+      {!canMakeRequest && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <Icons.alertCircle className="w-5 h-5 text-red-600" />
+            <div>
+              <div className="font-medium text-red-800">API Connection Blocked</div>
+              <div className="text-sm text-red-600">
+                Circuit breaker is {circuitState} - Provider API calls are temporarily disabled
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">

@@ -3,11 +3,11 @@ import { NavItem } from '@/types';
 //Info: Simplified single-level navigation for Docaiche Admin Interface
 export const navItems: NavItem[] = [
   {
-    title: 'Overview',
-    url: '/dashboard',
-    icon: 'dashboard',
+    title: 'Analytics',
+    url: '/dashboard/analytics',
+    icon: 'barChart',
+    shortcut: ['a', 'n'],
     isActive: false,
-    shortcut: ['o', 'v'],
     items: []
   },
   {
@@ -16,14 +16,6 @@ export const navItems: NavItem[] = [
     icon: 'bot',
     isActive: false,
     shortcut: ['p', 'r'],
-    items: []
-  },
-  {
-    title: 'Analytics',
-    url: '/dashboard/analytics',
-    icon: 'barChart',
-    shortcut: ['a', 'n'],
-    isActive: false,
     items: []
   },
   {

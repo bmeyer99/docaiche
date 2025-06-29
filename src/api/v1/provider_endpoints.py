@@ -4,13 +4,14 @@ LLM Provider configuration, testing, and management endpoints
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from .schemas import ProviderResponse, ProviderTestResponse, ProviderConfigRequest
-from .middleware import limiter
+from .middleware import limiter, get_trace_id
 from .dependencies import get_configuration_manager
 from src.core.config.manager import ConfigurationManager
 
@@ -31,6 +32,16 @@ except ImportError as e:
     REGISTRY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+# Import enhanced logging for provider security monitoring
+try:
+    from src.logging_config import SecurityLogger, ExternalServiceLogger
+    _security_logger = SecurityLogger(logger)
+    _service_logger = ExternalServiceLogger(logger)
+except ImportError:
+    _security_logger = None
+    _service_logger = None
+    logger.warning("Enhanced provider security logging not available")
 
 # Create router for provider endpoints
 router = APIRouter()

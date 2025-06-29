@@ -14,6 +14,7 @@ import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { useCircuitBreaker } from '@/lib/hooks/use-circuit-breaker';
 import { CircuitBreakerIndicator } from '@/components/ui/circuit-breaker-indicator';
+import { useDebouncedApi } from '@/lib/hooks/use-debounced-api';
 
 interface Collection {
   id: string;
@@ -28,8 +29,7 @@ interface Collection {
 }
 
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newCollection, setNewCollection] = useState({
     name: '',
@@ -38,45 +38,42 @@ export default function CollectionsPage() {
   });
   const { toast } = useToast();
   const apiClient = useApiClient();
-  const collectionsCircuitBreaker = useCircuitBreaker('collections-api', {
-    failureThreshold: 3,
+  
+  // Use debounced API hook
+  const {
+    data: collectionsData,
+    loading: collectionsLoading,
+    error: collectionsError,
+    refetch: refetchCollections,
+    canMakeRequest,
+    circuitState
+  } = useDebouncedApi(
+    () => apiClient.getCollections(),
+    'collections-api',
+    {
+      debounceMs: 2000,
+      onSuccess: (data) => {
+        // Data is handled in the component render
+      },
+      onError: (error) => {
+        console.error('🔥 Collections load failed:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load collections",
+          variant: "destructive",
+        });
+      }
+    }
+  );
+  
+  const collections = (collectionsData?.collections || []) as unknown as Collection[];
+  
+  // Circuit breaker for manual operations
+  const collectionsCircuitBreaker = useCircuitBreaker('collections-manual', {
+    failureThreshold: 2,
     resetTimeoutMs: 30000,
   });
 
-  const loadCollections = useCallback(async () => {
-    if (!collectionsCircuitBreaker.canMakeRequest) {
-      const state = collectionsCircuitBreaker.getCircuitState();
-      console.warn(`🚫 Collections API blocked by circuit breaker (${state})`);
-      toast({
-        title: "Backend Connection Issue",
-        description: `Collections API is temporarily unavailable (Circuit: ${state})`,
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const data = await apiClient.getCollections();
-      collectionsCircuitBreaker.recordSuccess();
-      setCollections((data.collections || []) as unknown as Collection[]);
-    } catch (error) {
-      collectionsCircuitBreaker.recordFailure();
-      console.error('🔥 Collections API request failed:', error);
-      
-      toast({
-        title: "Error",
-        description: "Failed to load collections",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [apiClient, toast, collectionsCircuitBreaker]);
-
-  useEffect(() => {
-    loadCollections();
-  }, [loadCollections]);
 
   const createCollection = async () => {
     if (!newCollection.name.trim()) {
@@ -104,7 +101,7 @@ export default function CollectionsPage() {
 
       setCreateDialogOpen(false);
       setNewCollection({ name: '', description: '', technology: '' });
-      loadCollections();
+      refetchCollections();
     } catch (error) {
       toast({
         title: "Error",
@@ -125,7 +122,7 @@ export default function CollectionsPage() {
         title: "Success",
         description: `Collection "${collectionName}" deleted successfully`,
       });
-      loadCollections();
+      refetchCollections();
     } catch (error) {
       toast({
         title: "Error",
@@ -142,7 +139,7 @@ export default function CollectionsPage() {
         title: "Success",
         description: `Reindexing started for collection "${collectionName}"`,
       });
-      loadCollections();
+      refetchCollections();
     } catch (error) {
       toast({
         title: "Error",
@@ -252,11 +249,26 @@ export default function CollectionsPage() {
       {/* Circuit Breaker Status */}
       <CircuitBreakerIndicator 
         identifier="collections-api" 
-        onReset={loadCollections}
+        onReset={refetchCollections}
       />
+      
+      {/* Show circuit state info */}
+      {!canMakeRequest && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <Icons.alertCircle className="w-5 h-5 text-red-600" />
+            <div>
+              <div className="font-medium text-red-800">API Connection Blocked</div>
+              <div className="text-sm text-red-600">
+                Circuit breaker is {circuitState} - Collections API calls are temporarily disabled
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Collections Grid */}
-      {loading ? (
+      {collectionsLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <Icons.spinner className="w-8 h-8 animate-spin mx-auto mb-4" />

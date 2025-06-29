@@ -7,6 +7,7 @@ as specified in CFG-009 requirements.
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import Dict, Any
 
@@ -19,12 +20,20 @@ from .schemas import (
     Collection,
     CollectionsResponse,
 )
-from .middleware import limiter
+from .middleware import limiter, get_trace_id
 from .dependencies import get_anythingllm_client
 from src.clients.anythingllm import AnythingLLMClient
 from src.core.config import get_settings, get_configuration_manager
 
 logger = logging.getLogger(__name__)
+
+# Import enhanced logging for configuration security monitoring
+try:
+    from src.logging_config import SecurityLogger
+    _security_logger = SecurityLogger(logger)
+except ImportError:
+    _security_logger = None
+    logger.warning("Enhanced configuration security logging not available")
 
 # Create router for configuration endpoints
 router = APIRouter()
@@ -171,6 +180,10 @@ async def update_configuration(
     Returns:
         Confirmation message with HTTP 202
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
     try:
         logger.info(
             f"Configuration update request: {config_request.key} = {config_request.value}"
