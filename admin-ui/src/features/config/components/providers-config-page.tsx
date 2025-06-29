@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,103 +15,101 @@ import { Icons } from '@/components/icons';
 import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/config/providers';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
-import { useCircuitBreaker } from '@/lib/hooks/use-circuit-breaker';
-import { CircuitBreakerIndicator } from '@/components/ui/circuit-breaker-indicator';
-import { useDebouncedApi } from '@/lib/hooks/use-debounced-api';
 
 export default function ProvidersConfigPage() {
   const [configurations, setConfigurations] = useState<Record<string, ProviderConfiguration>>({});
   const [loading, setLoading] = useState(false);
   const [activeProvider, setActiveProvider] = useState('ollama');
-  const [isQuickSetup, setIsQuickSetup] = useState(false);
-  const [quickSetupProvider, setQuickSetupProvider] = useState('');
+  const [isQuickSetup, setIsQuickSetup] = useState(true); // Default to quick setup
+  const [quickSetupProvider, setQuickSetupProvider] = useState('ollama');
+  const [loadError, setLoadError] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const apiClient = useApiClient();
-  
-  // Use debounced API hook instead of manual circuit breaker
-  const {
-    data: providerData,
-    loading: providersLoading,
-    error: providersError,
-    refetch: refetchProviders,
-    canMakeRequest,
-    circuitState
-  } = useDebouncedApi(
-    () => apiClient.getProviderConfigurations(),
-    'providers-api',
-    {
-      debounceMs: 2000, // 2 second debounce
-      onSuccess: (data) => {
-        // Convert array response to Record format expected by the component
-        const configRecord = Array.isArray(data) 
-          ? data.reduce((acc, provider) => {
-              acc[provider.id] = {
-                id: provider.id,
-                name: provider.name,
-                type: provider.type,
-                status: provider.status,
-                configured: provider.configured,
-                enabled: provider.enabled || false,
-                config: provider.config || {},
-                // Preserve all other fields that might exist
-                ...provider
-              };
-              return acc;
-            }, {} as Record<string, any>)
-          : data || {};
-        setConfigurations(configRecord);
-        
-        // Check if this is first-time setup (no providers configured)
-        const hasConfiguredProviders = Object.values(configRecord).some(
-          (config: any) => config.configured || config.enabled
-        );
-        if (!hasConfiguredProviders) {
-          setIsQuickSetup(true);
-          // Default to Ollama for quick setup (most common local setup)
-          setQuickSetupProvider('ollama');
-          setActiveProvider('ollama');
-        }
-      },
-      onError: (error) => {
-        console.error('🔥 Provider configurations load failed:', error);
-        
-        // If backend is down, still show quick setup for first-time users
-        setIsQuickSetup(true);
-        setQuickSetupProvider('ollama');
-        setActiveProvider('ollama');
-        
+  const attemptCountRef = useRef(0);
+  const hasMountedRef = useRef(false);
+
+  // Simple load function - max 2 attempts
+  const loadProviders = async () => {
+    if (attemptCountRef.current >= 2) {
+      return; // Already tried twice, stop
+    }
+
+    setLoading(true);
+    setLoadError(false);
+    attemptCountRef.current += 1;
+
+    try {
+      const data = await apiClient.getProviderConfigurations();
+      
+      // Convert array response to Record format
+      const configRecord = Array.isArray(data) 
+        ? data.reduce((acc, provider) => {
+            acc[provider.id] = {
+              id: provider.id,
+              name: provider.name,
+              type: provider.type,
+              status: provider.status,
+              configured: provider.configured,
+              enabled: provider.enabled || false,
+              config: provider.config || {},
+              ...provider
+            };
+            return acc;
+          }, {} as Record<string, any>)
+        : data || {};
+      
+      setConfigurations(configRecord);
+      
+      // Check if any providers are configured
+      const hasConfiguredProviders = Object.values(configRecord).some(
+        (config: any) => config.configured || config.enabled
+      );
+      
+      // Only show advanced mode if providers are configured
+      if (hasConfiguredProviders) {
+        setIsQuickSetup(false);
+      }
+      
+    } catch (error) {
+      console.error(`Provider load attempt ${attemptCountRef.current} failed:`, error);
+      setLoadError(true);
+      
+      // Only try once more if this was the first attempt
+      if (attemptCountRef.current === 1) {
+        setTimeout(() => loadProviders(), 1000);
+      } else {
+        // Failed after 2 attempts
         toast({
-          title: "Backend Connection Issue",
-          description: "Unable to load existing configurations. You can still set up a new provider.",
+          title: "Connection Failed",
+          description: "Unable to connect to the backend. You can still configure providers.",
           variant: "destructive",
         });
       }
+    } finally {
+      setLoading(false);
     }
-  );
+  };
 
-  // Circuit breaker for manual operations
-  const providerCircuitBreaker = useCircuitBreaker('providers-manual', {
-    failureThreshold: 2,
-    resetTimeoutMs: 30000,
-  });
+  // Load on mount
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      loadProviders();
+    }
+  }, []);
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    attemptCountRef.current = 0; // Reset attempt counter
+    loadProviders();
+  };
 
   const saveConfiguration = async (providerId: string, config: Partial<ProviderConfiguration>) => {
-    if (!providerCircuitBreaker.canMakeRequest) {
-      const state = providerCircuitBreaker.getCircuitState();
-      toast({
-        title: "Backend Connection Issue",
-        description: `Cannot save configuration - API unavailable (Circuit: ${state})`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       const updatedConfig = { ...configurations[providerId], ...config };
       await apiClient.updateProviderConfiguration(providerId, updatedConfig);
-      providerCircuitBreaker.recordSuccess();
       
       setConfigurations(prev => ({ ...prev, [providerId]: updatedConfig }));
       toast({
@@ -119,8 +117,7 @@ export default function ProvidersConfigPage() {
         description: `${AI_PROVIDERS[providerId]?.displayName} configuration saved`,
       });
     } catch (error) {
-      providerCircuitBreaker.recordFailure();
-      console.error('🔥 Provider configuration save failed:', error);
+      console.error('Provider configuration save failed:', error);
       
       toast({
         title: "Error",
@@ -201,16 +198,6 @@ export default function ProvidersConfigPage() {
   };
 
   const testConnection = async (providerId: string) => {
-    if (!providerCircuitBreaker.canMakeRequest) {
-      const state = providerCircuitBreaker.getCircuitState();
-      toast({
-        title: "Backend Connection Issue",
-        description: `Cannot test connection - API unavailable (Circuit: ${state})`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       // Get the provider config for testing
       const providerConfig = configurations[providerId];
@@ -229,20 +216,13 @@ export default function ProvidersConfigPage() {
         model: String(providerConfig.config?.model || "")
       });
       
-      if (result.success) {
-        providerCircuitBreaker.recordSuccess();
-      } else {
-        providerCircuitBreaker.recordFailure();
-      }
-      
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,
         variant: result.success ? "default" : "destructive",
       });
     } catch (error) {
-      providerCircuitBreaker.recordFailure();
-      console.error('🔥 Provider connection test failed:', error);
+      console.error('Provider connection test failed:', error);
       
       toast({
         title: "Error",
@@ -295,6 +275,24 @@ export default function ProvidersConfigPage() {
                 onClick={() => {
                   setQuickSetupProvider(provider.id);
                   setActiveProvider(provider.id);
+                  // Initialize configuration for the selected provider if not already present
+                  if (!configurations[provider.id]) {
+                    const providerDef = AI_PROVIDERS[provider.id];
+                    setConfigurations(prev => ({
+                      ...prev,
+                      [provider.id]: {
+                        id: provider.id,
+                        name: providerDef?.displayName || provider.name,
+                        type: providerDef?.type || 'llm',
+                        status: 'active',
+                        configured: false,
+                        enabled: false,
+                        config: {
+                          base_url: providerDef?.defaultBaseUrl || ''
+                        }
+                      }
+                    }));
+                  }
                 }}
               >
                 <div className="flex items-center gap-3">
@@ -324,7 +322,7 @@ export default function ProvidersConfigPage() {
             </Button>
             <Button 
               onClick={completeQuickSetup}
-              disabled={!quickSetupProvider || loading || !canMakeRequest}
+              disabled={!quickSetupProvider || loading}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
               {loading ? (
@@ -332,14 +330,9 @@ export default function ProvidersConfigPage() {
                   <Icons.spinner className="w-4 h-4 mr-2 animate-spin" />
                   Setting up...
                 </>
-              ) : !canMakeRequest ? (
-                <>
-                  <Icons.alertCircle className="w-4 h-4 mr-2" />
-                  Backend Unavailable
-                </>
               ) : (
                 <>
-                  Complete Setup & Go to Analytics
+                  Complete Setup
                   <Icons.arrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
@@ -516,43 +509,72 @@ export default function ProvidersConfigPage() {
   const activeProviderData = AI_PROVIDERS[activeProvider];
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">
-          {isQuickSetup ? 'Welcome to Docaiche!' : 'AI Providers Configuration'}
-        </h1>
-        <p className="text-muted-foreground">
-          {isQuickSetup 
-            ? 'Let\'s get you set up with an AI provider to start using the system'
-            : 'Configure and manage AI providers for text generation and embeddings'
-          }
-        </p>
+    <div className="flex flex-col gap-6 p-6 h-full overflow-y-auto">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">
+            {isQuickSetup ? 'Welcome to DocAIche!' : 'AI Providers Configuration'}
+          </h1>
+          <p className="text-muted-foreground">
+            {isQuickSetup 
+              ? 'Let\'s get you set up with an AI provider to start using the system'
+              : 'Configure and manage AI providers for text generation and embeddings'
+            }
+          </p>
+        </div>
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          size="sm"
+          disabled={loading}
+        >
+          {loading ? (
+            <Icons.spinner className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <Icons.refresh className="w-4 h-4 mr-1" />
+              Refresh
+            </>
+          )}
+        </Button>
       </div>
 
-      {/* Circuit Breaker Status */}
-      <CircuitBreakerIndicator 
-        identifier="providers-api" 
-        onReset={refetchProviders}
-      />
-      
-      {/* Show circuit state info */}
-      {!canMakeRequest && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <Icons.alertCircle className="w-5 h-5 text-red-600" />
-            <div>
-              <div className="font-medium text-red-800">API Connection Blocked</div>
-              <div className="text-sm text-red-600">
-                Circuit breaker is {circuitState} - Provider API calls are temporarily disabled
+      {/* Manual Refresh Button and Error State */}
+      {loadError && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icons.alertCircle className="w-5 h-5 text-yellow-600" />
+              <div>
+                <div className="font-medium text-yellow-800">Connection Issue</div>
+                <div className="text-sm text-yellow-600">
+                  Unable to load provider configurations. You can still configure providers manually.
+                </div>
               </div>
             </div>
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              size="sm"
+              className="ml-4"
+              disabled={loading}
+            >
+              {loading ? (
+                <Icons.spinner className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Icons.refresh className="w-4 h-4 mr-1" />
+                  Retry
+                </>
+              )}
+            </Button>
           </div>
         </div>
       )}
 
       {/* Quick Setup Mode */}
       {isQuickSetup ? (
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto w-full">
           {renderQuickSetupCard()}
           
           {/* Show selected provider configuration */}
@@ -570,7 +592,7 @@ export default function ProvidersConfigPage() {
                   Complete the configuration for your selected provider
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="max-h-[400px] overflow-y-auto">
                 {renderConfigurationForm(activeProviderData)}
               </CardContent>
             </Card>

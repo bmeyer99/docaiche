@@ -2,9 +2,9 @@
   "name": "docaiche-admin-ui",
   "version": "1.0.0",
   "private": true,
-  "description": "Modern admin interface for Docaiche documentation search system",
+  "description": "Modern admin interface for DocAIche documentation search system",
   "author": {
-    "name": "Docaiche Team"
+    "name": "DocAIche Team"
   },
   "scripts": {
     "dev": "next dev --turbopack",

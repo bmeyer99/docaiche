@@ -102,7 +102,7 @@ export default function OverviewPage() {
     <div className="flex flex-col gap-6 p-6">
       <GradientHeader 
         title="Dashboard Overview"
-        subtitle="Welcome to the Docaiche administration interface"
+        subtitle="Welcome to the DocAIche administration interface"
         gradient="accent"
         className="fade-in-sequence"
       />

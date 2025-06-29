@@ -1,0 +1,11 @@
+{
+  "name": "docaiche-test-scripts",
+  "version": "1.0.0",
+  "description": "Test scripts for DocAIche monitoring",
+  "scripts": {
+    "monitor": "node ../test-monitor-page.js"
+  },
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  }
+}

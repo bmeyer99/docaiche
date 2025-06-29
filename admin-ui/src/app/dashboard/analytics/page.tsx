@@ -1,11 +1,11 @@
 import { Metadata } from "next";
-import EnhancedAnalyticsPage from "@/features/analytics/components/enhanced-analytics-page";
+import WebSocketAnalyticsPage from "@/features/analytics/components/websocket-analytics-page";
 
 export const metadata: Metadata = {
-  title: "Analytics Dashboard",
-  description: "View usage analytics and system performance metrics",
+  title: "Real-time Analytics Dashboard",
+  description: "Live analytics and system performance metrics via WebSocket",
 };
 
 export default function Page() {
-  return <EnhancedAnalyticsPage />;
+  return <WebSocketAnalyticsPage />;
 }

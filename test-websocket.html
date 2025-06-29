@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Analytics Test</title>
+</head>
+<body>
+    <h1>WebSocket Analytics Test</h1>
+    <button onclick="connect()">Connect to Analytics WebSocket</button>
+    <button onclick="disconnect()">Disconnect</button>
+    <div id="status">Not connected</div>
+    <pre id="data"></pre>
+    
+    <script>
+        let ws = null;
+        
+        function connect() {
+            const url = 'ws://192.168.4.199:4080/ws/analytics';
+            ws = new WebSocket(url);
+            
+            ws.onopen = function() {
+                document.getElementById('status').textContent = 'Connected!';
+                console.log('WebSocket connected');
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                document.getElementById('data').textContent = JSON.stringify(data, null, 2);
+            };
+            
+            ws.onclose = function() {
+                document.getElementById('status').textContent = 'Disconnected';
+                console.log('WebSocket disconnected');
+            };
+            
+            ws.onerror = function(error) {
+                document.getElementById('status').textContent = 'Error: ' + error;
+                console.error('WebSocket error:', error);
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+    </script>
+</body>
+</html>

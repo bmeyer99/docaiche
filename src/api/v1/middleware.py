@@ -316,7 +316,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
             user_agent=request.headers.get("user-agent", "unknown"),
             method=request.method,
             trace_id=trace_id,
-            retry_after=exc.retry_after if exc.retry_after else 60
+            retry_after=getattr(exc, 'retry_after', 60)
         )
     
     # Log with enhanced metrics if available
@@ -343,5 +343,5 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
         status_code=429,
         content=problem_detail.model_dump(),
-        headers={"Retry-After": str(exc.retry_after) if exc.retry_after else "60"},
+        headers={"Retry-After": str(getattr(exc, 'retry_after', 60))},
     )

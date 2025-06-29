@@ -34,7 +34,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
-    print(f"🚀 Docaiche API starting up at {datetime.utcnow()}")
+    print(f"🚀 DocAIche API starting up at {datetime.utcnow()}")
 
     # Initialize configuration manager
     try:

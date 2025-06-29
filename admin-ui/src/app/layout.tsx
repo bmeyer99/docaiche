@@ -16,8 +16,8 @@ const META_THEME_COLORS = {
 };
 
 export const metadata: Metadata = {
-  title: 'Docaiche Admin',
-  description: 'Modern admin interface for Docaiche documentation search system'
+  title: 'DocAIche Admin',
+  description: 'Modern admin interface for DocAIche documentation search system'
 };
 
 export const viewport: Viewport = {

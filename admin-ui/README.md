@@ -1,6 +1,6 @@
-# Docaiche Admin Interface
+# DocAIche Admin Interface
 
-A modern, responsive administration interface for the Docaiche documentation search system built with Next.js 15, React 19, and shadcn/ui.
+A modern, responsive administration interface for the DocAIche documentation search system built with Next.js 15, React 19, and shadcn/ui.
 
 ## Features
 
@@ -97,7 +97,7 @@ The interface will be available at [http://localhost:3000](http://localhost:3000
 
 ```env
 NEXT_PUBLIC_API_URL=http://api:8000/api/v1
-NEXT_PUBLIC_APP_NAME=Docaiche Admin
+NEXT_PUBLIC_APP_NAME=DocAIche Admin
 NEXT_PUBLIC_ENABLE_AUTH=false
 NODE_ENV=production
 ```

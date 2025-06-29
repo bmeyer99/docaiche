@@ -6,8 +6,8 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 
 export const metadata: Metadata = {
-  title: 'Docaiche Admin Dashboard',
-  description: 'Modern admin interface for Docaiche documentation search system'
+  title: 'DocAIche Admin Dashboard',
+  description: 'Modern admin interface for DocAIche documentation search system'
 };
 
 export default async function DashboardLayout({

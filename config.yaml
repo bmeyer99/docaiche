@@ -42,7 +42,7 @@ github:
 
 # Web Scraping Configuration
 scraping:
-  user_agent: "DocaicheBot/1.0"
+  user_agent: "DocAIcheBot/1.0"
   rate_limit_delay: 1.0
   circuit_breaker:
     failure_threshold: 3

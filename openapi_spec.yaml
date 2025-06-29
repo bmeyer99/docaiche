@@ -1,11 +1,11 @@
 openapi: 3.0.3
 info:
-  title: Docaiche API
+  title: DocAIche API
   description: |
     AI-powered documentation search and content management system with advanced analytics capabilities.
     
     ## Overview
-    Docaiche provides intelligent documentation search, content enrichment, and comprehensive analytics
+    DocAIche provides intelligent documentation search, content enrichment, and comprehensive analytics
     for tracking user behavior and system performance. The API supports real-time search with caching,
     content ingestion from multiple sources, and AI-powered content enhancement.
     
@@ -33,7 +33,7 @@ info:
     
   version: 2.0.0
   contact:
-    name: Docaiche Support
+    name: DocAIche Support
     email: support@docaiche.io
   license:
     name: MIT

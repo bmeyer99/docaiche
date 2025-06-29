@@ -41,7 +41,7 @@ import * as React from 'react';
 import { Icons } from '../icons';
 
 export const company = {
-  name: 'Docaiche',
+  name: 'DocAIche',
   logo: IconServer,
   description: 'Documentation Search System'
 };
