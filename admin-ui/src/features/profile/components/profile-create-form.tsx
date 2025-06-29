@@ -75,7 +75,7 @@ const ProfileCreateForm: React.FC<ProfileFormType> = ({ initialData }) => {
 
   const processForm: SubmitHandler<ProfileFormValues> = (data) => {
     // Process form data
-    console.log(data);
+    // Handle form submission - could send to API
     // api call and reset
     // form.reset();
   };

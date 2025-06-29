@@ -17,7 +17,7 @@ import {
   ChartTooltipContent
 } from '@/components/ui/chart';
 import { Icons } from '@/components/icons';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/hooks/use-api-client';
 
 export const description = 'Search activity chart showing daily search trends';
 
@@ -37,7 +37,7 @@ export function BarGraph() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [activeChart, setActiveChart] = React.useState<keyof typeof chartConfig>('searches');
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   const total = React.useMemo(
     () => ({

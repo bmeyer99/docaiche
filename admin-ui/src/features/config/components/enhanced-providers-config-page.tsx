@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icons } from '@/components/icons';
 import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/config/providers';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +34,7 @@ export default function EnhancedProvidersConfigPage() {
   const [activeProvider, setActiveProvider] = useState('ollama');
   const [batchOperation, setBatchOperation] = useState<'test' | 'enable' | 'disable' | null>(null);
   const { toast } = useToast();
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   const loadProviderConfigurations = useCallback(async () => {
     setLoading(true);

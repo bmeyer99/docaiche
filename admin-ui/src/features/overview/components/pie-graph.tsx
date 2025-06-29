@@ -19,7 +19,7 @@ import {
   ChartTooltipContent
 } from '@/components/ui/chart';
 import { Icons } from '@/components/icons';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/hooks/use-api-client';
 
 const chartConfig = {
   documents: {
@@ -51,7 +51,7 @@ export function PieGraph() {
   const [chartData, setChartData] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   const loadContentDistribution = React.useCallback(async () => {
     try {

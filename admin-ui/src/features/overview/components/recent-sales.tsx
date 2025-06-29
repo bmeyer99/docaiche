@@ -9,7 +9,7 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/hooks/use-api-client';
 
 interface RecentSearch {
   id: string;
@@ -23,7 +23,7 @@ export function RecentSales() {
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   const loadRecentSearches = useCallback(async () => {
     try {

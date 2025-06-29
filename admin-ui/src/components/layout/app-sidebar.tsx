@@ -29,7 +29,6 @@ import {
   SidebarRail
 } from '@/components/ui/sidebar';
 import { navItems } from '@/constants/data';
-import { useMediaQuery } from '@/hooks/use-media-query';
 import {
   IconChevronRight,
   IconChevronsDown,
@@ -49,7 +48,6 @@ export const company = {
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { isOpen } = useMediaQuery();
 
   return (
     <Sidebar collapsible='icon'>

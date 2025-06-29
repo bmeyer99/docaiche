@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Icons } from '@/components/icons';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 
 interface Collection {
@@ -35,7 +35,7 @@ export default function CollectionsPage() {
     technology: ''
   });
   const { toast } = useToast();
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   const loadCollections = useCallback(async () => {
     try {

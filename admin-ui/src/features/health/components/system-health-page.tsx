@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/icons';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 
 interface ServiceHealth {
@@ -46,8 +46,9 @@ export default function SystemHealthPage() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const { toast } = useToast();
 
+  const apiClient = useApiClient();
+
   const checkHealthStatus = useCallback(async () => {
-    const apiClient = new DocaicheApiClient();
     try {
       const [healthData, metricsData] = await Promise.allSettled([
         apiClient.getSystemHealth(),
@@ -72,7 +73,7 @@ export default function SystemHealthPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, apiClient]);
 
   useEffect(() => {
     checkHealthStatus();

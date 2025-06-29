@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/icons';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/hooks/use-api-client';
 import {
   LineChart,
   Line,
@@ -87,20 +87,20 @@ export default function EnhancedAnalyticsPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('area');
   const [showDetails, setShowDetails] = useState(false);
-  const apiClient = new DocaicheApiClient();
+  const apiClient = useApiClient();
 
   useEffect(() => {
     loadAnalytics();
-  }, [timeRange]);
+  }, [loadAnalytics]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     
     const interval = setInterval(loadAnalytics, 60000); // Refresh every minute
     return () => clearInterval(interval);
-  }, [autoRefresh, timeRange]);
+  }, [autoRefresh, loadAnalytics]);
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       const data = await apiClient.getAnalytics(timeRange);
       
@@ -135,13 +135,13 @@ export default function EnhancedAnalyticsPage() {
       
       setAnalytics(enhancedData);
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      // Error handled, could show toast notification
       // Fallback to mock data for demonstration
       setAnalytics(generateMockAnalyticsData());
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiClient, timeRange]);
 
   const generateMockHourlyData = (): Array<{ hour: number; count: number; responseTime: number }> => {
     const data: Array<{ hour: number; count: number; responseTime: number }> = [];

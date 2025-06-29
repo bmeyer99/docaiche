@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Icons } from '@/components/icons';
-import { DocaicheApiClient } from '@/lib/utils/api-client';
+import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 
 interface SearchResult {
@@ -38,6 +38,7 @@ export default function ContentSearchPage() {
   const [totalResults, setTotalResults] = useState(0);
   const [searchTime, setSearchTime] = useState(0);
   const { toast } = useToast();
+  const apiClient = useApiClient();
 
   const performSearch = useCallback(async (searchQuery: string, searchFilters: SearchFilters = {}) => {
     if (!searchQuery.trim()) {
@@ -48,7 +49,6 @@ export default function ContentSearchPage() {
 
     setLoading(true);
     const startTime = Date.now();
-    const apiClient = new DocaicheApiClient();
 
     try {
       const response = await apiClient.searchContent({
@@ -71,7 +71,7 @@ export default function ContentSearchPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [apiClient, toast]);
 
   const handleSearch = () => {
     performSearch(query, filters);
