@@ -63,7 +63,7 @@ export const AI_PROVIDERS: Record<string, ProviderDefinition> = {
         key: 'base_url',
         label: 'Base URL',
         type: 'url',
-        required: true,
+        required: false,
         placeholder: 'http://localhost:11434/api',
         description: 'Ollama server API endpoint'
       },
@@ -107,7 +107,7 @@ export const AI_PROVIDERS: Record<string, ProviderDefinition> = {
         key: 'api_key',
         label: 'API Key',
         type: 'password',
-        required: true,
+        required: false,
         placeholder: 'sk-...',
         description: 'OpenAI API key from platform.openai.com'
       },
@@ -352,6 +352,283 @@ export const AI_PROVIDERS: Record<string, ProviderDefinition> = {
       }
     ],
     documentation: 'https://docs.mistral.ai'
+  },
+
+  deepseek: {
+    id: 'deepseek',
+    name: 'deepseek',
+    displayName: 'DeepSeek',
+    category: 'cloud',
+    icon: '🔍',
+    color: '#1e40af',
+    description: 'DeepSeek AI models for code and reasoning',
+    defaultBaseUrl: 'https://api.deepseek.com/v1',
+    requiresApiKey: true,
+    supportsEmbedding: false,
+    supportsChat: true,
+    modelTypes: ['text'],
+    configFields: [
+      {
+        key: 'api_key',
+        label: 'API Key',
+        type: 'password',
+        required: true,
+        placeholder: 'sk-...',
+        description: 'DeepSeek API key from platform.deepseek.com'
+      },
+      {
+        key: 'base_url',
+        label: 'Base URL',
+        type: 'url',
+        required: false,
+        placeholder: 'https://api.deepseek.com/v1',
+        description: 'API endpoint (default: https://api.deepseek.com/v1)'
+      }
+    ],
+    documentation: 'https://platform.deepseek.com/docs'
+  },
+
+  vertex: {
+    id: 'vertex',
+    name: 'vertex',
+    displayName: 'Google Vertex AI',
+    category: 'enterprise',
+    icon: '🔺',
+    color: '#4285f4',
+    description: 'Google Cloud Vertex AI with enterprise security',
+    defaultBaseUrl: '',
+    requiresApiKey: false,
+    supportsEmbedding: true,
+    supportsChat: true,
+    modelTypes: ['text', 'embedding'],
+    configFields: [
+      {
+        key: 'vertex_json_credentials',
+        label: 'JSON Credentials',
+        type: 'textarea',
+        required: false,
+        placeholder: '{"type": "service_account", ...}',
+        description: 'Google Cloud service account JSON credentials'
+      },
+      {
+        key: 'vertex_key_file',
+        label: 'Key File Path',
+        type: 'text',
+        required: false,
+        placeholder: '/path/to/service-account-key.json',
+        description: 'Path to Google Cloud service account key file'
+      },
+      {
+        key: 'vertex_project_id',
+        label: 'Project ID',
+        type: 'text',
+        required: true,
+        placeholder: 'my-gcp-project',
+        description: 'Google Cloud project ID'
+      },
+      {
+        key: 'vertex_region',
+        label: 'Region',
+        type: 'select',
+        required: true,
+        placeholder: 'us-central1',
+        description: 'Google Cloud region for Vertex AI',
+        options: [
+          { value: 'us-central1', label: 'US Central 1' },
+          { value: 'us-east1', label: 'US East 1' },
+          { value: 'us-west1', label: 'US West 1' },
+          { value: 'europe-west1', label: 'Europe West 1' },
+          { value: 'asia-northeast1', label: 'Asia Northeast 1' }
+        ]
+      }
+    ],
+    documentation: 'https://cloud.google.com/vertex-ai/docs'
+  },
+
+  gemini: {
+    id: 'gemini',
+    name: 'gemini',
+    displayName: 'Google Gemini',
+    category: 'enterprise',
+    icon: '💎',
+    color: '#34a853',
+    description: 'Google Gemini models for multimodal AI',
+    defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    requiresApiKey: true,
+    supportsEmbedding: true,
+    supportsChat: true,
+    modelTypes: ['text', 'embedding'],
+    configFields: [
+      {
+        key: 'api_key',
+        label: 'API Key',
+        type: 'password',
+        required: true,
+        placeholder: 'AI...',
+        description: 'Google Gemini API key from ai.google.dev'
+      },
+      {
+        key: 'base_url',
+        label: 'Base URL',
+        type: 'url',
+        required: false,
+        placeholder: 'https://generativelanguage.googleapis.com/v1beta',
+        description: 'API endpoint (leave empty for default)'
+      }
+    ],
+    documentation: 'https://ai.google.dev/docs'
+  },
+
+  bedrock: {
+    id: 'bedrock',
+    name: 'bedrock',
+    displayName: 'AWS Bedrock',
+    category: 'enterprise',
+    icon: '🪨',
+    color: '#ff9900',
+    description: 'AWS Bedrock with enterprise-grade AI models',
+    defaultBaseUrl: '',
+    requiresApiKey: false,
+    supportsEmbedding: true,
+    supportsChat: true,
+    modelTypes: ['text', 'embedding'],
+    configFields: [
+      {
+        key: 'aws_access_key',
+        label: 'AWS Access Key',
+        type: 'password',
+        required: true,
+        placeholder: 'AKIA...',
+        description: 'AWS access key ID'
+      },
+      {
+        key: 'aws_secret_key',
+        label: 'AWS Secret Key',
+        type: 'password',
+        required: true,
+        placeholder: 'Your AWS secret access key',
+        description: 'AWS secret access key'
+      },
+      {
+        key: 'aws_session_token',
+        label: 'AWS Session Token',
+        type: 'password',
+        required: false,
+        placeholder: 'Optional session token',
+        description: 'AWS session token (optional, for temporary credentials)'
+      },
+      {
+        key: 'aws_region',
+        label: 'AWS Region',
+        type: 'select',
+        required: true,
+        placeholder: 'us-east-1',
+        description: 'AWS region where Bedrock is available',
+        options: [
+          { value: 'us-east-1', label: 'US East (N. Virginia)' },
+          { value: 'us-west-2', label: 'US West (Oregon)' },
+          { value: 'eu-west-1', label: 'Europe (Ireland)' },
+          { value: 'ap-southeast-2', label: 'Asia Pacific (Sydney)' },
+          { value: 'ap-northeast-1', label: 'Asia Pacific (Tokyo)' }
+        ]
+      },
+      {
+        key: 'aws_profile',
+        label: 'AWS Profile',
+        type: 'text',
+        required: false,
+        placeholder: 'default',
+        description: 'AWS profile name (alternative to access keys)'
+      }
+    ],
+    documentation: 'https://docs.aws.amazon.com/bedrock/'
+  },
+
+  claudecode: {
+    id: 'claudecode',
+    name: 'claudecode',
+    displayName: 'Claude Code',
+    category: 'local',
+    icon: '💻',
+    color: '#ff6b35',
+    description: 'Local Claude Code CLI for development assistance',
+    defaultBaseUrl: '',
+    requiresApiKey: false,
+    supportsEmbedding: false,
+    supportsChat: true,
+    modelTypes: ['text'],
+    configFields: [
+      {
+        key: 'claude_code_path',
+        label: 'Claude Code Path',
+        type: 'text',
+        required: true,
+        placeholder: '/usr/local/bin/claude',
+        description: 'Path to Claude Code CLI executable'
+      },
+      {
+        key: 'timeout',
+        label: 'Timeout (seconds)',
+        type: 'number',
+        required: false,
+        placeholder: '30',
+        description: 'Request timeout in seconds',
+        validation: { min: 5, max: 300 }
+      }
+    ],
+    documentation: 'https://docs.anthropic.com/en/docs/claude-code'
+  },
+
+  geminicli: {
+    id: 'geminicli',
+    name: 'geminicli',
+    displayName: 'Gemini CLI',
+    category: 'local',
+    icon: '⚡',
+    color: '#4285f4',
+    description: 'Local Gemini CLI for terminal-based AI assistance',
+    defaultBaseUrl: '',
+    requiresApiKey: true,
+    supportsEmbedding: false,
+    supportsChat: true,
+    modelTypes: ['text'],
+    configFields: [
+      {
+        key: 'api_key',
+        label: 'Gemini API Key',
+        type: 'password',
+        required: true,
+        placeholder: 'AI...',
+        description: 'Google Gemini API key from ai.google.dev'
+      },
+      {
+        key: 'gemini_cli_path',
+        label: 'Gemini CLI Path',
+        type: 'text',
+        required: false,
+        placeholder: '/usr/local/bin/gemini',
+        description: 'Path to Gemini CLI executable (auto-detected if empty)'
+      },
+      {
+        key: 'max_requests_per_minute',
+        label: 'Max Requests/Minute',
+        type: 'number',
+        required: false,
+        placeholder: '60',
+        description: 'Rate limit for API requests (free tier: 60/min)',
+        validation: { min: 1, max: 1000 }
+      },
+      {
+        key: 'timeout',
+        label: 'Timeout (seconds)',
+        type: 'number',
+        required: false,
+        placeholder: '30',
+        description: 'Request timeout in seconds',
+        validation: { min: 5, max: 300 }
+      }
+    ],
+    documentation: 'https://developers.google.com/gemini-code-assist/docs/gemini-cli'
   }
 };
 

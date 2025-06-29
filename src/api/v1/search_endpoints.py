@@ -17,19 +17,20 @@ from .schemas import (
     SignalRequest,
 )
 from .middleware import limiter, get_trace_id
-from .dependencies import get_database_manager, get_search_orchestrator
+from .dependencies import get_database_manager, get_search_orchestrator, get_configuration_manager
 from src.database.connection import DatabaseManager
 from src.search.orchestrator import SearchOrchestrator
-from src.logging_config import MetricsLogger, SecurityLogger, ExternalServiceLogger
-
+from src.core.config.manager import ConfigurationManager
 logger = logging.getLogger(__name__)
-metrics = MetricsLogger(logger)
 
 # Import enhanced logging for search security monitoring
 try:
+    from src.logging_config import MetricsLogger, SecurityLogger, ExternalServiceLogger
+    metrics = MetricsLogger(logger)
     _security_logger = SecurityLogger(logger)
     _service_logger = ExternalServiceLogger(logger)
 except ImportError:
+    metrics = None
     _security_logger = None
     _service_logger = None
     logger.warning("Enhanced search security logging not available")
@@ -45,6 +46,7 @@ async def search_documents_post(
     search_request: SearchRequest,
     background_tasks: BackgroundTasks,
     search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> SearchResponse:
     """
     POST /api/v1/search - Initiates a search query
@@ -98,14 +100,15 @@ async def search_documents_post(
         cache_hit = getattr(search_response, 'cache_hit', False)
         
         # Log search metrics
-        metrics.log_search_query(
-            query=search_request.query,
-            result_count=len(results),
-            cache_hit=cache_hit,
-            duration=execution_time / 1000,  # Convert back to seconds for logging
-            technology_hint=search_request.technology_hint,
-            session_id=search_request.session_id
-        )
+        if metrics:
+            metrics.log_search_query(
+                query=search_request.query,
+                result_count=len(results),
+                cache_hit=cache_hit,
+                duration=execution_time / 1000,  # Convert back to seconds for logging
+                technology_hint=search_request.technology_hint,
+                session_id=search_request.session_id
+            )
 
         logger.debug(f"Creating SearchResponse with technology_hint={search_request.technology_hint!r} (type: {type(search_request.technology_hint)})")
         
@@ -133,6 +136,7 @@ async def search_documents_get(
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
     session_id: Optional[str] = Query(None, description="Session identifier"),
     search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> SearchResponse:
     """
     GET /api/v1/search - GET alternative for simple queries and browser testing
@@ -166,6 +170,7 @@ async def submit_feedback(
     feedback_request: FeedbackRequest,
     background_tasks: BackgroundTasks,
     db_manager: DatabaseManager = Depends(get_database_manager),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> Dict[str, str]:
     """
     POST /api/v1/feedback - Submits explicit user feedback on a search result
@@ -203,7 +208,10 @@ async def submit_feedback(
 @router.post("/signals", status_code=202, tags=["feedback"])
 @limiter.limit("100/minute")
 async def submit_signal(
-    request: Request, signal_request: SignalRequest, background_tasks: BackgroundTasks
+    request: Request, 
+    signal_request: SignalRequest, 
+    background_tasks: BackgroundTasks,
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> Dict[str, str]:
     """
     POST /api/v1/signals - Submits implicit user interaction signals

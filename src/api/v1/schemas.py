@@ -294,9 +294,9 @@ class ProviderResponse(BaseModel):
 
 
 class ProviderConfigRequest(BaseModel):
-    """Request for provider configuration"""
+    """Request for provider configuration - supports partial updates"""
 
-    base_url: str = Field(..., description="Provider base URL")
+    base_url: Optional[str] = Field(None, description="Provider base URL")
     api_key: Optional[str] = Field(None, description="API key")
     model: Optional[str] = Field(None, description="Default model")
 

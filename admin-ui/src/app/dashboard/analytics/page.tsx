@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import WebSocketAnalyticsPage from "@/features/analytics/components/websocket-analytics-page";
 
 export const metadata: Metadata = {
-  title: "Real-time Analytics Dashboard",
-  description: "Live analytics and system performance metrics via WebSocket",
+  title: "DocAIche Dashboard",
+  description: "Real-time analytics and system performance monitoring",
 };
 
 export default function Page() {

@@ -12,8 +12,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from .schemas import ActivityItem
 from .middleware import limiter, get_trace_id
-from .dependencies import get_database_manager
+from .dependencies import get_database_manager, get_configuration_manager
 from src.database.connection import DatabaseManager
+from src.core.config.manager import ConfigurationManager
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ async def get_recent_activity(
     limit: int = Query(20, ge=1, le=100),
     activity_type: Optional[str] = Query(None, description="Filter by activity type"),
     db_manager: DatabaseManager = Depends(get_database_manager),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> List[ActivityItem]:
     """
     GET /api/v1/admin/activity/recent - Get recent system activity
@@ -59,22 +61,55 @@ async def get_recent_activity(
         )
     
     try:
-        # First check if tables exist to avoid errors
-        tables_check = """
-            SELECT COUNT(*) as count 
-            FROM sqlite_master 
-            WHERE type='table' AND name IN ('search_cache', 'content_metadata', 'system_config')
-        """
+        # Get configuration-driven schema validation settings
         try:
-            table_check_result = await db_manager.fetch_one(tables_check)
-            table_count = table_check_result.get("count", 0) if table_check_result else 0
-            if table_count < 3:
-                logger.warning(f"Required tables not found for activity endpoint (found {table_count}/3)")
-                # Return empty activities if tables don't exist
-                return []
+            config = config_manager.get_configuration()
+            # Check if strict schema validation is enabled (default: True)
+            strict_validation = True  # Default to strict validation for admin endpoints
+            
+            # Configuration-driven required tables for activity tracking
+            required_tables = ['search_cache', 'content_metadata', 'system_config']
+            
+            # Comprehensive schema validation
+            schema_validation_query = """
+                SELECT name, type 
+                FROM sqlite_master 
+                WHERE type='table' AND name IN ('search_cache', 'content_metadata', 'system_config')
+            """
+            
+            existing_tables = await db_manager.fetch_all(schema_validation_query)
+            existing_table_names = {row['name'] for row in existing_tables or []}
+            missing_tables = set(required_tables) - existing_table_names
+            
+            if missing_tables:
+                logger.warning(f"Required tables missing for activity endpoint: {missing_tables}")
+                if strict_validation:
+                    # Log schema validation failure for admin monitoring
+                    if _security_logger:
+                        _security_logger.log_admin_action(
+                            action="schema_validation_failure",
+                            target="activity_recent_endpoint",
+                            impact_level="medium",
+                            client_ip=client_ip,
+                            trace_id=trace_id,
+                            missing_tables=list(missing_tables)
+                        )
+                    # Return empty list in strict mode rather than failing
+                    return []
+                else:
+                    logger.info("Non-strict mode: continuing with partial table availability")
+                    
         except Exception as e:
-            logger.warning(f"Failed to check tables: {e}")
-            return []
+            logger.error(f"Configuration-driven schema validation failed: {e}")
+            # Fallback to basic validation if config fails
+            basic_table_check = """
+                SELECT COUNT(*) as count 
+                FROM sqlite_master 
+                WHERE type='table' AND name IN ('search_cache', 'content_metadata', 'system_config')
+            """
+            basic_result = await db_manager.fetch_one(basic_table_check)
+            if not basic_result or basic_result.get("count", 0) < 3:
+                return []
             
         # Build query based on activity type
         if activity_type:
@@ -178,27 +213,54 @@ async def get_recent_searches(
     request: Request,
     limit: int = Query(20, ge=1, le=100),
     db_manager: DatabaseManager = Depends(get_database_manager),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> List[ActivityItem]:
     """
     GET /api/v1/admin/activity/searches - Get recent search queries
     """
     try:
-        # First check if search_cache table exists
-        tables_check = """
-            SELECT COUNT(*) as count 
-            FROM sqlite_master 
-            WHERE type='table' AND name='search_cache'
-        """
+        # Configuration-driven schema validation for search endpoint
         try:
-            table_check_result = await db_manager.fetch_one(tables_check)
-            table_exists = (table_check_result.get("count", 0) > 0) if table_check_result else False
-            if not table_exists:
+            config = config_manager.get_configuration()
+            
+            # Validate search_cache table with column verification
+            search_schema_query = """
+                SELECT sql 
+                FROM sqlite_master 
+                WHERE type='table' AND name='search_cache'
+            """
+            
+            schema_result = await db_manager.fetch_one(search_schema_query)
+            if not schema_result:
                 logger.warning("search_cache table not found")
-                # Return empty list if table doesn't exist
+                
+                # Log schema validation issue for admin monitoring
+                if _security_logger:
+                    _security_logger.log_admin_action(
+                        action="search_schema_validation_failure",
+                        target="search_cache_table",
+                        impact_level="low",
+                        missing_tables=["search_cache"]
+                    )
                 return []
+                
+            # Verify required columns exist in search_cache table
+            required_columns = ['query_hash', 'original_query', 'created_at', 'result_count']
+            table_sql = schema_result.get('sql', '') if schema_result else ''
+            missing_columns = [col for col in required_columns if col not in table_sql]
+            
+            if missing_columns:
+                logger.warning(f"search_cache table missing required columns: {missing_columns}")
+                return []
+                
         except Exception as e:
-            logger.warning(f"Failed to check search_cache table: {e}")
-            return []
+            logger.error(f"Search schema validation failed: {e}")
+            # Fallback to basic table existence check
+            basic_check = await db_manager.fetch_one(
+                "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='search_cache'"
+            )
+            if not basic_check or basic_check.get("count", 0) == 0:
+                return []
             
         # Get real search data from search_cache table
         query = """
@@ -243,6 +305,7 @@ async def get_recent_errors(
     request: Request,
     limit: int = Query(20, ge=1, le=50),
     db_manager: DatabaseManager = Depends(get_database_manager),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> List[ActivityItem]:
     """
     GET /api/v1/admin/activity/errors - Get recent system errors
@@ -260,7 +323,9 @@ async def get_recent_errors(
 @router.get("/admin/dashboard", tags=["admin"])
 @limiter.limit("20/minute")
 async def get_dashboard_data(
-    request: Request, db_manager: DatabaseManager = Depends(get_database_manager)
+    request: Request, 
+    db_manager: DatabaseManager = Depends(get_database_manager),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> Dict[str, Any]:
     """
     GET /api/v1/admin/dashboard - Get aggregated dashboard data

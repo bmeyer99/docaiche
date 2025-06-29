@@ -413,28 +413,91 @@ async def update_provider_config(
     config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ):
     """
-    POST /api/v1/providers/{provider_id}/config - Update provider configuration
+    POST /api/v1/providers/{provider_id}/config - Update provider configuration (supports partial updates)
     """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
     try:
-        # Update provider configuration
-        # TODO: Implement actual configuration update using config_manager
-        # config_key = f"providers.{provider_id}"
-        # config_value = {
-        #     "base_url": config_data.base_url,
-        #     "api_key": config_data.api_key,
-        #     "model": config_data.model,
-        #     "enabled": True,
-        #     "updated_at": datetime.utcnow().isoformat(),
-        # }
-        # config_manager.update_configuration(config_key, config_value)
+        # Validate that at least one field is provided
+        provided_fields = {k: v for k, v in config_data.dict().items() if v is not None}
+        if not provided_fields:
+            raise HTTPException(
+                status_code=400, 
+                detail="At least one configuration field must be provided"
+            )
 
-        # For now, just log the update
-        logger.info(f"Updated configuration for provider {provider_id}")
+        # Log the partial update attempt
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="provider_config_partial_update",
+                target=f"provider_{provider_id}",
+                impact_level="medium",
+                client_ip=client_ip,
+                trace_id=trace_id,
+                fields_updated=list(provided_fields.keys())
+            )
 
-        return {"status": "updated", "provider": provider_id}
+        # Get existing configuration or create new one
+        config_key = f"ai.providers.{provider_id}"
+        try:
+            existing_config = config_manager.get_setting(config_key) or {}
+        except Exception:
+            existing_config = {}
 
+        # Merge provided fields with existing configuration
+        updated_config = {**existing_config}
+        for field, value in provided_fields.items():
+            updated_config[field] = value
+        
+        # Add metadata
+        updated_config["enabled"] = updated_config.get("enabled", True)
+        updated_config["updated_at"] = datetime.utcnow().isoformat()
+
+        # Update configuration in database
+        await config_manager.update_in_db(config_key, updated_config)
+
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log successful update
+        if _service_logger:
+            _service_logger.log_service_call(
+                service="config_manager",
+                endpoint=f"update_provider_{provider_id}",
+                method="POST",
+                duration_ms=duration_ms,
+                status_code=200,
+                fields_updated=list(provided_fields.keys())
+            )
+
+        logger.info(f"Partial configuration update for provider {provider_id}: {list(provided_fields.keys())}")
+
+        return {
+            "status": "updated", 
+            "provider": provider_id,
+            "fields_updated": list(provided_fields.keys()),
+            "config": updated_config
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to update provider config: {e}")
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log configuration update failure
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="provider_config_update_failed",
+                target=f"provider_{provider_id}",
+                impact_level="medium",
+                client_ip=client_ip,
+                trace_id=trace_id,
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+
+        logger.error(f"Failed to update provider config for {provider_id}: {e}")
         raise HTTPException(
             status_code=500, detail="Failed to update provider configuration"
         )

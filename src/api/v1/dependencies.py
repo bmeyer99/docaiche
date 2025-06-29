@@ -278,6 +278,8 @@ async def get_configuration_manager() -> ConfigurationManager:
     if _configuration_manager is None:
         try:
             _configuration_manager = ConfigurationManager()
+            # Initialize with database manager for configuration updates
+            await _configuration_manager.initialize()
             logger.info("Configuration manager initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize configuration manager: {e}")

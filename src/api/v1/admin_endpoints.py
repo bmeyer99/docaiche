@@ -12,8 +12,9 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, R
 
 from .schemas import AdminSearchResponse, AdminContentItem
 from .middleware import limiter, get_trace_id
-from .dependencies import get_database_manager
+from .dependencies import get_database_manager, get_configuration_manager
 from src.database.connection import DatabaseManager
+from src.core.config.manager import ConfigurationManager
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ async def admin_search_content(
     limit: int = Query(20, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Results offset"),
     db_manager: DatabaseManager = Depends(get_database_manager),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> AdminSearchResponse:
     """
     GET /api/v1/admin/search-content - Searches content metadata for admin management
@@ -65,6 +67,34 @@ async def admin_search_content(
     trace_id = get_trace_id(request)
     
     try:
+        # Configuration-driven schema validation for admin search
+        try:
+            config = config_manager.get_configuration()
+            
+            # Validate content_metadata table schema
+            schema_validation_query = """
+                SELECT sql FROM sqlite_master 
+                WHERE type='table' AND name='content_metadata'
+            """
+            schema_result = await db_manager.fetch_one(schema_validation_query)
+            
+            if not schema_result:
+                logger.error("content_metadata table not found")
+                raise HTTPException(status_code=500, detail="Content metadata table not available")
+            
+            table_sql = schema_result.get('sql', '') if schema_result else ''
+            
+            # Check if content_type column exists (it should not in current schema)
+            has_content_type_column = 'content_type' in table_sql
+            
+            if content_type and not has_content_type_column:
+                logger.warning(f"Ignoring content_type filter - column does not exist in schema")
+                content_type = None  # Ignore the parameter if column doesn't exist
+                
+        except Exception as e:
+            logger.error(f"Schema validation failed: {e}")
+            # Continue with degraded functionality
+        
         # Log admin action with security context
         if _security_logger:
             _security_logger.log_admin_action(
@@ -80,21 +110,29 @@ async def admin_search_content(
             )
             
         logger.info(
-            f"Admin content search: term='{search_term}', type='{content_type}', tech='{technology}'"
+            f"Admin content search: term='{search_term}', status_filter='{content_type}', tech='{technology}'"
         )
 
-        # Build query with filters
+        # Build query with filters using actual schema columns
         where_clauses = []
         params = {}
         
         if search_term:
-            where_clauses.append("(title LIKE :search_term OR content_id LIKE :search_term)")
+            where_clauses.append("(title LIKE :search_term OR content_id LIKE :search_term OR source_url LIKE :search_term)")
             params["search_term"] = f"%{search_term}%"
         
-        # Note: content_type column doesn't exist in current schema
-        # if content_type:
-        #     where_clauses.append("content_type = :content_type")
-        #     params["content_type"] = content_type
+        # Use processing_status as content_type filter since content_type column doesn't exist
+        if content_type:
+            # Map content_type to processing_status values
+            status_mapping = {
+                "active": "completed",
+                "pending": "pending", 
+                "failed": "failed",
+                "flagged": "flagged"
+            }
+            mapped_status = status_mapping.get(content_type.lower(), content_type)
+            where_clauses.append("processing_status = :processing_status")
+            params["processing_status"] = mapped_status
             
         if technology:
             where_clauses.append("technology = :technology")
@@ -107,22 +145,28 @@ async def admin_search_content(
         count_result = await db_manager.fetch_one(count_query, params)
         total_count = count_result.get("total", 0) if count_result else 0
         
-        # Get paginated results
+        # Get paginated results using actual schema columns
         query = f"""
         SELECT 
             content_id,
             title,
-            'documentation' as content_type,  -- Default value since column doesn't exist
+            CASE 
+                WHEN processing_status = 'completed' THEN 'documentation'
+                WHEN processing_status = 'pending' THEN 'pending'
+                WHEN processing_status = 'failed' THEN 'error'
+                WHEN processing_status = 'flagged' THEN 'flagged'
+                ELSE 'unknown'
+            END as content_type,
             technology,
             source_url,
-            anythingllm_workspace as collection_name,
+            COALESCE(anythingllm_workspace, 'default') as collection_name,
             created_at,
             updated_at as last_updated,
-            chunk_count * 1000 as size_bytes,  -- Approximate size
-            'active' as status
+            COALESCE(word_count, chunk_count * 250) as size_bytes,  -- Better size estimation
+            processing_status as status
         FROM content_metadata
         {where_clause}
-        ORDER BY created_at DESC
+        ORDER BY updated_at DESC, created_at DESC
         LIMIT :limit OFFSET :offset
         """
         params["limit"] = limit
@@ -195,6 +239,7 @@ async def flag_content(
     content_id: str,
     background_tasks: BackgroundTasks,
     db_manager: DatabaseManager = Depends(get_database_manager),
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> Dict[str, str]:
     """
     DELETE /api/v1/content/{id} - Flags content for removal (admin action)

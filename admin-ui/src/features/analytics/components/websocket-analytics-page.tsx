@@ -71,9 +71,9 @@ export default function WebSocketAnalyticsPage() {
       {/* Header with WebSocket Status */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Real-time Analytics</h1>
+          <h1 className="text-3xl font-bold">DocAIche Dashboard</h1>
           <p className="text-muted-foreground">
-            Live dashboard with WebSocket updates
+            Real-time system monitoring and analytics
           </p>
         </div>
         <div className="flex items-center gap-4">

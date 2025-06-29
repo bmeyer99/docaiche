@@ -408,13 +408,6 @@ export class DocaicheApiClient {
   /**
    * Health and Monitoring Methods
    */
-  async getSystemHealth(): Promise<any> {
-    return this.get<any>('/system/health');
-  }
-
-  async getSystemMetrics(): Promise<any> {
-    return this.get<any>('/system/metrics');
-  }
 
   async getDashboardStats(): Promise<any> {
     return this.get<any>('/stats');

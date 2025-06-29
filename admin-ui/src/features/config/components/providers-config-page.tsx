@@ -23,7 +23,6 @@ export default function ProvidersConfigPage() {
   const apiClient = useApiClient();
   const attemptCountRef = useRef(0);
   const hasMountedRef = useRef(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Simple load function - max 2 attempts
   const loadProviders = async () => {
@@ -115,15 +114,6 @@ export default function ProvidersConfigPage() {
     }
   };
 
-  const debouncedSave = (providerId: string, config: Partial<ProviderConfiguration>, fieldName?: string) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    saveTimeoutRef.current = setTimeout(() => {
-      saveConfiguration(providerId, config, fieldName);
-    }, 1000); // Save 1 second after user stops typing
-  };
 
 
   const testConnection = async (providerId: string) => {
@@ -178,7 +168,7 @@ export default function ProvidersConfigPage() {
   
 
 
-  const updateFieldValue = (providerId: string, fieldKey: string, value: any, fieldLabel: string) => {
+  const updateFieldValue = (providerId: string, fieldKey: string, value: any) => {
     const config = configurations[providerId] || {};
     const updatedConfig = {
       ...config,
@@ -192,9 +182,19 @@ export default function ProvidersConfigPage() {
       ...prev,
       [providerId]: updatedConfig
     }));
+  };
+
+  const saveFieldOnBlur = (providerId: string, fieldKey: string, value: any, fieldLabel: string) => {
+    const config = configurations[providerId] || {};
+    const updatedConfig = {
+      ...config,
+      config: {
+        ...config.config,
+        [fieldKey]: value
+      }
+    };
     
-    // Auto-save after user stops typing
-    debouncedSave(providerId, updatedConfig, fieldLabel);
+    saveConfiguration(providerId, updatedConfig, fieldLabel);
   };
 
   const renderConfigurationForm = (provider: ProviderDefinition & { id: string }) => {
@@ -214,7 +214,7 @@ export default function ProvidersConfigPage() {
               onCheckedChange={(enabled) => {
                 const updatedConfig = { ...config, enabled };
                 setConfigurations(prev => ({ ...prev, [provider.id]: updatedConfig }));
-                saveConfiguration(provider.id, updatedConfig, 'Enable/Disable');
+                saveConfiguration(provider.id, updatedConfig, 'Provider Enable/Disable');
               }}
             />
           </div>
@@ -235,17 +235,8 @@ export default function ProvidersConfigPage() {
                   <Textarea
                     id={`${provider.id}-${field.key}`}
                     value={String(config.config?.[field.key] || field.key === 'base_url' ? provider.defaultBaseUrl || '' : '')}
-                    onChange={(e) => updateFieldValue(provider.id, field.key, e.target.value, field.label)}
-                    onBlur={(e) => {
-                      if (saveTimeoutRef.current) {
-                        clearTimeout(saveTimeoutRef.current);
-                        const updatedConfig = {
-                          ...config,
-                          config: { ...config.config, [field.key]: e.target.value }
-                        };
-                        saveConfiguration(provider.id, updatedConfig, field.label);
-                      }
-                    }}
+                    onChange={(e) => updateFieldValue(provider.id, field.key, e.target.value)}
+                    onBlur={(e) => saveFieldOnBlur(provider.id, field.key, e.target.value, field.label)}
                     placeholder={field.placeholder}
                   />
                 ) : field.type === 'number' ? (
@@ -253,17 +244,8 @@ export default function ProvidersConfigPage() {
                     id={`${provider.id}-${field.key}`}
                     type="number"
                     value={String(config.config?.[field.key] || '')}
-                    onChange={(e) => updateFieldValue(provider.id, field.key, parseInt(e.target.value) || 0, field.label)}
-                    onBlur={(e) => {
-                      if (saveTimeoutRef.current) {
-                        clearTimeout(saveTimeoutRef.current);
-                        const updatedConfig = {
-                          ...config,
-                          config: { ...config.config, [field.key]: parseInt(e.target.value) || 0 }
-                        };
-                        saveConfiguration(provider.id, updatedConfig, field.label);
-                      }
-                    }}
+                    onChange={(e) => updateFieldValue(provider.id, field.key, parseInt(e.target.value) || 0)}
+                    onBlur={(e) => saveFieldOnBlur(provider.id, field.key, parseInt(e.target.value) || 0, field.label)}
                     placeholder={field.placeholder}
                     min={field.validation?.min}
                     max={field.validation?.max}
@@ -273,17 +255,8 @@ export default function ProvidersConfigPage() {
                     id={`${provider.id}-${field.key}`}
                     type={field.type === 'password' ? 'password' : 'text'}
                     value={String(config.config?.[field.key] || (field.key === 'base_url' ? provider.defaultBaseUrl || '' : ''))}
-                    onChange={(e) => updateFieldValue(provider.id, field.key, e.target.value, field.label)}
-                    onBlur={(e) => {
-                      if (saveTimeoutRef.current) {
-                        clearTimeout(saveTimeoutRef.current);
-                        const updatedConfig = {
-                          ...config,
-                          config: { ...config.config, [field.key]: e.target.value }
-                        };
-                        saveConfiguration(provider.id, updatedConfig, field.label);
-                      }
-                    }}
+                    onChange={(e) => updateFieldValue(provider.id, field.key, e.target.value)}
+                    onBlur={(e) => saveFieldOnBlur(provider.id, field.key, e.target.value, field.label)}
                     placeholder={field.placeholder}
                   />
                 )}
@@ -318,12 +291,6 @@ export default function ProvidersConfigPage() {
             <Icons.activity className="w-4 h-4 mr-2" />
             Test Connection
           </button>
-          {(config.enabled || Object.keys(config.config || {}).length > 0) && (
-            <div className="flex items-center text-sm text-green-600">
-              <Icons.check className="w-4 h-4 mr-1" />
-              Auto-saved
-            </div>
-          )}
         </div>
       </div>
     );
@@ -414,8 +381,8 @@ export default function ProvidersConfigPage() {
                           key={provider.id}
                           className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                             activeProvider === provider.id 
-                              ? 'bg-blue-50 border-blue-300 shadow-sm' 
-                              : 'hover:bg-gray-50'
+                              ? 'bg-selection text-selection-foreground border-selection shadow-sm' 
+                              : 'hover:bg-selection-hover hover:text-selection-hover-foreground hover:border-selection-hover'
                           }`}
                           onClick={() => setActiveProvider(provider.id)}
                         >
@@ -428,7 +395,7 @@ export default function ProvidersConfigPage() {
                               <span className="font-medium">{provider.displayName}</span>
                             </div>
                             {isConfigured && (
-                              <div className="w-2 h-2 bg-green-500 rounded-full" title="Configured" />
+                              <div className="w-2 h-2 bg-success rounded-full" title="Configured" />
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">

@@ -11,6 +11,7 @@ from typing import Dict, Any
 from fastapi import APIRouter, Depends, Request, Query
 
 from .middleware import limiter, get_trace_id
+from .schemas import StatsResponse
 from .dependencies import (
     get_database_manager,
     get_cache_manager,
@@ -203,7 +204,6 @@ async def get_stats(
     Returns:
         StatsResponse with system statistics
     """
-    from .schemas import StatsResponse
 
     try:
         # Get real search statistics from database
