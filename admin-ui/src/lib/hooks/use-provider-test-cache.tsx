@@ -80,6 +80,7 @@ export function ProviderTestProvider({ children }: { children: ReactNode }) {
 
   const clearProvider = useCallback((providerId: string) => {
     setTestedProviders(prev => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [providerId]: _removed, ...rest } = prev;
       return rest;
     });

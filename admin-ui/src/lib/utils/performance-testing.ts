@@ -470,16 +470,7 @@ export class MemoryLeakDetector {
     };
   }
 
-  getReport(): {
-    snapshots: typeof this.snapshots;
-    analysis: ReturnType<typeof this.detectLeaks>;
-    summary: {
-      duration: number;
-      peakMemory: number;
-      currentMemory: number;
-      averageMemory: number;
-    };
-  } {
+  getReport() {
     const analysis = this.detectLeaks();
     
     const heapValues = this.snapshots.map(s => s.heapUsed);

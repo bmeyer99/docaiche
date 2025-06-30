@@ -20,7 +20,8 @@ export function ProfilerWrapper({
   onRender?: (id: string, phase: 'mount' | 'update', actualDuration: number) => void;
 }) {
   // Development logging for profiler data
-  const logPerformanceData = useCallback(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _logPerformanceData = useCallback(
     (id: string, phase: 'mount' | 'update', actualDuration: number) => {
       if (process.env.NODE_ENV === 'development') {
         console.log(`[Profiler] ${id} ${phase} took ${actualDuration.toFixed(2)}ms`);

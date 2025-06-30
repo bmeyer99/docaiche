@@ -578,6 +578,79 @@ async def test_provider_connection(
         )
 
 
+@router.get("/providers/{provider_id}/config", tags=["providers"])
+@limiter.limit("30/minute")
+async def get_provider_config(
+    request: Request,
+    provider_id: str,
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
+):
+    """
+    GET /api/v1/providers/{provider_id}/config - Get individual provider configuration
+    """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    
+    try:
+        # Log access to provider configuration (sensitive operation)
+        if _security_logger:
+            _security_logger.log_sensitive_operation(
+                operation="provider_config_access",
+                resource=f"provider_{provider_id}_config",
+                client_ip=client_ip,
+                trace_id=trace_id
+            )
+        
+        # Get provider configuration from database
+        config_key = f"ai.providers.{provider_id}"
+        try:
+            config = config_manager.get_setting(config_key) or {}
+        except Exception:
+            config = {}
+        
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log successful config retrieval
+        if _service_logger:
+            _service_logger.log_service_call(
+                service="config_manager",
+                endpoint=f"get_provider_{provider_id}",
+                method="GET",
+                duration_ms=duration_ms,
+                status_code=200
+            )
+        
+        logger.info(f"Retrieved configuration for provider {provider_id}")
+        
+        return {
+            "provider_id": provider_id,
+            "config": config,
+            "enabled": config.get("enabled", False),
+            "last_updated": config.get("updated_at")
+        }
+        
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log configuration retrieval failure
+        if _security_logger:
+            _security_logger.log_admin_action(
+                action="provider_config_access_failed",
+                target=f"provider_{provider_id}",
+                impact_level="low",
+                client_ip=client_ip,
+                trace_id=trace_id,
+                error_message=str(e),
+                duration_ms=duration_ms
+            )
+        
+        logger.error(f"Failed to get provider config for {provider_id}: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve provider configuration"
+        )
+
+
 @router.post("/providers/{provider_id}/config", tags=["providers"])
 @limiter.limit("10/minute")
 async def update_provider_config(

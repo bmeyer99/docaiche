@@ -190,13 +190,11 @@ export function useProviderSaver(): UseProviderSaverReturn {
               if (operation.type === 'provider') {
                 return await saveProviderConfiguration(
                   operation.providerId!,
-                  operation.data,
-                  abortController.signal
+                  operation.data
                 );
               } else {
                 return await saveModelSelection(
-                  operation.data,
-                  abortController.signal
+                  operation.data
                 );
               }
             }, `${operation.type}-${operation.providerId || 'model-selection'}`, abortController.signal);

@@ -33,11 +33,11 @@ const baseConfig: NextConfig = {
     return [
       {
         source: '/api/v1/:path*',
-        destination: 'http://api:8000/api/v1/:path*',
+        destination: 'http://api:4000/api/v1/:path*',
       },
       {
         source: '/ws/:path*',
-        destination: 'http://api:8000/api/v1/ws/:path*',
+        destination: 'http://api:4000/api/v1/ws/:path*',
       },
       {
         source: '/grafana/:path*',

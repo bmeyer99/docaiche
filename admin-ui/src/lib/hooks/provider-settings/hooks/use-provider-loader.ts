@@ -173,9 +173,9 @@ export function useProviderLoader(): UseProviderLoaderReturn {
             // Use deduplication for provider configurations
             const providersPromise = deduplicatorRef.current.deduplicate(
               'providers',
-              async (signal) => {
+              async (_signal) => {
                 // Pass abort signal to API call
-                return await loadProviderConfigurations(testedProviders, signal);
+                return await loadProviderConfigurations(testedProviders);
               },
               abortController.signal
             );
@@ -183,9 +183,9 @@ export function useProviderLoader(): UseProviderLoaderReturn {
             // Use deduplication for model selection
             const modelSelectionPromise = deduplicatorRef.current.deduplicate(
               'modelSelection',
-              async (signal) => {
+              async (_signal) => {
                 // Pass abort signal to API call
-                return await loadModelSelection(signal);
+                return await loadModelSelection();
               },
               abortController.signal
             );

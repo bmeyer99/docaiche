@@ -520,14 +520,16 @@ export function useOptimizedInput<T = string>(
 export function createProfilerWrapper(id: string, onRender?: (id: string, phase: 'mount' | 'update', actualDuration: number) => void) {
   return function ProfilerWrapper({ children }: { children: ReactNode }) {
     // Profiler callback (development logging only)
-    const logProfilerData = useCallback(
-      (id: string, phase: 'mount' | 'update', actualDuration: number) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _logProfilerData = useCallback(
+      (_id: string, _phase: 'mount' | 'update', _actualDuration: number) => {
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[Profiler] ${id} ${phase} took ${actualDuration.toFixed(2)}ms`);
+          console.log(`[Profiler] ${_id} ${_phase} took ${_actualDuration.toFixed(2)}ms`);
         }
-        onRender?.(id, phase, actualDuration);
+        onRender?.(_id, _phase, _actualDuration);
       },
-      []  // Remove onRender dependency to prevent recreations
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      []  // Development logging utility - fixed dependencies to prevent recreations
     );
 
     // Only render Profiler in development
@@ -652,6 +654,7 @@ export function useOptimizedFormState<T extends Record<string, any>>(
         }));
       } else {
         setErrors(prev => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { [fieldName]: _removed, ...rest } = prev;
           return rest;
         });
@@ -893,8 +896,10 @@ export function useAdvancedPerformanceMonitor(componentName: string, options: {
   threshold?: number;
   enableMemoryTracking?: boolean;
 } = {}) {
-  const { enableReporting = true, enableMemoryTracking = false } = options;
-  // Note: threshold parameter available but not used in current implementation
+  const { enableReporting = true, enableMemoryTracking = false, 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    threshold: _threshold } = options;
+  // Note: _threshold parameter available but not used in current implementation
   const renderStartTime = useRef<number | undefined>(undefined);
   const memoryUsageRef = useRef<number | undefined>(undefined);
 

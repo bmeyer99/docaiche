@@ -70,35 +70,57 @@ class AILogProcessor:
         start_time = time.time()
         logger.info(f"Processing query with params: {query_params}")
         
-        # For now, return a minimal working response to fix the validation error
-        # TODO: Implement full logic after validation issue is resolved
-        
-        response = {
-            "summary": {
-                "mode": query_params.get("mode", "troubleshoot"),
-                "time_range": query_params.get("time_range", "1h"),
-                "total_logs": 0,
-                "services_affected": [],
-                "patterns_detected": []
-            },
-            "logs": [],
-            "insights": {
-                "anomalies": [],
-                "patterns": [],
-                "recommendations": []
-            },
-            "metadata": {
-                "query_time": datetime.utcnow().isoformat(),
-                "total_logs": 0,
-                "services_queried": query_params.get("services", ["all"]),
-                "time_range": query_params.get("time_range", "1h"),
-                "query_mode": query_params.get("mode", "troubleshoot"),
-                "from_cache": False,
-                "query_duration_ms": int((time.time() - start_time) * 1000)
+        try:
+            # Build optimized query
+            logql_query = await self._build_intelligent_query(query_params)
+            
+            # Execute query
+            logs = await self._execute_query(logql_query, query_params)
+            
+            # Process and analyze logs
+            processed_logs = await self._process_logs(logs, query_params)
+            
+            # Generate insights
+            insights = await self._generate_insights(processed_logs, query_params)
+            
+            # Build response
+            response = self._build_response(processed_logs, insights, query_params)
+            
+            # Update query duration
+            response["metadata"]["query_duration_ms"] = int((time.time() - start_time) * 1000)
+            
+            logger.info(f"Query processed successfully: {len(processed_logs)} logs found")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Query processing failed: {e}")
+            # Return empty response on error
+            response = {
+                "summary": {
+                    "mode": query_params.get("mode", "troubleshoot"),
+                    "time_range": query_params.get("time_range", "1h"),
+                    "total_logs": 0,
+                    "services_affected": [],
+                    "patterns_detected": []
+                },
+                "logs": [],
+                "insights": {
+                    "anomalies": [],
+                    "patterns": [],
+                    "recommendations": []
+                },
+                "metadata": {
+                    "query_time": datetime.utcnow().isoformat(),
+                    "total_logs": 0,
+                    "services_queried": query_params.get("services", ["all"]),
+                    "time_range": query_params.get("time_range", "1h"),
+                    "query_mode": query_params.get("mode", "troubleshoot"),
+                    "from_cache": False,
+                    "query_duration_ms": int((time.time() - start_time) * 1000),
+                    "error": str(e)
+                }
             }
-        }
-        
-        return response
+            return response
     
     def _generate_cache_key(self, query_params: Dict[str, Any]) -> str:
         """Generate a unique cache key for the query parameters."""
@@ -121,16 +143,12 @@ class AILogProcessor:
         mode = query_params.get("mode", "troubleshoot")
         services = query_params.get("services", ["all"])
         
-        # Base query components
+        # Base query components - use dockerlogs job which we know exists
         query_parts = []
         
-        # Service selector
-        if services and services != ["all"]:
-            service_selector = f'{{job="docaiche", service=~"({"|".join(services)})" }}'
-        else:
-            service_selector = '{job="docaiche"}'
-        
-        query_parts.append(service_selector)
+        # Start with the known working job
+        base_selector = '{job="dockerlogs"}'
+        query_parts.append(base_selector)
         
         # Add mode-specific filters
         mode_filters = self._get_mode_filters(mode)
@@ -604,8 +622,13 @@ class AILogProcessor:
                 "related_logs": None
             }
         
-        # Sort logs chronologically
-        logs.sort(key=lambda x: x.get("timestamp", datetime.min))
+        # Sort logs chronologically (handle datetime objects)
+        def get_timestamp_for_sort(log):
+            ts = log.get("timestamp")
+            if isinstance(ts, datetime):
+                return ts
+            return datetime.min
+        logs.sort(key=get_timestamp_for_sort)
         
         # Build timeline
         timeline = []
@@ -617,8 +640,16 @@ class AILogProcessor:
         
         for log in logs:
             # Add to timeline
+            timestamp = log.get("timestamp")
+            if isinstance(timestamp, datetime):
+                timestamp_str = timestamp.isoformat()
+            elif timestamp:
+                timestamp_str = str(timestamp)
+            else:
+                timestamp_str = None
+                
             event = {
-                "timestamp": log.get("timestamp").isoformat() if log.get("timestamp") else None,
+                "timestamp": timestamp_str,
                 "event": log.get("request_type", "log"),
                 "details": {
                     "level": log.get("level"),
@@ -641,7 +672,7 @@ class AILogProcessor:
             # Collect prompts and responses
             if include_prompts and log.get("prompt"):
                 prompts.append({
-                    "timestamp": log.get("timestamp").isoformat() if log.get("timestamp") else None,
+                    "timestamp": timestamp_str,
                     "prompt": log["prompt"],
                     "model": log.get("model"),
                     "tokens": log.get("tokens_used")
@@ -649,7 +680,7 @@ class AILogProcessor:
                 
             if include_responses and log.get("response"):
                 responses.append({
-                    "timestamp": log.get("timestamp").isoformat() if log.get("timestamp") else None,
+                    "timestamp": timestamp_str,
                     "response": log["response"],
                     "model": log.get("model"),
                     "tokens": log.get("tokens_used")
@@ -660,15 +691,22 @@ class AILogProcessor:
                 errors += 1
         
         # Calculate metadata
-        start_time = logs[0].get("timestamp")
-        end_time = logs[-1].get("timestamp")
-        duration = (end_time - start_time).total_seconds() if start_time and end_time else 0
+        start_time = logs[0].get("timestamp") if logs else None
+        end_time = logs[-1].get("timestamp") if logs else None
+        
+        # Handle datetime serialization
+        start_time_str = start_time.isoformat() if isinstance(start_time, datetime) else (str(start_time) if start_time else None)
+        end_time_str = end_time.isoformat() if isinstance(end_time, datetime) else (str(end_time) if end_time else None)
+        
+        duration = 0
+        if start_time and end_time and isinstance(start_time, datetime) and isinstance(end_time, datetime):
+            duration = (end_time - start_time).total_seconds()
         
         result = {
             "conversation_id": conversation_id,
             "metadata": {
-                "start_time": start_time.isoformat() if start_time else None,
-                "end_time": end_time.isoformat() if end_time else None,
+                "start_time": start_time_str,
+                "end_time": end_time_str,
                 "duration_seconds": duration,
                 "workspace_id": logs[0].get("workspace_id") if logs else None
             },

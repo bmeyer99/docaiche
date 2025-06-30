@@ -100,7 +100,8 @@ export const createRealtimeSlice: StateCreator<
     }),
 
   // Metrics actions (real-time updates)
-  updateRealtimeMetrics: (metrics) =>
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  updateRealtimeMetrics: (_metrics) =>
     set((state) => {
       // This would update the system metrics in real-time
       // For now, we'll store this in the realtime slice, but in practice

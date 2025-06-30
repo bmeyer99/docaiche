@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { AppState, ProviderConfiguration, ModelSelection, UserPreferences, Notification } from './types';
+import { ProviderConfiguration, ModelSelection, UserPreferences, Notification } from './types';
 
 // Store slices
 import { createProviderSlice, ProviderSlice } from './slices/provider-slice';

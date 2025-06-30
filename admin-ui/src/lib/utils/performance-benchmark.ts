@@ -427,10 +427,12 @@ function generateBenchmarkSummary(results: any): string {
 /**
  * Save benchmark results to file
  */
-export function saveBenchmarkResults(results: any, filename?: string) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function saveBenchmarkResults(results: any, _filename?: string) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const defaultFilename = `performance-benchmark-${timestamp}.json`;
-  // Note: filename parameter available but not used in this implementation
+  // Note: _filename parameter available but not used in this implementation
   
   const data = {
     timestamp: new Date().toISOString(),

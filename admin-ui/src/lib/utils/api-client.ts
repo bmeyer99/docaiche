@@ -19,6 +19,7 @@ import {
   type ProblemDetail,
   type ActivityItem
 } from '../config/api';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { type ProviderConfiguration } from '../config/providers';
 
 // Request options interface
@@ -422,6 +423,20 @@ export class DocaicheApiClient {
       }
       throw error;
     }
+  }
+
+  async getProviderConfiguration(providerId: string): Promise<{
+    provider_id: string;
+    config: Record<string, any>;
+    enabled: boolean;
+    last_updated?: string;
+  }> {
+    return this.get<{
+      provider_id: string;
+      config: Record<string, any>;
+      enabled: boolean;
+      last_updated?: string;
+    }>(`/providers/${providerId}/config`);
   }
 
   async updateProviderConfiguration(providerId: string, config: { config: Record<string, any> }): Promise<{

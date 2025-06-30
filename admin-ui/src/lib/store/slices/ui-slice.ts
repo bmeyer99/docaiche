@@ -4,7 +4,7 @@
  */
 
 import { StateCreator } from 'zustand';
-import { UIState, Notification, NotificationAction } from '../types';
+import { UIState, Notification } from '../types';
 
 export interface UISliceState {
   ui: UIState;
@@ -186,7 +186,7 @@ export const createUISlice: StateCreator<
 
   removeNotification: (id) =>
     set((state) => {
-      state.ui.notifications = state.ui.notifications.filter((n: Notification) => n.id !== id);
+      state.ui.notifications = state.ui.notifications.filter((notification: Notification) => notification.id !== id);
     }),
 
   markNotificationRead: (id) =>

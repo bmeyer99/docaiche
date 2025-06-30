@@ -31,7 +31,8 @@ export function useDebouncedApi<T>(
   options: DebouncedApiOptions = {}
 ): DebouncedApiResult<T> {
   const {
-    debounceMs = 1000,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    debounceMs: _debounceMs = 1000,
     enabledCondition = true,
     onSuccess,
     onError,
@@ -55,8 +56,9 @@ export function useDebouncedApi<T>(
   useEffect(() => {
     return () => {
       mountedRef.current = false;
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+      const currentTimeout = debounceTimeoutRef.current;
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
       }
     };
   }, []);

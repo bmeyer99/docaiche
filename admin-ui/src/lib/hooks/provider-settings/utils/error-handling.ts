@@ -344,6 +344,7 @@ export class NetworkRecoveryStrategy implements RecoveryStrategy {
            !!(error.message && error.message.includes('fetch'));
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async recover(_error: Error, _context: any): Promise<any> {
     // Wait a bit and try to check network connectivity
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -364,12 +365,13 @@ export class ValidationRecoveryStrategy implements RecoveryStrategy {
     return error instanceof ValidationError;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async recover(_error: ValidationError, _context: any): Promise<any> {
     return {
       type: 'user-input-required',
-      message: `Please fix the following validation errors: ${error.validationErrors.join(', ')}`,
-      fieldPath: error.fieldPath,
-      validationErrors: error.validationErrors,
+      message: `Please fix the following validation errors: ${_error.validationErrors.join(', ')}`,
+      fieldPath: _error.fieldPath,
+      validationErrors: _error.validationErrors,
       actions: ['fix-validation']
     };
   }
@@ -382,13 +384,14 @@ export class ConflictRecoveryStrategy implements RecoveryStrategy {
     return error instanceof ConflictError;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async recover(_error: ConflictError, _context: any): Promise<any> {
     return {
       type: 'merge-required',
       message: 'Your changes conflict with recent server changes. Please review and merge.',
-      conflictedFields: error.conflictedFields,
-      serverVersion: error.serverVersion,
-      clientVersion: error.clientVersion,
+      conflictedFields: _error.conflictedFields,
+      serverVersion: _error.serverVersion,
+      clientVersion: _error.clientVersion,
       actions: ['merge', 'overwrite', 'reload']
     };
   }

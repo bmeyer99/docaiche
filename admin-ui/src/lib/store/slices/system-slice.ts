@@ -198,15 +198,15 @@ export const createSystemSlice: StateCreator<
   getHealthyServices: () => {
     const state = get();
     return Object.entries(state.system.health.services)
-      .filter(([_, status]) => status.status === 'healthy')
-      .map(([service, _]) => service);
+      .filter(([, status]) => status.status === 'healthy')
+      .map(([service]) => service);
   },
 
   getUnhealthyServices: () => {
     const state = get();
     return Object.entries(state.system.health.services)
-      .filter(([_, status]) => status.status === 'unhealthy')
-      .map(([service, _]) => service);
+      .filter(([, status]) => status.status === 'unhealthy')
+      .map(([service]) => service);
   },
 
   getOverallHealthStatus: () => {

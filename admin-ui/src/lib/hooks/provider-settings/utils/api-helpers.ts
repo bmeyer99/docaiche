@@ -60,11 +60,21 @@ export async function loadProviderConfigurations(
   const providersMap: Record<string, ProviderConfiguration> = {};
   
   // Process provider configurations
-  providerConfigs.forEach((config) => {
+  for (const config of providerConfigs) {
     const providerDef = AI_PROVIDERS[config.id];
     if (providerDef) {
+      // Get detailed configuration for each provider
+      let detailedConfig = {};
+      try {
+        const providerConfigResponse = await apiClient.getProviderConfiguration(config.id);
+        detailedConfig = providerConfigResponse.config || {};
+      } catch (error) {
+        console.warn(`Failed to load detailed config for provider ${config.id}:`, error);
+        detailedConfig = config.config || {};
+      }
+      
       // Sanitize the provider config
-      const sanitizedConfig = sanitizeProviderConfig(config.id, config.config || {});
+      const sanitizedConfig = sanitizeProviderConfig(config.id, detailedConfig);
       
       providersMap[config.id] = {
         id: config.id,
@@ -83,7 +93,7 @@ export async function loadProviderConfigurations(
         providersMap[config.id].status = 'connected';
       }
     }
-  });
+  }
   
   return providersMap;
 }
