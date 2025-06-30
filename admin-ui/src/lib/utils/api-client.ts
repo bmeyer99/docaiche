@@ -425,20 +425,6 @@ export class DocaicheApiClient {
     }
   }
 
-  async getProviderConfiguration(providerId: string): Promise<{
-    provider_id: string;
-    config: Record<string, any>;
-    enabled: boolean;
-    last_updated?: string;
-  }> {
-    return this.get<{
-      provider_id: string;
-      config: Record<string, any>;
-      enabled: boolean;
-      last_updated?: string;
-    }>(`/providers/${providerId}/config`);
-  }
-
   async updateProviderConfiguration(providerId: string, config: { config: Record<string, any> }): Promise<{
     id: string;
     enabled?: boolean;

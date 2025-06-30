@@ -164,105 +164,115 @@ async def list_providers(
                 trace_id=trace_id
             )
         
-        # Get all configured providers - comprehensive list
-        providers = [
-            ProviderResponse(
-                id="ollama",
-                name="Ollama",
-                type="text_generation",
+        # Define static provider definitions  
+        provider_definitions = {
+            "ollama": {
+                "name": "Ollama",
+                "type": "text_generation",
+                "category": "local",
+                "description": "Local LLM inference server with support for multiple models",
+                "requires_api_key": False,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "openai": {
+                "name": "OpenAI", 
+                "type": "text_generation",
+                "category": "cloud",
+                "description": "OpenAI GPT models and embeddings",
+                "requires_api_key": True,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "openrouter": {
+                "name": "OpenRouter",
+                "type": "text_generation", 
+                "category": "cloud",
+                "description": "Access to multiple LLM providers through one API",
+                "requires_api_key": True,
+                "supports_embedding": False,
+                "supports_chat": True,
+            },
+            "anthropic": {
+                "name": "Anthropic Claude",
+                "type": "text_generation",
+                "category": "cloud", 
+                "description": "Anthropic Claude models for advanced reasoning",
+                "requires_api_key": True,
+                "supports_embedding": False,
+                "supports_chat": True,
+            },
+            "groq": {
+                "name": "Groq",
+                "type": "text_generation",
+                "category": "cloud",
+                "description": "Ultra-fast LLM inference with Groq chips", 
+                "requires_api_key": True,
+                "supports_embedding": False,
+                "supports_chat": True,
+            },
+            "lmstudio": {
+                "name": "LM Studio",
+                "type": "text_generation",
+                "category": "local",
+                "description": "Local LLM inference with LM Studio",
+                "requires_api_key": False,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "mistral": {
+                "name": "Mistral AI",
+                "type": "text_generation",
+                "category": "cloud",
+                "description": "Mistral AI models for efficient inference",
+                "requires_api_key": True,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "litellm": {
+                "name": "LiteLLM",
+                "type": "text_generation",
+                "category": "gateway",
+                "description": "Universal proxy for 100+ LLM APIs with unified interface",
+                "requires_api_key": False,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+        }
+        
+        providers = []
+        
+        # Build provider list with actual configuration data
+        for provider_id, definition in provider_definitions.items():
+            # Get saved configuration for this provider
+            config_key = f"ai.providers.{provider_id}"
+            try:
+                saved_config = config_manager.get_setting(config_key) or {}
+            except Exception:
+                saved_config = {}
+            
+            # Determine if provider is configured (has any config data)
+            is_configured = bool(saved_config and any(
+                key != "updated_at" and key != "enabled" 
+                for key in saved_config.keys()
+            ))
+            
+            providers.append(ProviderResponse(
+                id=provider_id,
+                name=definition["name"],
+                type=definition["type"],
                 status="available",
-                configured=False,
-                category="local",
-                description="Local LLM inference server with support for multiple models",
-                requires_api_key=False,
-                supports_embedding=True,
-                supports_chat=True,
-            ),
-            ProviderResponse(
-                id="openai",
-                name="OpenAI",
-                type="text_generation",
-                status="available",
-                configured=False,
-                category="cloud",
-                description="OpenAI GPT models and embeddings",
-                requires_api_key=True,
-                supports_embedding=True,
-                supports_chat=True,
-            ),
-            ProviderResponse(
-                id="openrouter",
-                name="OpenRouter",
-                type="text_generation",
-                status="available",
-                configured=False,
-                category="cloud",
-                description="Access to multiple LLM providers through one API",
-                requires_api_key=True,
-                supports_embedding=False,
-                supports_chat=True,
-            ),
-            ProviderResponse(
-                id="anthropic",
-                name="Anthropic Claude",
-                type="text_generation",
-                status="available",
-                configured=False,
-                category="cloud",
-                description="Anthropic Claude models for advanced reasoning",
-                requires_api_key=True,
-                supports_embedding=False,
-                supports_chat=True,
-            ),
-            ProviderResponse(
-                id="groq",
-                name="Groq",
-                type="text_generation",
-                status="available",
-                configured=False,
-                category="cloud",
-                description="Ultra-fast LLM inference with Groq chips",
-                requires_api_key=True,
-                supports_embedding=False,
-                supports_chat=True,
-            ),
-            ProviderResponse(
-                id="lmstudio",
-                name="LM Studio",
-                type="text_generation",
-                status="available",
-                configured=False,
-                category="local",
-                description="Local LLM inference with LM Studio",
-                requires_api_key=False,
-                supports_embedding=True,
-                supports_chat=True,
-            ),
-            ProviderResponse(
-                id="mistral",
-                name="Mistral AI",
-                type="text_generation",
-                status="available",
-                configured=False,
-                category="cloud",
-                description="Mistral AI models for efficient inference",
-                requires_api_key=True,
-                supports_embedding=True,
-                supports_chat=True,
-            ),
-            ProviderResponse(
-                id="litellm",
-                name="LiteLLM",
-                type="text_generation",
-                status="available",
-                configured=False,
-                category="gateway",
-                description="Universal proxy for 100+ LLM APIs with unified interface",
-                requires_api_key=False,
-                supports_embedding=True,
-                supports_chat=True,
-            ),
-        ]
+                configured=is_configured,
+                category=definition["category"],
+                description=definition["description"],
+                requires_api_key=definition["requires_api_key"],
+                supports_embedding=definition["supports_embedding"],
+                supports_chat=definition["supports_chat"],
+                # Include the actual config data for the frontend state management
+                config=saved_config,
+                enabled=saved_config.get("enabled", False),
+                last_tested=saved_config.get("updated_at"),
+            ))
 
         return providers
 
@@ -577,78 +587,6 @@ async def test_provider_connection(
             success=False, message=f"Test failed: {str(e)}", latency=0
         )
 
-
-@router.get("/providers/{provider_id}/config", tags=["providers"])
-@limiter.limit("30/minute")
-async def get_provider_config(
-    request: Request,
-    provider_id: str,
-    config_manager: ConfigurationManager = Depends(get_configuration_manager),
-):
-    """
-    GET /api/v1/providers/{provider_id}/config - Get individual provider configuration
-    """
-    start_time = time.time()
-    client_ip = request.client.host if request.client else "unknown"
-    trace_id = get_trace_id(request)
-    
-    try:
-        # Log access to provider configuration (sensitive operation)
-        if _security_logger:
-            _security_logger.log_sensitive_operation(
-                operation="provider_config_access",
-                resource=f"provider_{provider_id}_config",
-                client_ip=client_ip,
-                trace_id=trace_id
-            )
-        
-        # Get provider configuration from database
-        config_key = f"ai.providers.{provider_id}"
-        try:
-            config = config_manager.get_setting(config_key) or {}
-        except Exception:
-            config = {}
-        
-        duration_ms = (time.time() - start_time) * 1000
-        
-        # Log successful config retrieval
-        if _service_logger:
-            _service_logger.log_service_call(
-                service="config_manager",
-                endpoint=f"get_provider_{provider_id}",
-                method="GET",
-                duration_ms=duration_ms,
-                status_code=200
-            )
-        
-        logger.info(f"Retrieved configuration for provider {provider_id}")
-        
-        return {
-            "provider_id": provider_id,
-            "config": config,
-            "enabled": config.get("enabled", False),
-            "last_updated": config.get("updated_at")
-        }
-        
-    except Exception as e:
-        duration_ms = (time.time() - start_time) * 1000
-        
-        # Log configuration retrieval failure
-        if _security_logger:
-            _security_logger.log_admin_action(
-                action="provider_config_access_failed",
-                target=f"provider_{provider_id}",
-                impact_level="low",
-                client_ip=client_ip,
-                trace_id=trace_id,
-                error_message=str(e),
-                duration_ms=duration_ms
-            )
-        
-        logger.error(f"Failed to get provider config for {provider_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve provider configuration"
-        )
 
 
 @router.post("/providers/{provider_id}/config", tags=["providers"])

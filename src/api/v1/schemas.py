@@ -291,6 +291,15 @@ class ProviderResponse(BaseModel):
     supports_chat: Optional[bool] = Field(
         None, description="Whether provider supports chat"
     )
+    config: Optional[Dict[str, Any]] = Field(
+        None, description="Provider configuration data"
+    )
+    enabled: Optional[bool] = Field(
+        None, description="Whether provider is enabled"
+    )
+    last_tested: Optional[str] = Field(
+        None, description="Last time provider was tested"
+    )
 
 
 class ProviderConfigRequest(BaseModel):
