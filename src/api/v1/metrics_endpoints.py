@@ -103,7 +103,7 @@ async def query_metrics(
     query: str = Query(..., description="PromQL query"),
     start: Optional[datetime] = Query(default_factory=lambda: datetime.utcnow() - timedelta(hours=1)),
     end: Optional[datetime] = Query(default_factory=datetime.utcnow),
-    step: Optional[str] = Query("15s", regex="^[0-9]+[smhd]$"),
+    step: Optional[str] = Query("15s", pattern="^[0-9]+[smhd]$"),
     current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """

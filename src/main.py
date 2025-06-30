@@ -17,7 +17,6 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from src.api.v1.api import api_router, setup_exception_handlers
-from src.core.middleware import LoggingMiddleware
 from src.core.middleware.correlation_middleware import CorrelationIDMiddleware, setup_correlation_logging
 from src.logging_config import setup_structured_logging, MetricsLogger
 
@@ -168,11 +167,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Correlation ID middleware (must be before logging middleware)
+    # Correlation ID middleware
     app.add_middleware(CorrelationIDMiddleware)
-    
-    # Custom logging middleware
-    app.add_middleware(LoggingMiddleware)
     
     # Setup correlation logging
     setup_correlation_logging()

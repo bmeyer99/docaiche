@@ -48,7 +48,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   delay: number,
   deps: React.DependencyList = []
 ): T & { cancel: () => void } {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const debouncedCallback = useCallback(
     (...args: Parameters<T>) => {
@@ -120,7 +120,7 @@ export function useStableMemo<T>(
   deps: React.DependencyList,
   equalityFn?: (prev: T, next: T) => boolean
 ): T {
-  const ref = useRef<{ deps: React.DependencyList; value: T }>();
+  const ref = useRef<{ deps: React.DependencyList; value: T } | undefined>(undefined);
   
   if (!ref.current || !deepEqual(ref.current.deps, deps)) {
     const newValue = factory();
@@ -214,7 +214,7 @@ export function useDeepMemo<T>(
   factory: () => T,
   deps: React.DependencyList
 ): T {
-  const ref = useRef<{ deps: React.DependencyList; value: T }>();
+  const ref = useRef<{ deps: React.DependencyList; value: T } | undefined>(undefined);
   
   if (!ref.current || !deepEqual(ref.current.deps, deps)) {
     ref.current = { deps, value: factory() };
@@ -345,7 +345,7 @@ export function useOptimizedSelection<T>(
  */
 export function usePerformanceMonitor(componentName: string) {
   const renderCount = useRef(0);
-  const lastRenderTime = useRef<number>();
+  const lastRenderTime = useRef<number | undefined>(undefined);
   
   useEffect(() => {
     renderCount.current++;
@@ -541,6 +541,181 @@ export function createProfilerWrapper(id: string, onRender?: (id: string, phase:
 }
 
 /**
+ * Enhanced batch state updates to reduce re-renders
+ */
+export function useBatchedUpdates<T extends Record<string, any>>(
+  initialState: T
+): [T, (updates: Partial<T> | ((prev: T) => Partial<T>)) => void] {
+  const [state, setState] = useState<T>(initialState);
+  const batchedUpdateRef = useRef<{
+    pendingUpdates: Partial<T>;
+    timeoutId: NodeJS.Timeout | null;
+  }>({ pendingUpdates: {}, timeoutId: null });
+
+  const batchedSetState = useCallback((updates: Partial<T> | ((prev: T) => Partial<T>)) => {
+    const currentUpdates = typeof updates === 'function' 
+      ? updates({ ...state, ...batchedUpdateRef.current.pendingUpdates })
+      : updates;
+
+    // Merge with pending updates
+    batchedUpdateRef.current.pendingUpdates = {
+      ...batchedUpdateRef.current.pendingUpdates,
+      ...currentUpdates
+    };
+
+    // Clear existing timeout
+    if (batchedUpdateRef.current.timeoutId) {
+      clearTimeout(batchedUpdateRef.current.timeoutId);
+    }
+
+    // Set new timeout to batch updates
+    batchedUpdateRef.current.timeoutId = setTimeout(() => {
+      setState(prevState => ({
+        ...prevState,
+        ...batchedUpdateRef.current.pendingUpdates
+      }));
+      batchedUpdateRef.current.pendingUpdates = {};
+      batchedUpdateRef.current.timeoutId = null;
+    }, 0); // Batch in next tick
+  }, [state]);
+
+  useEffect(() => {
+    return () => {
+      if (batchedUpdateRef.current.timeoutId) {
+        clearTimeout(batchedUpdateRef.current.timeoutId);
+      }
+    };
+  }, []);
+
+  return [state, batchedSetState];
+}
+
+/**
+ * Hook for smart component updates that skip unnecessary renders
+ */
+export function useSmartUpdate<T>(
+  value: T,
+  equalityFn: (prev: T, next: T) => boolean = shallowEqual,
+  skipInitial: boolean = true
+): [T, boolean] {
+  const [currentValue, setCurrentValue] = useState<T>(value);
+  const [hasChanged, setHasChanged] = useState(!skipInitial);
+  
+  useEffect(() => {
+    if (!equalityFn(currentValue, value)) {
+      setCurrentValue(value);
+      setHasChanged(true);
+    } else {
+      setHasChanged(false);
+    }
+  }, [value, currentValue, equalityFn]);
+
+  return [currentValue, hasChanged];
+}
+
+/**
+ * Hook for efficiently managing large form state with minimal re-renders
+ */
+export function useOptimizedFormState<T extends Record<string, any>>(
+  initialState: T,
+  validator?: (state: T) => Record<string, string>
+) {
+  const [state, setState] = useBatchedUpdates(initialState);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  
+  const validateField = useCallback((fieldName: string, value: any) => {
+    if (!validator) return null;
+    
+    const testState = { ...state, [fieldName]: value };
+    const validationErrors = validator(testState);
+    return validationErrors[fieldName] || null;
+  }, [validator, state]);
+
+  const updateField = useCallback((fieldName: string, value: any) => {
+    setState(prev => ({ ...prev, [fieldName]: value }));
+    
+    // Mark field as touched
+    setTouchedFields(prev => new Set(Array.from(prev).concat(fieldName)));
+    
+    // Validate field if validator exists
+    if (validator) {
+      const fieldError = validateField(fieldName, value);
+      if (fieldError) {
+        setErrors(prev => ({
+          ...prev,
+          [fieldName]: fieldError
+        }));
+      } else {
+        setErrors(prev => {
+          const { [fieldName]: _, ...rest } = prev;
+          return rest;
+        });
+      }
+    }
+  }, [setState, validator, validateField]);
+
+  const updateFields = useCallback((updates: Partial<T>) => {
+    setState(updates);
+    
+    // Mark all updated fields as touched
+    const updatedFieldNames = Object.keys(updates);
+    setTouchedFields(prev => new Set(Array.from(prev).concat(updatedFieldNames)));
+    
+    // Validate all updated fields
+    if (validator) {
+      const newErrors: Record<string, string> = {};
+      updatedFieldNames.forEach(fieldName => {
+        const fieldError = validateField(fieldName, updates[fieldName]);
+        if (fieldError) {
+          newErrors[fieldName] = fieldError;
+        }
+      });
+      setErrors(prev => ({ ...prev, ...newErrors }));
+    }
+  }, [setState, validator, validateField]);
+
+  const validateAllFields = useCallback(() => {
+    if (!validator) return {};
+    
+    const allErrors = validator(state);
+    setErrors(allErrors);
+    return allErrors;
+  }, [validator, state]);
+
+  const resetForm = useCallback(() => {
+    setState(initialState);
+    setErrors({});
+    setTouchedFields(new Set());
+  }, [setState, initialState]);
+
+  const isFieldTouched = useCallback((fieldName: string) => {
+    return touchedFields.has(fieldName);
+  }, [touchedFields]);
+
+  const hasErrors = useMemo(() => {
+    return Object.keys(errors).some(key => !!errors[key]);
+  }, [errors]);
+
+  const isDirty = useMemo(() => {
+    return !shallowEqual(state, initialState);
+  }, [state, initialState]);
+
+  return {
+    state,
+    errors,
+    touchedFields: touchedFields,
+    updateField,
+    updateFields,
+    validateAllFields,
+    resetForm,
+    isFieldTouched,
+    hasErrors,
+    isDirty
+  };
+}
+
+/**
  * Hook for collecting performance metrics
  */
 export function usePerformanceMetrics(componentName: string) {
@@ -577,3 +752,329 @@ export function usePerformanceMetrics(componentName: string) {
     metrics: metrics.current
   };
 }
+
+// ========================== ADVANCED PERFORMANCE MONITORING ==========================
+
+/**
+ * Performance monitoring store for tracking app-wide metrics
+ */
+class PerformanceMonitoringStore {
+  private metrics: Map<string, {
+    renderCount: number;
+    totalTime: number;
+    averageTime: number;
+    maxTime: number;
+    minTime: number;
+    lastRenderTime: number;
+    warnings: string[];
+  }> = new Map();
+
+  private bundleMetrics = {
+    initialLoadTime: 0,
+    chunkLoadTimes: new Map<string, number>(),
+    totalBundleSize: 0,
+    loadedChunks: new Set<string>()
+  };
+
+  recordRender(componentName: string, renderTime: number) {
+    const existing = this.metrics.get(componentName) || {
+      renderCount: 0,
+      totalTime: 0,
+      averageTime: 0,
+      maxTime: 0,
+      minTime: Infinity,
+      lastRenderTime: 0,
+      warnings: []
+    };
+
+    existing.renderCount++;
+    existing.totalTime += renderTime;
+    existing.averageTime = existing.totalTime / existing.renderCount;
+    existing.maxTime = Math.max(existing.maxTime, renderTime);
+    existing.minTime = Math.min(existing.minTime, renderTime);
+    existing.lastRenderTime = renderTime;
+
+    // Add performance warnings
+    if (renderTime > 16) {
+      existing.warnings.push(`Slow render: ${renderTime.toFixed(2)}ms at ${new Date().toISOString()}`);
+      // Keep only last 10 warnings
+      if (existing.warnings.length > 10) {
+        existing.warnings.shift();
+      }
+    }
+
+    this.metrics.set(componentName, existing);
+
+    // Log warnings in development
+    if (process.env.NODE_ENV === 'development' && renderTime > 16) {
+      console.warn(`[Performance Warning] ${componentName} took ${renderTime.toFixed(2)}ms to render`);
+    }
+  }
+
+  recordBundleLoad(chunkName: string, loadTime: number, size?: number) {
+    this.bundleMetrics.chunkLoadTimes.set(chunkName, loadTime);
+    this.bundleMetrics.loadedChunks.add(chunkName);
+    
+    if (size) {
+      this.bundleMetrics.totalBundleSize += size;
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Bundle] ${chunkName} loaded in ${loadTime.toFixed(2)}ms${size ? ` (${(size / 1024).toFixed(2)}KB)` : ''}`);
+    }
+  }
+
+  getMetrics() {
+    return {
+      components: Object.fromEntries(this.metrics),
+      bundle: this.bundleMetrics
+    };
+  }
+
+  getSlowComponents(threshold: number = 16) {
+    return Array.from(this.metrics.entries())
+      .filter(([, metrics]) => metrics.averageTime > threshold)
+      .sort(([, a], [, b]) => b.averageTime - a.averageTime);
+  }
+
+  getComponentReport(componentName: string) {
+    return this.metrics.get(componentName);
+  }
+
+  generatePerformanceReport() {
+    const report = {
+      timestamp: new Date().toISOString(),
+      summary: {
+        totalComponents: this.metrics.size,
+        slowComponents: this.getSlowComponents().length,
+        totalBundleSize: (this.bundleMetrics.totalBundleSize / 1024).toFixed(2) + 'KB',
+        loadedChunks: this.bundleMetrics.loadedChunks.size
+      },
+      slowComponents: this.getSlowComponents().map(([name, metrics]) => ({
+        name,
+        averageTime: metrics.averageTime.toFixed(2) + 'ms',
+        maxTime: metrics.maxTime.toFixed(2) + 'ms',
+        renderCount: metrics.renderCount,
+        warnings: metrics.warnings.length
+      })),
+      bundleMetrics: {
+        totalSize: (this.bundleMetrics.totalBundleSize / 1024).toFixed(2) + 'KB',
+        chunkCount: this.bundleMetrics.loadedChunks.size,
+        slowestChunks: Array.from(this.bundleMetrics.chunkLoadTimes.entries())
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([name, time]) => ({ name, time: time.toFixed(2) + 'ms' }))
+      }
+    };
+
+    return report;
+  }
+
+  clear() {
+    this.metrics.clear();
+    this.bundleMetrics.chunkLoadTimes.clear();
+    this.bundleMetrics.loadedChunks.clear();
+    this.bundleMetrics.totalBundleSize = 0;
+  }
+}
+
+// Global performance monitoring instance
+const performanceStore = new PerformanceMonitoringStore();
+
+/**
+ * Hook for advanced performance monitoring with detailed reporting
+ */
+export function useAdvancedPerformanceMonitor(componentName: string, options: {
+  enableReporting?: boolean;
+  threshold?: number;
+  enableMemoryTracking?: boolean;
+} = {}) {
+  const { enableReporting = true, threshold = 16, enableMemoryTracking = false } = options;
+  const renderStartTime = useRef<number | undefined>(undefined);
+  const memoryUsageRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (enableMemoryTracking && 'memory' in performance) {
+      memoryUsageRef.current = (performance as any).memory.usedJSHeapSize;
+    }
+  });
+
+  useEffect(() => {
+    renderStartTime.current = performance.now();
+    
+    return () => {
+      if (renderStartTime.current) {
+        const renderTime = performance.now() - renderStartTime.current;
+        
+        if (enableReporting) {
+          performanceStore.recordRender(componentName, renderTime);
+        }
+
+        if (enableMemoryTracking && 'memory' in performance && memoryUsageRef.current) {
+          const currentMemory = (performance as any).memory.usedJSHeapSize;
+          const memoryDiff = currentMemory - memoryUsageRef.current;
+          
+          if (Math.abs(memoryDiff) > 1024 * 1024) { // 1MB threshold
+            console.log(`[Memory] ${componentName} changed memory usage by ${(memoryDiff / 1024 / 1024).toFixed(2)}MB`);
+          }
+        }
+      }
+    };
+  });
+
+  const getComponentMetrics = useCallback(() => {
+    return performanceStore.getComponentReport(componentName);
+  }, [componentName]);
+
+  const generateReport = useCallback(() => {
+    return performanceStore.generatePerformanceReport();
+  }, []);
+
+  return {
+    getComponentMetrics,
+    generateReport,
+    clearMetrics: () => performanceStore.clear()
+  };
+}
+
+/**
+ * Hook for tracking bundle loading performance
+ */
+export function useBundlePerformanceTracker() {
+  const trackChunkLoad = useCallback((chunkName: string, loadPromise: Promise<any>) => {
+    const startTime = performance.now();
+    
+    return loadPromise.then(
+      (result) => {
+        const loadTime = performance.now() - startTime;
+        performanceStore.recordBundleLoad(chunkName, loadTime);
+        return result;
+      },
+      (error) => {
+        const loadTime = performance.now() - startTime;
+        performanceStore.recordBundleLoad(chunkName, loadTime);
+        throw error;
+      }
+    );
+  }, []);
+
+  const trackInitialLoad = useCallback(() => {
+    const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+    performanceStore.recordBundleLoad('initial', loadTime);
+  }, []);
+
+  return {
+    trackChunkLoad,
+    trackInitialLoad
+  };
+}
+
+/**
+ * Hook for virtual scrolling optimization
+ */
+export function useVirtualScrolling<T>({
+  items,
+  itemHeight,
+  containerHeight,
+  overscan = 5
+}: {
+  items: T[];
+  itemHeight: number;
+  containerHeight: number;
+  overscan?: number;
+}) {
+  const [scrollTop, setScrollTop] = useState(0);
+
+  const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
+  const endIndex = Math.min(
+    items.length - 1,
+    Math.ceil((scrollTop + containerHeight) / itemHeight) + overscan
+  );
+
+  const visibleItems = useMemo(() => {
+    return items.slice(startIndex, endIndex + 1).map((item, index) => ({
+      item,
+      index: startIndex + index
+    }));
+  }, [items, startIndex, endIndex]);
+
+  const totalHeight = items.length * itemHeight;
+  const offsetY = startIndex * itemHeight;
+
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(event.currentTarget.scrollTop);
+  }, []);
+
+  return {
+    visibleItems,
+    totalHeight,
+    offsetY,
+    handleScroll
+  };
+}
+
+/**
+ * Hook for optimizing expensive computations with Web Workers
+ */
+export function useWebWorkerComputation<T, R>(
+  computation: (data: T) => R,
+  dependencies: React.DependencyList
+): [(data: T) => Promise<R>, boolean] {
+  const [isLoading, setIsLoading] = useState(false);
+  const workerRef = useRef<Worker | undefined>(undefined);
+
+  useEffect(() => {
+    // Create worker from function
+    const workerCode = `
+      self.onmessage = function(e) {
+        const { data } = e.data;
+        try {
+          const result = (${computation.toString()})(data);
+          self.postMessage({ result });
+        } catch (error) {
+          self.postMessage({ error: error.message });
+        }
+      };
+    `;
+
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const blobUrl = URL.createObjectURL(blob);
+    workerRef.current = new Worker(blobUrl);
+
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, dependencies);
+
+  const runComputation = useCallback(async (data: T): Promise<R> => {
+    if (!workerRef.current) {
+      throw new Error('Worker not initialized');
+    }
+
+    setIsLoading(true);
+
+    return new Promise((resolve, reject) => {
+      const handleMessage = (e: MessageEvent) => {
+        workerRef.current?.removeEventListener('message', handleMessage);
+        setIsLoading(false);
+
+        if (e.data.error) {
+          reject(new Error(e.data.error));
+        } else {
+          resolve(e.data.result);
+        }
+      };
+
+      workerRef.current?.addEventListener('message', handleMessage);
+      workerRef.current?.postMessage({ data });
+    });
+  }, []);
+
+  return [runComputation, isLoading];
+}
+
+// Export performance monitoring store for advanced usage
+export { performanceStore };

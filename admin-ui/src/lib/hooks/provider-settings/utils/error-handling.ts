@@ -340,8 +340,8 @@ export class NetworkRecoveryStrategy implements RecoveryStrategy {
 
   canRecover(error: Error): boolean {
     return error instanceof NetworkError || 
-           (error.message && error.message.includes('network')) ||
-           (error.message && error.message.includes('fetch'));
+           !!(error.message && error.message.includes('network')) ||
+           !!(error.message && error.message.includes('fetch'));
   }
 
   async recover(error: Error, context: any): Promise<any> {

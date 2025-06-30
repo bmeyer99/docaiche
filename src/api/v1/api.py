@@ -53,7 +53,7 @@ api_router.include_router(containers_router)
 api_router.include_router(metrics_router)
 api_router.include_router(workspace_router)
 api_router.include_router(browser_logs_router)
-api_router.include_router(ai_logs_router, prefix="/ai_logs")
+api_router.include_router(ai_logs_router)
 
 # Add rate limiter state to router
 api_router.state = type("State", (), {"limiter": limiter})()

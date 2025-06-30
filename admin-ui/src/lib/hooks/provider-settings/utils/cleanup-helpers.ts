@@ -147,12 +147,12 @@ export class RequestDeduplicator<T> {
 /**
  * Save queue to prevent overlapping saves
  */
-export class SaveQueue<T> {
-  private queue: Array<() => Promise<T>> = [];
+export class SaveQueue {
+  private queue: Array<() => Promise<any>> = [];
   private isProcessing = false;
-  private currentRequest: CancellablePromise<T> | null = null;
+  private currentRequest: CancellablePromise<any> | null = null;
 
-  async enqueue(saveFn: () => Promise<T>): Promise<T> {
+  async enqueue<T>(saveFn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.push(async () => {
         try {

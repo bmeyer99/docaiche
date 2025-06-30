@@ -5,7 +5,7 @@
 import { apiClient } from '@/lib/utils/api-client';
 import { ProviderConfiguration } from '@/lib/config/providers';
 import { AI_PROVIDERS } from '@/lib/config/providers';
-import type { 
+import { 
   ProviderSettings, 
   ProviderConfigurationResponse,
   ModelSelectionResponse,
@@ -56,7 +56,7 @@ export async function loadProviderConfigurations(
   testedProviders: Record<string, TestedProvider>,
   signal?: AbortSignal
 ): Promise<Record<string, ProviderConfiguration>> {
-  const rawResponse = await apiClient.getProviderConfigurations({ signal });
+  const rawResponse = await apiClient.getProviderConfigurations();
   const providerConfigs = validateProviderResponse(rawResponse);
   const providersMap: Record<string, ProviderConfiguration> = {};
   
@@ -90,7 +90,7 @@ export async function loadProviderConfigurations(
 }
 
 export async function loadModelSelection(signal?: AbortSignal): Promise<ProviderSettings['modelSelection']> {
-  const rawResponse = await apiClient.getModelSelection({ signal });
+  const rawResponse = await apiClient.getModelSelection();
   const validated = validateModelSelectionResponse(rawResponse);
   
   // Merge with defaults to ensure all required fields are present
@@ -111,7 +111,7 @@ export async function saveProviderConfiguration(
   
   await apiClient.updateProviderConfiguration(providerId, { 
     config: sanitizedConfig 
-  }, { signal });
+  });
 }
 
 export async function saveModelSelection(
@@ -132,7 +132,7 @@ export async function saveModelSelection(
       sharedProvider: modelSelection.sharedProvider
     };
     
-    await apiClient.updateModelSelection(validated, { signal });
+    await apiClient.updateModelSelection(validated);
   } catch (error) {
     throw new Error('Invalid model selection: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }

@@ -51,7 +51,7 @@ export default function AnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     try {
       const data = await apiClient.getAnalytics(timeRange);
-      setAnalytics(data);
+      setAnalytics(data as unknown as AnalyticsData);
     } catch (error) {
       // Error silently handled, could show toast notification here
     } finally {

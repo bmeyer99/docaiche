@@ -38,12 +38,12 @@ services:
         alembic upgrade head &&
         python src/database/init_db.py --db-path /data/docaiche.db &&
         (python /app/init-anythingllm-workspace.py > /var/log/docaiche/workspace-init.log 2>&1 &) &&
-        uvicorn src.main:app --host 0.0.0.0 --port 8000
+        uvicorn src.main:app --host 0.0.0.0 --port 4000
       "
     networks:
       - docaiche
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/v1/health"]
       interval: 5s
       timeout: 4s
       retries: 10

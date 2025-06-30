@@ -208,7 +208,7 @@ async def correlate_logs(
 async def analyze_logs(
     pattern_detection: bool = Query(True, description="Enable pattern detection"),
     anomaly_detection: bool = Query(True, description="Enable anomaly detection"),
-    time_range: str = Query("1h", regex="^[0-9]+[smhd]$"),
+    time_range: str = Query("1h", pattern="^[0-9]+[smhd]$"),
     services: Optional[List[str]] = Query(None)
 ) -> Dict[str, Any]:
     """
@@ -374,7 +374,7 @@ async def get_conversation_logs(
            tags=["AI Logs Tracking"])
 async def get_workspace_ai_summary(
     workspace_id: str,
-    time_range: str = Query("24h", regex="^[0-9]+[smhd]$")
+    time_range: str = Query("24h", pattern="^[0-9]+[smhd]$")
 ) -> WorkspaceSummary:
     """
     Get AI usage summary for a workspace.
@@ -569,8 +569,8 @@ async def get_pattern_library() -> PatternLibrary:
 
 @router.get("/metrics")
 async def get_ai_metrics(
-    time_range: str = Query("1h", regex="^[0-9]+[smhd]$"),
-    aggregation_interval: str = Query("5m", regex="^[0-9]+[smh]$")
+    time_range: str = Query("1h", pattern="^[0-9]+[smhd]$"),
+    aggregation_interval: str = Query("5m", pattern="^[0-9]+[smh]$")
 ) -> Dict[str, Any]:
     """
     Get aggregated AI operation metrics.

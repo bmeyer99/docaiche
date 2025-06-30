@@ -13,7 +13,7 @@ import React, {
   useMemo 
 } from 'react';
 import { useProviderTestCache } from '../use-provider-test-cache';
-import { ProviderConfiguration } from '@/lib/config/providers';
+import { ProviderConfiguration, ProviderDefinition } from '@/lib/config/providers';
 import { useProviderLoader } from './hooks/use-provider-loader';
 import { useProviderSaver } from './hooks/use-provider-saver';
 import { 
@@ -99,7 +99,7 @@ export function OptimizedProviderSettingsProvider({
   debounceDelay = 300
 }: OptimizedProviderSettingsProviderProps) {
   // Performance monitoring
-  usePerformanceMonitor('OptimizedProviderSettingsProvider', []);
+  usePerformanceMonitor('OptimizedProviderSettingsProvider');
   
   const { testedProviders, setProviderTested } = useProviderTestCache();
   const { isLoading, loadError, loadSettings: loadSettingsCore } = useProviderLoader();
@@ -550,9 +550,9 @@ export function useEnabledProviders(): ProviderConfiguration[] {
 /**
  * Hook for providers by category
  */
-export function useProvidersByCategory(category: string): ProviderConfiguration[] {
-  return useProviderSelector(
-    (providers) => Object.values(providers).filter(p => p.category === category),
-    shallowEqual
-  );
+export function useProvidersByCategory(category: string): ProviderDefinition[] {
+  return useStableMemo(() => {
+    const { AI_PROVIDERS } = require('@/lib/config/providers');
+    return Object.values(AI_PROVIDERS).filter((p: any) => p.category === category) as ProviderDefinition[];
+  }, [category]);
 }

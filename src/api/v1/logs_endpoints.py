@@ -108,7 +108,7 @@ async def list_services(
 async def get_service_logs(
     request: Request,
     service_id: str,
-    level: Optional[str] = Query(None, regex="^(DEBUG|INFO|WARN|WARNING|ERROR|FATAL)$"),
+    level: Optional[str] = Query(None, pattern="^(DEBUG|INFO|WARN|WARNING|ERROR|FATAL)$"),
     start_time: Optional[datetime] = Query(default_factory=lambda: datetime.utcnow() - timedelta(hours=1)),
     end_time: Optional[datetime] = Query(default_factory=datetime.utcnow),
     search: Optional[str] = Query(None, max_length=100),
@@ -250,7 +250,7 @@ async def get_service_logs(
 async def websocket_logs(
     websocket: WebSocket,
     service_id: str,
-    level: Optional[str] = Query(None, regex="^(DEBUG|INFO|WARN|WARNING|ERROR|FATAL)$"),
+    level: Optional[str] = Query(None, pattern="^(DEBUG|INFO|WARN|WARNING|ERROR|FATAL)$"),
     search: Optional[str] = Query(None, max_length=100)
 ):
     """
@@ -445,7 +445,7 @@ async def websocket_logs(
 async def export_logs(
     request: Request,
     service_id: str,
-    format: str = Query("json", regex="^(json|csv|txt)$"),
+    format: str = Query("json", pattern="^(json|csv|txt)$"),
     start_time: Optional[datetime] = Query(default_factory=lambda: datetime.utcnow() - timedelta(hours=1)),
     end_time: Optional[datetime] = Query(default_factory=datetime.utcnow),
     level: Optional[str] = Query(None),
