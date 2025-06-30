@@ -66,6 +66,14 @@ from .resources.status_resource import StatusResource
 from .services.consent_manager import ConsentManager
 from .auth.security_audit import SecurityAuditor
 
+# Import security framework
+from .security import (
+    SecurityManager, SecurityPolicy, SecurityMiddleware
+)
+
+# Import configuration management
+from .config import ConfigurationManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -152,10 +160,17 @@ class MCPServer:
         self.sessions: Dict[str, ClientSession] = {}
         self._session_lock = asyncio.Lock()
         
+        # Security components
+        self.security_manager: Optional[SecurityManager] = None
+        self.security_middleware: Optional[SecurityMiddleware] = None
+        
         # Service components
         self.auth_manager: Optional[AuthManager] = None
         self.consent_manager: Optional[ConsentManager] = None
         self.security_auditor: Optional[SecurityAuditor] = None
+        
+        # Configuration management
+        self.config_manager: Optional[ConfigurationManager] = None
         
         # Request handlers
         self.request_handlers: Dict[str, Callable] = {
@@ -164,6 +179,9 @@ class MCPServer:
             "shutdown": self._handle_shutdown,
             "tools/list": self._handle_tools_list,
             "tools/call": self._handle_tools_call,
+            "security/status": self._handle_security_status,
+            "security/grant_consent": self._handle_grant_consent,
+            "security/revoke_consent": self._handle_revoke_consent,
             "resources/list": self._handle_resources_list,
             "resources/read": self._handle_resources_read,
             "logging/setLevel": self._handle_logging_set_level,
@@ -280,11 +298,32 @@ class MCPServer:
     
     async def _initialize_services(self) -> None:
         """Initialize core services."""
+        # Initialize configuration manager
+        self.config_manager = ConfigurationManager(
+            base_path=getattr(self.config, 'config_path', 'config'),
+            environment=getattr(self.config, 'environment', 'development'),
+            auto_reload=getattr(self.config, 'config_auto_reload', False)
+        )
+        await self.config_manager.initialize()
+        
+        # Register configuration change callback
+        async def on_config_change(key: str, old_value, new_value):
+            logger.info(f"Configuration changed: {key}")
+            # Handle specific configuration changes
+            if key == "log_level":
+                logging.getLogger().setLevel(new_value.value)
+        
+        self.config_manager.register_change_callback(on_config_change)
+        
         # Initialize security auditor
+        audit_log_file = self.config_manager.get('audit_log_file', self.config.audit_log_file)
+        audit_log_max_size = self.config_manager.get('audit_log_max_size', self.config.audit_log_max_size)
+        audit_log_retention_days = self.config_manager.get('audit_log_retention_days', self.config.audit_log_retention_days)
+        
         self.security_auditor = SecurityAuditor(
-            log_file=self.config.audit_log_file,
-            max_size=self.config.audit_log_max_size,
-            retention_days=self.config.audit_log_retention_days
+            log_file=audit_log_file,
+            max_size=audit_log_max_size,
+            retention_days=audit_log_retention_days
         )
         await self.security_auditor.initialize()
         
@@ -294,7 +333,24 @@ class MCPServer:
             require_explicit_consent=self.config.require_explicit_consent
         )
         
-        logger.info("Core services initialized")
+        # Initialize security manager with config from manager
+        security_policy = SecurityPolicy(
+            rate_limit_window=self.config_manager.get('rate_limit_window', self.config.rate_limit_window),
+            rate_limit_max_requests=self.config_manager.get('rate_limit_max_requests', self.config.rate_limit_max_requests),
+            max_auth_failures=self.config_manager.get('max_auth_failures', self.config.max_auth_failures),
+            require_explicit_consent=self.config_manager.get('require_explicit_consent', self.config.require_explicit_consent)
+        )
+        
+        self.security_manager = SecurityManager(
+            consent_manager=self.consent_manager,
+            security_auditor=self.security_auditor,
+            policy=security_policy
+        )
+        
+        # Initialize security middleware
+        self.security_middleware = SecurityMiddleware(self.security_manager)
+        
+        logger.info("Core services initialized with security framework")
     
     async def _initialize_authentication(self) -> None:
         """Initialize authentication system."""
@@ -322,7 +378,27 @@ class MCPServer:
             require_auth=self.config.require_authentication
         )
         
-        logger.info("Authentication system initialized")
+        # Set up auth event callbacks if security middleware is available
+        if self.security_middleware:
+            # Create auth event handlers
+            async def on_auth_failure(client_id: str, reason: str):
+                await self.security_middleware.handle_auth_event(
+                    event_type="auth_failure",
+                    client_id=client_id,
+                    details={"reason": reason}
+                )
+            
+            async def on_auth_success(client_id: str):
+                await self.security_middleware.handle_auth_event(
+                    event_type="auth_success",
+                    client_id=client_id,
+                    details={}
+                )
+            
+            # These would be set on the auth providers if they supported callbacks
+            # For now, we'll handle this in the request processing
+        
+        logger.info("Authentication system initialized with security integration")
     
     async def _initialize_tools(self) -> None:
         """Initialize and register all tools."""
@@ -468,6 +544,14 @@ class MCPServer:
             # Update activity
             session.update_activity()
             
+            # Build auth context
+            auth_context = {
+                "client_id": session.client_info.get("name", "unknown") if session.client_info else "anonymous",
+                "session_id": session.session_id,
+                "authenticated": session.authenticated,
+                "transport_type": type(transport).__name__
+            }
+            
             # Check if initialized (except for initialize request)
             if request.method != "initialize" and not session.initialized:
                 raise ValidationError(
@@ -491,11 +575,23 @@ class MCPServer:
                     error_code="METHOD_NOT_FOUND"
                 )
             
-            # Execute handler
-            response = await handler(request, session)
+            # Create handler that includes session
+            async def handler_with_session(req: MCPRequest) -> MCPResponse:
+                return await handler(req, session)
             
-            # Audit successful request
-            if self.security_auditor:
+            # Execute handler through security middleware
+            if self.security_middleware and request.method != "initialize":
+                response = await self.security_middleware.process_request(
+                    request=request,
+                    auth_context=auth_context,
+                    handler=handler_with_session
+                )
+            else:
+                # Bypass security for initialize
+                response = await handler_with_session(request)
+            
+            # Audit successful request (if not already done by security middleware)
+            if self.security_auditor and request.method == "initialize":
                 await self.security_auditor.log_event(
                     event_type="request_handled",
                     details={
@@ -518,6 +614,15 @@ class MCPServer:
                 },
                 exc_info=True
             )
+            
+            # Handle auth failures through security middleware
+            if isinstance(e, AuthenticationError) and self.security_middleware:
+                client_id = session.client_info.get("name", "unknown") if session and session.client_info else "anonymous"
+                await self.security_middleware.handle_auth_event(
+                    event_type="auth_failure",
+                    client_id=client_id,
+                    details={"reason": str(e)}
+                )
             
             # Audit failed request
             if self.security_auditor:
@@ -829,6 +934,121 @@ class MCPServer:
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
         )
+    
+    async def _handle_security_status(
+        self,
+        request: MCPRequest,
+        session: ClientSession
+    ) -> MCPResponse:
+        """Handle security status request."""
+        if not self.security_middleware:
+            return create_error_response(
+                request_id=request.id,
+                error_code=ErrorCode.INTERNAL_ERROR.value,
+                error_message="Security not configured"
+            )
+        
+        client_id = session.client_info.get("name", "unknown") if session.client_info else "anonymous"
+        
+        try:
+            status = await self.security_middleware.get_security_status(client_id)
+            
+            return create_success_response(
+                request_id=request.id,
+                result=status
+            )
+        except Exception as e:
+            logger.error(f"Error getting security status: {e}", exc_info=True)
+            return create_error_response(
+                request_id=request.id,
+                error_code=ErrorCode.INTERNAL_ERROR.value,
+                error_message=str(e)
+            )
+    
+    async def _handle_grant_consent(
+        self,
+        request: MCPRequest,
+        session: ClientSession
+    ) -> MCPResponse:
+        """Handle consent grant request."""
+        if not self.security_middleware:
+            return create_error_response(
+                request_id=request.id,
+                error_code=ErrorCode.INTERNAL_ERROR.value,
+                error_message="Security not configured"
+            )
+        
+        try:
+            operation = request.params.get("operation")
+            duration_hours = request.params.get("duration_hours")
+            
+            if not operation:
+                raise ValidationError("Operation parameter required")
+            
+            client_id = session.client_info.get("name", "unknown") if session.client_info else "anonymous"
+            
+            consent_id = await self.security_middleware.grant_consent(
+                client_id=client_id,
+                operation=operation,
+                duration_hours=duration_hours
+            )
+            
+            return create_success_response(
+                request_id=request.id,
+                result={
+                    "consent_id": consent_id,
+                    "operation": operation,
+                    "granted": True
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error granting consent: {e}", exc_info=True)
+            return create_error_response(
+                request_id=request.id,
+                error_code=ErrorCode.INTERNAL_ERROR.value,
+                error_message=str(e)
+            )
+    
+    async def _handle_revoke_consent(
+        self,
+        request: MCPRequest,
+        session: ClientSession
+    ) -> MCPResponse:
+        """Handle consent revocation request."""
+        if not self.security_middleware:
+            return create_error_response(
+                request_id=request.id,
+                error_code=ErrorCode.INTERNAL_ERROR.value,
+                error_message="Security not configured"
+            )
+        
+        try:
+            operation = request.params.get("operation")
+            
+            if not operation:
+                raise ValidationError("Operation parameter required")
+            
+            client_id = session.client_info.get("name", "unknown") if session.client_info else "anonymous"
+            
+            await self.security_middleware.revoke_consent(
+                client_id=client_id,
+                operation=operation
+            )
+            
+            return create_success_response(
+                request_id=request.id,
+                result={
+                    "operation": operation,
+                    "revoked": True
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error revoking consent: {e}", exc_info=True)
+            return create_error_response(
+                request_id=request.id,
+                error_code=ErrorCode.INTERNAL_ERROR.value,
+                error_message=str(e)
+            )
     
     async def _close_all_sessions(self) -> None:
         """Close all client sessions."""

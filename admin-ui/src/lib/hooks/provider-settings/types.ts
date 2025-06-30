@@ -76,10 +76,10 @@ export const ProviderConfigurationResponseSchema = z.object({
   id: z.string(),
   enabled: z.boolean().optional(),
   config: z.record(z.string(), z.any()).optional(),
-  status: z.enum(['connected', 'disconnected', 'error', 'available']).optional(),
+  status: z.enum(['connected', 'disconnected', 'error', 'available', 'tested', 'failed', 'testing']).optional(),
   last_tested: z.string().nullable().optional(),
   models: z.array(z.string()).optional()
-});
+}).passthrough();
 
 export type ProviderConfigurationResponse = z.infer<typeof ProviderConfigurationResponseSchema>;
 

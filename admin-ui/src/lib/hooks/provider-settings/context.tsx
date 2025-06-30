@@ -74,6 +74,18 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
       setModelSelection(loadedModelSelection);
       setSavedState(newSavedState);
       
+      // Populate test cache from loaded provider data
+      const { populateTestCacheFromProviders } = await import('./utils/api-helpers');
+      populateTestCacheFromProviders(
+        loadedProviders,
+        setProviderTested,
+        (providerId: string, error: string) => {
+          // Map to test cache failed method if available
+          // For now, just log since we don't have the failed method here
+          console.log(`Provider ${providerId} test failed: ${error}`);
+        }
+      );
+      
       // Clear dirty fields since we just loaded
       setDirtyFields(new Set());
       
@@ -85,7 +97,7 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
         return;
       }
     }
-  }, [testedProviders, loadSettingsCore, isMounted]);
+  }, [testedProviders, loadSettingsCore, isMounted, setProviderTested]);
 
   /**
    * Update a provider's configuration with validation

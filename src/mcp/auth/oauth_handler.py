@@ -74,6 +74,10 @@ class OAuth21Config:
     jwks_cache_ttl: int = 3600
     issuer: Optional[str] = None
     
+    # Development/Testing settings
+    development_mode: bool = False
+    jwt_secret: Optional[str] = None  # For symmetric key in dev mode only
+    
     # Advanced settings
     dpop_required: bool = False  # Demonstrating Proof of Possession
     require_signed_request_object: bool = False
@@ -644,28 +648,143 @@ class OAuth21Handler(AuthProvider):
             )
     
     async def _validate_jwt_token(self, token: str) -> Dict[str, Any]:
-        """Validate JWT token with JWKS."""
-        # For testing without real JWKS
-        if not self.config.jwks_uri:
-            # Simple decode for testing
-            try:
-                # This is NOT secure - only for testing
-                parts = token.split('.')
-                if len(parts) == 3:
-                    # Decode payload
-                    payload = parts[1]
-                    # Add padding if needed
-                    payload += '=' * (4 - len(payload) % 4)
-                    decoded = base64.urlsafe_b64decode(payload)
-                    return json.loads(decoded)
-            except:
-                pass
-            
-            return {"sub": "test", "exp": int(time.time()) + 3600}
+        """Validate JWT token with proper signature verification."""
+        import jwt
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
         
-        # Real JWT validation would happen here with JWKS
-        # This is a placeholder for the actual implementation
-        raise NotImplementedError("JWKS validation not implemented")
+        # Parse token header to get key ID
+        try:
+            header = jwt.get_unverified_header(token)
+            kid = header.get('kid')
+        except jwt.DecodeError:
+            raise ValidationError(
+                message="Invalid JWT format",
+                error_code="INVALID_JWT"
+            )
+        
+        # For testing/development with symmetric key
+        if self.config.development_mode and self.config.jwt_secret:
+            try:
+                payload = jwt.decode(
+                    token,
+                    self.config.jwt_secret,
+                    algorithms=['HS256'],
+                    options={"verify_exp": True}
+                )
+                return payload
+            except jwt.ExpiredSignatureError:
+                raise AuthenticationError(
+                    message="Token has expired",
+                    error_code="TOKEN_EXPIRED"
+                )
+            except jwt.InvalidTokenError as e:
+                raise ValidationError(
+                    message=f"Invalid token: {str(e)}",
+                    error_code="INVALID_TOKEN"
+                )
+        
+        # Production mode - require JWKS
+        if not self.config.jwks_uri:
+            raise SecurityError(
+                message="JWKS URI not configured for production",
+                error_code="JWKS_NOT_CONFIGURED"
+            )
+        
+        # Fetch JWKS if not cached
+        jwks = await self._fetch_jwks()
+        
+        # Find matching key
+        key = None
+        for jwk in jwks.get('keys', []):
+            if jwk.get('kid') == kid:
+                key = jwk
+                break
+        
+        if not key:
+            raise ValidationError(
+                message=f"Key {kid} not found in JWKS",
+                error_code="KEY_NOT_FOUND"
+            )
+        
+        # Verify token with public key
+        try:
+            # Convert JWK to PEM format
+            public_key = self._jwk_to_pem(key)
+            
+            # Decode and verify
+            payload = jwt.decode(
+                token,
+                public_key,
+                algorithms=['RS256'],
+                options={"verify_exp": True}
+            )
+            
+            return payload
+            
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationError(
+                message="Token has expired",
+                error_code="TOKEN_EXPIRED"
+            )
+        except jwt.InvalidTokenError as e:
+            raise ValidationError(
+                message=f"Invalid token: {str(e)}",
+                error_code="INVALID_TOKEN"
+            )
+    
+    async def _fetch_jwks(self) -> Dict[str, Any]:
+        """Fetch JWKS from authorization server."""
+        if hasattr(self, '_jwks_cache'):
+            # Simple cache - in production use proper caching
+            return self._jwks_cache
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(self.config.jwks_uri) as response:
+                if response.status != 200:
+                    raise SecurityError(
+                        message="Failed to fetch JWKS",
+                        error_code="JWKS_FETCH_FAILED"
+                    )
+                
+                self._jwks_cache = await response.json()
+                return self._jwks_cache
+    
+    def _jwk_to_pem(self, jwk: Dict[str, Any]) -> str:
+        """Convert JWK to PEM format."""
+        # This is a simplified implementation
+        # In production, use a proper JWK library
+        if jwk.get('kty') != 'RSA':
+            raise ValueError("Only RSA keys supported")
+        
+        # Extract modulus and exponent
+        n = jwk.get('n')
+        e = jwk.get('e')
+        
+        if not n or not e:
+            raise ValueError("Invalid RSA key")
+        
+        # Convert to integers
+        from base64 import urlsafe_b64decode
+        
+        def b64_to_int(b64):
+            data = urlsafe_b64decode(b64 + '=' * (4 - len(b64) % 4))
+            return int.from_bytes(data, 'big')
+        
+        modulus = b64_to_int(n)
+        exponent = b64_to_int(e)
+        
+        # Create public key
+        public_numbers = rsa.RSAPublicNumbers(exponent, modulus)
+        public_key = public_numbers.public_key()
+        
+        # Export to PEM
+        pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        
+        return pem.decode('utf-8')
     
     async def _introspect_token(self, token: str) -> bool:
         """Check token status with introspection endpoint."""

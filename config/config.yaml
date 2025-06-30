@@ -1,0 +1,56 @@
+# Base MCP Server Configuration
+# This file contains default settings for all environments
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  workers: 4
+  max_connections: 1000
+  request_timeout: 30
+
+database:
+  url: "postgresql://localhost/docaiche"
+  pool_size: 20
+  max_overflow: 10
+  echo: false
+
+redis:
+  url: "redis://localhost:6379/0"
+  pool_size: 10
+  decode_responses: true
+
+security:
+  require_authentication: true
+  rate_limit_enabled: true
+  rate_limit_requests: 60
+  rate_limit_window: 60
+  max_auth_failures: 5
+  auth_failure_lockout_time: 300
+  require_explicit_consent: true
+  consent_expiry_days: 90
+
+logging:
+  level: "INFO"
+  format: "json"
+  file: "logs/mcp_server.log"
+  max_size: 104857600  # 100MB
+  backup_count: 5
+
+cache:
+  enabled: true
+  ttl: 3600
+  max_size_mb: 512
+  backend: "redis"
+
+monitoring:
+  metrics_enabled: true
+  metrics_port: 9090
+  tracing_enabled: false
+  health_check_interval: 30
+
+features:
+  search_enabled: true
+  ingestion_enabled: true
+  feedback_enabled: true
+  collections_enabled: true
+  ai_integration: true

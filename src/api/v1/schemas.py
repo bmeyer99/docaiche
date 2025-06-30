@@ -300,6 +300,9 @@ class ProviderResponse(BaseModel):
     last_tested: Optional[str] = Field(
         None, description="Last time provider was tested"
     )
+    models: Optional[List[str]] = Field(
+        None, description="Available models for this provider"
+    )
 
 
 class ProviderConfigRequest(BaseModel):

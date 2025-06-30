@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AI_PROVIDERS, ProviderDefinition } from '@/lib/config/providers';
 import { useToast } from '@/hooks/use-toast';
 import { useApiClient } from '@/lib/hooks/use-api-client';
-import { useProviderTestCache } from '@/lib/hooks/use-provider-test-cache';
 import { useProviderSettings } from '@/lib/hooks/use-provider-settings';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2, Activity } from 'lucide-react';
@@ -25,46 +24,36 @@ interface ProviderFormProps {
 function ProviderForm({ provider }: ProviderFormProps) {
   const { toast } = useToast();
   const apiClient = useApiClient();
-  const testCache = useProviderTestCache();
   const { providers, updateProvider } = useProviderSettings();
   const [isTesting, setIsTesting] = useState(false);
 
   const providerConfig = providers[provider.id];
-  const testStatus = testCache.getProviderStatus(provider.id);
-  const testModels = testCache.getProviderModels(provider.id);
 
-  // Debug logging
-  console.log(`ProviderForm ${provider.id} - Config:`, providerConfig);
-  console.log(`ProviderForm ${provider.id} - Test Status:`, testStatus);
-  console.log(`ProviderForm ${provider.id} - Models:`, testModels);
+  const [localConfig, setLocalConfig] = useState<Record<string, any>>({});
 
   const handleFieldChange = (fieldKey: string, value: string | number | boolean) => {
-    updateProvider(provider.id, {
+    setLocalConfig(prev => ({
+      ...prev,
       [fieldKey]: value
-    });
+    }));
   };
+
 
   const handleTestConnection = async () => {
     setIsTesting(true);
-    const config = providerConfig?.config || {};
-    testCache.setProviderTesting(provider.id, config);
+    const config = { ...providerConfig?.config, ...localConfig };
 
     try {
       const response = await apiClient.testProviderConnection(provider.id, config);
       
       if (response.success) {
-        const models = response.models || [];
-        testCache.setProviderTested(provider.id, models, config);
-        
-        // Save configuration to backend on successful test
-        await apiClient.updateProviderConfiguration(provider.id, { config });
-        
         toast({
           title: "Connection Successful",
-          description: `${provider.displayName} connected successfully. Found ${models.length} models. Configuration saved.`,
+          description: `${provider.displayName} connected successfully. Found ${response.models?.length || 0} models.`,
         });
+        // Backend handles save and updates, so refresh the data
+        // TODO: Refresh provider data from backend
       } else {
-        testCache.setProviderFailed(provider.id, response.message, config);
         toast({
           title: "Connection Failed", 
           description: response.message || "Failed to connect to provider",
@@ -72,7 +61,6 @@ function ProviderForm({ provider }: ProviderFormProps) {
         });
       }
     } catch (error: any) {
-      testCache.setProviderFailed(provider.id, error.message, config);
       toast({
         title: "Connection Error",
         description: error.message || "Failed to test provider connection",
@@ -84,13 +72,13 @@ function ProviderForm({ provider }: ProviderFormProps) {
   };
 
   const getStatusBadge = () => {
-    if (isTesting || testStatus === 'testing') {
+    if (isTesting) {
       return <Badge variant="outline" className="border-blue-500 text-blue-600">Testing...</Badge>;
     }
-    if (testStatus === 'tested') {
-      return <Badge variant="outline" className="border-green-500 text-green-600">Connected ({testModels.length} models)</Badge>;
+    if (providerConfig?.status === 'tested') {
+      return <Badge variant="outline" className="border-green-500 text-green-600">Connected ({providerConfig.models?.length || 0} models)</Badge>;
     }
-    if (testStatus === 'failed') {
+    if (providerConfig?.status === 'failed') {
       return <Badge variant="outline" className="border-red-500 text-red-600">Failed</Badge>;
     }
     return <Badge variant="outline" className="border-amber-500 text-amber-600">Not Tested</Badge>;
@@ -120,7 +108,8 @@ function ProviderForm({ provider }: ProviderFormProps) {
         {/* Configuration Fields */}
         <div className="grid gap-4">
           {provider.configFields?.map((field) => {
-            const fieldValue = providerConfig?.config?.[field.key] || 
+            const fieldValue = localConfig[field.key] ?? 
+              providerConfig?.config?.[field.key] ?? 
               (field.key === 'base_url' ? provider.defaultBaseUrl : '');
 
             return (
@@ -168,7 +157,7 @@ function ProviderForm({ provider }: ProviderFormProps) {
         </div>
 
         {/* Status Alerts */}
-        {testStatus === 'failed' && (
+        {providerConfig?.status === 'failed' && (
           <Alert className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950">
             <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
             <AlertDescription className="text-red-800 dark:text-red-200">
@@ -177,21 +166,21 @@ function ProviderForm({ provider }: ProviderFormProps) {
           </Alert>
         )}
 
-        {testStatus === 'tested' && (
+        {providerConfig?.status === 'tested' && (
           <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
             <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
             <AlertDescription className="text-green-800 dark:text-green-200">
-              <strong>Connected successfully!</strong> Found {testModels.length} available models.
-              {testModels.length > 0 && (
+              <strong>Connected successfully!</strong> Found {providerConfig.models?.length || 0} available models.
+              {providerConfig.models && providerConfig.models.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {testModels.slice(0, 5).map(model => (
+                  {providerConfig.models.slice(0, 5).map((model: string) => (
                     <Badge key={model} variant="outline" className="text-xs">
                       {model}
                     </Badge>
                   ))}
-                  {testModels.length > 5 && (
+                  {providerConfig.models.length > 5 && (
                     <Badge variant="outline" className="text-xs">
-                      +{testModels.length - 5} more
+                      +{providerConfig.models.length - 5} more
                     </Badge>
                   )}
                 </div>

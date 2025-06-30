@@ -17,7 +17,7 @@ export interface ProviderConfiguration {
   name: string;
   enabled: boolean;
   config: Record<string, any>;
-  status: 'connected' | 'disconnected' | 'error' | 'available';
+  status: 'connected' | 'disconnected' | 'error' | 'available' | 'tested' | 'failed' | 'testing';
   lastTested?: string | null;
   models?: string[];
 }
@@ -72,7 +72,7 @@ export const AI_PROVIDERS: Record<string, ProviderDefinition> = {
     modelTypes: ['text', 'embedding'],
     configFields: [
       {
-        key: 'base_url',
+        key: 'endpoint',
         label: 'Base URL',
         type: 'url',
         required: false,
@@ -669,7 +669,7 @@ export const DEFAULT_PROVIDER_CONFIGS = {
 } as const;
 
 // Provider status types
-export type ProviderStatus = 'connected' | 'disconnected' | 'testing' | 'error';
+export type ProviderStatus = 'connected' | 'disconnected' | 'testing' | 'error' | 'available' | 'tested' | 'failed';
 
 export interface ProviderConnectionResult {
   status: ProviderStatus;

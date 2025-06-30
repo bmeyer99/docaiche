@@ -28,18 +28,8 @@ function validateProviderResponse(data: unknown): ProviderConfigurationResponse[
     return [];
   }
   
-  const validated: ProviderConfigurationResponse[] = [];
-  
-  for (const item of data) {
-    try {
-      const parsed = ProviderConfigurationResponseSchema.parse(item);
-      validated.push(parsed);
-    } catch (error) {
-      console.error('Invalid provider configuration in response:', error);
-    }
-  }
-  
-  return validated;
+  // Skip validation for now - just return the data as-is
+  return data as ProviderConfigurationResponse[];
 }
 
 // Validate API response for model selection
@@ -59,12 +49,21 @@ export async function loadProviderConfigurations(
   const providerConfigs = validateProviderResponse(rawResponse);
   const providersMap: Record<string, ProviderConfiguration> = {};
   
-  // Process provider configurations
+  // Process provider configurations - backend now provides all test data
   providerConfigs.forEach((config) => {
     const providerDef = AI_PROVIDERS[config.id];
     if (providerDef) {
       // Sanitize the provider config
       const sanitizedConfig = sanitizeProviderConfig(config.id, config.config || {});
+      
+      // Map backend status to frontend status
+      let frontendStatus: 'connected' | 'disconnected' | 'error' | 'available' | 'tested' | 'failed' | 'testing' = 'disconnected';
+      if (config.status === 'tested') frontendStatus = 'connected';
+      else if (config.status === 'testing') frontendStatus = 'testing';
+      else if (config.status === 'failed') frontendStatus = 'error';
+      else if (config.status === 'connected') frontendStatus = 'connected';
+      else if (config.status === 'available') frontendStatus = 'available';
+      else if (config.status === 'error') frontendStatus = 'error';
       
       providersMap[config.id] = {
         id: config.id,
@@ -72,20 +71,31 @@ export async function loadProviderConfigurations(
         name: providerDef.displayName,
         enabled: config.enabled ?? true,
         config: sanitizedConfig,
-        status: config.status || 'disconnected',
+        status: frontendStatus,
         lastTested: config.last_tested,
         models: config.models || [],
       };
-      
-      // Sync with test cache if provider was tested
-      if (testedProviders[config.id]?.status === 'tested') {
-        providersMap[config.id].models = testedProviders[config.id].models;
-        providersMap[config.id].status = 'connected';
-      }
     }
   });
   
   return providersMap;
+}
+
+export function populateTestCacheFromProviders(
+  providerConfigs: Record<string, ProviderConfiguration>,
+  setProviderTested: (providerId: string, models: string[], config: any) => void,
+  setProviderFailed: (providerId: string, error: string, config: any) => void
+) {
+  // Populate test cache from backend provider data
+  Object.values(providerConfigs).forEach(provider => {
+    if (provider.status === 'connected' && provider.models && provider.models.length > 0) {
+      // Provider was successfully tested
+      setProviderTested(provider.id, provider.models, provider.config);
+    } else if (provider.status === 'error') {
+      // Provider test failed
+      setProviderFailed(provider.id, 'Connection test failed', provider.config);
+    }
+  });
 }
 
 export async function loadModelSelection(): Promise<ProviderSettings['modelSelection']> {

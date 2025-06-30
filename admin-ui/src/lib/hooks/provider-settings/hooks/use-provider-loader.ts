@@ -5,7 +5,8 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { 
   loadProviderConfigurations, 
-  loadModelSelection 
+  loadModelSelection,
+  populateTestCacheFromProviders 
 } from '../utils/api-helpers';
 import { 
   initializeMissingProviders, 

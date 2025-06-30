@@ -279,11 +279,27 @@ async def list_providers(
                         if key in config_fields:
                             core_config[key] = value
 
+            # Extract test data from saved config
+            test_status = saved_config.get("test_status", "untested")
+            models = saved_config.get("models", [])
+            last_tested = saved_config.get("last_tested")
+            test_error = saved_config.get("test_error")
+            
+            # For non-queryable providers, add default models if not tested
+            if test_status == "untested" and provider_id.lower() in ["openai", "anthropic", "groq", "mistral"]:
+                default_models = {
+                    "openai": ["gpt-4-turbo", "gpt-4", "gpt-3.5-turbo", "text-embedding-3-small"],
+                    "anthropic": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
+                    "groq": ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+                    "mistral": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "mistral-embed"],
+                }
+                models = default_models.get(provider_id.lower(), [])
+
             providers.append(ProviderResponse(
                 id=provider_id,
                 name=definition["name"],
                 type=definition["type"],
-                status="available",
+                status=test_status,  # Use test status from config
                 configured=is_configured,
                 category=definition["category"],
                 description=definition["description"],
@@ -293,7 +309,8 @@ async def list_providers(
                 # Include only the core config data for the frontend state management
                 config=core_config,
                 enabled=saved_config.get("enabled", False),
-                last_tested=saved_config.get("updated_at"),
+                last_tested=last_tested,
+                models=models,  # Include models from config
             ))
 
         return providers
@@ -301,6 +318,51 @@ async def list_providers(
     except Exception as e:
         logger.error(f"Failed to list providers: {e}")
         raise HTTPException(status_code=500, detail="Failed to list providers")
+
+
+async def update_provider_test_results(
+    config_manager: ConfigurationManager,
+    provider_id: str,
+    test_config: dict,
+    success: bool,
+    models: list = None,
+    error: str = None
+):
+    """
+    Update provider configuration with test results.
+    This makes the backend the single source of truth for test state.
+    """
+    try:
+        # Get existing configuration
+        config_key = f"ai.providers.{provider_id}"
+        existing_config = config_manager.get_setting(config_key) or {}
+        
+        # Update with test results
+        updated_config = {**existing_config}
+        
+        # Merge test config into provider config
+        for key, value in test_config.items():
+            if value is not None:
+                updated_config[key] = value
+        
+        # Add test status and results
+        updated_config.update({
+            "test_status": "tested" if success else "failed",
+            "models": models or [],
+            "last_tested": datetime.utcnow().isoformat(),
+            "test_error": error if not success else None,
+            "enabled": True,  # Enable provider after successful test
+            "updated_at": datetime.utcnow().isoformat(),
+        })
+        
+        # Save to database
+        await config_manager.update_in_db(config_key, updated_config)
+        
+        logger.info(f"Updated provider {provider_id} config with test results: success={success}, models={len(models or [])}")
+        
+    except Exception as e:
+        logger.error(f"Failed to update provider {provider_id} test results: {e}")
+        # Don't fail the test response if config update fails
 
 
 @router.post(
@@ -360,6 +422,12 @@ async def test_provider_connection(
                             model_count=len(models)
                         )
                     
+                    # Update provider config with test results
+                    await update_provider_test_results(
+                        config_manager, provider_id, test_config.dict(), 
+                        success=True, models=model_names
+                    )
+                    
                     return ProviderTestResponse(
                         success=True,
                         message=f"Connection successful. {len(models)} models available.",
@@ -417,6 +485,12 @@ async def test_provider_connection(
                             model_count=len(models)
                         )
                     
+                    # Update provider config with test results
+                    await update_provider_test_results(
+                        config_manager, provider_id, test_config.dict(), 
+                        success=True, models=model_names
+                    )
+                    
                     return ProviderTestResponse(
                         success=True,
                         message=f"Connection successful. {len(models)} models available.",
@@ -462,6 +536,12 @@ async def test_provider_connection(
                             status_code=200,
                             model_count=len(models)
                         )
+                    
+                    # Update provider config with test results
+                    await update_provider_test_results(
+                        config_manager, provider_id, test_config.dict(), 
+                        success=True, models=model_names
+                    )
                     
                     return ProviderTestResponse(
                         success=True,
@@ -543,6 +623,12 @@ async def test_provider_connection(
                         )
                     
                     if success:
+                        # Update provider config with test results (no models for non-queryable providers)
+                        await update_provider_test_results(
+                            config_manager, provider_id, test_config.dict(), 
+                            success=True, models=[]
+                        )
+                        
                         return ProviderTestResponse(
                             success=True,
                             message="Connection successful. Models are not queryable for this provider.",
@@ -582,11 +668,19 @@ async def test_provider_connection(
 
                 if response.status_code == 200:
                     models = response.json().get("data", [])
+                    model_names = [model.get("id", "") for model in models[:5]]
+                    
+                    # Update provider config with test results
+                    await update_provider_test_results(
+                        config_manager, provider_id, test_config.dict(), 
+                        success=True, models=model_names
+                    )
+                    
                     return ProviderTestResponse(
                         success=True,
                         message=f"LiteLLM proxy connection successful. {len(models)} models available.",
                         latency=response.elapsed.total_seconds() * 1000,
-                        models=[model.get("id", "") for model in models[:5]],
+                        models=model_names,
                     )
                 else:
                     return ProviderTestResponse(

@@ -440,6 +440,12 @@ class MCPServerConfig:
     rate_limit_enabled: bool = True
     rate_limit_requests_per_minute: int = 60
     rate_limit_burst_size: int = 10
+    rate_limit_window: int = 60  # seconds
+    rate_limit_max_requests: int = 60
+    
+    # Security policy settings
+    max_auth_failures: int = 5
+    auth_failure_lockout_time: int = 300  # seconds
     
     # Service endpoints
     services: Dict[str, str] = field(default_factory=lambda: {

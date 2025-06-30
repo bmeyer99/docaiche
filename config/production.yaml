@@ -1,0 +1,73 @@
+# Production Environment Configuration
+# Overrides for production deployment
+
+environment: "production"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  workers: 8
+  debug: false
+
+database:
+  url: "${DATABASE_URL}"  # From environment
+  pool_size: 50
+  max_overflow: 20
+  echo: false
+
+redis:
+  url: "${REDIS_URL}"  # From environment
+  pool_size: 20
+
+security:
+  require_authentication: true
+  ssl_enabled: true
+  ssl_cert_path: "/certs/tls.crt"
+  ssl_key_path: "/certs/tls.key"
+  cors_origins:
+    - "https://docaiche.example.com"
+    - "https://api.docaiche.example.com"
+  
+  # Stricter security settings
+  rate_limit_requests: 100
+  rate_limit_window: 60
+  max_auth_failures: 3
+  auth_failure_lockout_time: 600
+
+logging:
+  level: "WARNING"
+  format: "json"
+  file: "/var/log/mcp/server.log"
+
+cache:
+  ttl: 7200  # 2 hours
+  max_size_mb: 2048
+
+monitoring:
+  metrics_enabled: true
+  metrics_port: 9090
+  tracing_enabled: true
+  tracing_endpoint: "${JAEGER_ENDPOINT}"
+
+# Production feature flags
+features:
+  debug_endpoints: false
+  allow_insecure_transport: false
+  mock_external_services: false
+  
+# Production-specific settings
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # 2 AM daily
+  retention_days: 30
+
+alerts:
+  enabled: true
+  channels:
+    - "email"
+    - "slack"
+  thresholds:
+    error_rate: 0.01
+    response_time_ms: 1000
+    cpu_percent: 80
+    memory_percent: 90

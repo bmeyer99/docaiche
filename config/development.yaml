@@ -1,0 +1,38 @@
+# Development Environment Configuration
+# Overrides for local development
+
+environment: "development"
+
+server:
+  host: "127.0.0.1"
+  port: 8080
+  workers: 2
+  debug: true
+
+database:
+  url: "postgresql://docaiche:docaiche@localhost/docaiche_dev"
+  echo: true  # Enable SQL logging
+
+security:
+  require_authentication: false
+  ssl_enabled: false
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8080"
+
+logging:
+  level: "DEBUG"
+  format: "text"  # Human-readable format
+
+cache:
+  ttl: 300  # Shorter TTL for development
+
+monitoring:
+  metrics_enabled: false
+  tracing_enabled: false
+
+# Development-specific features
+features:
+  debug_endpoints: true
+  allow_insecure_transport: true
+  mock_external_services: true
