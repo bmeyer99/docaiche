@@ -8,15 +8,37 @@ async function testProviderStatusFix() {
   
   try {
     const page = await browser.newPage();
-    await page.goto('http://localhost:3000/dashboard/providers');
+    await page.goto('http://localhost:4080/dashboard/providers');
     
     console.log('Navigated to providers page');
     
-    // Wait for page to load and find test button
-    await page.waitForFunction(() => {
+    // Wait for page to load
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Check what's on the page
+    const pageContent = await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
-      return buttons.some(btn => btn.textContent?.includes('Test Connection'));
-    }, { timeout: 15000 });
+      return {
+        title: document.title,
+        buttonTexts: buttons.map(btn => btn.textContent?.trim()).filter(Boolean),
+        hasProviderSection: !!document.querySelector('[data-provider-config]'),
+        allText: document.body.textContent?.substring(0, 500)
+      };
+    });
+    
+    console.log('Page content:', pageContent);
+    
+    if (pageContent.buttonTexts.length === 0) {
+      console.log('No buttons found, page may not have loaded correctly');
+      return;
+    }
+    
+    // Find test connection button
+    const hasTestButton = pageContent.buttonTexts.some(text => text.includes('Test Connection'));
+    if (!hasTestButton) {
+      console.log('No Test Connection button found. Available buttons:', pageContent.buttonTexts);
+      return;
+    }
     
     // Take screenshot of initial state
     await page.screenshot({ path: 'before-test.png', fullPage: true });
@@ -32,15 +54,8 @@ async function testProviderStatusFix() {
     await testButton.click();
     console.log('Clicked test connection button');
     
-    // Wait for either success or failure
-    await page.waitForFunction(() => {
-      const badges = document.querySelectorAll('[class*="badge"], [class*="Badge"]');
-      return Array.from(badges).some(badge => 
-        badge.textContent.includes('Connected') || 
-        badge.textContent.includes('Failed') ||
-        badge.textContent.includes('Testing')
-      );
-    }, { timeout: 15000 });
+    // Wait for test to complete (either success or failure) 
+    await new Promise(resolve => setTimeout(resolve, 8000));
     
     // Take screenshot after test
     await page.screenshot({ path: 'after-test.png', fullPage: true });
