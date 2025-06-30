@@ -77,6 +77,10 @@ export default function ProvidersConfigPage() {
   const testCache = useProviderTestCache();
   const { modelSelection: config, updateModelSelection } = useModelSelection();
 
+  // Debug logging
+  console.log('ProvidersConfigPage - Model Selection Config:', config);
+  console.log('ProvidersConfigPage - Test Cache:', testCache.testedProviders);
+
   // No need to load configuration anymore - it comes from context
 
   // IMPORTANT: Models should only be loaded when user clicks "Test Connection"

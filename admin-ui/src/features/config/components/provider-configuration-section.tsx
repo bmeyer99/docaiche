@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,6 +21,62 @@ interface ProviderFormProps {
   provider: ProviderDefinition & { id: string };
 }
 
+// Save Provider Configuration Button Component
+function SaveProviderConfigButton({ providerId, providerName }: { providerId: string; providerName: string }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+  const apiClient = useApiClient();
+  const { providers } = useProviderSettings();
+
+  const handleSaveConfig = async () => {
+    setIsSaving(true);
+    try {
+      const providerConfig = providers[providerId];
+      if (!providerConfig?.config) {
+        throw new Error('No configuration to save');
+      }
+
+      // Save configuration (without enabled field since we removed it)
+      await apiClient.updateProviderConfiguration(providerId, { config: providerConfig.config });
+      toast({
+        title: "Configuration Saved",
+        description: `${providerName} configuration has been saved successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save provider configuration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const providerConfig = providers[providerId];
+  const hasConfig = providerConfig?.config && Object.keys(providerConfig.config).length > 0;
+
+  return (
+    <Button
+      onClick={handleSaveConfig}
+      disabled={isSaving || !hasConfig}
+      className="flex items-center gap-2"
+    >
+      {isSaving ? (
+        <>
+          <Icons.spinner className="w-4 h-4 animate-spin" />
+          Saving...
+        </>
+      ) : (
+        <>
+          <Icons.check className="w-4 h-4" />
+          Save Configuration
+        </>
+      )}
+    </Button>
+  );
+}
+
 function ProviderForm({ provider }: ProviderFormProps) {
   const { toast } = useToast();
   const apiClient = useApiClient();
@@ -32,6 +87,11 @@ function ProviderForm({ provider }: ProviderFormProps) {
   const providerConfig = providers[provider.id];
   const testStatus = testCache.getProviderStatus(provider.id);
   const testModels = testCache.getProviderModels(provider.id);
+
+  // Debug logging
+  console.log(`ProviderForm ${provider.id} - Config:`, providerConfig);
+  console.log(`ProviderForm ${provider.id} - Test Status:`, testStatus);
+  console.log(`ProviderForm ${provider.id} - Models:`, testModels);
 
   const handleFieldChange = (fieldKey: string, value: string | number | boolean) => {
     updateProvider(provider.id, {
@@ -91,28 +151,19 @@ function ProviderForm({ provider }: ProviderFormProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
-              style={{ backgroundColor: provider.color + '20', color: provider.color }}
-            >
-              {provider.icon}
-            </div>
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                {provider.displayName}
-                {getStatusBadge()}
-              </CardTitle>
-              <CardDescription>{provider.description}</CardDescription>
-            </div>
+        <div className="flex items-center gap-3">
+          <div 
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+            style={{ backgroundColor: provider.color + '20', color: provider.color }}
+          >
+            {provider.icon}
           </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={providerConfig?.enabled || false}
-              onCheckedChange={(enabled) => handleFieldChange('enabled', enabled)}
-            />
-            <Label className="text-sm">Enabled</Label>
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              {provider.displayName}
+              {getStatusBadge()}
+            </CardTitle>
+            <CardDescription>{provider.description}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -216,11 +267,6 @@ function ProviderForm({ provider }: ProviderFormProps) {
             )}
             {isTesting ? 'Testing...' : 'Test Connection'}
           </Button>
-          
-          <SaveProviderConfigButton 
-            providerId={provider.id} 
-            providerName={provider.displayName}
-          />
         </div>
       </CardContent>
     </Card>
