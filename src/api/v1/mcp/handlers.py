@@ -12,6 +12,7 @@ from fastapi import Depends
 from ..dependencies import get_search_orchestrator, get_database_manager
 from src.database.connection import DatabaseManager
 from src.search.orchestrator import SearchOrchestrator
+from .tools import SearchTool, IngestTool, FeedbackTool
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,12 @@ class MCPHandler:
         self.search_orchestrator = search_orchestrator
         self.db_manager = db_manager
         
-        # Initialize tools (will be populated in next phase)
-        self.tools = {}
+        # Initialize tools with dependencies
+        self.tools = {
+            "docaiche_search": SearchTool(search_orchestrator),
+            "docaiche_ingest": IngestTool(),
+            "docaiche_feedback": FeedbackTool()
+        }
         
         # Initialize resources (will be populated in next phase)
         self.resources = {}
@@ -132,7 +137,20 @@ class MCPHandler:
         arguments = params.get("arguments", {})
         
         # Execute tool
-        return await tool.execute(arguments)
+        result = await tool.execute(arguments)
+        
+        # Convert ToolResult to dict for JSON-RPC response
+        if result.success:
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": result.data
+                    }
+                ]
+            }
+        else:
+            raise ValueError(f"Tool execution failed: {result.error}")
     
     async def _handle_resource_read(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -167,7 +185,8 @@ class MCPHandler:
             "tools": [
                 {
                     "name": name,
-                    "description": tool.description
+                    "description": tool.description,
+                    "inputSchema": tool.get_schema()
                 }
                 for name, tool in self.tools.items()
             ]

@@ -29,7 +29,7 @@ router = APIRouter(
 
 
 @router.post(
-    "/",
+    "",
     summary="MCP JSON-RPC Endpoint",
     description="""
     Main endpoint for MCP (Model Context Protocol) requests.
@@ -108,7 +108,7 @@ async def handle_mcp_request(
 
 
 @router.get(
-    "/",
+    "",
     summary="MCP Information",
     description="Get information about available MCP tools and resources",
 )
