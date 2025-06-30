@@ -1,21 +1,5 @@
-# Multi-stage build for Docaiche Admin UI - Optimized for fast builds
+# Multi-stage build for Docaiche Admin UI - Simple and fast
 FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-WORKDIR /app
-
-# Copy package files
-COPY package.json ./
-
-# Install production dependencies
-# Use alpine packages for sharp instead of building from source
-RUN apk add --no-cache vips-dev \
-    && npm install --production --no-optional \
-    --legacy-peer-deps \
-    --no-audit \
-    --no-fund \
-    && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -25,10 +9,12 @@ WORKDIR /app
 COPY package.json ./
 
 # Install ALL dependencies for building
+# Skip optional dependencies and postinstall scripts that might fail
 RUN npm install \
     --legacy-peer-deps \
     --no-audit \
     --no-fund \
+    --ignore-scripts \
     && npm cache clean --force
 
 # Copy configuration files
@@ -60,21 +46,18 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_SENTRY_DISABLED=true
 
 # Create a non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
-# Copy production dependencies from deps stage
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-
 # Copy built application
 COPY --from=builder /app/public ./public
+
+# Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Create .next directory with correct permissions
-RUN mkdir -p .next && chown nextjs:nodejs .next
 
 USER nextjs
 
