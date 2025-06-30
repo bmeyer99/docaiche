@@ -7,7 +7,6 @@
 import React, { 
   createContext, 
   useState, 
-  useCallback, 
   useEffect, 
   ReactNode, 
   useRef,
@@ -36,7 +35,7 @@ import {
 } from './utils/validation';
 import { useIsMounted, CleanupManager } from './utils/cleanup-helpers';
 import { 
-  useDebounceCallback,
+  useDebouncedCallback,
   useStableMemo, 
   shallowEqual,
   useStableCallback,
@@ -97,8 +96,7 @@ interface OptimizedProviderSettingsProviderProps {
 
 export function OptimizedProviderSettingsProvider({ 
   children, 
-  debounceDelay = 300,
-  enablePerformanceMonitoring = process.env.NODE_ENV === 'development'
+  debounceDelay = 300
 }: OptimizedProviderSettingsProviderProps) {
   // Performance monitoring
   usePerformanceMonitor('OptimizedProviderSettingsProvider', []);
@@ -177,7 +175,7 @@ export function OptimizedProviderSettingsProvider({
   /**
    * Debounced provider update to prevent excessive re-renders
    */
-  const updateProviderDebounced = useDebounceCallback(
+  const updateProviderDebounced = useDebouncedCallback(
     (providerId: string, config: Partial<ProviderConfiguration['config']>) => {
       if (!isValidProviderId(providerId)) {
         console.error('Invalid provider ID:', providerId);
@@ -231,7 +229,7 @@ export function OptimizedProviderSettingsProvider({
   /**
    * Update model selection with debouncing
    */
-  const updateModelSelectionDebounced = useDebounceCallback(
+  const updateModelSelectionDebounced = useDebouncedCallback(
     (selection: Partial<typeof modelSelection>) => {
       setModelSelection(prev => {
         const updated = { ...prev, ...selection };

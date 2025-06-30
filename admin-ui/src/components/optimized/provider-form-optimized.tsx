@@ -3,8 +3,7 @@
  * Implements React.memo, debounced inputs, and smart re-rendering
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,7 +40,7 @@ const OptimizedTextField = React.memo<OptimizedFieldProps>(({
   onChange,
   placeholder
 }) => {
-  usePerformanceMonitor(`OptimizedTextField-${fieldKey}`, [value]);
+  usePerformanceMonitor(`OptimizedTextField-${fieldKey}`);
   
   const [localValue, setLocalValue] = useState(String(value || ''));
   const debouncedValue = useDebounce(localValue, 300);
@@ -97,7 +96,7 @@ const OptimizedTextareaField = React.memo<OptimizedFieldProps>(({
   onChange,
   placeholder
 }) => {
-  usePerformanceMonitor(`OptimizedTextareaField-${fieldKey}`, [value]);
+  usePerformanceMonitor(`OptimizedTextareaField-${fieldKey}`);
   
   const [localValue, setLocalValue] = useState(String(value || ''));
   const debouncedValue = useDebounce(localValue, 500); // Longer debounce for textarea
@@ -147,7 +146,7 @@ const OptimizedNumberField = React.memo<OptimizedFieldProps>(({
   value,
   onChange
 }) => {
-  usePerformanceMonitor(`OptimizedNumberField-${fieldKey}`, [value]);
+  usePerformanceMonitor(`OptimizedNumberField-${fieldKey}`);
   
   const [localValue, setLocalValue] = useState(String(value || ''));
   const debouncedValue = useDebounce(localValue, 300);
@@ -210,7 +209,7 @@ const OptimizedProviderForm = React.memo<OptimizedProviderFormProps>(({
   onTestConnection,
   isLoading = false
 }) => {
-  usePerformanceMonitor(`OptimizedProviderForm-${provider.id}`, [provider.id, config]);
+  usePerformanceMonitor(`OptimizedProviderForm-${provider.id}`);
 
   // Memoize field change handler to prevent recreation
   const handleFieldChange = useStableCallback((fieldKey: string, value: any) => {
@@ -319,7 +318,7 @@ const OptimizedProviderForm = React.memo<OptimizedProviderFormProps>(({
         {fieldComponents}
         {apiKeyHelpText && (
           <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
-            <Icons.info className="w-4 h-4 inline mr-2" />
+            <Icons.help className="w-4 h-4 inline mr-2" />
             {apiKeyHelpText}
           </div>
         )}
@@ -371,7 +370,7 @@ const OptimizedProviderCard = React.memo<OptimizedProviderCardProps>(({
   isActive,
   onClick
 }) => {
-  usePerformanceMonitor(`OptimizedProviderCard-${provider.id}`, [isActive, config.enabled]);
+  usePerformanceMonitor(`OptimizedProviderCard-${provider.id}`);
 
   const handleClick = useStableCallback(() => {
     onClick(provider.id);
@@ -438,7 +437,7 @@ const OptimizedProviderList = React.memo<OptimizedProviderListProps>(({
   activeProvider,
   onProviderSelect
 }) => {
-  usePerformanceMonitor('OptimizedProviderList', [providers.length, activeProvider]);
+  usePerformanceMonitor('OptimizedProviderList');
 
   // Memoize provider cards to prevent recreation
   const providerCards = useMemo(() => {

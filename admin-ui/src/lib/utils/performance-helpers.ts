@@ -3,7 +3,7 @@
  * Includes debouncing, throttling, memoization, and component optimization helpers
  */
 
-import { 
+import React, { 
   useCallback, 
   useMemo, 
   useRef, 
@@ -244,11 +244,17 @@ export function createLazyComponent<P extends object>(
 ): ComponentType<P> {
   const LazyComponent = lazy(importFunc);
   
-  return (props: P) => (
-    <Suspense fallback={fallback}>
-      <LazyComponent {...props} />
-    </Suspense>
-  );
+  const LazyWrapper = (props: P) => {
+    return React.createElement(
+      Suspense,
+      { fallback },
+      React.createElement(LazyComponent, props)
+    );
+  };
+  
+  LazyWrapper.displayName = 'LazyWrapper';
+  
+  return LazyWrapper;
 }
 
 /**
@@ -507,36 +513,31 @@ export function useOptimizedInput<T = string>(
 
 /**
  * Profiler wrapper component for measuring component performance
+ * Note: This should be used in .tsx files with proper JSX syntax
  */
-export function ProfilerWrapper({ 
-  id, 
-  children,
-  onRender
-}: {
-  id: string;
-  children: ReactNode;
-  onRender?: (id: string, phase: 'mount' | 'update', actualDuration: number) => void;
-}) {
-  const handleRender = useCallback(
-    (id: string, phase: 'mount' | 'update', actualDuration: number) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[Profiler] ${id} ${phase} took ${actualDuration.toFixed(2)}ms`);
-      }
-      onRender?.(id, phase, actualDuration);
-    },
-    [onRender]
-  );
-
-  // Only render Profiler in development
-  if (process.env.NODE_ENV === 'development') {
-    return (
-      <div data-profiler-id={id}>
-        {children}
-      </div>
+export function createProfilerWrapper(id: string, onRender?: (id: string, phase: 'mount' | 'update', actualDuration: number) => void) {
+  return function ProfilerWrapper({ children }: { children: ReactNode }) {
+    const handleRender = useCallback(
+      (id: string, phase: 'mount' | 'update', actualDuration: number) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[Profiler] ${id} ${phase} took ${actualDuration.toFixed(2)}ms`);
+        }
+        onRender?.(id, phase, actualDuration);
+      },
+      [onRender]
     );
-  }
 
-  return <>{children}</>;
+    // Only render Profiler in development
+    if (process.env.NODE_ENV === 'development') {
+      return React.createElement(
+        'div',
+        { 'data-profiler-id': id },
+        children
+      );
+    }
+
+    return React.createElement(React.Fragment, null, children);
+  };
 }
 
 /**
