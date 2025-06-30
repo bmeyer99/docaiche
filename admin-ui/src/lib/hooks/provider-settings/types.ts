@@ -76,8 +76,8 @@ export const ProviderConfigurationResponseSchema = z.object({
   id: z.string(),
   enabled: z.boolean().optional(),
   config: z.record(z.string(), z.any()).optional(),
-  status: z.enum(['connected', 'disconnected', 'error']).optional(),
-  last_tested: z.string().optional(),
+  status: z.enum(['connected', 'disconnected', 'error', 'available']).optional(),
+  last_tested: z.string().nullable().optional(),
   models: z.array(z.string()).optional()
 });
 
@@ -87,7 +87,7 @@ export const ModelSelectionResponseSchema = z.object({
   textGeneration: ModelSelectionSchema.optional(),
   embeddings: ModelSelectionSchema.optional(),
   sharedProvider: z.boolean().optional()
-}).optional();
+}).nullable().optional();
 
 export type ModelSelectionResponse = z.infer<typeof ModelSelectionResponseSchema>;
 

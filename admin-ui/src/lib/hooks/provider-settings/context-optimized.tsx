@@ -184,7 +184,9 @@ export function OptimizedProviderSettingsProvider({
       
       setProviders(prev => {
         const provider = prev[providerId];
-        if (!provider) return prev;
+        if (!provider) {
+          return prev;
+        }
         
         const mergedConfig = { ...provider.config, ...config };
         const sanitizedConfig = sanitizeProviderConfig(providerId, mergedConfig);

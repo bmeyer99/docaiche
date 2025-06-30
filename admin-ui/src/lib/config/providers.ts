@@ -17,8 +17,8 @@ export interface ProviderConfiguration {
   name: string;
   enabled: boolean;
   config: Record<string, any>;
-  status: 'connected' | 'disconnected' | 'error';
-  lastTested?: string;
+  status: 'connected' | 'disconnected' | 'error' | 'available';
+  lastTested?: string | null;
   models?: string[];
 }
 
