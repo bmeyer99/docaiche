@@ -9,10 +9,11 @@ import logging
 from typing import Dict, Any, Optional
 from fastapi import Depends
 
-from ..dependencies import get_search_orchestrator, get_database_manager
-from src.database.connection import DatabaseManager
+from ..dependencies import get_search_orchestrator, get_database_manager, get_cache_manager
+from src.database.connection import DatabaseManager, CacheManager
 from src.search.orchestrator import SearchOrchestrator
 from .tools import SearchTool, IngestTool, FeedbackTool
+from .resources import CollectionsResource, StatusResource
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class MCPHandler:
         self,
         search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator),
         db_manager: DatabaseManager = Depends(get_database_manager),
+        cache_manager: CacheManager = Depends(get_cache_manager),
     ):
         """
         Initialize MCP handler with dependencies.
@@ -35,9 +37,11 @@ class MCPHandler:
         Args:
             search_orchestrator: Search service for document queries
             db_manager: Database access for collections and feedback
+            cache_manager: Cache service for performance
         """
         self.search_orchestrator = search_orchestrator
         self.db_manager = db_manager
+        self.cache_manager = cache_manager
         
         # Initialize tools with dependencies
         self.tools = {
@@ -46,8 +50,11 @@ class MCPHandler:
             "docaiche_feedback": FeedbackTool()
         }
         
-        # Initialize resources (will be populated in next phase)
-        self.resources = {}
+        # Initialize resources with dependencies
+        self.resources = {
+            "docaiche://collections": CollectionsResource(db_manager),
+            "docaiche://status": StatusResource(db_manager, cache_manager, search_orchestrator)
+        }
     
     async def handle(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
