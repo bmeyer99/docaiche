@@ -33,6 +33,13 @@ AVAILABLE_SERVICES = {
         "container_pattern": "docaiche-admin-ui",
         "log_level": "INFO"
     },
+    "browser": {
+        "id": "browser",
+        "name": "Browser Frontend",
+        "container_pattern": "browser",
+        "log_level": "DEBUG",
+        "loki_labels": {"app": "docaiche-admin-ui", "component": "browser"}
+    },
     "redis": {
         "id": "redis",
         "name": "Redis Cache",
@@ -135,7 +142,15 @@ async def get_service_logs(
     
     # Build Loki query
     query_parts = []
-    query_parts.append(f'{{service_name=~"{service_info["container_pattern"]}.*"}}')
+    
+    # Use custom labels for browser logs
+    if "loki_labels" in service_info:
+        label_conditions = []
+        for key, value in service_info["loki_labels"].items():
+            label_conditions.append(f'{key}="{value}"')
+        query_parts.append(f'{{{",".join(label_conditions)}}}')
+    else:
+        query_parts.append(f'{{service_name=~"{service_info["container_pattern"]}.*"}}')
     
     if level:
         query_parts.append(f'|= "{level}"')
@@ -239,7 +254,7 @@ async def websocket_logs(
     search: Optional[str] = Query(None, max_length=100)
 ):
     """
-    WebSocket endpoint for real-time log streaming
+    WebSocket endpoint for real-time log streaming using polling
     
     Args:
         websocket: WebSocket connection
@@ -260,9 +275,17 @@ async def websocket_logs(
     
     service_info = AVAILABLE_SERVICES[service_id]
     
-    # Build Loki query for tail
+    # Build Loki query
     query_parts = []
-    query_parts.append(f'{{service_name=~"{service_info["container_pattern"]}.*"}}')
+    
+    # Use custom labels for browser logs
+    if "loki_labels" in service_info:
+        label_conditions = []
+        for key, value in service_info["loki_labels"].items():
+            label_conditions.append(f'{key}="{value}"')
+        query_parts.append(f'{{{",".join(label_conditions)}}}')
+    else:
+        query_parts.append(f'{{service_name=~"{service_info["container_pattern"]}.*"}}')
     
     if level:
         query_parts.append(f'|= "{level}"')
@@ -273,79 +296,128 @@ async def websocket_logs(
     
     loki_query = " ".join(query_parts)
     
+    # Send initial connected message
+    await websocket.send_json({
+        "type": "connected",
+        "data": {"service": service_id}
+    })
+    
+    # Track last timestamp to avoid duplicates
+    last_timestamp = datetime.utcnow()
+    seen_entries = set()
+    
+    update_task = None
+    
     try:
-        # Start tailing logs
-        async with httpx.AsyncClient(timeout=None) as client:
-            # Use Loki's tail endpoint for real-time streaming
-            async with client.stream(
-                "GET",
-                "http://loki:3100/loki/api/v1/tail",
-                params={
-                    "query": loki_query,
-                    "delay_for": 0,
-                    "limit": 100
-                }
-            ) as response:
-                if response.status_code != 200:
-                    await websocket.send_json({
-                        "type": "error",
-                        "data": {"message": "Failed to connect to log stream"}
-                    })
-                    await websocket.close()
-                    return
-                
-                # Send initial connected message
-                await websocket.send_json({
-                    "type": "connected",
-                    "data": {"service": service_id}
-                })
-                
-                # Stream logs
-                async for line in response.aiter_lines():
-                    if not line:
-                        continue
+        # Start polling for new logs
+        async def poll_logs():
+            nonlocal last_timestamp, seen_entries
+            
+            while True:
+                try:
+                    await asyncio.sleep(2)  # Poll every 2 seconds
                     
-                    try:
-                        # Parse SSE format
-                        if line.startswith("data: "):
-                            data = json.loads(line[6:])
+                    # Query for recent logs
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        end_time = datetime.utcnow()
+                        start_time = last_timestamp - timedelta(seconds=1)  # Small overlap to catch any missed logs
+                        
+                        response = await client.get(
+                            "http://loki:3100/loki/api/v1/query_range",
+                            params={
+                                "query": loki_query,
+                                "start": int(start_time.timestamp() * 1e9),
+                                "end": int(end_time.timestamp() * 1e9),
+                                "limit": 100,
+                                "direction": "forward"  # Oldest first
+                            }
+                        )
+                        
+                        if response.status_code == 200:
+                            data = response.json()
                             
-                            for stream in data.get("streams", []):
-                                stream_labels = stream.get("stream", {})
-                                for value in stream.get("values", []):
-                                    timestamp_ns, log_line = value
-                                    timestamp = datetime.fromtimestamp(int(timestamp_ns) / 1e9)
-                                    
-                                    # Parse log
-                                    try:
-                                        log_data = json.loads(log_line)
-                                        message = log_data.get("message", log_line)
-                                        log_level = log_data.get("level", "INFO")
-                                        metadata = {k: v for k, v in log_data.items() 
-                                                   if k not in ["message", "level", "timestamp"]}
-                                    except json.JSONDecodeError:
-                                        message = log_line
-                                        log_level = "INFO"
-                                        metadata = {}
-                                    
-                                    # Send log to client
-                                    await websocket.send_json({
-                                        "type": "log",
-                                        "data": {
+                            if data.get("status") == "success":
+                                new_logs = []
+                                
+                                for stream in data.get("data", {}).get("result", []):
+                                    stream_labels = stream.get("stream", {})
+                                    for value in stream.get("values", []):
+                                        timestamp_ns, log_line = value
+                                        
+                                        # Create unique entry ID
+                                        entry_id = f"{timestamp_ns}:{hash(log_line)}"
+                                        if entry_id in seen_entries:
+                                            continue
+                                        
+                                        seen_entries.add(entry_id)
+                                        
+                                        # Keep only recent entries in memory
+                                        if len(seen_entries) > 10000:
+                                            seen_entries = set(list(seen_entries)[-5000:])
+                                        
+                                        timestamp = datetime.fromtimestamp(int(timestamp_ns) / 1e9)
+                                        
+                                        # Parse log
+                                        try:
+                                            log_data = json.loads(log_line)
+                                            message = log_data.get("message", log_line)
+                                            log_level = log_data.get("level", "INFO")
+                                            metadata = {k: v for k, v in log_data.items() 
+                                                       if k not in ["message", "level", "timestamp"]}
+                                        except json.JSONDecodeError:
+                                            message = log_line
+                                            log_level = "INFO"
+                                            # Try to extract level from log line
+                                            for lvl in ["DEBUG", "INFO", "WARN", "WARNING", "ERROR", "FATAL"]:
+                                                if lvl in log_line.upper():
+                                                    log_level = lvl
+                                                    break
+                                            metadata = {}
+                                        
+                                        new_logs.append({
                                             "timestamp": timestamp.isoformat() + "Z",
                                             "level": log_level,
                                             "service": service_id,
                                             "message": message,
                                             "metadata": {**metadata, **stream_labels}
-                                        }
+                                        })
+                                        
+                                        # Update last timestamp
+                                        if timestamp > last_timestamp:
+                                            last_timestamp = timestamp
+                                
+                                # Send new logs to client
+                                for log in new_logs:
+                                    await websocket.send_json({
+                                        "type": "log",
+                                        "data": log
                                     })
-                    
-                    except Exception as e:
-                        logger.error(f"Error parsing log stream: {e}")
-                        continue
+                        
+                except asyncio.CancelledError:
+                    logger.info("Log polling task cancelled")
+                    break
+                except Exception as e:
+                    logger.error(f"Error polling logs: {e}")
+                    await asyncio.sleep(5)  # Back off on error
+        
+        # Create polling task
+        update_task = asyncio.create_task(poll_logs())
+        
+        # Listen for client messages
+        while True:
+            try:
+                message = await websocket.receive_text()
+                data = json.loads(message)
                 
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for service {service_id}")
+                if data.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+                    
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Error processing websocket message: {e}")
+                break
+                
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         try:
@@ -356,6 +428,12 @@ async def websocket_logs(
         except:
             pass
     finally:
+        if update_task:
+            update_task.cancel()
+            try:
+                await update_task
+            except asyncio.CancelledError:
+                pass
         try:
             await websocket.close()
         except:

@@ -1,0 +1,4714 @@
+{
+  "consoleLogs": [
+    {
+      "timestamp": "23:51:01.530",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.530",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.531",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.538",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.543",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.548",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.554",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.558",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.564",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.568",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.572",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.576",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.580",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.584",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.588",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.592",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.596",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.600",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.604",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.608",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.612",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:01.617",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.536",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.540",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.545",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.549",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.553",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.557",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.561",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.566",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.570",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.574",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.578",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.582",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.586",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.590",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.594",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.600",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.607",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.612",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.617",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.621",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.625",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:02.629",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.543",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.562",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.582",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.582",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.582",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.583",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.605",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.605",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.605",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.606",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.611",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.612",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.613",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:04.613",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:04.613",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:04.670",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:04.672",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.672",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.673",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.673",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.704",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.744",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.744",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.745",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.747",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.787",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.787",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.934",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.935",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.935",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:04.935",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:05.072",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 429 (Too Many Requests)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+      }
+    },
+    {
+      "timestamp": "23:51:05.392",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:05.392",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:05.392",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:05.392",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:06.517",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:06.518",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:06.518",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:07.237",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    },
+    {
+      "timestamp": "23:51:07.237",
+      "type": "warn",
+      "text": "Circuit breaker opened for endpoint: /logs/browser?limit=500",
+      "location": {
+        "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+        "lineNumber": 0,
+        "columnNumber": 1327
+      }
+    }
+  ],
+  "networkRequests": [
+    {
+      "timestamp": "23:50:53.230",
+      "url": "http://192.168.4.199:4080/dashboard/logs",
+      "method": "GET",
+      "resourceType": "document",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "upgrade-insecure-requests": "1",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+      }
+    },
+    {
+      "timestamp": "23:50:53.296",
+      "url": "http://192.168.4.199:4080/_next/static/css/406cce1285e45c71.css",
+      "method": "GET",
+      "resourceType": "stylesheet",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "text/css,*/*;q=0.1"
+      }
+    },
+    {
+      "timestamp": "23:50:53.297",
+      "url": "http://192.168.4.199:4080/_next/static/css/0c48fe1d45498b29.css",
+      "method": "GET",
+      "resourceType": "stylesheet",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "text/css,*/*;q=0.1"
+      }
+    },
+    {
+      "timestamp": "23:50:53.304",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/webpack-0a10d8c1b9fe1647.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.305",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/4bd1b696-c90879200007ec91.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.312",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/163-214838a58e9b0137.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.313",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/main-app-196e18c5ff0fcbcf.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.313",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/352-09cb203a2591843e.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.313",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/111-7afaf568d2e191f6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.313",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/595-47280fc847c1d09d.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.314",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/544-c87dbf3e48919c6b.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.314",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/671-aef812467c2e49e0.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.314",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/677-0a92b7ec917b35d3.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.315",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/logs/page-ca1233718d8a7950.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.315",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/73-f1c35af939766281.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.315",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/global-error-2855aa51e8dde115.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.315",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/511-410649efa432b3e7.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.315",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.316",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/error-ec72d7b510f04fb6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.317",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/not-found-8ea7914e1a9977c6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.317",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/874-c61424daff6dd93a.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.317",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/518-73aa5b275e7bef05.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.317",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/13-e9646e825de46ade.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.318",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/layout-5fa463fc1412afda.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.318",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/error-8c15e228bcef559c.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.404",
+      "url": "http://192.168.4.199:4080/favicon.ico",
+      "method": "GET",
+      "resourceType": "other",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+      }
+    },
+    {
+      "timestamp": "23:50:53.428",
+      "url": "http://192.168.4.199:4080/api/v1/logs/services",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:50:53.437",
+      "url": "http://192.168.4.199:4080/dashboard/analytics?_rsc=1dr0u",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "rsc": "1",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "next-url": "/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "next-router-prefetch": "1",
+        "next-router-state-tree": "%5B%22%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22logs%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2C%22%2Fdashboard%2Flogs%22%2C%22refresh%22%5D%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:53.437",
+      "url": "http://192.168.4.199:4080/dashboard/providers?_rsc=1dr0u",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "rsc": "1",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "next-url": "/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "next-router-prefetch": "1",
+        "next-router-state-tree": "%5B%22%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22logs%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2C%22%2Fdashboard%2Flogs%22%2C%22refresh%22%5D%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:53.438",
+      "url": "http://192.168.4.199:4080/dashboard/documents?_rsc=1dr0u",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "rsc": "1",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "next-url": "/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "next-router-prefetch": "1",
+        "next-router-state-tree": "%5B%22%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22logs%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2C%22%2Fdashboard%2Flogs%22%2C%22refresh%22%5D%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:53.478",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:53.480",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:53.733",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:53.734",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:57.459",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:57.459",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:57.697",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:57.698",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:57.912",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:57.913",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.132",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.132",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.372",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.373",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.385",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "method": "POST",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.597",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.598",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.834",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:58.835",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.047",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.048",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.273",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.274",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.507",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.507",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.733",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.734",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.958",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:50:59.959",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:00.178",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:00.179",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:00.401",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:00.402",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:00.642",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:00.643",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:00.853",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:00.854",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:01.062",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:01.062",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:01.294",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:01.294",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:01.528",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:01.529",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:01.550",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "method": "POST",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.531",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.531",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.531",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.539",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.545",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.550",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.555",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.560",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.565",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.569",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.572",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.576",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.581",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.585",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.589",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.593",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.599",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "method": "POST",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.599",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.601",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.605",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.609",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.613",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:02.617",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:03.385",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "method": "POST",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.537",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.541",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.561",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.562",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.563",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.563",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.564",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.564",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.564",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.581",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.581",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.584",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.584",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.584",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.584",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.585",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.602",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.602",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.607",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.608",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.608",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.611",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.612",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.704",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.704",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.704",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.705",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.745",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:04.746",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "method": "POST",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:11.430",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:11.431",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:12.044",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:51:12.044",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    }
+  ],
+  "networkResponses": [
+    {
+      "timestamp": "23:50:53.286",
+      "url": "http://192.168.4.199:4080/dashboard/logs",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/html; charset=utf-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "x-powered-by": "Next.js"
+      }
+    },
+    {
+      "timestamp": "23:50:53.303",
+      "url": "http://192.168.4.199:4080/_next/static/css/406cce1285e45c71.css",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/css; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"1c18f-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.303",
+      "url": "http://192.168.4.199:4080/_next/static/css/0c48fe1d45498b29.css",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/css; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"1119-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.312",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/webpack-0a10d8c1b9fe1647.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"de7-197be18e85b\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.344",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/4bd1b696-c90879200007ec91.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"291e2-197be18e85b\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.346",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/main-app-196e18c5ff0fcbcf.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-length": "612",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"264-197be18e85a\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.347",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/111-7afaf568d2e191f6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"3721-197be18e85b\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.347",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/352-09cb203a2591843e.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"6ba3-197be18e85b\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.347",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/595-47280fc847c1d09d.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"6147-197be18e85b\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.348",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/544-c87dbf3e48919c6b.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"bc9c-197be18e85b\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.349",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/671-aef812467c2e49e0.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"818b-197be18e85b\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.349",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/677-0a92b7ec917b35d3.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"8735-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.349",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/163-214838a58e9b0137.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"2ad7a-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.350",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/logs/page-ca1233718d8a7950.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"46ab-197be18e85b\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.351",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/global-error-2855aa51e8dde115.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-length": "470",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"1d6-197be18e85a\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.351",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/73-f1c35af939766281.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"3b31-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.351",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/511-410649efa432b3e7.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"3f3b-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.351",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-f8927d2103290e04.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"2ea5-197be18e85a\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.351",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/error-ec72d7b510f04fb6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"152f-197be18e85a\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.351",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/not-found-8ea7914e1a9977c6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"c52-197be18e85a\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.352",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/874-c61424daff6dd93a.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"2137-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.352",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/518-73aa5b275e7bef05.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"1fa5-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.352",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/13-e9646e825de46ade.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"bc28-197be18e85c\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.352",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/error-8c15e228bcef559c.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"146c-197be18e85a\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.352",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/layout-5fa463fc1412afda.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "etag": "W/\"b48d-197be18e85a\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:49:52 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.432",
+      "url": "http://192.168.4.199:4080/favicon.ico",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "connection": "keep-alive",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "image/x-icon",
+        "x-nextjs-cache": "HIT",
+        "x-nextjs-prerender": "1"
+      }
+    },
+    {
+      "timestamp": "23:50:53.452",
+      "url": "http://192.168.4.199:4080/dashboard/analytics?_rsc=1dr0u",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/x-component",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.453",
+      "url": "http://192.168.4.199:4080/dashboard/providers?_rsc=1dr0u",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/x-component",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.457",
+      "url": "http://192.168.4.199:4080/dashboard/documents?_rsc=1dr0u",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/x-component",
+        "date": "Sun, 29 Jun 2025 23:50:53 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:50:53.462",
+      "url": "http://192.168.4.199:4080/api/v1/logs/services",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "613",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:52 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0009021759033203125",
+        "x-trace-id": "7d85fdc7"
+      }
+    },
+    {
+      "timestamp": "23:50:53.723",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "61",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:52 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.23593831062316895",
+        "x-trace-id": "ad6eb728"
+      }
+    },
+    {
+      "timestamp": "23:50:57.449",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "61",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:52 GMT",
+        "server": "uvicorn",
+        "x-process-time": "3.7214977741241455",
+        "x-trace-id": "8d5af979"
+      }
+    },
+    {
+      "timestamp": "23:50:57.689",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "61",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:57 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.2338550090789795",
+        "x-trace-id": "2c61fb31"
+      }
+    },
+    {
+      "timestamp": "23:50:57.904",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "61",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:57 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.21021437644958496",
+        "x-trace-id": "298f5ead"
+      }
+    },
+    {
+      "timestamp": "23:50:58.124",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "61",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:57 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.21482229232788086",
+        "x-trace-id": "e9a72bca"
+      }
+    },
+    {
+      "timestamp": "23:50:58.364",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "61",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:58 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.23519253730773926",
+        "x-trace-id": "05368012"
+      }
+    },
+    {
+      "timestamp": "23:50:58.395",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "60",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:58 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0026254653930664062",
+        "x-trace-id": "362c5fa6"
+      }
+    },
+    {
+      "timestamp": "23:50:58.589",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "61",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:58 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.22014141082763672",
+        "x-trace-id": "bb57a506"
+      }
+    },
+    {
+      "timestamp": "23:50:58.815",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:58 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.22038578987121582",
+        "x-trace-id": "7dbbfffc"
+      }
+    },
+    {
+      "timestamp": "23:50:59.035",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:58 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.21604609489440918",
+        "x-trace-id": "98fe29dd"
+      }
+    },
+    {
+      "timestamp": "23:50:59.260",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:59 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.21956467628479004",
+        "x-trace-id": "5da1c3b4"
+      }
+    },
+    {
+      "timestamp": "23:50:59.493",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:59 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.22785615921020508",
+        "x-trace-id": "b219dfad"
+      }
+    },
+    {
+      "timestamp": "23:50:59.720",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:59 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.2221078872680664",
+        "x-trace-id": "d0c07c0d"
+      }
+    },
+    {
+      "timestamp": "23:50:59.944",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:59 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.21889686584472656",
+        "x-trace-id": "6ec9c671"
+      }
+    },
+    {
+      "timestamp": "23:51:00.165",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:50:59 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.21623539924621582",
+        "x-trace-id": "5a6ccee2"
+      }
+    },
+    {
+      "timestamp": "23:51:00.385",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:00 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.21542620658874512",
+        "x-trace-id": "87446575"
+      }
+    },
+    {
+      "timestamp": "23:51:00.624",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:00 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.23375606536865234",
+        "x-trace-id": "674a2abc"
+      }
+    },
+    {
+      "timestamp": "23:51:00.840",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:00 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.21099019050598145",
+        "x-trace-id": "5accdde6"
+      }
+    },
+    {
+      "timestamp": "23:51:01.050",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:00 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.20526862144470215",
+        "x-trace-id": "0b06e4d6"
+      }
+    },
+    {
+      "timestamp": "23:51:01.280",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:00 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.22628211975097656",
+        "x-trace-id": "b47032be"
+      }
+    },
+    {
+      "timestamp": "23:51:01.515",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.22886371612548828",
+        "x-trace-id": "0d2a3c85"
+      }
+    },
+    {
+      "timestamp": "23:51:01.529",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0010030269622802734",
+        "x-trace-id": "7cbecadb"
+      }
+    },
+    {
+      "timestamp": "23:51:01.530",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007565021514892578",
+        "x-trace-id": "7346067d"
+      }
+    },
+    {
+      "timestamp": "23:51:01.531",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009102821350097656",
+        "x-trace-id": "20eef17f"
+      }
+    },
+    {
+      "timestamp": "23:51:01.538",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.001394510269165039",
+        "x-trace-id": "81e9387f"
+      }
+    },
+    {
+      "timestamp": "23:51:01.543",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008561611175537109",
+        "x-trace-id": "0a3a0330"
+      }
+    },
+    {
+      "timestamp": "23:51:01.548",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008776187896728516",
+        "x-trace-id": "4832611d"
+      }
+    },
+    {
+      "timestamp": "23:51:01.554",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007965564727783203",
+        "x-trace-id": "7173c3a6"
+      }
+    },
+    {
+      "timestamp": "23:51:01.558",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008909702301025391",
+        "x-trace-id": "cd59dee2"
+      }
+    },
+    {
+      "timestamp": "23:51:01.559",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "60",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0035631656646728516",
+        "x-trace-id": "0baccfc6"
+      }
+    },
+    {
+      "timestamp": "23:51:01.564",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009262561798095703",
+        "x-trace-id": "12f9c048"
+      }
+    },
+    {
+      "timestamp": "23:51:01.567",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007181167602539062",
+        "x-trace-id": "efa23def"
+      }
+    },
+    {
+      "timestamp": "23:51:01.571",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007226467132568359",
+        "x-trace-id": "84d80cf7"
+      }
+    },
+    {
+      "timestamp": "23:51:01.575",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008935928344726562",
+        "x-trace-id": "660aed52"
+      }
+    },
+    {
+      "timestamp": "23:51:01.580",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007734298706054688",
+        "x-trace-id": "3441b40d"
+      }
+    },
+    {
+      "timestamp": "23:51:01.584",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0006897449493408203",
+        "x-trace-id": "a9b4e28e"
+      }
+    },
+    {
+      "timestamp": "23:51:01.588",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008456707000732422",
+        "x-trace-id": "33df9553"
+      }
+    },
+    {
+      "timestamp": "23:51:01.592",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0006785392761230469",
+        "x-trace-id": "2c4bf328"
+      }
+    },
+    {
+      "timestamp": "23:51:01.596",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007255077362060547",
+        "x-trace-id": "15ac5472"
+      }
+    },
+    {
+      "timestamp": "23:51:01.600",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008053779602050781",
+        "x-trace-id": "479efcc6"
+      }
+    },
+    {
+      "timestamp": "23:51:01.604",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008428096771240234",
+        "x-trace-id": "e8f5020b"
+      }
+    },
+    {
+      "timestamp": "23:51:01.608",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0006592273712158203",
+        "x-trace-id": "451d05ba"
+      }
+    },
+    {
+      "timestamp": "23:51:01.612",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008637905120849609",
+        "x-trace-id": "a946cc77"
+      }
+    },
+    {
+      "timestamp": "23:51:01.616",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:01 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007243156433105469",
+        "x-trace-id": "34e5bba8"
+      }
+    },
+    {
+      "timestamp": "23:51:02.536",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008790493011474609",
+        "x-trace-id": "17d6f498"
+      }
+    },
+    {
+      "timestamp": "23:51:02.540",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008716583251953125",
+        "x-trace-id": "31d7efa0"
+      }
+    },
+    {
+      "timestamp": "23:51:02.544",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008182525634765625",
+        "x-trace-id": "30424464"
+      }
+    },
+    {
+      "timestamp": "23:51:02.549",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008816719055175781",
+        "x-trace-id": "1cd67932"
+      }
+    },
+    {
+      "timestamp": "23:51:02.553",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007028579711914062",
+        "x-trace-id": "63ea0d3b"
+      }
+    },
+    {
+      "timestamp": "23:51:02.557",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007197856903076172",
+        "x-trace-id": "0b962025"
+      }
+    },
+    {
+      "timestamp": "23:51:02.561",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009865760803222656",
+        "x-trace-id": "5360c2a0"
+      }
+    },
+    {
+      "timestamp": "23:51:02.566",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007741451263427734",
+        "x-trace-id": "cd7e086e"
+      }
+    },
+    {
+      "timestamp": "23:51:02.570",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008378028869628906",
+        "x-trace-id": "1595bc58"
+      }
+    },
+    {
+      "timestamp": "23:51:02.574",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0010242462158203125",
+        "x-trace-id": "19c6ff8a"
+      }
+    },
+    {
+      "timestamp": "23:51:02.578",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007569789886474609",
+        "x-trace-id": "2abe840b"
+      }
+    },
+    {
+      "timestamp": "23:51:02.582",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007545948028564453",
+        "x-trace-id": "135fbb5d"
+      }
+    },
+    {
+      "timestamp": "23:51:02.586",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008959770202636719",
+        "x-trace-id": "6b028626"
+      }
+    },
+    {
+      "timestamp": "23:51:02.590",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007224082946777344",
+        "x-trace-id": "efeeb737"
+      }
+    },
+    {
+      "timestamp": "23:51:02.594",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007822513580322266",
+        "x-trace-id": "5eb8903f"
+      }
+    },
+    {
+      "timestamp": "23:51:02.600",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0010182857513427734",
+        "x-trace-id": "29034d78"
+      }
+    },
+    {
+      "timestamp": "23:51:02.607",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0010652542114257812",
+        "x-trace-id": "55ffaedc"
+      }
+    },
+    {
+      "timestamp": "23:51:02.610",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "60",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0039691925048828125",
+        "x-trace-id": "958283f9"
+      }
+    },
+    {
+      "timestamp": "23:51:02.612",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008308887481689453",
+        "x-trace-id": "ed6d5b2d"
+      }
+    },
+    {
+      "timestamp": "23:51:02.617",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007426738739013672",
+        "x-trace-id": "f3dcaf5b"
+      }
+    },
+    {
+      "timestamp": "23:51:02.621",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008003711700439453",
+        "x-trace-id": "e650df51"
+      }
+    },
+    {
+      "timestamp": "23:51:02.625",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008919239044189453",
+        "x-trace-id": "a543973f"
+      }
+    },
+    {
+      "timestamp": "23:51:02.629",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:02 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0006895065307617188",
+        "x-trace-id": "b8489fae"
+      }
+    },
+    {
+      "timestamp": "23:51:03.392",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "60",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:03 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.002228260040283203",
+        "x-trace-id": "ec16f9b7"
+      }
+    },
+    {
+      "timestamp": "23:51:04.542",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009610652923583984",
+        "x-trace-id": "9298b7c6"
+      }
+    },
+    {
+      "timestamp": "23:51:04.562",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008680820465087891",
+        "x-trace-id": "e16eef04"
+      }
+    },
+    {
+      "timestamp": "23:51:04.582",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009019374847412109",
+        "x-trace-id": "97853d32"
+      }
+    },
+    {
+      "timestamp": "23:51:04.582",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.00078582763671875",
+        "x-trace-id": "5648cf79"
+      }
+    },
+    {
+      "timestamp": "23:51:04.582",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008456707000732422",
+        "x-trace-id": "9420c2d1"
+      }
+    },
+    {
+      "timestamp": "23:51:04.582",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008449554443359375",
+        "x-trace-id": "c5f1e537"
+      }
+    },
+    {
+      "timestamp": "23:51:04.605",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009729862213134766",
+        "x-trace-id": "9a6e859a"
+      }
+    },
+    {
+      "timestamp": "23:51:04.605",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007736682891845703",
+        "x-trace-id": "d11c28a6"
+      }
+    },
+    {
+      "timestamp": "23:51:04.605",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.00102996826171875",
+        "x-trace-id": "3b182b6d"
+      }
+    },
+    {
+      "timestamp": "23:51:04.606",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007412433624267578",
+        "x-trace-id": "fc751bb0"
+      }
+    },
+    {
+      "timestamp": "23:51:04.610",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0010139942169189453",
+        "x-trace-id": "ab7c2f24"
+      }
+    },
+    {
+      "timestamp": "23:51:04.611",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0011990070343017578",
+        "x-trace-id": "702aea1d"
+      }
+    },
+    {
+      "timestamp": "23:51:04.672",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008182525634765625",
+        "x-trace-id": "6f40ef52"
+      }
+    },
+    {
+      "timestamp": "23:51:04.672",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.00075531005859375",
+        "x-trace-id": "f19a4337"
+      }
+    },
+    {
+      "timestamp": "23:51:04.673",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009174346923828125",
+        "x-trace-id": "e5df0d74"
+      }
+    },
+    {
+      "timestamp": "23:51:04.673",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007894039154052734",
+        "x-trace-id": "4ec1101a"
+      }
+    },
+    {
+      "timestamp": "23:51:04.704",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008268356323242188",
+        "x-trace-id": "62f18f33"
+      }
+    },
+    {
+      "timestamp": "23:51:04.744",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008804798126220703",
+        "x-trace-id": "1c71b12f"
+      }
+    },
+    {
+      "timestamp": "23:51:04.744",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007121562957763672",
+        "x-trace-id": "8fef7ae9"
+      }
+    },
+    {
+      "timestamp": "23:51:04.745",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0006806850433349609",
+        "x-trace-id": "c42ecfd8"
+      }
+    },
+    {
+      "timestamp": "23:51:04.747",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009262561798095703",
+        "x-trace-id": "212ae980"
+      }
+    },
+    {
+      "timestamp": "23:51:04.787",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007412433624267578",
+        "x-trace-id": "d7c33552"
+      }
+    },
+    {
+      "timestamp": "23:51:04.787",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0006916522979736328",
+        "x-trace-id": "ce546d5d"
+      }
+    },
+    {
+      "timestamp": "23:51:04.934",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0009086132049560547",
+        "x-trace-id": "cf162f1d"
+      }
+    },
+    {
+      "timestamp": "23:51:04.934",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0007338523864746094",
+        "x-trace-id": "ad8c8bbe"
+      }
+    },
+    {
+      "timestamp": "23:51:04.935",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008044242858886719",
+        "x-trace-id": "c545df46"
+      }
+    },
+    {
+      "timestamp": "23:51:04.935",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0008680820465087891",
+        "x-trace-id": "cec4f1ed"
+      }
+    },
+    {
+      "timestamp": "23:51:05.072",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 429,
+      "statusText": "Too Many Requests",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "244",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "retry-after": "60",
+        "server": "uvicorn",
+        "x-process-time": "0.0015931129455566406",
+        "x-trace-id": "a1d1e83d"
+      }
+    },
+    {
+      "timestamp": "23:51:05.073",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "60",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:51:04 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0029609203338623047",
+        "x-trace-id": "bc28a0b7"
+      }
+    }
+  ],
+  "errors": [],
+  "websockets": {},
+  "performanceMetrics": [
+    {
+      "timestamp": "23:51:07.173",
+      "metrics": {
+        "Timestamp": 280851.691883,
+        "Documents": 1,
+        "Frames": 1,
+        "JSEventListeners": 2275,
+        "Nodes": 30770,
+        "LayoutCount": 180,
+        "RecalcStyleCount": 328,
+        "LayoutDuration": 0.221081,
+        "RecalcStyleDuration": 2.000083,
+        "ScriptDuration": 0.742158,
+        "TaskDuration": 3.160344,
+        "JSHeapUsedSize": 23225940,
+        "JSHeapTotalSize": 43515904
+      }
+    }
+  ]
+}

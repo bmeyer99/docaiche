@@ -1,0 +1,1017 @@
+{
+  "consoleLogs": [],
+  "networkRequests": [
+    {
+      "timestamp": "23:58:24.706",
+      "url": "http://192.168.4.199:4080/dashboard/logs",
+      "method": "GET",
+      "resourceType": "document",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "upgrade-insecure-requests": "1",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+      }
+    },
+    {
+      "timestamp": "23:58:24.778",
+      "url": "http://192.168.4.199:4080/_next/static/css/406cce1285e45c71.css",
+      "method": "GET",
+      "resourceType": "stylesheet",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "text/css,*/*;q=0.1"
+      }
+    },
+    {
+      "timestamp": "23:58:24.779",
+      "url": "http://192.168.4.199:4080/_next/static/css/0c48fe1d45498b29.css",
+      "method": "GET",
+      "resourceType": "stylesheet",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "text/css,*/*;q=0.1"
+      }
+    },
+    {
+      "timestamp": "23:58:24.788",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/webpack-0a10d8c1b9fe1647.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.789",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/4bd1b696-c90879200007ec91.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.797",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/163-214838a58e9b0137.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.797",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/main-app-196e18c5ff0fcbcf.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.797",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/352-09cb203a2591843e.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.797",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/111-7afaf568d2e191f6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.798",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/595-47280fc847c1d09d.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.798",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/544-c87dbf3e48919c6b.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.798",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/671-aef812467c2e49e0.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.799",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/677-0a92b7ec917b35d3.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.799",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/logs/page-f5159e0f13ac8b61.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.799",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/73-f1c35af939766281.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.799",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/global-error-2855aa51e8dde115.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.800",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/511-410649efa432b3e7.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.801",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-c41960ac367627fc.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.801",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/error-ec72d7b510f04fb6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.801",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/not-found-8ea7914e1a9977c6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.801",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/874-c61424daff6dd93a.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.801",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/518-73aa5b275e7bef05.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.801",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/13-e9646e825de46ade.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.802",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/layout-5fa463fc1412afda.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.802",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/error-8c15e228bcef559c.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.898",
+      "url": "http://192.168.4.199:4080/favicon.ico",
+      "method": "GET",
+      "resourceType": "other",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+      }
+    },
+    {
+      "timestamp": "23:58:24.920",
+      "url": "http://192.168.4.199:4080/api/v1/logs/services",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:58:24.927",
+      "url": "http://192.168.4.199:4080/dashboard/analytics?_rsc=1dr0u",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "rsc": "1",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "next-url": "/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "next-router-prefetch": "1",
+        "next-router-state-tree": "%5B%22%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22logs%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2C%22%2Fdashboard%2Flogs%22%2C%22refresh%22%5D%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:58:24.928",
+      "url": "http://192.168.4.199:4080/dashboard/providers?_rsc=1dr0u",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "rsc": "1",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "next-url": "/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "next-router-prefetch": "1",
+        "next-router-state-tree": "%5B%22%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22logs%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2C%22%2Fdashboard%2Flogs%22%2C%22refresh%22%5D%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:58:24.929",
+      "url": "http://192.168.4.199:4080/dashboard/documents?_rsc=1dr0u",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "rsc": "1",
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "next-url": "/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "next-router-prefetch": "1",
+        "next-router-state-tree": "%5B%22%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22logs%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2C%22%2Fdashboard%2Flogs%22%2C%22refresh%22%5D%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:58:24.960",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:58:29.879",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "method": "POST",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/logs",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    }
+  ],
+  "networkResponses": [
+    {
+      "timestamp": "23:58:24.768",
+      "url": "http://192.168.4.199:4080/dashboard/logs",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/html; charset=utf-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "x-powered-by": "Next.js"
+      }
+    },
+    {
+      "timestamp": "23:58:24.788",
+      "url": "http://192.168.4.199:4080/_next/static/css/0c48fe1d45498b29.css",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/css; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"1119-197be201843\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.788",
+      "url": "http://192.168.4.199:4080/_next/static/css/406cce1285e45c71.css",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/css; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"1c18f-197be201843\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.796",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/webpack-0a10d8c1b9fe1647.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"de7-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.837",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/4bd1b696-c90879200007ec91.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"291e2-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.838",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/main-app-196e18c5ff0fcbcf.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-length": "612",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"264-197be201840\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.839",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/111-7afaf568d2e191f6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"3721-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.844",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/352-09cb203a2591843e.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"6ba3-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.844",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/595-47280fc847c1d09d.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"6147-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.845",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/671-aef812467c2e49e0.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"818b-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.845",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/163-214838a58e9b0137.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"2ad7a-197be201842\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.846",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/544-c87dbf3e48919c6b.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"bc9c-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.846",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/677-0a92b7ec917b35d3.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"8735-197be201842\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.847",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/logs/page-f5159e0f13ac8b61.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"487e-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.847",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/73-f1c35af939766281.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"3b31-197be201842\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.847",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/global-error-2855aa51e8dde115.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-length": "470",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"1d6-197be201840\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.848",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/511-410649efa432b3e7.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"3f3b-197be201842\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.848",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-c41960ac367627fc.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"2efc-197be201840\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.848",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/error-ec72d7b510f04fb6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"152f-197be201840\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.848",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/not-found-8ea7914e1a9977c6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"c52-197be201840\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.848",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/874-c61424daff6dd93a.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"2137-197be201841\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.848",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/518-73aa5b275e7bef05.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"1fa5-197be201842\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.848",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/layout-5fa463fc1412afda.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"b48d-197be201840\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.849",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/error-8c15e228bcef559c.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"146c-197be201840\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.849",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/13-e9646e825de46ade.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "etag": "W/\"bc28-197be201842\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 23:57:43 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.920",
+      "url": "http://192.168.4.199:4080/favicon.ico",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "connection": "keep-alive",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "image/x-icon",
+        "x-nextjs-cache": "HIT",
+        "x-nextjs-prerender": "1"
+      }
+    },
+    {
+      "timestamp": "23:58:24.941",
+      "url": "http://192.168.4.199:4080/dashboard/analytics?_rsc=1dr0u",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/x-component",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.944",
+      "url": "http://192.168.4.199:4080/dashboard/providers?_rsc=1dr0u",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/x-component",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.947",
+      "url": "http://192.168.4.199:4080/dashboard/documents?_rsc=1dr0u",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/x-component",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:58:24.951",
+      "url": "http://192.168.4.199:4080/api/v1/logs/services",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "613",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0006823539733886719",
+        "x-trace-id": "fc5db7a4"
+      }
+    },
+    {
+      "timestamp": "23:58:25.219",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:58:24 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.23461413383483887",
+        "x-trace-id": "0ea706f4"
+      }
+    },
+    {
+      "timestamp": "23:58:29.888",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "60",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:58:29 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0021588802337646484",
+        "x-trace-id": "3356857a"
+      }
+    }
+  ],
+  "errors": [],
+  "websockets": {},
+  "performanceMetrics": [
+    {
+      "timestamp": "23:58:31.849",
+      "metrics": {
+        "Timestamp": 281296.367435,
+        "Documents": 3,
+        "Frames": 1,
+        "JSEventListeners": 1464,
+        "Nodes": 8992,
+        "LayoutCount": 12,
+        "RecalcStyleCount": 36,
+        "LayoutDuration": 0.042611,
+        "RecalcStyleDuration": 0.035929,
+        "ScriptDuration": 0.097037,
+        "TaskDuration": 0.23992,
+        "JSHeapUsedSize": 7833328,
+        "JSHeapTotalSize": 11534336
+      }
+    }
+  ]
+}

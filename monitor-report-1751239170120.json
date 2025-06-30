@@ -1,0 +1,1580 @@
+{
+  "consoleLogs": [
+    {
+      "timestamp": "23:19:14.199",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/openai/models"
+      }
+    },
+    {
+      "timestamp": "23:19:15.207",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/openai/models"
+      }
+    },
+    {
+      "timestamp": "23:19:17.224",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/openai/models"
+      }
+    },
+    {
+      "timestamp": "23:19:17.233",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models"
+      }
+    },
+    {
+      "timestamp": "23:19:18.241",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models"
+      }
+    },
+    {
+      "timestamp": "23:19:20.251",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models"
+      }
+    },
+    {
+      "timestamp": "23:19:20.260",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/groq/models"
+      }
+    },
+    {
+      "timestamp": "23:19:21.269",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/groq/models"
+      }
+    },
+    {
+      "timestamp": "23:19:23.282",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/groq/models"
+      }
+    },
+    {
+      "timestamp": "23:19:23.290",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models"
+      }
+    },
+    {
+      "timestamp": "23:19:24.312",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models"
+      }
+    },
+    {
+      "timestamp": "23:19:26.330",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models"
+      }
+    },
+    {
+      "timestamp": "23:19:26.339",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models"
+      }
+    },
+    {
+      "timestamp": "23:19:27.359",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models"
+      }
+    },
+    {
+      "timestamp": "23:19:29.377",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models"
+      }
+    },
+    {
+      "timestamp": "23:19:29.385",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "http://192.168.4.199:4080/api/v1/providers/vertex/models"
+      }
+    }
+  ],
+  "networkRequests": [
+    {
+      "timestamp": "23:19:13.931",
+      "url": "http://192.168.4.199:4080/dashboard/providers",
+      "method": "GET",
+      "resourceType": "document",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "upgrade-insecure-requests": "1",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+      }
+    },
+    {
+      "timestamp": "23:19:14.004",
+      "url": "http://192.168.4.199:4080/_next/static/css/076f4e5a4f65c747.css",
+      "method": "GET",
+      "resourceType": "stylesheet",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "text/css,*/*;q=0.1"
+      }
+    },
+    {
+      "timestamp": "23:19:14.004",
+      "url": "http://192.168.4.199:4080/_next/static/css/0c48fe1d45498b29.css",
+      "method": "GET",
+      "resourceType": "stylesheet",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "text/css,*/*;q=0.1"
+      }
+    },
+    {
+      "timestamp": "23:19:14.011",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/webpack-0a10d8c1b9fe1647.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.012",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/4bd1b696-c90879200007ec91.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.019",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/163-214838a58e9b0137.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.020",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/main-app-196e18c5ff0fcbcf.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.020",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/352-09cb203a2591843e.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.021",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/111-7afaf568d2e191f6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.021",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/595-47280fc847c1d09d.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.022",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/62-35c947c95c49c0c6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.022",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/671-aef812467c2e49e0.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.022",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/704-4d302dd84043e0b7.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.023",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/providers/page-c465da277ab4a271.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.023",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/73-f1c35af939766281.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.023",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/global-error-2855aa51e8dde115.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.023",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/511-410649efa432b3e7.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.023",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-66114cb822d06ca2.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.025",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/error-ec72d7b510f04fb6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.025",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/not-found-8ea7914e1a9977c6.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.025",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/874-c61424daff6dd93a.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.025",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/518-73aa5b275e7bef05.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.025",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/13-e9646e825de46ade.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.026",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/layout-8ea9292e49355f29.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.026",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/error-8c15e228bcef559c.js",
+      "method": "GET",
+      "resourceType": "script",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.116",
+      "url": "http://192.168.4.199:4080/favicon.ico",
+      "method": "GET",
+      "resourceType": "other",
+      "headers": {
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+      }
+    },
+    {
+      "timestamp": "23:19:14.155",
+      "url": "http://192.168.4.199:4080/api/v1/config",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.156",
+      "url": "http://192.168.4.199:4080/api/v1/providers/openai/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*"
+      }
+    },
+    {
+      "timestamp": "23:19:14.156",
+      "url": "http://192.168.4.199:4080/api/v1/providers",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:14.171",
+      "url": "http://192.168.4.199:4080/dashboard/analytics?_rsc=1o531",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "rsc": "1",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "next-url": "/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "next-router-prefetch": "1",
+        "next-router-state-tree": "%5B%22%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22providers%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2C%22%2Fdashboard%2Fproviders%22%2C%22refresh%22%5D%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:14.172",
+      "url": "http://192.168.4.199:4080/dashboard/documents?_rsc=1o531",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "rsc": "1",
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "next-url": "/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "next-router-prefetch": "1",
+        "next-router-state-tree": "%5B%22%22%2C%7B%22children%22%3A%5B%22dashboard%22%2C%7B%22children%22%3A%5B%22providers%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%2C%22%2Fdashboard%2Fproviders%22%2C%22refresh%22%5D%7D%5D%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:14.194",
+      "url": "http://192.168.4.199:4080/api/v1/providers",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:15.199",
+      "url": "http://192.168.4.199:4080/api/v1/providers/openai/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:17.210",
+      "url": "http://192.168.4.199:4080/api/v1/providers/openai/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:17.225",
+      "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:18.234",
+      "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:20.242",
+      "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:20.252",
+      "url": "http://192.168.4.199:4080/api/v1/providers/groq/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:21.261",
+      "url": "http://192.168.4.199:4080/api/v1/providers/groq/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:23.271",
+      "url": "http://192.168.4.199:4080/api/v1/providers/groq/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:23.283",
+      "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:24.293",
+      "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:26.314",
+      "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:26.331",
+      "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:27.342",
+      "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:29.362",
+      "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    },
+    {
+      "timestamp": "23:19:29.378",
+      "url": "http://192.168.4.199:4080/api/v1/providers/vertex/models",
+      "method": "GET",
+      "resourceType": "fetch",
+      "headers": {
+        "referer": "http://192.168.4.199:4080/dashboard/providers",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+        "content-type": "application/json",
+        "accept": "*/*",
+        "cookie": "active_theme=default"
+      }
+    }
+  ],
+  "networkResponses": [
+    {
+      "timestamp": "23:19:13.994",
+      "url": "http://192.168.4.199:4080/dashboard/providers",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/html; charset=utf-8",
+        "date": "Sun, 29 Jun 2025 23:19:13 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "x-powered-by": "Next.js"
+      }
+    },
+    {
+      "timestamp": "23:19:14.010",
+      "url": "http://192.168.4.199:4080/_next/static/css/0c48fe1d45498b29.css",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/css; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"1119-197bd62c885\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.011",
+      "url": "http://192.168.4.199:4080/_next/static/css/076f4e5a4f65c747.css",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/css; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"1bc15-197bd62c885\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.018",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/webpack-0a10d8c1b9fe1647.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"de7-197bd62c883\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.055",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/4bd1b696-c90879200007ec91.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"291e2-197bd62c883\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.057",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/main-app-196e18c5ff0fcbcf.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-length": "612",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"264-197bd62c882\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.057",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/352-09cb203a2591843e.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"6ba3-197bd62c883\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.058",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/111-7afaf568d2e191f6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"3721-197bd62c883\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.058",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/595-47280fc847c1d09d.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"6147-197bd62c883\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.059",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/163-214838a58e9b0137.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"2ad7a-197bd62c884\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.060",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/62-35c947c95c49c0c6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"bc5d-197bd62c883\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.060",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/671-aef812467c2e49e0.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"818b-197bd62c883\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.060",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/704-4d302dd84043e0b7.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"1fd7-197bd62c884\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.061",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/global-error-2855aa51e8dde115.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-length": "470",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"1d6-197bd62c882\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.061",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/providers/page-c465da277ab4a271.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"cad4-197bd62c882\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.061",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/73-f1c35af939766281.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"3b31-197bd62c884\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.062",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/511-410649efa432b3e7.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"3f3b-197bd62c884\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.062",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/layout-66114cb822d06ca2.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"237e-197bd62c882\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.062",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/error-ec72d7b510f04fb6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"152f-197bd62c882\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.062",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/not-found-8ea7914e1a9977c6.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"c52-197bd62c882\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.062",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/874-c61424daff6dd93a.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"2137-197bd62c883\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.062",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/518-73aa5b275e7bef05.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"1fa5-197bd62c884\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.063",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/error-8c15e228bcef559c.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"146c-197bd62c882\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.063",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/app/dashboard/layout-8ea9292e49355f29.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"b42f-197bd62c882\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.063",
+      "url": "http://192.168.4.199:4080/_next/static/chunks/13-e9646e825de46ade.js",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "accept-ranges": "bytes",
+        "cache-control": "public, max-age=31536000, immutable",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "application/javascript; charset=UTF-8",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "etag": "W/\"bc28-197bd62c884\"",
+        "keep-alive": "timeout=5",
+        "last-modified": "Sun, 29 Jun 2025 20:30:57 GMT",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.126",
+      "url": "http://192.168.4.199:4080/favicon.ico",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "connection": "keep-alive",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "image/x-icon",
+        "x-nextjs-cache": "HIT",
+        "x-nextjs-prerender": "1"
+      }
+    },
+    {
+      "timestamp": "23:19:14.181",
+      "url": "http://192.168.4.199:4080/dashboard/analytics?_rsc=1o531",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/x-component",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.184",
+      "url": "http://192.168.4.199:4080/dashboard/documents?_rsc=1o531",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-type": "text/x-component",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "keep-alive": "timeout=5",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "timestamp": "23:19:14.192",
+      "url": "http://192.168.4.199:4080/api/v1/config",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:13 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0011126995086669922",
+        "x-trace-id": "78df8860"
+      }
+    },
+    {
+      "timestamp": "23:19:14.199",
+      "url": "http://192.168.4.199:4080/api/v1/providers/openai/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "283",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:13 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:14.200",
+      "url": "http://192.168.4.199:4080/api/v1/providers",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:13 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.00980687141418457",
+        "x-trace-id": "5e3c08f3"
+      }
+    },
+    {
+      "timestamp": "23:19:14.210",
+      "url": "http://192.168.4.199:4080/api/v1/providers",
+      "status": 200,
+      "statusText": "OK",
+      "headers": {
+        "content-encoding": "gzip",
+        "transfer-encoding": "chunked",
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:13 GMT",
+        "server": "uvicorn",
+        "x-process-time": "0.0009617805480957031",
+        "x-trace-id": "2cca0946"
+      }
+    },
+    {
+      "timestamp": "23:19:15.207",
+      "url": "http://192.168.4.199:4080/api/v1/providers/openai/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "283",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:14 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:17.224",
+      "url": "http://192.168.4.199:4080/api/v1/providers/openai/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "283",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:16 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:17.232",
+      "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "286",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:16 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:18.241",
+      "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "286",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:17 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:20.251",
+      "url": "http://192.168.4.199:4080/api/v1/providers/anthropic/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "286",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:19 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:20.260",
+      "url": "http://192.168.4.199:4080/api/v1/providers/groq/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "281",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:19 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:21.269",
+      "url": "http://192.168.4.199:4080/api/v1/providers/groq/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "281",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:20 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:23.282",
+      "url": "http://192.168.4.199:4080/api/v1/providers/groq/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "281",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:22 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:23.290",
+      "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "284",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:22 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:24.311",
+      "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "284",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:23 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:26.330",
+      "url": "http://192.168.4.199:4080/api/v1/providers/mistral/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "284",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:26 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:26.339",
+      "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "285",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:26 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:27.359",
+      "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "285",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:27 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:29.377",
+      "url": "http://192.168.4.199:4080/api/v1/providers/deepseek/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "285",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:29 GMT",
+        "server": "uvicorn"
+      }
+    },
+    {
+      "timestamp": "23:19:29.385",
+      "url": "http://192.168.4.199:4080/api/v1/providers/vertex/models",
+      "status": 500,
+      "statusText": "Internal Server Error",
+      "headers": {
+        "vary": "Accept-Encoding",
+        "connection": "close",
+        "content-length": "283",
+        "content-type": "application/json",
+        "date": "Sun, 29 Jun 2025 23:19:29 GMT",
+        "server": "uvicorn"
+      }
+    }
+  ],
+  "errors": [],
+  "websockets": {},
+  "performanceMetrics": [
+    {
+      "timestamp": "23:19:20.121",
+      "metrics": {
+        "Timestamp": 278944.639296,
+        "Documents": 3,
+        "Frames": 1,
+        "JSEventListeners": 1518,
+        "Nodes": 856,
+        "LayoutCount": 6,
+        "RecalcStyleCount": 12,
+        "LayoutDuration": 0.019697,
+        "RecalcStyleDuration": 0.028822,
+        "ScriptDuration": 0.097853,
+        "TaskDuration": 0.198171,
+        "JSHeapUsedSize": 6661816,
+        "JSHeapTotalSize": 11534336
+      }
+    },
+    {
+      "timestamp": "23:19:25.121",
+      "metrics": {
+        "Timestamp": 278949.640138,
+        "Documents": 3,
+        "Frames": 1,
+        "JSEventListeners": 1580,
+        "Nodes": 880,
+        "LayoutCount": 6,
+        "RecalcStyleCount": 12,
+        "LayoutDuration": 0.019697,
+        "RecalcStyleDuration": 0.028822,
+        "ScriptDuration": 0.102466,
+        "TaskDuration": 0.209982,
+        "JSHeapUsedSize": 7881384,
+        "JSHeapTotalSize": 11534336
+      }
+    }
+  ]
+}
