@@ -26,6 +26,7 @@ interface RequestOptions {
   timeout?: number;
   retries?: number;
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 }
 
 // Circuit breaker state
@@ -124,7 +125,7 @@ export class DocaicheApiClient {
       );
     }
 
-    const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = Math.min(API_CONFIG.RETRY.MAX_ATTEMPTS, 3), ...fetchOptions } = options;
+    const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = Math.min(API_CONFIG.RETRY.MAX_ATTEMPTS, 3), signal: externalSignal, ...fetchOptions } = options;
     let lastError: Error = new Error('Unknown error');
     
     const url = `${this.baseUrl}${endpoint}`;
@@ -134,9 +135,24 @@ export class DocaicheApiClient {
     };
     
     for (let attempt = 1; attempt <= retries; attempt++) {
+      let timeoutId: NodeJS.Timeout | undefined;
+      let signalAbortHandler: (() => void) | undefined;
+      
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        // Handle external abort signal
+        if (externalSignal) {
+          // Check if already aborted
+          if (externalSignal.aborted) {
+            controller.abort(externalSignal.reason);
+          } else {
+            // Forward external signal to internal controller
+            signalAbortHandler = () => controller.abort(externalSignal.reason);
+            externalSignal.addEventListener('abort', signalAbortHandler);
+          }
+        }
 
         const response = await fetch(url, {
           ...fetchOptions,
@@ -144,7 +160,10 @@ export class DocaicheApiClient {
           signal: controller.signal
         });
 
-        clearTimeout(timeoutId);
+        if (timeoutId) clearTimeout(timeoutId);
+        if (signalAbortHandler && externalSignal) {
+          externalSignal.removeEventListener('abort', signalAbortHandler);
+        }
 
         // Handle response based on content type and status
         const result = await this.handleResponse<T>(response);
@@ -153,6 +172,12 @@ export class DocaicheApiClient {
 
       } catch (error) {
         lastError = error as Error;
+        
+        // Cleanup timeout and signal handler
+        if (timeoutId) clearTimeout(timeoutId);
+        if (signalAbortHandler && externalSignal) {
+          externalSignal.removeEventListener('abort', signalAbortHandler);
+        }
         
         // Don't retry on certain errors
         if (error instanceof TypeError || (error as Error).name === 'AbortError') {
@@ -352,7 +377,7 @@ export class DocaicheApiClient {
     const startTime = Date.now();
     
     try {
-      await this.get<any>(endpoint || API_ENDPOINTS.HEALTH, {
+      await this.get<HealthResponse>(endpoint || API_ENDPOINTS.HEALTH, {
         timeout: API_CONFIG.TIMEOUTS.CONNECTION_TEST,
         retries: 1
       });
@@ -372,9 +397,23 @@ export class DocaicheApiClient {
   /**
    * Provider Management
    */
-  async getProviderConfigurations(): Promise<any[]> {
+  async getProviderConfigurations(): Promise<Array<{
+    id: string;
+    enabled?: boolean;
+    config?: Record<string, any>;
+    status?: string;
+    last_tested?: string;
+    models?: string[];
+  }>> {
     try {
-      return await this.get<any[]>('/providers');
+      return await this.get<Array<{
+        id: string;
+        enabled?: boolean;
+        config?: Record<string, any>;
+        status?: string;
+        last_tested?: string;
+        models?: string[];
+      }>>('/providers');
     } catch (error) {
       // Return empty array on circuit breaker or repeated failures
       if (error instanceof Error && error.message.includes('Circuit Breaker')) {
@@ -385,20 +424,23 @@ export class DocaicheApiClient {
     }
   }
 
-  async updateProviderConfiguration(providerId: string, config: ProviderConfiguration): Promise<ProviderConfiguration> {
-    // Transform frontend ProviderConfiguration to backend ProviderConfigRequest format
-    const backendConfig = {
-      base_url: config.config?.base_url as string || undefined,
-      api_key: config.config?.api_key as string || undefined,
-      model: config.config?.model as string || undefined,
-    };
-    
-    // Remove undefined values to send only provided fields
-    const cleanConfig = Object.fromEntries(
-      Object.entries(backendConfig).filter(([, value]) => value !== undefined)
-    );
-
-    return this.post<any>(`/providers/${providerId}/config`, cleanConfig);
+  async updateProviderConfiguration(providerId: string, config: { config: Record<string, any> }): Promise<{
+    id: string;
+    enabled?: boolean;
+    config?: Record<string, any>;
+    status?: string;
+    last_tested?: string;
+    models?: string[];
+  }> {
+    // Send the config object directly
+    return this.post<{
+      id: string;
+      enabled?: boolean;
+      config?: Record<string, any>;
+      status?: string;
+      last_tested?: string;
+      models?: string[];
+    }>(`/providers/${providerId}/config`, config.config);
   }
 
   async testProviderConnection(providerId: string, config: Record<string, string | number>): Promise<{ success: boolean; message: string; models?: string[] }> {
@@ -419,15 +461,15 @@ export class DocaicheApiClient {
 
   async getProviderModels(providerId: string): Promise<{ provider: string; models: string[]; queryable: boolean; custom_count?: number }> {
     // This will be logged by the browser logger via fetch monkey-patch
-    return this.get<any>(`/providers/${providerId}/models`);
+    return this.get<{ provider: string; models: string[]; queryable: boolean; custom_count?: number }>(`/providers/${providerId}/models`);
   }
 
-  async addCustomModel(providerId: string, modelName: string): Promise<any> {
-    return this.post<any>(`/providers/${providerId}/models`, { model_name: modelName });
+  async addCustomModel(providerId: string, modelName: string): Promise<{ success: boolean; message: string }> {
+    return this.post<{ success: boolean; message: string }>(`/providers/${providerId}/models`, { model_name: modelName });
   }
 
-  async removeCustomModel(providerId: string, modelName: string): Promise<any> {
-    return this.delete<any>(`/providers/${providerId}/models/${encodeURIComponent(modelName)}`);
+  async removeCustomModel(providerId: string, modelName: string): Promise<{ success: boolean; message: string }> {
+    return this.delete<{ success: boolean; message: string }>(`/providers/${providerId}/models/${encodeURIComponent(modelName)}`);
   }
 
   /**
@@ -467,7 +509,13 @@ export class DocaicheApiClient {
     sharedProvider: boolean;
   } | null> {
     try {
-      const response = await this.get<any>('/config');
+      const response = await this.get<{
+        model_selection?: {
+          textGeneration: { provider: string; model: string };
+          embeddings: { provider: string; model: string };
+          sharedProvider: boolean;
+        };
+      }>('/config');
       return response.model_selection || null;
     } catch (error) {
       console.warn('Failed to load model selection configuration:', error);
@@ -479,8 +527,8 @@ export class DocaicheApiClient {
    * Health and Monitoring Methods
    */
 
-  async getDashboardStats(): Promise<any> {
-    return this.get<any>('/stats');
+  async getDashboardStats(): Promise<StatsResponse> {
+    return this.get<StatsResponse>('/stats');
   }
 
   async getRecentActivity(): Promise<ActivityItem[]> {
@@ -490,23 +538,23 @@ export class DocaicheApiClient {
 
 
   async createCollection(data: { name: string; description?: string; metadata?: Record<string, unknown> }): Promise<{ id: string; name: string; description?: string; created_at: string }> {
-    return this.post<any>('/content/collections', data);
+    return this.post<{ id: string; name: string; description?: string; created_at: string }>('/content/collections', data);
   }
 
   async deleteCollection(collectionId: string): Promise<void> {
     return this.delete<void>(`/content/collections/${collectionId}`);
   }
 
-  async reindexCollection(collectionId: string): Promise<any> {
-    return this.post<any>(`/content/collections/${collectionId}/reindex`, {});
+  async reindexCollection(collectionId: string): Promise<{ success: boolean; message: string }> {
+    return this.post<{ success: boolean; message: string }>(`/content/collections/${collectionId}/reindex`, {});
   }
 
 
   /**
    * Analytics Methods
    */
-  async getAnalytics(timeRange: string = '24h'): Promise<any> {
-    return this.get<any>(`/analytics?timeRange=${timeRange}`);
+  async getAnalytics(timeRange: string = '24h'): Promise<Record<string, unknown>> {
+    return this.get<Record<string, unknown>>(`/analytics?timeRange=${timeRange}`);
   }
 }
 

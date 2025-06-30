@@ -654,9 +654,33 @@ class AnythingLLMClient:
 
         url = f"{self.base_url}{endpoint}"
         trace_id = kwargs.pop("trace_id", None)
+        
+        # Get correlation context for distributed tracing
+        try:
+            from src.core.middleware.correlation_middleware import get_correlation_context
+            correlation_context = get_correlation_context()
+            
+            # Add correlation headers to request
+            headers = kwargs.get("headers", {})
+            if correlation_context.get("correlation_id"):
+                headers["X-Correlation-ID"] = correlation_context["correlation_id"]
+            if correlation_context.get("conversation_id"):
+                headers["X-Conversation-ID"] = correlation_context["conversation_id"]
+            if correlation_context.get("session_id"):
+                headers["X-Session-ID"] = correlation_context["session_id"]
+                
+            if headers:
+                kwargs["headers"] = headers
+        except ImportError:
+            # Correlation middleware not available
+            pass
 
         logger.debug(
-            f"AnythingLLM request: {method} {url}", extra={"trace_id": trace_id}
+            f"AnythingLLM request: {method} {url}", 
+            extra={
+                "trace_id": trace_id,
+                "correlation_id": correlation_context.get("correlation_id") if 'correlation_context' in locals() else None
+            }
         )
 
         async def make_request():

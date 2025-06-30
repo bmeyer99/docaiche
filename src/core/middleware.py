@@ -30,6 +30,11 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Generate trace ID for request correlation
         trace_id = str(uuid.uuid4())[:8]
         request.state.trace_id = trace_id
+        
+        # Get correlation IDs from request state (set by CorrelationIDMiddleware)
+        correlation_id = getattr(request.state, 'correlation_id', None)
+        conversation_id = getattr(request.state, 'conversation_id', None)
+        session_id = getattr(request.state, 'session_id', None)
 
         # Record start time
         start_time = time.time()
@@ -39,6 +44,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             f"Request started",
             extra={
                 'request_id': trace_id,
+                'correlation_id': correlation_id,
+                'conversation_id': conversation_id,
+                'session_id': session_id,
                 'method': request.method,
                 'path': request.url.path,
             }
@@ -55,9 +63,12 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response.headers["X-Trace-ID"] = trace_id
             response.headers["X-Process-Time"] = str(process_time)
 
-            # Log structured metrics
+            # Log structured metrics with correlation IDs
             metrics.log_api_request(
                 request_id=trace_id,
+                correlation_id=correlation_id,
+                conversation_id=conversation_id,
+                session_id=session_id,
                 method=request.method,
                 path=request.url.path,
                 status_code=response.status_code,

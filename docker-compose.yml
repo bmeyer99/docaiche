@@ -21,6 +21,17 @@ services:
       - ENVIRONMENT=development
       - DATA_DIR=/data
       - LOG_LEVEL=INFO
+      # AI Logging Configuration
+      - AI_LOG_ENABLED=true
+      - AI_LOG_CACHE_TTL=300
+      - AI_LOG_MAX_CACHE_SIZE=1000
+      - AI_LOG_PATTERN_DETECTION=true
+      - AI_LOG_CORRELATION_TIMEOUT=30
+      - AI_LOG_STREAM_BUFFER_SIZE=100
+      - AI_LOG_EXPORT_BATCH_SIZE=1000
+      - LOKI_URL=http://loki:3100
+      - LOKI_TIMEOUT=30
+      - LOKI_MAX_RETRIES=3
     command: >
       sh -c "
         mkdir -p /var/log/docaiche &&
@@ -58,6 +69,9 @@ services:
       - NEXT_PUBLIC_APP_NAME=DocAIche Admin
       - NEXT_PUBLIC_ENABLE_AUTH=false
       - NEXT_PUBLIC_SENTRY_DISABLED=true
+      # AI Logging Access for UI
+      - NEXT_PUBLIC_AI_LOGS_ENABLED=true
+      - NEXT_PUBLIC_AI_LOGS_WEBSOCKET_ENABLED=true
     depends_on:
       api:
         condition: service_healthy
@@ -169,6 +183,8 @@ services:
 
   grafana:
     image: grafana/grafana:12.0.2
+    ports:
+      - "3001:3000"  # Different port to avoid conflict with admin-ui
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin

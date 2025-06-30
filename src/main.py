@@ -18,6 +18,7 @@ from slowapi.util import get_remote_address
 
 from src.api.v1.api import api_router, setup_exception_handlers
 from src.core.middleware import LoggingMiddleware
+from src.core.middleware.correlation_middleware import CorrelationIDMiddleware, setup_correlation_logging
 from src.logging_config import setup_structured_logging, MetricsLogger
 
 
@@ -66,13 +67,96 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
 
     app = FastAPI(
-        title="Docaiche Simplified API",
-        description="Simplified documentation search and content management API",
-        version="2.0.0",
+        title="DocAIche API",
+        description="""
+        ## DocAIche - AI-Powered Documentation Search and Analysis Platform
+
+        Comprehensive API for AI documentation management with advanced logging, monitoring, and troubleshooting capabilities.
+
+        ### Features
+        - **Intelligent Document Search**: AI-powered semantic search across multiple documentation sources
+        - **Real-time AI Logs**: Advanced logging system with correlation tracking and pattern detection
+        - **Content Management**: Document ingestion, processing, and enrichment pipelines
+        - **Workspace Management**: Multi-tenant workspace isolation and analytics
+        - **Monitoring & Analytics**: Comprehensive metrics, health checks, and performance monitoring
+
+        ### AI Logs API
+        The AI Logs API provides specialized endpoints for AI agents and developers:
+        - Query logs with intelligent filtering and optimization
+        - Real-time streaming with WebSocket connections
+        - Correlation analysis across distributed services
+        - Pattern detection and anomaly identification
+        - Multi-format export capabilities
+
+        ### Authentication
+        API endpoints require authentication via API key in the Authorization header:
+        ```
+        Authorization: Bearer your_api_key_here
+        ```
+
+        ### Rate Limiting
+        All endpoints implement rate limiting for fair usage. Limits vary by endpoint type:
+        - Standard endpoints: 60 requests/minute
+        - AI Logs queries: 60 requests/minute
+        - WebSocket connections: 10 concurrent connections
+        - Export operations: 10 requests/minute
+        """,
+        version="2.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
         lifespan=lifespan,
+        contact={
+            "name": "DocAIche API Support",
+            "email": "api-support@docaiche.com",
+            "url": "https://docs.docaiche.com"
+        },
+        license_info={
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        openapi_tags=[
+            {
+                "name": "Health Checks",
+                "description": "System health and status endpoints"
+            },
+            {
+                "name": "AI Logs Query",
+                "description": "Query and filter logs with AI optimization"
+            },
+            {
+                "name": "AI Logs Analysis",
+                "description": "Correlation analysis and pattern detection"
+            },
+            {
+                "name": "AI Logs Streaming",
+                "description": "Real-time log streaming via WebSocket"
+            },
+            {
+                "name": "AI Logs Tracking",
+                "description": "Conversation and workspace tracking"
+            },
+            {
+                "name": "AI Logs Export",
+                "description": "Export logs in various formats"
+            },
+            {
+                "name": "Search",
+                "description": "Document search and retrieval"
+            },
+            {
+                "name": "Admin",
+                "description": "Administrative operations"
+            },
+            {
+                "name": "Configuration",
+                "description": "System configuration management"
+            },
+            {
+                "name": "Workspaces",
+                "description": "Multi-tenant workspace management"
+            }
+        ]
     )
 
     # CORS middleware
@@ -84,8 +168,14 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Correlation ID middleware (must be before logging middleware)
+    app.add_middleware(CorrelationIDMiddleware)
+    
     # Custom logging middleware
     app.add_middleware(LoggingMiddleware)
+    
+    # Setup correlation logging
+    setup_correlation_logging()
 
     # Rate limiting
     app.state.limiter = limiter

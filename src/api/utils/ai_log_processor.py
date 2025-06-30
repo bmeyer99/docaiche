@@ -17,6 +17,7 @@ import time
 from .loki_client import LokiClient, LokiAIQueryBuilder
 from .log_correlator import LogCorrelator
 from .pattern_detector import PatternDetector
+from .cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +40,20 @@ class AILogProcessor:
         self.query_builder = LokiAIQueryBuilder()
         self.correlator = LogCorrelator()
         self.pattern_detector = PatternDetector()
-        self.cache = None        # Will be CacheManager instance
+        self.cache = CacheManager()
         self.optimizer = None    # Will be QueryOptimizer instance
         
+        # Initialize cache connection
+        asyncio.create_task(self._init_cache())
+        
         logger.info("AILogProcessor initialized")
+        
+    async def _init_cache(self):
+        """Initialize cache connection."""
+        try:
+            await self.cache.connect()
+        except Exception as e:
+            logger.warning(f"Cache initialization failed: {e}")
     
     async def process_query(self, 
                           query_params: Dict[str, Any], 
@@ -98,46 +109,19 @@ class AILogProcessor:
     
     def _generate_cache_key(self, query_params: Dict[str, Any]) -> str:
         """Generate a unique cache key for the query parameters."""
-        # Sort params for consistent hashing
-        sorted_params = json.dumps(query_params, sort_keys=True)
-        return hashlib.sha256(sorted_params.encode()).hexdigest()
+        return self.cache.generate_cache_key(query_params)
     
     async def _get_cached_result(self, cache_key: str) -> Optional[Dict[str, Any]]:
         """Retrieve cached result if available."""
-        # TODO: Implement cache retrieval
-        return None
+        return await self.cache.get(cache_key)
     
     async def _cache_result(self, 
                           cache_key: str, 
                           result: Dict[str, Any], 
                           query_params: Dict[str, Any]) -> None:
         """Cache the result with appropriate TTL."""
-        # TODO: Implement cache storage
-        ttl = self._calculate_cache_ttl(query_params)
-        logger.debug(f"Caching result with key: {cache_key}, TTL: {ttl}s")
-    
-    def _calculate_cache_ttl(self, query_params: Dict[str, Any]) -> int:
-        """Calculate appropriate cache TTL based on query parameters."""
-        # Shorter TTL for recent data, longer for historical
-        time_range = query_params.get("time_range", "1h")
-        
-        # Parse time range
-        if time_range.endswith("m"):
-            minutes = int(time_range[:-1])
-            if minutes <= 30:
-                return 60  # 1 minute cache for very recent data
-            else:
-                return 300  # 5 minutes for recent data
-        elif time_range.endswith("h"):
-            hours = int(time_range[:-1])
-            if hours <= 1:
-                return 300  # 5 minutes for last hour
-            else:
-                return 900  # 15 minutes for several hours
-        elif time_range.endswith("d"):
-            return 3600  # 1 hour for daily data
-        
-        return 300  # Default 5 minutes
+        ttl = self.cache.calculate_ttl(query_params)
+        await self.cache.set(cache_key, result, ttl)
     
     async def _build_intelligent_query(self, query_params: Dict[str, Any]) -> str:
         """Build optimized LogQL query based on mode and parameters."""
@@ -869,7 +853,7 @@ class AILogProcessor:
     def _process_correlation(self,
                            logs: List[Dict[str, Any]],
                            correlation_id: str) -> Dict[str, Any]:
-        """Process logs into correlation result."""
+        """Process logs into correlation result using LogCorrelator."""
         if not logs:
             return {
                 "correlation_id": correlation_id,
@@ -882,100 +866,95 @@ class AILogProcessor:
                 "recommendations": []
             }
         
-        # Sort logs chronologically
-        logs.sort(key=lambda x: x.get("timestamp", datetime.min))
+        # Build correlation graph
+        graph = self.correlator.build_correlation_graph(logs, correlation_id)
         
-        # Build service flow
+        # Identify bottlenecks
+        bottlenecks = self.correlator.identify_bottlenecks(graph)
+        
+        # Trace error propagation
+        error_analysis = self.correlator.trace_error_propagation(graph)
+        
+        # Calculate dependencies
+        dependencies = self.correlator.calculate_service_dependencies(graph)
+        
+        # Generate recommendations
+        recommendations = self.correlator.generate_recommendations(
+            graph, bottlenecks, error_analysis, dependencies
+        )
+        
+        # Convert graph to request flow format
         nodes = []
-        edges = []
-        service_timeline = []
-        service_durations = defaultdict(float)
-        errors = []
-        
-        # Track service interactions
-        service_order = []
-        for i, log in enumerate(logs):
-            service = log.get("service", "unknown")
-            timestamp = log.get("timestamp")
+        for service, data in graph.nodes(data=True):
+            nodes.append({
+                "id": service,
+                "service": service,
+                "timestamp": data["first_seen"].isoformat() if data.get("first_seen") else None,
+                "duration_ms": data.get("total_duration", 0),
+                "error_count": data.get("errors", 0),
+                "log_count": len(data.get("logs", []))
+            })
             
-            # Add node if new service
-            if service not in [n["service"] for n in nodes]:
-                nodes.append({
-                    "id": f"{service}_{i}",
-                    "service": service,
-                    "timestamp": timestamp.isoformat() if timestamp else None
-                })
-                service_order.append(service)
-                
-            # Track service timeline
-            if timestamp:
-                service_timeline.append({
-                    "service": service,
-                    "timestamp": timestamp.isoformat(),
-                    "event": log.get("message", ""),
-                    "level": log.get("level", "info")
-                })
-                
-            # Track errors
-            if log.get("level") in ["error", "fatal"]:
-                errors.append({
-                    "service": service,
-                    "timestamp": timestamp.isoformat() if timestamp else None,
-                    "error": log.get("error", log.get("message", "Unknown error")),
-                    "details": log.get("context", {})
-                })
-                
-            # Track duration if available
-            if log.get("duration"):
-                service_durations[service] += log["duration"]
-        
-        # Build edges based on service order
-        for i in range(len(service_order) - 1):
+        edges = []
+        for source, target, data in graph.edges(data=True):
             edges.append({
-                "source": f"{service_order[i]}_{i}",
-                "target": f"{service_order[i+1]}_{i+1}"
+                "source": source,
+                "target": target,
+                "transitions": data.get("transitions", 1),
+                "avg_latency_ms": data.get("avg_latency", 0)
             })
         
+        # Build service timeline
+        service_timeline = []
+        all_logs = []
+        for _, data in graph.nodes(data=True):
+            all_logs.extend(data.get("logs", []))
+            
+        all_logs.sort(key=lambda x: x.get("timestamp", datetime.min))
+        
+        for log in all_logs:
+            service_timeline.append({
+                "service": log.get("service", "unknown"),
+                "timestamp": log.get("timestamp").isoformat() if log.get("timestamp") else None,
+                "event": log.get("message", "")[:200],  # Truncate long messages
+                "level": log.get("level", "info")
+            })
+        
+        # Extract errors from error analysis
+        errors = []
+        if error_analysis.get("has_errors"):
+            for source in error_analysis.get("error_sources", []):
+                errors.append({
+                    "service": source["service"],
+                    "timestamp": source.get("first_error", {}).get("timestamp"),
+                    "error": source.get("first_error", {}).get("message", "Unknown error"),
+                    "details": {"error_count": source.get("error_count", 1)}
+                })
+        
         # Calculate total duration
-        if logs:
-            start = logs[0].get("timestamp")
-            end = logs[-1].get("timestamp")
-            total_duration_ms = (end - start).total_seconds() * 1000 if start and end else 0
+        if all_logs:
+            start = min(log.get("timestamp", datetime.max) for log in all_logs)
+            end = max(log.get("timestamp", datetime.min) for log in all_logs)
+            total_duration_ms = (end - start).total_seconds() * 1000 if start != datetime.max else 0
         else:
             total_duration_ms = 0
         
-        # Identify bottlenecks (services taking > 50% of total time)
-        bottlenecks = []
-        for service, duration in service_durations.items():
-            if total_duration_ms > 0 and duration > total_duration_ms * 0.5:
-                bottlenecks.append({
-                    "service": service,
-                    "duration_ms": duration,
-                    "percentage": (duration / total_duration_ms) * 100,
-                    "severity": "high" if duration > total_duration_ms * 0.7 else "medium"
-                })
+        # Extract service durations
+        service_durations = {
+            service: data.get("total_duration", 0)
+            for service, data in graph.nodes(data=True)
+        }
         
-        # Generate recommendations
-        recommendations = []
-        if bottlenecks:
-            recommendations.append("Consider optimizing slow services: " + ", ".join(b["service"] for b in bottlenecks))
-        if errors:
-            recommendations.append("Address errors in services: " + ", ".join(set(e["service"] for e in errors)))
-        if total_duration_ms > 5000:
-            recommendations.append("Consider implementing caching for frequently accessed data")
-        if len(nodes) > 5:
-            recommendations.append("Complex request flow detected - consider simplifying architecture")
-            
         return {
             "correlation_id": correlation_id,
             "request_flow": {
                 "nodes": nodes,
                 "edges": edges
             },
-            "service_timeline": service_timeline,
-            "bottlenecks": bottlenecks,
-            "errors": errors,
+            "service_timeline": service_timeline[:100],  # Limit timeline entries
+            "bottlenecks": bottlenecks[:10],  # Top 10 bottlenecks
+            "errors": errors[:20],  # Top 20 errors
             "total_duration_ms": total_duration_ms,
-            "service_durations": dict(service_durations),
+            "service_durations": service_durations,
             "recommendations": recommendations
         }

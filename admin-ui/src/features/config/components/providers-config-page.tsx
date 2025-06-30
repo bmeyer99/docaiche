@@ -1,49 +1,172 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { AI_PROVIDERS, ProviderDefinition } from '@/lib/config/providers';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { ProviderTestProvider, useProviderTestCache } from '@/lib/hooks/use-provider-test-cache';
-import { ProviderSettingsProvider, useProviderSettings } from '@/lib/hooks/use-provider-settings';
-import ModelSelectionRedesigned from './model-selection-redesigned';
+import { 
+  OptimizedProviderSettingsProvider, 
+  useProviderData,
+  useProviderActions,
+  useProviderState,
+  useProviderUtilities,
+  useProvidersByCategory
+} from '@/lib/hooks/provider-settings/context-optimized';
+import { 
+  OptimizedProviderForm,
+  OptimizedProviderList
+} from '@/components/optimized/provider-form-optimized';
+import { 
+  useStableMemo,
+  useStableCallback,
+  useStableHandlers,
+  usePerformanceMonitor,
+  shallowEqual,
+  createLazyComponent
+} from '@/lib/utils/performance-helpers';
+
+// Lazy load the model selection component for better initial load performance
+const ModelSelectionRedesigned = createLazyComponent(
+  () => import('./model-selection-redesigned'),
+  () => <div className="animate-pulse bg-muted h-32 rounded-lg" />
+);
+
+// ========================== OPTIMIZED COMPONENTS ==========================
+
+const OptimizedRefreshButton = React.memo<{
+  onRefresh: () => void;
+  isLoading: boolean;
+}>(({ onRefresh, isLoading }) => (
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={onRefresh}
+    disabled={isLoading}
+    className="flex items-center gap-2"
+  >
+    {isLoading ? (
+      <Icons.spinner className="w-4 h-4 animate-spin" />
+    ) : (
+      <Icons.refresh className="w-4 h-4" />
+    )}
+    Refresh
+  </Button>
+), shallowEqual);
+
+OptimizedRefreshButton.displayName = 'OptimizedRefreshButton';
+
+const OptimizedSaveButton = React.memo<{
+  onSave: () => void;
+  isSaving: boolean;
+  hasChanges: boolean;
+}>(({ onSave, isSaving, hasChanges }) => {
+  if (!hasChanges) return null;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      <div className="bg-background border rounded-lg shadow-lg p-4 flex items-center gap-4">
+        <div className="text-sm text-muted-foreground">
+          You have unsaved changes
+        </div>
+        <Button
+          onClick={onSave}
+          disabled={isSaving}
+          className="flex items-center gap-2"
+        >
+          {isSaving ? (
+            <>
+              <Icons.spinner className="w-4 h-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Icons.check className="w-4 h-4" />
+              Save All Changes
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}, shallowEqual);
+
+OptimizedSaveButton.displayName = 'OptimizedSaveButton';
+
+const OptimizedErrorDisplay = React.memo<{
+  error: string | null;
+  onRetry: () => void;
+  isLoading: boolean;
+}>(({ error, onRetry, isLoading }) => {
+  if (!error) return null;
+
+  return (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icons.alertCircle className="w-5 h-5 text-yellow-600" />
+          <div>
+            <div className="font-medium text-yellow-800">Connection Issue</div>
+            <div className="text-sm text-yellow-600">
+              {error}. You can still configure providers manually.
+            </div>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRetry}
+          disabled={isLoading}
+          className="ml-4"
+        >
+          {isLoading ? (
+            <Icons.spinner className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <Icons.refresh className="w-4 h-4 mr-1" />
+              Retry
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}, shallowEqual);
+
+OptimizedErrorDisplay.displayName = 'OptimizedErrorDisplay';
+
+// ========================== MAIN CONTENT COMPONENT ==========================
 
 function ProvidersConfigPageContent() {
+  usePerformanceMonitor('ProvidersConfigPageContent');
+
   const [activeProvider, setActiveProvider] = useState('ollama');
   const { toast } = useToast();
   const apiClient = useApiClient();
   const testCache = useProviderTestCache();
-  const { 
-    providers, 
-    isLoading: loading, 
-    isSaving: saving,
-    loadError: error,
-    loadSettings,
-    updateProvider,
-    saveAllChanges,
-    hasUnsavedChanges
-  } = useProviderSettings();
+  
+  // Use optimized context hooks
+  const { providers } = useProviderData();
+  const { loadSettings, updateProvider, saveAllChanges } = useProviderActions();
+  const { isLoading, isSaving, loadError } = useProviderState();
+  const { hasUnsavedChanges } = useProviderUtilities();
 
   // Load settings on mount
   useEffect(() => {
     loadSettings();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Manual refresh function
-  const handleRefresh = () => {
+  // Stable event handlers
+  const handleRefresh = useStableCallback(() => {
     loadSettings();
-  };
+  }, [loadSettings]);
 
-  // Handle save all changes
-  const handleSaveAllChanges = async () => {
+  const handleSaveAllChanges = useStableCallback(async () => {
     try {
       await saveAllChanges();
       toast({
@@ -57,13 +180,12 @@ function ProvidersConfigPageContent() {
         variant: "destructive",
       });
     }
-  };
+  }, [saveAllChanges, toast]);
 
 
 
-  const testConnection = async (providerId: string) => {
+  const testConnection = useStableCallback(async (providerId: string) => {
     try {
-      // Get the provider config from context
       const providerConfig = providers[providerId];
       if (!providerConfig) {
         toast({
@@ -74,17 +196,14 @@ function ProvidersConfigPageContent() {
         return;
       }
       
-      // Prepare test config
       const testConfig = {
         base_url: providerConfig.config?.base_url ? String(providerConfig.config.base_url) : '',
         api_key: providerConfig.config?.api_key ? String(providerConfig.config.api_key) : '',
         ...providerConfig.config
       };
       
-      // Set testing state
       testCache.setProviderTesting(providerId, testConfig);
       
-      // Don't send model parameter - let the test endpoint handle model discovery
       const testParams: Record<string, string> = {};
       if (testConfig.base_url) {
         testParams.base_url = testConfig.base_url;
@@ -96,10 +215,8 @@ function ProvidersConfigPageContent() {
       const result = await apiClient.testProviderConnection(providerId, testParams);
       
       if (result.success) {
-        // Update test cache with successful result
         testCache.setProviderTested(providerId, result.models || [], testConfig);
         
-        // Show success message
         let message = result.message;
         if (result.models && result.models.length > 0) {
           message = `${result.message} Found ${result.models.length} models.`;
@@ -110,7 +227,6 @@ function ProvidersConfigPageContent() {
           description: message,
         });
       } else {
-        // Update test cache with failed result
         testCache.setProviderFailed(providerId, result.message || 'Connection test failed', testConfig);
         
         toast({
@@ -120,7 +236,6 @@ function ProvidersConfigPageContent() {
         });
       }
     } catch (error: any) {
-      // Update test cache with failed result
       const providerConfig = providers[providerId];
       const testConfig = {
         base_url: providerConfig?.config?.base_url ? String(providerConfig.config.base_url) : '',
@@ -136,35 +251,37 @@ function ProvidersConfigPageContent() {
         variant: "destructive",
       });
     }
-  };
+  }, [providers, testCache, apiClient, toast]);
 
-  const getProvidersByCategory = () => {
+  // Memoized provider data processing
+  const providersByCategory = useStableMemo(() => {
     return Object.entries(AI_PROVIDERS).reduce((acc, [, provider]) => {
       if (!acc[provider.category]) acc[provider.category] = [];
       acc[provider.category].push(provider);
       return acc;
     }, {} as Record<string, Array<ProviderDefinition>>);
-  };
+  }, []);
 
-  const providerCategories = {
+  const providerCategories = useStableMemo(() => ({
     'local': 'Local',
     'cloud': 'Cloud', 
     'enterprise': 'Enterprise'
-  };
+  }), []);
 
-  
+  // Stable provider selection handler
+  const handleProviderSelect = useStableCallback((providerId: string) => {
+    setActiveProvider(providerId);
+  }, []);
 
+  // Memoized active provider data
+  const activeProviderData = useStableMemo(() => {
+    return AI_PROVIDERS[activeProvider];
+  }, [activeProvider]);
 
-  const updateFieldValue = (providerId: string, fieldKey: string, value: any) => {
-    const config = providers[providerId] || {};
-    const updatedConfig = {
-      ...config.config,
-      [fieldKey]: value
-    };
-    
-    // Use context to update provider without saving
-    updateProvider(providerId, updatedConfig);
-  };
+  // Memoized provider config
+  const activeProviderConfig = useStableMemo(() => {
+    return providers[activeProvider] || {};
+  }, [providers, activeProvider]);
 
   const renderConfigurationForm = (provider: ProviderDefinition & { id: string }) => {
     const config = providers[provider.id] || {};

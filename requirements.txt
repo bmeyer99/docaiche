@@ -63,3 +63,6 @@ psutil>=6.1.1  # Latest stable
 
 # Container management
 docker>=7.1.0  # Latest as of 2024, still current
+
+# Graph analysis for log correlation
+networkx>=3.3  # For service flow analysis

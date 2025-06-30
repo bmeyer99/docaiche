@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first for better Docker layer caching
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies (includes AI logging dependencies: networkx for correlation graphs)
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy alembic configuration
