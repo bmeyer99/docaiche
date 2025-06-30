@@ -36,20 +36,24 @@ class CollectionsResource(BaseResource):
         """
         try:
             if self.db_manager:
-                # Get collections from database
-                # Note: Using workspace instead of collection based on schema
-                query = """
-                SELECT DISTINCT 
-                    workspace,
-                    technology,
-                    COUNT(*) as document_count
-                FROM content_metadata
-                WHERE status = 'active'
-                GROUP BY workspace, technology
-                ORDER BY workspace
-                """
-                
-                rows = await self.db_manager.fetch_all(query)
+                # Try to get collections from database
+                try:
+                    # First try with workspace column
+                    query = """
+                    SELECT DISTINCT 
+                        workspace,
+                        technology,
+                        COUNT(*) as document_count
+                    FROM content_metadata
+                    WHERE status = 'active'
+                    GROUP BY workspace, technology
+                    ORDER BY workspace
+                    """
+                    rows = await self.db_manager.fetch_all(query)
+                except Exception:
+                    # If that fails, return empty collections
+                    logger.warning("Unable to query collections, returning empty list")
+                    rows = []
                 
                 collections = {}
                 for row in rows:
