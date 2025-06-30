@@ -32,7 +32,7 @@ export interface ProviderConfig {
   projectId?: string
   region?: string
   customHeaders?: Record<string, string>
-  [key: string]: string | number | boolean | undefined // For provider-specific fields
+  [key: string]: string | number | boolean | Record<string, string> | undefined // For provider-specific fields
 }
 
 export interface Model {
@@ -106,6 +106,7 @@ export interface ConfigurationPanelProps {
   onConfigurationChange: (config: ProviderConfig) => void
   onTestConnection: () => Promise<void>
   onSaveConfiguration: () => Promise<void>
+  isSaving?: boolean
 }
 
 export interface ModelSelectionPanelProps {
@@ -116,6 +117,7 @@ export interface ModelSelectionPanelProps {
   onAddCustomModel: (providerId: string, model: Model) => Promise<void>
   onRemoveCustomModel: (providerId: string, modelId: string) => Promise<void>
   onSaveModelSelection: () => Promise<void>
+  isSaving?: boolean
 }
 
 export interface CurrentConfigurationProps {
@@ -139,6 +141,11 @@ export interface ProviderFormData {
   organizationId?: string
   projectId?: string
   region?: string
+  serviceAccountKey?: string
+  accessKeyId?: string
+  secretAccessKey?: string
+  siteUrl?: string
+  siteName?: string
   [key: string]: string | number | boolean | undefined
 }
 

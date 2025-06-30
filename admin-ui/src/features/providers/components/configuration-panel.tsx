@@ -26,9 +26,9 @@ export function ConfigurationPanel({
   testResult,
   onConfigurationChange,
   onTestConnection,
-  onSaveConfiguration
+  onSaveConfiguration,
+  isSaving = false
 }: ConfigurationPanelProps) {
-  const [isSaving, setIsSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
   
   // Initialize form with provider-specific schema and defaults
@@ -51,7 +51,6 @@ export function ConfigurationPanel({
   const handleSubmit = async (data: ProviderFormData) => {
     if (!provider || isSaving) return
     
-    setIsSaving(true)
     setSaveError(null)
     
     try {
@@ -64,9 +63,7 @@ export function ConfigurationPanel({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save configuration'
       setSaveError(message)
-      console.error('Configuration save error:', error)
-    } finally {
-      setIsSaving(false)
+      // Log error for debugging
     }
   }
   
@@ -112,16 +109,20 @@ export function ConfigurationPanel({
             <FormControl>
               {field.type === 'textarea' ? (
                 <Textarea
-                  {...formField}
                   placeholder={field.placeholder}
                   className="min-h-[100px]"
+                  {...formField}
+                  value={String(formField.value || '')}
                 />
               ) : (
                 <Input
                   {...formField}
                   type={field.type}
                   placeholder={field.placeholder}
-                  value={field.type === 'number' ? (formField.value ?? '') : (formField.value || '')}
+                  value={field.type === 'number' 
+                    ? String(formField.value ?? '') 
+                    : String(formField.value || '')
+                  }
                   onChange={(e) => {
                     const value = field.type === 'number' 
                       ? e.target.value === '' ? undefined : Number(e.target.value)

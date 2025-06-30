@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { ProviderCards } from '../components/provider-cards'
-import { ProviderInfo, ProviderCategory } from '../types'
+import { ProviderInfo } from '../types'
 
 describe('ProviderCards', () => {
   const mockProviders: ProviderInfo[] = [

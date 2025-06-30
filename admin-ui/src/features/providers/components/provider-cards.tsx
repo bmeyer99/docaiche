@@ -64,9 +64,9 @@ export function ProviderCards({
       <Card 
         key={provider.id}
         className={cn(
-          "cursor-pointer transition-all p-4",
+          "cursor-pointer transition-all p-4 provider-card",
           "hover:shadow-md hover:border-primary/50",
-          selectedProvider === provider.id && "ring-2 ring-primary border-primary"
+          selectedProvider === provider.id && "ring-2 ring-primary border-primary selected"
         )}
         onClick={() => onProviderSelect(provider.id)}
         onKeyDown={(e) => {

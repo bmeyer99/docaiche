@@ -37,7 +37,7 @@ export function ProgressTracker({
                 onClick={() => isClickable && onStepClick(step.id)}
                 disabled={!isClickable}
                 className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all",
+                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all progress-step",
                   isActive && "border-primary bg-primary text-primary-foreground",
                   isCompleted && !isActive && "border-primary bg-background text-primary",
                   !isActive && !isCompleted && "border-muted-foreground text-muted-foreground",
@@ -64,7 +64,7 @@ export function ProgressTracker({
             {/* Connector line */}
             {index < steps.length - 1 && (
               <div className={cn(
-                "flex-1 h-0.5 mx-4",
+                "flex-1 h-0.5 mx-4 progress-connector",
                 completedSteps.has(steps[index + 1].id) ? "bg-primary" : "bg-muted"
               )} />
             )}

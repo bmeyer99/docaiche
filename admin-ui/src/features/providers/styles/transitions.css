@@ -1,0 +1,136 @@
+/* Provider Cards Transitions */
+.provider-card-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.provider-card-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+/* Configuration Panel Transitions */
+.config-panel-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.config-panel-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+
+/* Model Selection Panel Transitions */
+.model-panel-enter {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+
+.model-panel-enter-active {
+  opacity: 1;
+  max-height: 1000px;
+  transition: opacity 500ms ease-out, max-height 500ms ease-out;
+}
+
+/* Progress Tracker Transitions */
+.progress-step {
+  transition: all 300ms ease-in-out;
+}
+
+.progress-step:hover {
+  transform: scale(1.1);
+}
+
+.progress-connector {
+  transition: background-color 400ms ease-in-out;
+}
+
+/* Card Selection Animation */
+.provider-card {
+  transition: all 200ms ease-in-out;
+}
+
+.provider-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.provider-card.selected {
+  animation: pulse 300ms ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Form Field Animations */
+.form-field-error {
+  animation: shake 300ms ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Loading States */
+.loading-pulse {
+  animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Success Animation */
+.success-check {
+  animation: checkmark 400ms ease-out;
+}
+
+@keyframes checkmark {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Smooth Scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { ProviderInfo } from '../types'
 
 // Custom URL validator that only allows http/https
 const httpUrlSchema = z.string().url().refine(

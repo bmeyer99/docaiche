@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-06-30T23:08:18.947Z",
+  "url": "http://localhost:3000",
+  "results": [
+    {
+      "test": "Page Load",
+      "status": "BLOCKED",
+      "reason": "Authentication required"
+    }
+  ]
+}

@@ -1,13 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { 
   ProvidersPageState, 
-  ProviderInfo, 
   ProviderConfig, 
-  TestResult, 
   Model,
-  ModelSelection,
+  ModelSelection as LocalModelSelection,
   ProviderCategory 
 } from '../types'
 import { ProviderCards } from './provider-cards'
@@ -16,204 +14,211 @@ import { ModelSelectionPanel } from './model-selection-panel'
 import { CurrentConfiguration } from './current-configuration'
 import { ProgressTracker } from './progress-tracker'
 import { useProvidersApi } from '../hooks/use-providers-api'
+import { useProviderSettings } from '@/lib/hooks/use-provider-settings'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
+import '../styles/transitions.css'
 
 /**
  * ProvidersPage - Main container component for AI Provider configuration
  * 
- * This component manages the overall state and orchestrates the provider
- * configuration flow including selection, configuration, testing, and model selection.
+ * This component orchestrates the provider configuration flow while delegating
+ * state management to the global ProviderSettingsProvider.
  */
 export function ProvidersPage() {
-  // Initialize state
-  const [state, setState] = useState<ProvidersPageState>({
-    activeStep: 'select',
-    selectedProvider: null,
-    selectedCategory: 'cloud',
-    isTestingConnection: false,
-    isSavingConfig: false,
-    showAddCustomModel: false,
-    providers: [],
-    configurations: new Map(),
-    testResults: new Map(),
-    availableModels: new Map(),
-    modelSelection: {
-      textGeneration: { provider: null, model: null },
-      embeddings: { provider: null, model: null },
-      useSharedProvider: false
-    },
-    errors: new Map()
-  })
-
-  // API hooks
+  // Global provider settings
   const {
-    isLoading,
-    fetchProviders,
-    saveProviderConfig,
+    providers: globalProviders,
+    modelSelection: globalModelSelection,
+    updateProvider,
+    updateModelSelection,
+    saveAllChanges,
+    hasUnsavedChanges,
+    isLoading: isGlobalLoading,
+    isSaving: isGlobalSaving
+  } = useProviderSettings()
+  
+  // Local UI state only
+  const [activeStep, setActiveStep] = useState<ProvidersPageState['activeStep']>('select')
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<ProviderCategory>('cloud')
+  const [isTestingConnection, setIsTestingConnection] = useState(false)
+  const [testResults, setTestResults] = useState<Map<string, any>>(new Map())
+  const [availableModels, setAvailableModels] = useState<Map<string, Model[]>>(new Map())
+  const [showAddCustomModel, setShowAddCustomModel] = useState(false)
+
+  // API hooks for provider-specific operations
+  const {
     testProviderConnection,
     getProviderModels,
     addCustomModel,
-    removeCustomModel,
-    saveModelSelection,
-    getModelSelection
+    removeCustomModel
   } = useProvidersApi()
 
+  // Transform global providers to match local format
+  const providers = useMemo(() => {
+    return Object.entries(globalProviders).map(([id, config]) => ({
+      id,
+      name: config.name,
+      category: config.category as ProviderCategory,
+      description: config.description || '',
+      requiresApiKey: config.requiresApiKey || false,
+      supportsEmbedding: config.supportsEmbedding || false,
+      supportsChat: config.supportsChat || false,
+      isQueryable: ['ollama', 'lmstudio', 'openrouter'].includes(id),
+      status: config.status as 'configured' | 'not_configured' | 'failed',
+      lastTested: config.lastTested,
+      configured: config.configured || false,
+      enabled: config.enabled || false
+    }))
+  }, [globalProviders])
+  
+  // Transform global model selection to local format
+  const modelSelection: LocalModelSelection = useMemo(() => ({
+    textGeneration: {
+      provider: globalModelSelection.textGeneration?.provider || null,
+      model: globalModelSelection.textGeneration?.model || null
+    },
+    embeddings: {
+      provider: globalModelSelection.embeddings?.provider || null,
+      model: globalModelSelection.embeddings?.model || null
+    },
+    useSharedProvider: globalModelSelection.useSharedProvider || false
+  }), [globalModelSelection])
+  
   // Computed values
-  const selectedProviderInfo = state.providers.find(p => p.id === state.selectedProvider)
-  const selectedProviderConfig = state.selectedProvider 
-    ? state.configurations.get(state.selectedProvider) 
+  const selectedProviderInfo = providers.find(p => p.id === selectedProvider)
+  const selectedProviderConfig = selectedProvider && globalProviders[selectedProvider]
+    ? {
+        id: selectedProvider,
+        apiKey: globalProviders[selectedProvider].config?.apiKey,
+        baseUrl: globalProviders[selectedProvider].config?.baseUrl,
+        ...globalProviders[selectedProvider].config
+      }
     : undefined
-  const selectedProviderTestResult = state.selectedProvider 
-    ? state.testResults.get(state.selectedProvider) 
+  const selectedProviderTestResult = selectedProvider 
+    ? testResults.get(selectedProvider) 
     : undefined
   const completedSteps = new Set<ProvidersPageState['activeStep']>()
-  if (state.selectedProvider) completedSteps.add('select')
+  if (selectedProvider) completedSteps.add('select')
   if (selectedProviderConfig) completedSteps.add('configure')
   if (selectedProviderTestResult?.success) completedSteps.add('test')
-  if (state.modelSelection.textGeneration.model) completedSteps.add('models')
+  if (modelSelection.textGeneration.model) completedSteps.add('models')
 
-  // Load initial data
+  // Load models for configured providers
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Fetch providers
-        const providers = await fetchProviders()
-        
-        // Fetch current model selection
-        const modelSelection = await getModelSelection()
-        
-        setState(prev => ({
-          ...prev,
-          providers,
-          modelSelection: modelSelection || prev.modelSelection
-        }))
-        
-        // Load models for configured providers
-        for (const provider of providers) {
-          if (provider.configured && provider.status === 'configured') {
-            const models = await getProviderModels(provider.id)
-            setState(prev => ({
-              ...prev,
-              availableModels: new Map(prev.availableModels).set(provider.id, models)
-            }))
-          }
+    let mounted = true
+    
+    const loadModels = async () => {
+      const configuredProviders = providers.filter(p => p.configured && p.status === 'configured')
+      const newAvailableModels = new Map<string, Model[]>()
+      
+      // Batch load models to improve performance
+      const modelPromises = configuredProviders.map(async (provider) => {
+        try {
+          const models = await getProviderModels(provider.id)
+          return { providerId: provider.id, models }
+        } catch {
+          return { providerId: provider.id, models: [] }
         }
-      } catch (error) {
-        console.error('Failed to load initial data:', error)
+      })
+      
+      const modelResults = await Promise.all(modelPromises)
+      
+      if (!mounted) return
+      
+      for (const result of modelResults) {
+        newAvailableModels.set(result.providerId, result.models)
       }
+      
+      setAvailableModels(newAvailableModels)
     }
     
-    loadData()
-  }, [fetchProviders, getModelSelection, getProviderModels])
+    loadModels()
+    
+    return () => {
+      mounted = false
+    }
+  }, [providers, getProviderModels])
 
   // Handlers
   const handleProviderSelect = (providerId: string) => {
-    setState(prev => ({
-      ...prev,
-      selectedProvider: providerId,
-      activeStep: 'configure'
-    }))
+    setSelectedProvider(providerId)
+    setActiveStep('configure')
   }
 
   const handleCategoryChange = (category: ProviderCategory) => {
-    setState(prev => ({
-      ...prev,
-      selectedCategory: category
-    }))
+    setSelectedCategory(category)
   }
 
   const handleConfigurationChange = (config: ProviderConfig) => {
-    setState(prev => ({
-      ...prev,
-      configurations: new Map(prev.configurations).set(config.id, config)
-    }))
+    // Update global provider configuration
+    updateProvider(config.id, {
+      config: {
+        apiKey: config.apiKey,
+        baseUrl: config.baseUrl,
+        ...config
+      }
+    })
   }
 
   const handleTestConnection = async () => {
-    if (!state.selectedProvider) return
+    if (!selectedProvider) return
     
-    setState(prev => ({ ...prev, isTestingConnection: true }))
+    setIsTestingConnection(true)
     
     try {
-      const result = await testProviderConnection(state.selectedProvider)
+      const result = await testProviderConnection(selectedProvider)
       
-      setState(prev => ({
-        ...prev,
-        testResults: new Map(prev.testResults).set(state.selectedProvider!, result),
-        isTestingConnection: false,
-        activeStep: result.success ? 'models' : 'test'
-      }))
+      setTestResults(prev => new Map(prev).set(selectedProvider, result))
+      setIsTestingConnection(false)
+      setActiveStep(result.success ? 'models' : 'test')
       
       // Load models if test was successful and provider is queryable
       if (result.success && result.availableModels) {
-        setState(prev => ({
-          ...prev,
-          availableModels: new Map(prev.availableModels).set(
-            state.selectedProvider!, 
-            result.availableModels!
-          )
-        }))
+        setAvailableModels(prev => new Map(prev).set(
+          selectedProvider, 
+          result.availableModels!
+        ))
       }
       
-      // Update provider status
-      setState(prev => ({
-        ...prev,
-        providers: prev.providers.map(p => 
-          p.id === state.selectedProvider 
-            ? { ...p, status: result.success ? 'configured' : 'failed' }
-            : p
-        )
-      }))
+      // Update provider status in global state
+      updateProvider(selectedProvider, {
+        status: result.success ? 'configured' : 'failed',
+        lastTested: new Date().toISOString()
+      })
     } catch (error) {
-      setState(prev => ({ ...prev, isTestingConnection: false }))
+      setIsTestingConnection(false)
     }
   }
 
   const handleSaveConfiguration = async () => {
-    if (!state.selectedProvider || !selectedProviderConfig) return
-    
-    setState(prev => ({ ...prev, isSavingConfig: true }))
+    if (!selectedProvider || !selectedProviderConfig) return
     
     try {
-      await saveProviderConfig(selectedProviderConfig)
+      // Save all changes through global provider
+      await saveAllChanges()
       
       // Update provider status
-      setState(prev => ({
-        ...prev,
-        providers: prev.providers.map(p => 
-          p.id === state.selectedProvider 
-            ? { ...p, configured: true }
-            : p
-        ),
-        isSavingConfig: false
-      }))
+      updateProvider(selectedProvider, {
+        configured: true
+      })
     } catch (error) {
-      setState(prev => ({ ...prev, isSavingConfig: false }))
       throw error // Re-throw to be handled by ConfigurationPanel
     }
   }
 
-  const handleModelSelectionChange = (selection: ModelSelection) => {
-    setState(prev => ({
-      ...prev,
-      modelSelection: selection
-    }))
+  const handleModelSelectionChange = (selection: LocalModelSelection) => {
+    // Update global model selection
+    updateModelSelection({
+      textGeneration: selection.textGeneration,
+      embeddings: selection.embeddings,
+      useSharedProvider: selection.useSharedProvider
+    })
   }
 
   const handleSaveModelSelection = async () => {
-    const config = {
-      text_generation: {
-        provider: state.modelSelection.textGeneration.provider || '',
-        model: state.modelSelection.textGeneration.model || ''
-      },
-      embeddings: {
-        provider: state.modelSelection.embeddings.provider || '',
-        model: state.modelSelection.embeddings.model || ''
-      },
-      use_shared_provider: state.modelSelection.useSharedProvider
-    }
-    
-    await saveModelSelection(config)
+    // Save through global provider
+    await saveAllChanges()
   }
 
   const handleAddCustomModel = async (providerId: string, model: Model) => {
@@ -221,10 +226,7 @@ export function ProvidersPage() {
     
     // Refresh models
     const models = await getProviderModels(providerId)
-    setState(prev => ({
-      ...prev,
-      availableModels: new Map(prev.availableModels).set(providerId, models)
-    }))
+    setAvailableModels(prev => new Map(prev).set(providerId, models))
   }
 
   const handleRemoveCustomModel = async (providerId: string, modelId: string) => {
@@ -232,21 +234,18 @@ export function ProvidersPage() {
     
     // Refresh models
     const models = await getProviderModels(providerId)
-    setState(prev => ({
-      ...prev,
-      availableModels: new Map(prev.availableModels).set(providerId, models)
-    }))
+    setAvailableModels(prev => new Map(prev).set(providerId, models))
   }
 
   const handleStepClick = (step: ProvidersPageState['activeStep']) => {
-    setState(prev => ({ ...prev, activeStep: step }))
+    setActiveStep(step)
   }
 
   const handleEditConfiguration = () => {
-    setState(prev => ({ ...prev, activeStep: 'models' }))
+    setActiveStep('models')
   }
 
-  if (isLoading) {
+  if (isGlobalLoading) {
     return <LoadingSkeleton variant="dashboard" />
   }
 
@@ -260,15 +259,15 @@ export function ProvidersPage() {
       
       {/* Progress Tracker */}
       <ProgressTracker
-        activeStep={state.activeStep}
+        activeStep={activeStep}
         completedSteps={completedSteps}
         onStepClick={handleStepClick}
       />
       
       {/* Current Configuration Summary */}
       <CurrentConfiguration
-        modelSelection={state.modelSelection}
-        providers={state.providers}
+        modelSelection={modelSelection}
+        providers={providers}
         onEditConfiguration={handleEditConfiguration}
       />
       
@@ -276,9 +275,9 @@ export function ProvidersPage() {
       <div className="flex gap-6">
         {/* Provider Selection */}
         <ProviderCards
-          providers={state.providers}
-          selectedProvider={state.selectedProvider}
-          selectedCategory={state.selectedCategory}
+          providers={providers}
+          selectedProvider={selectedProvider}
+          selectedCategory={selectedCategory}
           onProviderSelect={handleProviderSelect}
           onCategoryChange={handleCategoryChange}
         />
@@ -287,24 +286,26 @@ export function ProvidersPage() {
         <ConfigurationPanel
           provider={selectedProviderInfo || null}
           configuration={selectedProviderConfig}
-          isTestingConnection={state.isTestingConnection}
+          isTestingConnection={isTestingConnection}
           testResult={selectedProviderTestResult}
           onConfigurationChange={handleConfigurationChange}
           onTestConnection={handleTestConnection}
           onSaveConfiguration={handleSaveConfiguration}
+          isSaving={isGlobalSaving}
         />
       </div>
       
       {/* Model Selection */}
-      {(state.activeStep === 'models' || completedSteps.has('test')) && (
+      {(activeStep === 'models' || completedSteps.has('test')) && (
         <ModelSelectionPanel
-          providers={state.providers}
-          availableModels={state.availableModels}
-          modelSelection={state.modelSelection}
+          providers={providers}
+          availableModels={availableModels}
+          modelSelection={modelSelection}
           onModelSelectionChange={handleModelSelectionChange}
           onAddCustomModel={handleAddCustomModel}
           onRemoveCustomModel={handleRemoveCustomModel}
           onSaveModelSelection={handleSaveModelSelection}
+          isSaving={isGlobalSaving}
         />
       )}
     </div>
