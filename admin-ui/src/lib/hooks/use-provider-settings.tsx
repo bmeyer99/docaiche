@@ -223,9 +223,9 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
       });
       
       // Batch provider updates
-      for (const [providerId, config] of providerUpdates) {
+      providerUpdates.forEach((config, providerId) => {
         promises.push(apiClient.updateProviderConfiguration(providerId, { config } as any));
-      }
+      });
       
       // Save model selection if dirty
       const hasModelSelectionChanges = Array.from(dirtyFields).some(f => f.startsWith('modelSelection.'));
@@ -300,7 +300,7 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
   // Load settings on mount
   useEffect(() => {
     loadSettings();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync with test cache updates
   useEffect(() => {

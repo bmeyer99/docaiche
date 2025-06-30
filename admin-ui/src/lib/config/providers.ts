@@ -10,6 +10,18 @@ import { designTokens } from '../design-system/tokens';
 // Provider Categories
 export type ProviderCategory = 'local' | 'cloud' | 'enterprise';
 
+// Provider Configuration (runtime state)
+export interface ProviderConfiguration {
+  id: string;
+  providerId: string;
+  name: string;
+  enabled: boolean;
+  config: Record<string, any>;
+  status: 'connected' | 'disconnected' | 'error';
+  lastTested?: string;
+  models?: string[];
+}
+
 // Provider Configuration Interface
 export interface ProviderDefinition {
   id: string;
@@ -665,16 +677,4 @@ export interface ProviderConnectionResult {
   models?: string[];
   latency?: number;
   error?: string;
-}
-
-// Runtime provider configuration
-export interface ProviderConfiguration {
-  id: string;
-  providerId: string;
-  name: string;
-  enabled: boolean;
-  config: Record<string, string | number | boolean>;
-  status: ProviderStatus;
-  lastTested?: string;
-  models?: string[];
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -13,53 +13,20 @@ import { AI_PROVIDERS, ProviderDefinition } from '@/lib/config/providers';
 import { useToast } from '@/hooks/use-toast';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useProviderTestCache } from '@/lib/hooks/use-provider-test-cache';
-import { cn } from '@/lib/utils';
+import { useModelSelection } from '@/lib/hooks/use-provider-settings';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 
-interface ModelConfiguration {
-  provider: string;
-  model: string;
-}
-
-interface ModelSelectionConfig {
-  textGeneration: ModelConfiguration;
-  embeddings: ModelConfiguration;
-  sharedProvider: boolean;
-}
 
 export default function ModelSelectionRedesigned() {
-  const [config, setConfig] = useState<ModelSelectionConfig>({
-    textGeneration: { provider: '', model: '' },
-    embeddings: { provider: '', model: '' },
-    sharedProvider: false
-  });
   const [customModelInput, setCustomModelInput] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const apiClient = useApiClient();
   const testCache = useProviderTestCache();
+  const { modelSelection: config, updateModelSelection } = useModelSelection();
 
-  // Load existing configuration on mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const existingConfig = await apiClient.getModelSelection();
-        if (existingConfig) {
-          setConfig({
-            textGeneration: existingConfig.textGeneration || { provider: '', model: '' },
-            embeddings: existingConfig.embeddings || { provider: '', model: '' },
-            sharedProvider: existingConfig.sharedProvider || false
-          });
-        }
-      } catch {
-        // Silently ignore error on load
-      }
-    };
-    
-    loadData();
-  }, [apiClient]);
+  // No need to load configuration anymore - it comes from context
 
   // IMPORTANT: Models should only be loaded when user clicks "Test Connection"
   // No automatic model loading on page mount to prevent 500 errors
@@ -96,7 +63,7 @@ export default function ModelSelectionRedesigned() {
       newConfig.embeddings = { ...newConfig.textGeneration };
     }
 
-    setConfig(newConfig);
+    updateModelSelection(newConfig);
   };
 
   const handleModelChange = (section: 'textGeneration' | 'embeddings', model: string) => {
@@ -113,7 +80,7 @@ export default function ModelSelectionRedesigned() {
       newConfig.embeddings = { ...newConfig.textGeneration };
     }
 
-    setConfig(newConfig);
+    updateModelSelection(newConfig);
   };
 
   const handleSharedProviderToggle = (enabled: boolean) => {
@@ -130,7 +97,7 @@ export default function ModelSelectionRedesigned() {
       };
     }
 
-    setConfig(newConfig);
+    updateModelSelection(newConfig);
   };
 
   const addCustomModel = async (providerId: string) => {
@@ -163,25 +130,7 @@ export default function ModelSelectionRedesigned() {
     }
   };
 
-  const saveConfiguration = async () => {
-    setSaving(true);
-    try {
-      await apiClient.updateModelSelection(config);
-      
-      toast({
-        title: "Configuration Saved",
-        description: "Model selection preferences have been saved",
-      });
-    } catch (error) {
-      toast({
-        title: "Save Failed",
-        description: "Failed to save model selection configuration",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Configuration saving is now handled by the central ProviderSettings context
 
   const scrollToProviderConfig = () => {
     const element = document.querySelector('[data-provider-config]');
@@ -509,22 +458,6 @@ export default function ModelSelectionRedesigned() {
           </div>
         )}
 
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <Button onClick={saveConfiguration} disabled={saving} className="px-6">
-            {saving ? (
-              <>
-                <Icons.spinner className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Icons.check className="w-4 h-4 mr-2" />
-                Save Configuration
-              </>
-            )}
-          </Button>
-        </div>
 
         {/* Current Configuration Summary */}
         <div className="border-t pt-4">

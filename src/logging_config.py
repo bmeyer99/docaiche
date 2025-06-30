@@ -5,8 +5,9 @@ Structured logging configuration for Loki integration
 import logging
 import json
 import sys
+import hashlib
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class StructuredFormatter(logging.Formatter):
@@ -41,6 +42,24 @@ class StructuredFormatter(logging.Formatter):
             log_obj['search_query'] = record.search_query
         if hasattr(record, 'cache_hit'):
             log_obj['cache_hit'] = record.cache_hit
+            
+        # Add AI-specific fields
+        if hasattr(record, 'correlation_id'):
+            log_obj['correlation_id'] = record.correlation_id
+        if hasattr(record, 'conversation_id'):
+            log_obj['conversation_id'] = record.conversation_id
+        if hasattr(record, 'workspace_id'):
+            log_obj['workspace_id'] = record.workspace_id
+        if hasattr(record, 'model'):
+            log_obj['model'] = record.model
+        if hasattr(record, 'tokens_used'):
+            log_obj['tokens_used'] = record.tokens_used
+        if hasattr(record, 'request_type'):
+            log_obj['request_type'] = record.request_type
+        if hasattr(record, 'session_id'):
+            log_obj['session_id'] = record.session_id
+        if hasattr(record, 'prompt_hash'):
+            log_obj['prompt_hash'] = record.prompt_hash
             
         # Add exception info if present
         if record.exc_info:
@@ -450,3 +469,214 @@ class BusinessMetricsLogger:
             f"SYSTEM_CAPACITY {metric_type} usage={current_value}/{threshold} ({utilization:.1f}%)",
             extra=extra
         )
+
+
+class AIOperationLogger:
+    """Logger for AI-specific operations with comprehensive tracking"""
+    
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
+        
+    def log_ai_request(self, 
+                      correlation_id: str,
+                      conversation_id: str,
+                      model: str,
+                      prompt: str,
+                      tokens: int,
+                      duration: float,
+                      workspace_id: str,
+                      user_id: Optional[str] = None,
+                      session_id: Optional[str] = None,
+                      success: bool = True,
+                      error: Optional[str] = None,
+                      **kwargs):
+        """Log AI operation with full context for troubleshooting"""
+        # Hash the prompt for privacy while maintaining traceability
+        prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()[:16]
+        
+        extra = {
+            'correlation_id': correlation_id,
+            'conversation_id': conversation_id,
+            'model': model,
+            'prompt_hash': prompt_hash,
+            'prompt_length': len(prompt),
+            'tokens_used': tokens,
+            'duration': duration,
+            'workspace_id': workspace_id,
+            'user_id': user_id,
+            'session_id': session_id,
+            'success': success,
+            'error': error,
+            'request_type': 'ai_completion',
+            'ai_event': 'request',
+            **kwargs
+        }
+        
+        severity = "error" if not success else "info"
+        message = f"AI_REQUEST model={model} tokens={tokens} duration={duration:.3f}s"
+        if error:
+            message += f" error={error}"
+            
+        getattr(self.logger, severity)(message, extra=extra)
+    
+    def log_ai_response(self,
+                       correlation_id: str,
+                       conversation_id: str,
+                       response_tokens: int,
+                       response_hash: Optional[str] = None,
+                       confidence_score: Optional[float] = None,
+                       **kwargs):
+        """Log AI response details"""
+        extra = {
+            'correlation_id': correlation_id,
+            'conversation_id': conversation_id,
+            'response_tokens': response_tokens,
+            'response_hash': response_hash,
+            'confidence_score': confidence_score,
+            'ai_event': 'response',
+            **kwargs
+        }
+        
+        self.logger.info(
+            f"AI_RESPONSE tokens={response_tokens} confidence={confidence_score}",
+            extra=extra
+        )
+    
+    def log_token_usage(self,
+                       workspace_id: str,
+                       model: str,
+                       input_tokens: int,
+                       output_tokens: int,
+                       total_tokens: int,
+                       estimated_cost: Optional[float] = None,
+                       **kwargs):
+        """Log token usage for cost tracking and monitoring"""
+        extra = {
+            'workspace_id': workspace_id,
+            'model': model,
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+            'total_tokens': total_tokens,
+            'estimated_cost': estimated_cost,
+            'ai_event': 'token_usage',
+            **kwargs
+        }
+        
+        self.logger.info(
+            f"TOKEN_USAGE model={model} total={total_tokens} cost=${estimated_cost:.4f}",
+            extra=extra
+        )
+    
+    def log_model_performance(self,
+                            model: str,
+                            latency_ms: float,
+                            throughput_tps: Optional[float] = None,
+                            queue_depth: Optional[int] = None,
+                            **kwargs):
+        """Log model performance metrics"""
+        performance_tier = self._classify_latency(latency_ms)
+        severity = "warning" if latency_ms > 5000 else "info"
+        
+        extra = {
+            'model': model,
+            'latency_ms': latency_ms,
+            'throughput_tps': throughput_tps,
+            'queue_depth': queue_depth,
+            'performance_tier': performance_tier,
+            'ai_event': 'model_performance',
+            **kwargs
+        }
+        
+        getattr(self.logger, severity)(
+            f"MODEL_PERFORMANCE model={model} latency={latency_ms:.1f}ms tier={performance_tier}",
+            extra=extra
+        )
+    
+    def log_context_overflow(self,
+                           model: str,
+                           context_size: int,
+                           max_context: int,
+                           truncation_strategy: str,
+                           **kwargs):
+        """Log context window overflow events"""
+        overflow_percent = ((context_size - max_context) / max_context * 100)
+        
+        extra = {
+            'model': model,
+            'context_size': context_size,
+            'max_context': max_context,
+            'overflow_percent': overflow_percent,
+            'truncation_strategy': truncation_strategy,
+            'ai_event': 'context_overflow',
+            **kwargs
+        }
+        
+        self.logger.warning(
+            f"CONTEXT_OVERFLOW model={model} size={context_size}/{max_context} overflow={overflow_percent:.1f}%",
+            extra=extra
+        )
+    
+    def log_conversation_summary(self,
+                               conversation_id: str,
+                               workspace_id: str,
+                               message_count: int,
+                               total_tokens: int,
+                               duration_seconds: float,
+                               model_switches: int = 0,
+                               error_count: int = 0,
+                               **kwargs):
+        """Log conversation summary for analysis"""
+        avg_response_time = duration_seconds / message_count if message_count > 0 else 0
+        
+        extra = {
+            'conversation_id': conversation_id,
+            'workspace_id': workspace_id,
+            'message_count': message_count,
+            'total_tokens': total_tokens,
+            'duration_seconds': duration_seconds,
+            'avg_response_time': avg_response_time,
+            'model_switches': model_switches,
+            'error_count': error_count,
+            'ai_event': 'conversation_summary',
+            **kwargs
+        }
+        
+        self.logger.info(
+            f"CONVERSATION_SUMMARY id={conversation_id} messages={message_count} tokens={total_tokens} errors={error_count}",
+            extra=extra
+        )
+    
+    def log_prompt_injection_attempt(self,
+                                   correlation_id: str,
+                                   pattern_detected: str,
+                                   risk_score: float,
+                                   blocked: bool,
+                                   **kwargs):
+        """Log potential prompt injection attempts"""
+        extra = {
+            'correlation_id': correlation_id,
+            'security_event': 'prompt_injection_attempt',
+            'pattern_detected': pattern_detected,
+            'risk_score': risk_score,
+            'blocked': blocked,
+            'ai_event': 'security',
+            **kwargs
+        }
+        
+        self.logger.error(
+            f"PROMPT_INJECTION pattern={pattern_detected} risk={risk_score:.2f} blocked={blocked}",
+            extra=extra
+        )
+    
+    def _classify_latency(self, latency_ms: float) -> str:
+        """Classify AI response latency"""
+        if latency_ms < 500:
+            return "excellent"
+        elif latency_ms < 1000:
+            return "good"
+        elif latency_ms < 3000:
+            return "acceptable"
+        elif latency_ms < 5000:
+            return "slow"
+        else:
+            return "critical"

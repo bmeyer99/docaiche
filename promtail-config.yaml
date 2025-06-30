@@ -64,6 +64,51 @@ scrape_configs:
       - labels:
           level:
       
+      # Parse AI-specific fields from JSON logs
+      - json:
+          expressions:
+            correlation_id: correlation_id
+            conversation_id: conversation_id
+            workspace_id: workspace_id
+            model: model
+            tokens_used: tokens_used
+            request_type: request_type
+            user_id: user_id
+            session_id: session_id
+            duration: duration
+          source: output
+      
+      # Add AI-specific labels
+      - labels:
+          correlation_id:
+          conversation_id:
+          workspace_id:
+          model:
+          request_type:
+      
+      # Extract and track AI token usage as metric (only if fields exist)
+      - match:
+          selector: '{tokens_used!=""}'
+          stages:
+            - metrics:
+                ai_tokens_used:
+                  type: Counter
+                  description: "Total AI tokens used"
+                  source: tokens_used
+                  config:
+                    action: add
+      
+      - match:
+          selector: '{duration!=""}'
+          stages:
+            - metrics:
+                ai_request_duration:
+                  type: Histogram
+                  description: "AI request duration in seconds"
+                  source: duration
+                  config:
+                    buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
+      
       # Output the actual log message
       - output:
           source: output
@@ -87,6 +132,76 @@ scrape_configs:
           job: docaiche
           service: admin-ui
           __path__: /var/log/docaiche/admin.log
+
+  # AI Agent logs  
+  - job_name: ai_agent_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docaiche
+          service: ai_agent
+          __path__: /var/log/docaiche/ai_*.log
+    
+    pipeline_stages:
+      # Parse JSON logs
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            message: message
+            correlation_id: correlation_id
+            conversation_id: conversation_id
+            workspace_id: workspace_id
+            model: model
+            tokens_used: tokens_used
+            duration: duration
+            request_type: request_type
+            user_id: user_id
+            session_id: session_id
+            error: error
+            prompt_hash: prompt_hash
+      
+      # Use extracted timestamp
+      - timestamp:
+          format: RFC3339Nano
+          source: timestamp
+      
+      # Set labels
+      - labels:
+          level:
+          correlation_id:
+          conversation_id:
+          workspace_id:
+          model:
+          request_type:
+      
+      # Track metrics (only if fields exist)
+      - match:
+          selector: '{tokens_used!=""}'
+          stages:
+            - metrics:
+                ai_tokens_total:
+                  type: Counter
+                  description: "Total AI tokens consumed"
+                  source: tokens_used
+                  config:
+                    action: add
+      
+      - match:
+          selector: '{duration!=""}'
+          stages:
+            - metrics:
+                ai_request_duration_seconds:
+                  type: Histogram
+                  description: "AI request duration"
+                  source: duration
+                  config:
+                    buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
+      
+      # Output message
+      - output:
+          source: message
 
   # System logs
   - job_name: syslog

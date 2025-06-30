@@ -25,6 +25,7 @@ from .containers_endpoints import router as containers_router
 from .metrics_endpoints import router as metrics_router
 from .workspace_endpoints import router as workspace_router
 from .browser_logs_endpoint import router as browser_logs_router
+from .ai_logs_endpoints import router as ai_logs_router
 from .middleware import limiter, rate_limit_handler
 from .exceptions import (
     validation_exception_handler,
@@ -52,6 +53,7 @@ api_router.include_router(containers_router)
 api_router.include_router(metrics_router)
 api_router.include_router(workspace_router)
 api_router.include_router(browser_logs_router)
+api_router.include_router(ai_logs_router)
 
 # Add rate limiter state to router
 api_router.state = type("State", (), {"limiter": limiter})()

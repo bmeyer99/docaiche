@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Icons } from '@/components/icons';
-import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/config/providers';
+import { AI_PROVIDERS, ProviderDefinition } from '@/lib/config/providers';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { ProviderTestProvider, useProviderTestCache } from '@/lib/hooks/use-provider-test-cache';
@@ -23,14 +23,13 @@ function ProvidersConfigPageContent() {
   const testCache = useProviderTestCache();
   const { 
     providers, 
-    loading, 
-    saving,
-    error,
+    isLoading: loading, 
+    isSaving: saving,
+    loadError: error,
     loadSettings,
     updateProvider,
     saveAllChanges,
-    hasUnsavedChanges,
-    isFieldDirty
+    hasUnsavedChanges
   } = useProviderSettings();
 
   // Load settings on mount
@@ -159,11 +158,8 @@ function ProvidersConfigPageContent() {
   const updateFieldValue = (providerId: string, fieldKey: string, value: any) => {
     const config = providers[providerId] || {};
     const updatedConfig = {
-      ...config,
-      config: {
-        ...config.config,
-        [fieldKey]: value
-      }
+      ...config.config,
+      [fieldKey]: value
     };
     
     // Use context to update provider without saving
@@ -185,9 +181,7 @@ function ProvidersConfigPageContent() {
             <Switch
               checked={config.enabled || false}
               onCheckedChange={(enabled) => {
-                const updatedConfig = { ...config, enabled };
-                setConfigurations(prev => ({ ...prev, [provider.id]: updatedConfig }));
-                saveConfiguration(provider.id, updatedConfig, 'Provider Enable/Disable');
+                updateProvider(provider.id, { enabled });
               }}
             />
           </div>
@@ -209,7 +203,6 @@ function ProvidersConfigPageContent() {
                     id={`${provider.id}-${field.key}`}
                     value={String(config.config?.[field.key] || field.key === 'base_url' ? provider.defaultBaseUrl || '' : '')}
                     onChange={(e) => updateFieldValue(provider.id, field.key, e.target.value)}
-                    onBlur={(e) => saveFieldOnBlur(provider.id, field.key, e.target.value, field.label)}
                     placeholder={field.placeholder}
                   />
                 ) : field.type === 'number' ? (
@@ -218,7 +211,6 @@ function ProvidersConfigPageContent() {
                     type="number"
                     value={String(config.config?.[field.key] || '')}
                     onChange={(e) => updateFieldValue(provider.id, field.key, parseInt(e.target.value) || 0)}
-                    onBlur={(e) => saveFieldOnBlur(provider.id, field.key, parseInt(e.target.value) || 0, field.label)}
                     placeholder={field.placeholder}
                     min={field.validation?.min}
                     max={field.validation?.max}
@@ -229,12 +221,8 @@ function ProvidersConfigPageContent() {
                     type={field.type === 'password' ? 'password' : 'text'}
                     value={String(config.config?.[field.key] || (field.key === 'base_url' ? provider.defaultBaseUrl || '' : ''))}
                     onChange={(e) => updateFieldValue(provider.id, field.key, e.target.value)}
-                    onBlur={(e) => saveFieldOnBlur(provider.id, field.key, e.target.value, field.label)}
                     placeholder={field.placeholder}
                   />
-                )}
-                {savingField === field.label && (
-                  <Icons.spinner className="w-4 h-4 animate-spin absolute right-3 top-3" />
                 )}
               </div>
               {field.description && (
@@ -300,8 +288,36 @@ function ProvidersConfigPageContent() {
       {/* Model Selection Interface */}
       <ModelSelectionRedesigned />
 
+      {/* Save All Changes Button */}
+      {hasUnsavedChanges() && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-background border rounded-lg shadow-lg p-4 flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              You have unsaved changes
+            </div>
+            <button
+              onClick={handleSaveAllChanges}
+              disabled={saving}
+              className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <Icons.spinner className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Icons.check className="w-4 h-4 mr-2" />
+                  Save All Changes
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Error State */}
-      {loadError && (
+      {error && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -309,7 +325,7 @@ function ProvidersConfigPageContent() {
               <div>
                 <div className="font-medium text-yellow-800">Connection Issue</div>
                 <div className="text-sm text-yellow-600">
-                  Unable to load provider configurations. You can still configure providers manually.
+                  {error}. You can still configure providers manually.
                 </div>
               </div>
             </div>
@@ -356,10 +372,10 @@ function ProvidersConfigPageContent() {
                     <TabsTrigger key={key} value={key}>{label}</TabsTrigger>
                   ))}
                 </TabsList>
-                {Object.entries(providersByCategory).map(([category, providers]) => (
+                {Object.entries(providersByCategory).map(([category, categoryProviders]) => (
                   <TabsContent key={category} value={category} className="space-y-2 p-4">
-                    {providers.map(provider => {
-                      const config = configurations[provider.id];
+                    {categoryProviders.map(provider => {
+                      const config = providers[provider.id];
                       const isConfigured = config?.enabled || Object.keys(config?.config || {}).length > 0;
                       
                       return (
@@ -417,8 +433,10 @@ function ProvidersConfigPageContent() {
 
 export default function ProvidersConfigPage() {
   return (
-    <ProviderTestProvider>
-      <ProvidersConfigPageContent />
-    </ProviderTestProvider>
+    <ProviderSettingsProvider>
+      <ProviderTestProvider>
+        <ProvidersConfigPageContent />
+      </ProviderTestProvider>
+    </ProviderSettingsProvider>
   );
 }
