@@ -440,7 +440,7 @@ export class DocaicheApiClient {
   }): Promise<void> {
     // Save the complete model selection configuration
     await this.updateConfiguration({
-      key: 'model_selection',
+      key: 'ai.model_selection',
       value: config
     });
     

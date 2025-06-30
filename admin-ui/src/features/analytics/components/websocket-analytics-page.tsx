@@ -364,77 +364,158 @@ export default function WebSocketAnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="system" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cache Performance</CardTitle>
-                  <CardDescription>Cache hit/miss statistics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+            {/* Service Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stats?.service_metrics && Object.entries(stats.service_metrics).map(([serviceName, metrics]: [string, any]) => (
+                <Card key={serviceName}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm capitalize flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        metrics.status === 'running' ? 'bg-green-500' :
+                        metrics.status === 'exited' ? 'bg-red-500' :
+                        'bg-yellow-500'
+                      }`} />
+                      {serviceName.replace('-', ' ')}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Status: {metrics.status || 'unknown'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {/* CPU Usage */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm">Hit Rate</span>
-                        <span className="text-sm font-medium">
-                          {((stats?.cache_stats?.hit_rate || 0) * 100).toFixed(1)}%
-                        </span>
+                        <span className="text-xs text-muted-foreground">CPU</span>
+                        <span className="text-xs font-medium">{metrics.cpu_percent || 0}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-1">
                         <div 
-                          className="bg-green-600 h-2 rounded-full" 
-                          style={{ width: `${(stats?.cache_stats?.hit_rate || 0) * 100}%` }}
+                          className="bg-blue-500 h-1 rounded-full" 
+                          style={{ width: `${Math.min(metrics.cpu_percent || 0, 100)}%` }}
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Total Keys</p>
-                        <p className="font-medium">{formatNumber(stats?.cache_stats?.total_keys || 0)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Memory Usage</p>
-                        <p className="font-medium">{stats?.cache_stats?.memory_usage_mb || 0} MB</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Resources</CardTitle>
-                  <CardDescription>Current resource utilization</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                    
+                    {/* Memory Usage */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm">CPU Usage</span>
-                        <span className="text-sm font-medium">
-                          {stats?.system_stats?.cpu_usage_percent?.toFixed(1) || 0}%
-                        </span>
+                        <span className="text-xs text-muted-foreground">Memory</span>
+                        <span className="text-xs font-medium">{metrics.memory_usage_mb || 0} MB</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-1">
                         <div 
-                          className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${stats?.system_stats?.cpu_usage_percent || 0}%` }}
+                          className="bg-green-500 h-1 rounded-full" 
+                          style={{ width: `${Math.min(metrics.memory_percent || 0, 100)}%` }}
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    
+                    {/* Network I/O */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <p className="text-muted-foreground">Memory</p>
-                        <p className="font-medium">{stats?.system_stats?.memory_usage_mb || 0} MB</p>
+                        <p className="text-muted-foreground">RX</p>
+                        <p className="font-medium">{metrics.network_rx_mb || 0} MB</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Disk</p>
-                        <p className="font-medium">{stats?.system_stats?.disk_usage_mb || 0} MB</p>
+                        <p className="text-muted-foreground">TX</p>
+                        <p className="font-medium">{metrics.network_tx_mb || 0} MB</p>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+            
+            {/* Redis Detailed Metrics */}
+            {stats?.redis_metrics && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Redis Cache Metrics</CardTitle>
+                  <CardDescription>Detailed Redis performance and usage</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Connections</p>
+                      <p className="text-2xl font-bold">{stats.redis_metrics.connected_clients || 0}</p>
+                      <p className="text-xs text-muted-foreground">Active clients</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Operations/sec</p>
+                      <p className="text-2xl font-bold">{stats.redis_metrics.instantaneous_ops_per_sec || 0}</p>
+                      <p className="text-xs text-muted-foreground">Current rate</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Memory Usage</p>
+                      <p className="text-2xl font-bold">{stats.redis_metrics.used_memory_mb || 0}</p>
+                      <p className="text-xs text-muted-foreground">MB used</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Hit Rate</p>
+                      <p className="text-2xl font-bold">
+                        {stats.redis_metrics.keyspace_hits && stats.redis_metrics.keyspace_misses
+                          ? Math.round((stats.redis_metrics.keyspace_hits / (stats.redis_metrics.keyspace_hits + stats.redis_metrics.keyspace_misses)) * 100)
+                          : 0}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Cache efficiency</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Commands Processed</p>
+                      <p className="font-medium">{formatNumber(stats.redis_metrics.total_commands_processed || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Expired Keys</p>
+                      <p className="font-medium">{formatNumber(stats.redis_metrics.expired_keys || 0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Evicted Keys</p>
+                      <p className="font-medium">{formatNumber(stats.redis_metrics.evicted_keys || 0)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* AnythingLLM Metrics */}
+            {stats?.anythingllm_metrics && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>AnythingLLM Service</CardTitle>
+                  <CardDescription>Vector database and LLM service status</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <Badge variant={stats.anythingllm_metrics.status === 'healthy' ? 'default' : 'destructive'}>
+                        {stats.anythingllm_metrics.status || 'unknown'}
+                      </Badge>
+                    </div>
+                    {stats.anythingllm_metrics.version && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Version</p>
+                        <p className="font-medium">{stats.anythingllm_metrics.version}</p>
+                      </div>
+                    )}
+                    {stats.anythingllm_metrics.vectorDB && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Vector DB</p>
+                        <p className="font-medium">{stats.anythingllm_metrics.vectorDB}</p>
+                      </div>
+                    )}
+                    {stats.anythingllm_metrics.LLMProvider && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">LLM Provider</p>
+                        <p className="font-medium">{stats.anythingllm_metrics.LLMProvider}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       )}

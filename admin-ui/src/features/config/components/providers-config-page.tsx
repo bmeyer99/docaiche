@@ -13,107 +13,50 @@ import { AI_PROVIDERS, ProviderDefinition, ProviderConfiguration } from '@/lib/c
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { ProviderTestProvider, useProviderTestCache } from '@/lib/hooks/use-provider-test-cache';
+import { ProviderSettingsProvider, useProviderSettings } from '@/lib/hooks/use-provider-settings';
 import ModelSelectionRedesigned from './model-selection-redesigned';
 
 function ProvidersConfigPageContent() {
-  const [configurations, setConfigurations] = useState<Record<string, ProviderConfiguration>>({});
-  const [loading, setLoading] = useState(false);
   const [activeProvider, setActiveProvider] = useState('ollama');
-  const [loadError, setLoadError] = useState(false);
-  const [savingField, setSavingField] = useState<string | null>(null);
   const { toast } = useToast();
   const apiClient = useApiClient();
   const testCache = useProviderTestCache();
-  const attemptCountRef = useRef(0);
-  const hasMountedRef = useRef(false);
+  const { 
+    providers, 
+    loading, 
+    saving,
+    error,
+    loadSettings,
+    updateProvider,
+    saveAllChanges,
+    hasUnsavedChanges,
+    isFieldDirty
+  } = useProviderSettings();
 
-  // Simple load function - max 2 attempts
-  const loadProviders = async () => {
-    if (attemptCountRef.current >= 2) {
-      return; // Already tried twice, stop
-    }
-
-    setLoading(true);
-    setLoadError(false);
-    attemptCountRef.current += 1;
-
-    try {
-      const data = await apiClient.getProviderConfigurations();
-      
-      // Convert array response to Record format
-      const configRecord = Array.isArray(data) 
-        ? data.reduce((acc, provider) => {
-            acc[provider.id] = {
-              id: provider.id,
-              name: provider.name,
-              type: provider.type,
-              status: provider.status,
-              configured: provider.configured,
-              enabled: provider.enabled || false,
-              config: provider.config || {},
-              ...provider
-            };
-            return acc;
-          }, {} as Record<string, any>)
-        : data || {};
-      
-      setConfigurations(configRecord);
-      
-      // No need for quick setup logic anymore
-      
-    } catch (error) {
-      // Provider load attempt failed
-      setLoadError(true);
-      
-      // Only try once more if this was the first attempt
-      if (attemptCountRef.current === 1) {
-        setTimeout(() => loadProviders(), 1000);
-      } else {
-        // Failed after 2 attempts
-        toast({
-          title: "Connection Failed",
-          description: "Unable to connect to the backend. You can still configure providers.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load on mount
+  // Load settings on mount
   useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      loadProviders();
-    }
+    loadSettings();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Manual refresh function
   const handleRefresh = () => {
-    attemptCountRef.current = 0; // Reset attempt counter
-    loadProviders();
+    loadSettings();
   };
 
-  const saveConfiguration = async (providerId: string, config: Partial<ProviderConfiguration>, fieldName?: string) => {
-    if (fieldName) setSavingField(fieldName);
-    
+  // Handle save all changes
+  const handleSaveAllChanges = async () => {
     try {
-      const updatedConfig = { ...configurations[providerId], ...config };
-      await apiClient.updateProviderConfiguration(providerId, updatedConfig);
-      
-      setConfigurations(prev => ({ ...prev, [providerId]: updatedConfig }));
-      // Don't show success toast for individual field saves to avoid spam
+      await saveAllChanges();
+      toast({
+        title: "Settings Saved",
+        description: "All configuration changes have been saved successfully.",
+      });
     } catch (error) {
-      // Provider configuration save failed
-      
       toast({
         title: "Save Failed",
-        description: `Failed to save ${fieldName || 'configuration'} for ${AI_PROVIDERS[providerId]?.displayName}`,
+        description: "Failed to save configuration changes. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      if (fieldName) setSavingField(null);
     }
   };
 
@@ -121,8 +64,8 @@ function ProvidersConfigPageContent() {
 
   const testConnection = async (providerId: string) => {
     try {
-      // Get the provider config for testing
-      const providerConfig = configurations[providerId];
+      // Get the provider config from context
+      const providerConfig = providers[providerId];
       if (!providerConfig) {
         toast({
           title: "Error",
@@ -179,7 +122,7 @@ function ProvidersConfigPageContent() {
       }
     } catch (error: any) {
       // Update test cache with failed result
-      const providerConfig = configurations[providerId];
+      const providerConfig = providers[providerId];
       const testConfig = {
         base_url: providerConfig?.config?.base_url ? String(providerConfig.config.base_url) : '',
         api_key: providerConfig?.config?.api_key ? String(providerConfig.config.api_key) : '',
@@ -214,7 +157,7 @@ function ProvidersConfigPageContent() {
 
 
   const updateFieldValue = (providerId: string, fieldKey: string, value: any) => {
-    const config = configurations[providerId] || {};
+    const config = providers[providerId] || {};
     const updatedConfig = {
       ...config,
       config: {
@@ -223,27 +166,12 @@ function ProvidersConfigPageContent() {
       }
     };
     
-    setConfigurations(prev => ({
-      ...prev,
-      [providerId]: updatedConfig
-    }));
-  };
-
-  const saveFieldOnBlur = (providerId: string, fieldKey: string, value: any, fieldLabel: string) => {
-    const config = configurations[providerId] || {};
-    const updatedConfig = {
-      ...config,
-      config: {
-        ...config.config,
-        [fieldKey]: value
-      }
-    };
-    
-    saveConfiguration(providerId, updatedConfig, fieldLabel);
+    // Use context to update provider without saving
+    updateProvider(providerId, updatedConfig);
   };
 
   const renderConfigurationForm = (provider: ProviderDefinition & { id: string }) => {
-    const config = configurations[provider.id] || {};
+    const config = providers[provider.id] || {};
 
     return (
       <div className="space-y-6">

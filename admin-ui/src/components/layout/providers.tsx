@@ -3,6 +3,8 @@ import React from 'react';
 import { ActiveThemeProvider } from '../active-theme';
 import { ApiClientProvider } from '@/components/providers/api-client-provider';
 import { BrowserLoggerProvider } from '@/components/providers/browser-logger-provider';
+import { ProviderTestProvider } from '@/lib/hooks/use-provider-test-cache';
+import { ProviderSettingsProvider } from '@/lib/hooks/use-provider-settings';
 
 export default function Providers({
   activeThemeValue,
@@ -16,7 +18,11 @@ export default function Providers({
       <ActiveThemeProvider initialTheme={activeThemeValue}>
         <ApiClientProvider>
           <BrowserLoggerProvider>
-            {children}
+            <ProviderTestProvider>
+              <ProviderSettingsProvider>
+                {children}
+              </ProviderSettingsProvider>
+            </ProviderTestProvider>
           </BrowserLoggerProvider>
         </ApiClientProvider>
       </ActiveThemeProvider>

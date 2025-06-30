@@ -122,9 +122,12 @@ export default function ModelSelectionRedesigned() {
       sharedProvider: enabled
     };
 
-    // If enabling shared provider, copy text generation config to embeddings
+    // If enabling shared provider, sync provider but keep model separate
     if (enabled) {
-      newConfig.embeddings = { ...config.textGeneration };
+      newConfig.embeddings = { 
+        provider: config.textGeneration.provider,
+        model: config.embeddings.model || '' // Keep existing embedding model or clear
+      };
     }
 
     setConfig(newConfig);
@@ -204,8 +207,7 @@ export default function ModelSelectionRedesigned() {
   const renderModelSection = (
     section: 'textGeneration' | 'embeddings',
     title: string,
-    description: string,
-    disabled = false
+    description: string
   ) => {
     const sectionConfig = config[section];
     const providerTestStatus = sectionConfig.provider ? getProviderTestStatus(sectionConfig.provider) : null;
@@ -213,7 +215,7 @@ export default function ModelSelectionRedesigned() {
     const isQueryable = sectionConfig.provider && queryableProviders.includes(sectionConfig.provider.toLowerCase());
 
     return (
-      <div className={cn("space-y-4", disabled && "opacity-50 pointer-events-none")}>
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium">{title}</h3>
@@ -227,6 +229,7 @@ export default function ModelSelectionRedesigned() {
             <Select
               value={sectionConfig.provider}
               onValueChange={(value) => handleProviderChange(section, value)}
+              disabled={section === 'embeddings' && config.sharedProvider}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select provider" />
@@ -293,11 +296,36 @@ export default function ModelSelectionRedesigned() {
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  {providerTestStatus?.models.map((model) => (
-                    <SelectItem key={model} value={model}>
-                      {model}
-                    </SelectItem>
-                  ))}
+                  {providerTestStatus?.models
+                    .filter((model) => {
+                      // Always filter embedding models for embeddings section
+                      if (section === 'embeddings') {
+                        // Common embedding model patterns
+                        const embeddingPatterns = [
+                          'embed', 'embedding', 'sentence', 'e5-', 'bge-', 'nomic-embed',
+                          'text-embedding', 'all-minilm', 'instructor'
+                        ];
+                        const modelLower = model.toLowerCase();
+                        return embeddingPatterns.some(pattern => modelLower.includes(pattern));
+                      }
+                      
+                      // For text generation, exclude embedding models
+                      if (section === 'textGeneration') {
+                        const embeddingPatterns = [
+                          'embed', 'embedding', 'sentence', 'e5-', 'bge-', 'nomic-embed',
+                          'text-embedding', 'all-minilm', 'instructor'
+                        ];
+                        const modelLower = model.toLowerCase();
+                        return !embeddingPatterns.some(pattern => modelLower.includes(pattern));
+                      }
+                      
+                      return true;
+                    })
+                    .map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             )}
@@ -467,8 +495,9 @@ export default function ModelSelectionRedesigned() {
         {renderModelSection(
           'embeddings',
           'Embeddings',
-          'Choose the provider and model for document embeddings and semantic search',
-          config.sharedProvider
+          config.sharedProvider 
+            ? 'Choose the embedding model from the same provider'
+            : 'Choose the provider and model for document embeddings and semantic search'
         )}
 
         {config.sharedProvider && (

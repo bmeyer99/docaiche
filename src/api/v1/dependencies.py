@@ -37,6 +37,35 @@ def _reset_dependent_instances():
     logger.info("Reset dependent instances due to database reinitialization")
 
 
+async def reset_service_instances():
+    """Reset all service instances when configuration changes"""
+    global _anythingllm_client, _search_orchestrator, _knowledge_enricher, _configuration_manager
+    
+    # Disconnect existing clients gracefully
+    if _anythingllm_client is not None:
+        try:
+            await _anythingllm_client.disconnect()
+        except Exception as e:
+            logger.warning(f"Error disconnecting AnythingLLM client: {e}")
+    
+    # Reset all service instances
+    _anythingllm_client = None
+    _search_orchestrator = None
+    _knowledge_enricher = None
+    _configuration_manager = None
+    
+    # Reset AI provider instances to pick up new models/configs
+    try:
+        from src.llm.provider_registry import get_provider_registry
+        provider_registry = get_provider_registry()
+        provider_registry.clear_instances()
+        logger.info("Cleared AI provider instances")
+    except ImportError:
+        logger.warning("Could not reset AI provider instances - provider registry not available")
+    
+    logger.info("Reset all service instances due to configuration change")
+
+
 class StubDatabaseManager:
     """Stub database manager for degraded operation"""
 

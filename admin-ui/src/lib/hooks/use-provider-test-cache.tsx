@@ -125,3 +125,40 @@ export function useProviderTestCache(): ProviderTestContextValue {
   }
   return context;
 }
+
+/**
+ * Hook to test a provider connection
+ * This is a convenience wrapper that integrates with the API client
+ */
+export function useProviderConnectionTest() {
+  const { setProviderTesting, setProviderTested, setProviderFailed } = useProviderTestCache();
+  
+  const testProviderConnection = useCallback(async (
+    providerId: string, 
+    config: Record<string, any>
+  ): Promise<{ success: boolean; models?: string[]; error?: string }> => {
+    // Lazy import to avoid circular dependencies
+    const { apiClient } = await import('../utils/api-client');
+    
+    setProviderTesting(providerId, config);
+    
+    try {
+      const result = await apiClient.testProviderConnection(providerId, config);
+      
+      if (result.success && result.models) {
+        setProviderTested(providerId, result.models, config);
+        return { success: true, models: result.models };
+      } else {
+        const error = result.message || 'Connection failed';
+        setProviderFailed(providerId, error, config);
+        return { success: false, error };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setProviderFailed(providerId, errorMessage, config);
+      return { success: false, error: errorMessage };
+    }
+  }, [setProviderTesting, setProviderTested, setProviderFailed]);
+  
+  return { testProviderConnection };
+}

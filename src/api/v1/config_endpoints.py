@@ -21,7 +21,7 @@ from .schemas import (
     CollectionsResponse,
 )
 from .middleware import limiter, get_trace_id
-from .dependencies import get_anythingllm_client
+from .dependencies import get_anythingllm_client, reset_service_instances
 from src.clients.anythingllm import AnythingLLMClient
 from src.core.config import get_settings, get_configuration_manager
 
@@ -209,6 +209,9 @@ async def update_configuration(
                 await config_manager.update_in_db(
                     config_request.key, config_request.value
                 )
+
+                # Reset service instances to pick up new configuration
+                await reset_service_instances()
 
                 logger.info(f"Configuration updated successfully: {config_request.key}")
 
