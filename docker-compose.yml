@@ -82,7 +82,6 @@ services:
       - redis_data:/data
     networks:
       - docaiche
-    
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

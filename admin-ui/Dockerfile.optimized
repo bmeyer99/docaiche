@@ -1,5 +1,5 @@
-# Multi-stage build for Docaiche Admin UI - Optimized for fast builds
-FROM node:20-alpine AS base
+# Multi-stage build for Docaiche Admin UI - Optimized
+FROM node:20-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -8,14 +8,17 @@ WORKDIR /app
 # Copy package files
 COPY package.json ./
 
-# Install production dependencies
-# Use alpine packages for sharp instead of building from source
-RUN apk add --no-cache vips-dev \
-    && npm install --production --no-optional \
-    --legacy-peer-deps \
+# Install production dependencies without native compilation where possible
+# Sharp will use pre-built binaries, puppeteer should be in devDependencies
+RUN npm install --production --no-optional \
+    --ignore-scripts \
+    --prefer-offline \
     --no-audit \
     --no-fund \
     && npm cache clean --force
+
+# For sharp specifically, run its install script after to get pre-built binaries
+RUN npm rebuild sharp
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -24,9 +27,10 @@ WORKDIR /app
 # Copy package files
 COPY package.json ./
 
-# Install ALL dependencies for building
-RUN npm install \
-    --legacy-peer-deps \
+# Install ALL dependencies for building (including dev)
+# We still need some build tools for Next.js compilation
+RUN npm install --ignore-scripts \
+    --prefer-offline \
     --no-audit \
     --no-fund \
     && npm cache clean --force
@@ -38,10 +42,9 @@ COPY postcss.config.mjs tailwind.config.js components.json ./
 # Copy source files
 COPY . .
 
-# Disable telemetry and Sentry during build
+# Disable telemetry during the build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_SENTRY_DISABLED=true
-ENV SENTRY_SKIP_SOURCE_MAPS=true
 
 # Set build-time environment variables
 ARG NEXT_PUBLIC_API_URL=http://api:8000/api/v1
@@ -62,8 +65,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create a non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
 # Copy production dependencies from deps stage
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
