@@ -72,7 +72,7 @@ export const AI_PROVIDERS: Record<string, ProviderDefinition> = {
     modelTypes: ['text', 'embedding'],
     configFields: [
       {
-        key: 'endpoint',
+        key: 'base_url',
         label: 'Base URL',
         type: 'url',
         required: false,

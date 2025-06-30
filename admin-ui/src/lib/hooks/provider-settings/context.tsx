@@ -102,7 +102,7 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
   /**
    * Update a provider's configuration with validation
    */
-  const updateProvider = useCallback((providerId: string, config: Partial<ProviderConfiguration['config']>) => {
+  const updateProvider = useCallback((providerId: string, updates: Partial<ProviderConfiguration>) => {
     // Validate provider ID
     if (!isValidProviderId(providerId)) {
       console.error('Invalid provider ID:', providerId);
@@ -113,35 +113,42 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
       const provider = prev[providerId];
       if (!provider) return prev;
       
-      // Merge with existing config
-      const mergedConfig = {
-        ...provider.config,
-        ...config,
-      };
-      
-      // Sanitize the configuration
-      const sanitizedConfig = sanitizeProviderConfig(providerId, mergedConfig);
-      
-      // Validate the configuration
-      const validation = validateProviderConfig(providerId, sanitizedConfig);
-      if (!validation.isValid) {
-        console.warn(`Invalid configuration for provider ${providerId}:`, validation.errors);
-        // Still allow the update but log the warning
+      // Handle config updates separately if provided
+      let sanitizedConfig = provider.config;
+      if (updates.config) {
+        // Merge with existing config
+        const mergedConfig = {
+          ...provider.config,
+          ...updates.config,
+        };
+        
+        // Sanitize the configuration
+        sanitizedConfig = sanitizeProviderConfig(providerId, mergedConfig);
+        
+        // Validate the configuration
+        const validation = validateProviderConfig(providerId, sanitizedConfig);
+        if (!validation.isValid) {
+          console.warn(`Invalid configuration for provider ${providerId}:`, validation.errors);
+          // Still allow the update but log the warning
+        }
       }
       
       const updated = {
         ...prev,
         [providerId]: {
           ...provider,
+          ...updates,
           config: sanitizedConfig,
         },
       };
       
-      // Mark fields as dirty
-      const newDirtyFields = Object.keys(config).map(key => 
-        createProviderFieldPath(providerId, key)
-      );
-      setDirtyFields(prev => markFieldsAsDirty(prev, newDirtyFields));
+      // Mark fields as dirty only for config changes
+      if (updates.config) {
+        const newDirtyFields = Object.keys(updates.config).map(key => 
+          createProviderFieldPath(providerId, key)
+        );
+        setDirtyFields(prev => markFieldsAsDirty(prev, newDirtyFields));
+      }
       
       return updated;
     });

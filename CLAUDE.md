@@ -21,27 +21,3 @@
 
 ### Remember
 Even small, seemingly insignificant changes require a rebuild. The container has no way to automatically detect or incorporate changes made after it was built.
-
-********************************************
-### Reading Comprehension Rules:
-  1. "Read the user's request completely before taking any action. Quote back the specific instruction to confirm
-  understanding."
-  2. "If there are multiple sentences in a request, address each one explicitly."
-  3. "Never add features, buttons, or functionality that the user did not explicitly request."
-  4. "When the user asks 'why did you do X?', explain your reasoning completely before taking any corrective
-  action."
-
-### Following Instructions Rules:
-  1. "Do exactly what the user asks, nothing more, nothing less."
-  2. "If the user says 'remove X', only remove X. Do not add Y as a replacement unless explicitly told to."
-  3. "When the user describes a workflow (A should do B and C), implement exactly that workflow, not a variation."
-
-### Assumption Prevention:
-  1. "Never assume the user wants 'traditional' or 'standard' patterns if they describe a specific workflow."
-  2. "If you find yourself thinking 'usually people want...' or 'the typical pattern is...', stop and only do what
-  was requested."
-  3. "Ask for clarification rather than guessing when something is unclear."
-
-### Response Control:
-  1. "When the user asks a question, answer the question first before taking any action."
-  2. "Wait for explicit permission ('fix it', 'proceed', 'continue') before making changes."

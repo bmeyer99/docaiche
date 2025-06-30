@@ -30,6 +30,7 @@ function ProviderForm({ provider }: ProviderFormProps) {
   const providerConfig = providers[provider.id];
 
   const [localConfig, setLocalConfig] = useState<Record<string, any>>({});
+  const [forceRender, setForceRender] = useState(0);
 
   const handleFieldChange = (fieldKey: string, value: string | number | boolean) => {
     setLocalConfig(prev => ({
@@ -47,13 +48,33 @@ function ProviderForm({ provider }: ProviderFormProps) {
       const response = await apiClient.testProviderConnection(provider.id, config);
       
       if (response.success) {
+        console.log('Test successful, updating provider status...');
+        console.log('Provider ID:', provider.id);
+        console.log('Models found:', response.models?.length);
+        
+        // Update provider status and models
+        updateProvider(provider.id, {
+          status: 'tested',
+          models: response.models || [],
+          config: config
+        });
+        setLocalConfig({}); // Clear local changes since they're now saved
+        
+        console.log('Provider updated, showing toast...');
+        
+        // Force component re-render
+        setForceRender(prev => prev + 1);
+        
         toast({
           title: "Connection Successful",
           description: `${provider.displayName} connected successfully. Found ${response.models?.length || 0} models.`,
         });
-        // Backend handles save and updates, so refresh the data
-        // TODO: Refresh provider data from backend
       } else {
+        // Update provider status to failed
+        updateProvider(provider.id, {
+          status: 'failed'
+        });
+        
         toast({
           title: "Connection Failed", 
           description: response.message || "Failed to connect to provider",
@@ -61,6 +82,11 @@ function ProviderForm({ provider }: ProviderFormProps) {
         });
       }
     } catch (error: any) {
+      // Update provider status to failed
+      updateProvider(provider.id, {
+        status: 'failed'
+      });
+      
       toast({
         title: "Connection Error",
         description: error.message || "Failed to test provider connection",
@@ -72,6 +98,9 @@ function ProviderForm({ provider }: ProviderFormProps) {
   };
 
   const getStatusBadge = () => {
+    console.log('getStatusBadge - providerConfig?.status:', providerConfig?.status);
+    console.log('getStatusBadge - isTesting:', isTesting);
+    
     if (isTesting) {
       return <Badge variant="outline" className="border-blue-500 text-blue-600">Testing...</Badge>;
     }
