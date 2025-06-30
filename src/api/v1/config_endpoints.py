@@ -8,6 +8,7 @@ as specified in CFG-009 requirements.
 
 import logging
 import time
+import json
 from datetime import datetime
 from typing import Dict, Any
 
@@ -66,6 +67,25 @@ async def get_configuration(request: Request) -> ConfigurationResponse:
         except Exception:
             # Fall back to legacy method for compatibility
             config = get_settings()
+
+        # Get additional settings from database overrides
+        config_dict = {}
+        if config_manager and config_manager._db_manager:
+            try:
+                # Get all database configuration overrides
+                rows = await config_manager._db_manager.fetch_all(
+                    "SELECT key, value FROM system_config",
+                    (),
+                )
+                for row in rows:
+                    try:
+                        # Parse JSON value
+                        config_dict[row.key] = json.loads(row.value)
+                    except (json.JSONDecodeError, AttributeError):
+                        # Treat as string value
+                        config_dict[row.key] = row.value
+            except Exception as e:
+                logger.warning(f"Failed to load database configuration overrides: {e}")
 
         # Return non-sensitive configuration items with comprehensive coverage
         items = [
@@ -155,6 +175,16 @@ async def get_configuration(request: Request) -> ConfigurationResponse:
                 description="AnythingLLM service endpoint",
             ),
         ]
+
+        # Add database configuration overrides to the response
+        for key, value in config_dict.items():
+            # Don't duplicate existing hardcoded items
+            if not any(item.key == key for item in items):
+                items.append(ConfigurationItem(
+                    key=key,
+                    value=value,
+                    description=f"User-configured setting: {key}",
+                ))
 
         return ConfigurationResponse(items=items, timestamp=datetime.utcnow())
 

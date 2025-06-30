@@ -21,61 +21,6 @@ interface ProviderFormProps {
   provider: ProviderDefinition & { id: string };
 }
 
-// Save Provider Configuration Button Component
-function SaveProviderConfigButton({ providerId, providerName }: { providerId: string; providerName: string }) {
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
-  const apiClient = useApiClient();
-  const { providers } = useProviderSettings();
-
-  const handleSaveConfig = async () => {
-    setIsSaving(true);
-    try {
-      const providerConfig = providers[providerId];
-      if (!providerConfig?.config) {
-        throw new Error('No configuration to save');
-      }
-
-      // Save configuration (without enabled field since we removed it)
-      await apiClient.updateProviderConfiguration(providerId, { config: providerConfig.config });
-      toast({
-        title: "Configuration Saved",
-        description: `${providerName} configuration has been saved successfully.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Save Failed",
-        description: error.message || "Failed to save provider configuration. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const providerConfig = providers[providerId];
-  const hasConfig = providerConfig?.config && Object.keys(providerConfig.config).length > 0;
-
-  return (
-    <Button
-      onClick={handleSaveConfig}
-      disabled={isSaving || !hasConfig}
-      className="flex items-center gap-2"
-    >
-      {isSaving ? (
-        <>
-          <Icons.spinner className="w-4 h-4 animate-spin" />
-          Saving...
-        </>
-      ) : (
-        <>
-          <Icons.check className="w-4 h-4" />
-          Save Configuration
-        </>
-      )}
-    </Button>
-  );
-}
 
 function ProviderForm({ provider }: ProviderFormProps) {
   const { toast } = useToast();
@@ -111,9 +56,12 @@ function ProviderForm({ provider }: ProviderFormProps) {
         const models = response.models || [];
         testCache.setProviderTested(provider.id, models, config);
         
+        // Save configuration to backend on successful test
+        await apiClient.updateProviderConfiguration(provider.id, { config });
+        
         toast({
           title: "Connection Successful",
-          description: `${provider.displayName} connected successfully. Found ${models.length} models.`,
+          description: `${provider.displayName} connected successfully. Found ${models.length} models. Configuration saved.`,
         });
       } else {
         testCache.setProviderFailed(provider.id, response.message, config);

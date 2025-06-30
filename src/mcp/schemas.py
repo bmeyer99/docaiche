@@ -12,10 +12,24 @@ Follows MCP specification 2025-03-26 with OAuth 2.1 and RFC 8707 compliance.
 """
 
 from typing import Dict, Any, List, Optional, Union, Literal
-from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from enum import Enum
 import logging
+
+# Try to import pydantic, fall back to mock if not available
+try:
+    from pydantic import BaseModel, Field, validator
+except ImportError:
+    try:
+        from .mock_pydantic import BaseModel, Field, validator
+    except ImportError:
+        # Handle direct execution without package context
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from mock_pydantic import BaseModel, Field, validator
+    logger = logging.getLogger(__name__)
+    logger.warning("pydantic not available, using mock implementation")
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +53,22 @@ class ContentType(str, Enum):
     TEXT = "text"
     IMAGE = "image" 
     AUDIO = "audio"  # 2025 specification addition
+
+
+class ErrorCode(Enum):
+    """JSON-RPC 2.0 error codes."""
+    PARSE_ERROR = -32700
+    INVALID_REQUEST = -32600
+    METHOD_NOT_FOUND = -32601
+    INVALID_PARAMS = -32602
+    INTERNAL_ERROR = -32603
+    
+    # MCP-specific error codes
+    AUTHENTICATION_REQUIRED = -32000
+    AUTHORIZATION_FAILED = -32001
+    RESOURCE_NOT_FOUND = -32002
+    RATE_LIMIT_EXCEEDED = -32003
+    INVALID_PROTOCOL_VERSION = -32004
 
 
 # Core MCP Message Schemas
@@ -250,6 +280,21 @@ class AuthResponse(BaseModel):
         extra = "forbid"
 
 
+class ResourceIndicator(BaseModel):
+    """
+    RFC 8707 Resource Indicator for OAuth 2.1.
+    
+    Specifies target resources for scoped access control.
+    """
+    
+    resource: str = Field(..., description="Resource URI")
+    scopes: List[str] = Field(default=[], description="Allowed scopes for resource")
+    metadata: Dict[str, Any] = Field(default={}, description="Resource metadata")
+    
+    class Config:
+        extra = "forbid"
+
+
 class ConsentRequest(BaseModel):
     """
     User consent request for sensitive operations.
@@ -423,6 +468,27 @@ class CollectionsToolRequest(BaseModel):
 # 3. Batch operation schemas for bulk requests
 # 4. WebSocket streaming message schemas
 # 5. Advanced analytics and monitoring schemas
+
+# Initialize Protocol Schemas
+class InitializeRequest(BaseModel):
+    """Initialize request parameters."""
+    protocolVersion: str = Field(..., description="Protocol version")
+    capabilities: Dict[str, Any] = Field(default_factory=dict)
+    clientInfo: Dict[str, Any] = Field(default_factory=dict)
+
+
+class InitializeResponse(BaseModel):
+    """Initialize response data."""
+    protocolVersion: str = Field(..., description="Protocol version")
+    capabilities: Dict[str, Any] = Field(..., description="Server capabilities")
+    serverInfo: Dict[str, Any] = Field(..., description="Server information")
+    sessionId: Optional[str] = Field(None, description="Session identifier")
+
+
+class InitializedNotification(BaseModel):
+    """Initialized notification (no response expected)."""
+    initialized: bool = Field(True, description="Client initialized")
+
 
 # Validation helpers
 def validate_mcp_request(request_data: Dict[str, Any]) -> MCPRequest:

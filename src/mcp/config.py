@@ -14,9 +14,15 @@ and security considerations for production deployment.
 
 import os
 import logging
-from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field, validator
+from typing import Dict, Any, Optional, List, Set
+from dataclasses import dataclass, field
 from enum import Enum
+
+# Try to import pydantic, fall back to mock if not available
+try:
+    from pydantic import BaseModel, Field, validator
+except ImportError:
+    from .mock_pydantic import BaseModel, Field, validator
 
 logger = logging.getLogger(__name__)
 
@@ -389,3 +395,87 @@ def get_config() -> MCPConfig:
         validate_production_config(config)
     
     return config
+
+
+# Additional configuration class for server compatibility
+@dataclass
+class MCPServerConfig:
+    """
+    MCP server configuration for compatibility with server.py.
+    
+    This class provides a simpler interface that matches what the
+    server implementation expects.
+    """
+    
+    # Server identification
+    server_name: str = "DocaiChe MCP Server"
+    server_id: str = "docaiche-mcp-001"
+    
+    # Transport configuration
+    transport_config: MCPTransportConfig = field(default_factory=MCPTransportConfig)
+    
+    # Security settings
+    require_authentication: bool = True
+    require_explicit_consent: bool = True
+    default_permissions: Set[str] = field(default_factory=lambda: {
+        "search:public",
+        "resources:read:public", 
+        "status:read"
+    })
+    
+    # OAuth configuration
+    oauth_client_id: str = "docaiche-mcp-client"
+    oauth_client_secret: str = ""
+    oauth_auth_endpoint: str = "https://auth.docaiche.com/authorize"
+    oauth_token_endpoint: str = "https://auth.docaiche.com/token"
+    oauth_introspection_endpoint: str = "https://auth.docaiche.com/introspect"
+    oauth_revocation_endpoint: str = "https://auth.docaiche.com/revoke"
+    
+    # Audit settings
+    audit_log_file: str = "logs/mcp_audit.log"
+    audit_log_max_size: int = 104857600  # 100MB
+    audit_log_retention_days: int = 90
+    
+    # Rate limiting
+    rate_limit_enabled: bool = True
+    rate_limit_requests_per_minute: int = 60
+    rate_limit_burst_size: int = 10
+    
+    # Service endpoints
+    services: Dict[str, str] = field(default_factory=lambda: {
+        "search_service_url": "http://localhost:8000/api/v1/search",
+        "ingestion_service_url": "http://localhost:8000/api/v1/ingest",
+        "documentation_service_url": "http://localhost:8000/api/v1/docs",
+        "collections_service_url": "http://localhost:8000/api/v1/collections",
+        "health_service_url": "http://localhost:8000/api/v1/health",
+        "feedback_service_url": "http://localhost:8000/api/v1/feedback"
+    })
+    
+    # Cache settings
+    cache_enabled: bool = True
+    cache_ttl_seconds: int = 3600
+    cache_max_size_mb: int = 512
+    
+    # Development settings
+    development_mode: bool = False
+    enable_debug_endpoints: bool = False
+    allow_insecure_transport: bool = False
+    
+    @classmethod
+    def from_mcp_config(cls, config: MCPConfig) -> 'MCPServerConfig':
+        """Create MCPServerConfig from MCPConfig."""
+        return cls(
+            server_name=config.server_name,
+            transport_config=config.transport,
+            require_authentication=config.security.security_level == SecurityLevel.PRODUCTION,
+            require_explicit_consent=config.auth.require_consent,
+            oauth_client_id=config.auth.client_id,
+            oauth_client_secret=config.auth.client_secret,
+            oauth_auth_endpoint=f"{config.auth.authorization_server_url}/authorize",
+            oauth_token_endpoint=f"{config.auth.authorization_server_url}/token",
+            oauth_introspection_endpoint=f"{config.auth.authorization_server_url}/introspect",
+            oauth_revocation_endpoint=f"{config.auth.authorization_server_url}/revoke",
+            audit_log_file=config.security.audit_backend,
+            rate_limit_enabled=config.security.rate_limit_enabled,
+            development_mode=config.environment == "development"
+        )

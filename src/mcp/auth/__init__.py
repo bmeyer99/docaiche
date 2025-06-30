@@ -16,7 +16,7 @@ Follows 2025 MCP security specification with enhanced threat mitigation
 and compliance requirements for production deployment.
 """
 
-from .oauth_handler import OAuth2Handler, TokenValidator
+from .oauth_handler import OAuth21Handler as OAuth2Handler, TokenValidator
 from .resource_indicators import ResourceIndicatorManager
 from .consent_manager import ConsentManager, ConsentRecord
 from .security_audit import SecurityAuditor

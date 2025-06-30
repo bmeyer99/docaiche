@@ -411,6 +411,47 @@ class ConfigurationManager:
 
         return False
 
+    def get_setting(self, config_key: str) -> Optional[Any]:
+        """
+        Get a specific configuration setting by key
+        
+        Supports dot notation for nested access (e.g., "ai.providers.ollama.base_url")
+        First checks runtime configuration, then falls back to database
+        
+        Args:
+            config_key: Configuration key in dot notation
+            
+        Returns:
+            Configuration value or None if not found
+        """
+        # Try to get from runtime configuration first
+        if self._config is not None:
+            try:
+                # Split the key by dots and traverse the configuration
+                keys = config_key.split('.')
+                current = self._config.model_dump()
+                
+                for key in keys:
+                    if isinstance(current, dict) and key in current:
+                        current = current[key]
+                    else:
+                        # Not found in runtime config, try database
+                        break
+                else:
+                    # Successfully traversed all keys
+                    return current
+            except (AttributeError, KeyError, TypeError):
+                # Error in traversing, fall back to database
+                pass
+        
+        # Fall back to database lookup
+        try:
+            import asyncio
+            return asyncio.run(self.get_from_db(config_key))
+        except Exception as e:
+            logger.warning(f"Failed to get setting '{config_key}': {e}")
+            return None
+
     def get_configuration(self) -> SystemConfiguration:
         """
         Get current configuration object

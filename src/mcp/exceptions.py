@@ -258,6 +258,35 @@ class ConfigurationError(MCPException):
         )
 
 
+class ServiceError(MCPException):
+    """
+    External service integration errors.
+    
+    Raised when external services (HTTP APIs, databases, etc.) fail
+    or are unavailable during MCP operations.
+    """
+    
+    def __init__(
+        self,
+        message: str = "Service integration error",
+        error_code: str = "SERVICE_ERROR",
+        service_name: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+        correlation_id: Optional[str] = None
+    ):
+        enhanced_details = details or {}
+        if service_name:
+            enhanced_details["service_name"] = service_name
+            
+        super().__init__(
+            message=message,
+            error_code=error_code,
+            status_code=503,
+            details=enhanced_details,
+            correlation_id=correlation_id
+        )
+
+
 class RateLimitError(MCPException):
     """
     Rate limiting and quota exceeded errors.

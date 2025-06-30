@@ -186,6 +186,23 @@ class BaseTransport(ABC):
         self._message_handlers[method] = handler
         logger.debug(f"Message handler registered for method: {method}")
     
+    def set_message_handler(
+        self,
+        handler: Callable[[MCPRequest, 'BaseTransport'], Awaitable[MCPResponse]]
+    ) -> None:
+        """
+        Set the global message handler callback.
+        
+        This handler will be called for all incoming messages regardless
+        of method. Used by the server for centralized request routing.
+        
+        Args:
+            handler: Async function that processes requests and returns responses
+        """
+        # Store the global handler
+        self._global_message_handler = handler
+        logger.debug("Global message handler set")
+    
     def register_error_handler(
         self,
         handler: Callable[[Exception], Awaitable[None]]
@@ -238,18 +255,22 @@ class BaseTransport(ABC):
                     error_code="MISSING_METHOD"
                 )
             
-            # Find handler for method
-            handler = self._message_handlers.get(request.method)
-            if not handler:
-                return self._create_error_response(
-                    request_id=request.id,
-                    error_code=-32601,  # Method not found
-                    error_message=f"Method not found: {request.method}",
-                    correlation_id=getattr(request, 'correlation_id', None)
-                )
-            
-            # Execute handler
-            response = await handler(request)
+            # Use global handler if set (server mode)
+            if hasattr(self, '_global_message_handler') and self._global_message_handler:
+                response = await self._global_message_handler(request, self)
+            else:
+                # Find handler for method (standalone mode)
+                handler = self._message_handlers.get(request.method)
+                if not handler:
+                    return self._create_error_response(
+                        request_id=request.id,
+                        error_code=-32601,  # Method not found
+                        error_message=f"Method not found: {request.method}",
+                        correlation_id=getattr(request, 'correlation_id', None)
+                    )
+                
+                # Execute handler
+                response = await handler(request)
             
             # Record successful handling
             execution_time = int((time.time() - start_time) * 1000)

@@ -103,8 +103,13 @@ export const sanitizeText = (text: string): string => {
 export const ProviderConfigSchemas = {
   ollama: z.object({
     base_url: urlValidator.optional(),
+    endpoint: urlValidator.optional(), 
     timeout: stringNumberValidator(5, 300).optional(),
+    timeout_seconds: stringNumberValidator(5, 300).optional(),
     max_retries: stringNumberValidator(0, 10).optional(),
+    model: z.string().optional(),
+    temperature: stringNumberValidator(0, 2).optional(),
+    max_tokens: stringNumberValidator(1, 32000).optional(),
   }),
   
   openai: z.object({
@@ -228,12 +233,32 @@ export function createSafeProviderConfig(
   providerId: string,
   config: unknown
 ): Record<string, any> {
+  // If config is not an object, return empty
+  if (!config || typeof config !== 'object') {
+    return {};
+  }
+  
   const validation = validateProviderConfig(providerId, config);
   
   if (validation.success) {
     return validation.data;
   }
   
-  // Return empty config if validation fails
-  return {};
+  // If validation fails, still return the config but sanitize text fields
+  // This is more lenient and allows unknown fields to pass through
+  const inputConfig = config as Record<string, any>;
+  const sanitized: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(inputConfig)) {
+    if (typeof value === 'string') {
+      sanitized[key] = sanitizeText(value);
+    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      sanitized[key] = value;
+    } else if (value === null || value === undefined) {
+      sanitized[key] = value;
+    }
+    // Skip complex objects/arrays for safety
+  }
+  
+  return sanitized;
 }

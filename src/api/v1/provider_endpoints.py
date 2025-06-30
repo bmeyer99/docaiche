@@ -257,6 +257,28 @@ async def list_providers(
                 for key in saved_config.keys()
             ))
             
+            # Extract only the core configuration fields that the frontend expects
+            # Remove metadata fields that shouldn't be in the provider config
+            core_config = {}
+            if saved_config:
+                # Common provider configuration field names
+                config_fields = {
+                    "base_url", "api_key", "model", "endpoint", "temperature", 
+                    "max_tokens", "timeout_seconds", "stream", "frequency_penalty",
+                    "presence_penalty", "top_p", "top_k", "system_prompt"
+                }
+                
+                # First, collect top-level configuration fields
+                for key, value in saved_config.items():
+                    if key in config_fields:
+                        core_config[key] = value
+                
+                # Then merge nested 'config' field if it exists
+                if "config" in saved_config and isinstance(saved_config["config"], dict):
+                    for key, value in saved_config["config"].items():
+                        if key in config_fields:
+                            core_config[key] = value
+
             providers.append(ProviderResponse(
                 id=provider_id,
                 name=definition["name"],
@@ -268,8 +290,8 @@ async def list_providers(
                 requires_api_key=definition["requires_api_key"],
                 supports_embedding=definition["supports_embedding"],
                 supports_chat=definition["supports_chat"],
-                # Include the actual config data for the frontend state management
-                config=saved_config,
+                # Include only the core config data for the frontend state management
+                config=core_config,
                 enabled=saved_config.get("enabled", False),
                 last_tested=saved_config.get("updated_at"),
             ))
@@ -288,7 +310,10 @@ async def list_providers(
 )
 @limiter.limit("10/minute")
 async def test_provider_connection(
-    request: Request, provider_id: str, test_config: ProviderConfigRequest
+    request: Request, 
+    provider_id: str, 
+    test_config: ProviderConfigRequest,
+    config_manager: ConfigurationManager = Depends(get_configuration_manager),
 ) -> ProviderTestResponse:
     """
     POST /api/v1/providers/{provider_id}/test - Test connection to LLM provider

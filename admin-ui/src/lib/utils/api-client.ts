@@ -511,13 +511,27 @@ export class DocaicheApiClient {
   } | null> {
     try {
       const response = await this.get<{
-        model_selection?: {
-          textGeneration: { provider: string; model: string };
-          embeddings: { provider: string; model: string };
-          sharedProvider: boolean;
-        };
+        items: Array<{
+          key: string;
+          value: any;
+          description: string;
+        }>;
+        timestamp: string;
       }>('/config');
-      return response.model_selection || null;
+      
+      // Look for model selection in the configuration items
+      const modelSelectionItem = response.items?.find(item => item.key === 'ai.model_selection');
+      
+      if (modelSelectionItem && modelSelectionItem.value) {
+        // Validate the structure
+        const selection = modelSelectionItem.value;
+        if (selection.textGeneration && selection.embeddings && 
+            typeof selection.sharedProvider === 'boolean') {
+          return selection;
+        }
+      }
+      
+      return null;
     } catch (error) {
       console.warn('Failed to load model selection configuration:', error);
       return null;
