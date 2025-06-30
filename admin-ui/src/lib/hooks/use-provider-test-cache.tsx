@@ -80,7 +80,7 @@ export function ProviderTestProvider({ children }: { children: ReactNode }) {
 
   const clearProvider = useCallback((providerId: string) => {
     setTestedProviders(prev => {
-      const { [providerId]: removed, ...rest } = prev;
+      const { [providerId]: _removed, ...rest } = prev;
       return rest;
     });
   }, []);

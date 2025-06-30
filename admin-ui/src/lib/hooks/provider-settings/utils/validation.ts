@@ -6,8 +6,6 @@ import { z } from 'zod';
 import { ProviderConfiguration } from '@/lib/config/providers';
 import type { ModelSelection, ProviderSettings } from '../types';
 import { 
-  ModelSelectionSchema, 
-  ProviderSettingsSchema,
   isModelSelection 
 } from '../types';
 import { 

@@ -4,8 +4,8 @@
 
 import { z } from 'zod';
 
-// URL validation pattern
-const urlPattern = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+// URL validation pattern (currently unused but kept for future validation needs)
+// const urlPattern = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
 
 // API key patterns for different providers
 const apiKeyPatterns = {

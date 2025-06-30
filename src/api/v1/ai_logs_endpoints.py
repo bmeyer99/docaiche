@@ -65,15 +65,43 @@ async def health_check():
     Returns:
         dict: Health status of the AI logging system
     """
-    # TODO: Implement actual health checks
+    from datetime import datetime
+    
+    # Check components
+    components = {}
+    overall_status = "healthy"
+    
+    # Check Loki connection
+    try:
+        loki_client = log_processor.loki_client
+        loki_healthy = await loki_client.test_connection()
+        components["loki"] = "healthy" if loki_healthy else "unhealthy"
+        if not loki_healthy:
+            overall_status = "degraded"
+    except Exception as e:
+        components["loki"] = "unhealthy"
+        overall_status = "degraded"
+        logger.warning(f"Loki health check failed: {e}")
+    
+    # Check cache connection
+    try:
+        cache_manager = log_processor.cache
+        cache_stats = await cache_manager.get_stats()
+        components["cache"] = "healthy" if cache_stats.get("connected", False) else "unhealthy"
+        if not cache_stats.get("connected", False):
+            overall_status = "degraded"
+    except Exception as e:
+        components["cache"] = "unhealthy"
+        overall_status = "degraded"
+        logger.warning(f"Cache health check failed: {e}")
+    
+    # Processor is always healthy if we can reach this point
+    components["processor"] = "healthy"
+    
     return {
-        "status": "healthy",
+        "status": overall_status,
         "timestamp": datetime.utcnow().isoformat(),
-        "components": {
-            "loki": "healthy",
-            "processor": "healthy",
-            "cache": "healthy"
-        }
+        "components": components
     }
 
 
@@ -155,40 +183,44 @@ async def correlate_logs(
     - Request flow visualization
     """
     try:
-        # Mock implementation for now - replace with actual correlation logic
+        # Use real correlation logic
+        correlation_result = await log_processor.correlate_logs(
+            correlation_id=request.correlation_id,
+            time_window="30m"  # Look back 30 minutes
+        )
+        
+        # Format for API response structure
         result = {
             "correlation_id": request.correlation_id,
-            "service_flow": [
-                {
-                    "service": "api",
-                    "timestamp": "2025-06-30T14:30:00.123Z",
-                    "duration_ms": 50,
-                    "status": "success",
-                    "operation": "receive_request"
-                },
-                {
-                    "service": "anythingllm",
-                    "timestamp": "2025-06-30T14:30:00.200Z",
-                    "duration_ms": 1100,
-                    "status": "success",
-                    "operation": "vector_search"
-                }
-            ],
-            "total_duration_ms": 1150,
-            "services_involved": ["api", "anythingllm"],
-            "bottlenecks": [
-                {
-                    "service": "anythingllm",
-                    "avg_duration_ms": 1100,
-                    "percentage_of_total": 95.7
-                }
-            ],
-            "error_propagation": [],
-            "recommendations": [
-                "Consider implementing caching for AnythingLLM vector searches",
-                "Monitor AnythingLLM service performance"
-            ]
+            "service_flow": [],
+            "total_duration_ms": correlation_result.get("total_duration_ms", 0),
+            "services_involved": [],
+            "bottlenecks": correlation_result.get("bottlenecks", [])[:5],  # Top 5
+            "error_propagation": correlation_result.get("errors", [])[:10],  # Top 10
+            "recommendations": correlation_result.get("recommendations", [])[:5]  # Top 5
         }
+        
+        # Convert request flow to service flow format
+        request_flow = correlation_result.get("request_flow", {})
+        nodes = request_flow.get("nodes", [])
+        
+        for node in nodes:
+            result["service_flow"].append({
+                "service": node.get("service", "unknown"),
+                "timestamp": node.get("timestamp"),
+                "duration_ms": node.get("duration_ms", 0),
+                "status": "error" if node.get("error_count", 0) > 0 else "success",
+                "operation": "processing"
+            })
+        
+        # Extract unique services
+        result["services_involved"] = list(set(node.get("service", "unknown") for node in nodes))
+        
+        # If no real data found, provide empty result rather than mock data
+        if not result["service_flow"]:
+            result["service_flow"] = []
+            result["services_involved"] = []
+            result["recommendations"] = [f"No correlation data found for {request.correlation_id}"]
         
         return CorrelationResponse(**result)
         
@@ -221,20 +253,60 @@ async def analyze_logs(
     - Performance bottleneck identification
     - Root cause suggestions
     """
-    # TODO: Implement analysis logic
-    logger.info(f"Log analysis requested: pattern_detection={pattern_detection}, anomaly_detection={anomaly_detection}")
-    
-    return {
-        "patterns": [],
-        "anomalies": [],
-        "error_clusters": [],
-        "performance_issues": [],
-        "root_cause_analysis": {
-            "potential_causes": [],
-            "confidence_scores": {}
-        },
-        "recommendations": []
-    }
+    try:
+        # Build query parameters
+        query_params = {
+            "mode": "troubleshoot",
+            "time_range": time_range,
+            "services": services or ["all"],
+            "limit": 10000  # Higher limit for comprehensive analysis
+        }
+        
+        # Get logs for analysis
+        logs_result = await log_processor.process_query(query_params, use_cache=False)
+        logs = logs_result.get("logs", [])
+        insights = logs_result.get("insights", {})
+        
+        result = {
+            "patterns": insights.get("patterns", []) if pattern_detection else [],
+            "anomalies": insights.get("anomalies", []) if anomaly_detection else [],
+            "error_clusters": [],  # Would need additional clustering logic
+            "performance_issues": [],  # Would need performance analysis
+            "root_cause_analysis": {
+                "potential_causes": [],
+                "confidence_scores": {}
+            },
+            "recommendations": insights.get("recommendations", [])
+        }
+        
+        # Add basic performance analysis if logs exist
+        if logs:
+            slow_requests = [log for log in logs if log.get("duration", 0) > 1000]
+            if slow_requests:
+                result["performance_issues"] = [
+                    {
+                        "type": "slow_requests",
+                        "count": len(slow_requests),
+                        "description": f"Found {len(slow_requests)} slow requests (>1s)",
+                        "severity": "medium" if len(slow_requests) < 10 else "high"
+                    }
+                ]
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Log analysis failed: {e}")
+        return {
+            "patterns": [],
+            "anomalies": [],
+            "error_clusters": [],
+            "performance_issues": [],
+            "root_cause_analysis": {
+                "potential_causes": [],
+                "confidence_scores": {}
+            },
+            "recommendations": [f"Analysis failed: {str(e)}"]
+        }
 
 
 @router.post("/patterns", response_model=PatternResponse,
@@ -260,33 +332,63 @@ async def detect_patterns(
     - Custom pattern matches
     """
     try:
-        # Mock implementation - replace with actual pattern detection
+        # Use real pattern detection
+        import time
+        start_time = time.time()
+        
+        # Build query parameters for log retrieval
+        query_params = {
+            "mode": "troubleshoot",
+            "time_range": request.time_range,
+            "services": request.services or ["all"],
+            "limit": 5000  # Higher limit for pattern analysis
+        }
+        
+        # Get logs for pattern analysis
+        logs_result = await log_processor.process_query(query_params, use_cache=False)
+        logs = logs_result.get("logs", [])
+        
+        # Run pattern detection
+        pattern_detector = log_processor.pattern_detector
+        detection_results = pattern_detector.detect_patterns(logs)
+        
+        # Format results for API response
+        patterns_found = []
+        for pattern in detection_results.get("detected_patterns", [])[:20]:  # Top 20
+            patterns_found.append({
+                "pattern_type": pattern["category"],
+                "confidence": 0.85,  # Default confidence
+                "occurrences": detection_results["pattern_counts"].get(pattern["pattern"], 1),
+                "description": pattern["description"],
+                "affected_services": [pattern["service"]],
+                "time_distribution": {
+                    "peak_hour": "recent",
+                    "frequency": f"{detection_results['pattern_counts'].get(pattern['pattern'], 1)} times"
+                },
+                "sample_logs": [
+                    {
+                        "timestamp": pattern["timestamp"].isoformat() if pattern.get("timestamp") else None,
+                        "message": pattern["message"][:200]  # Truncate long messages
+                    }
+                ]
+            })
+        
+        # Generate recommendations based on detected patterns
+        recommendations = []
+        for pattern_name, count in detection_results["pattern_counts"].items():
+            if count > 5:  # Frequent patterns
+                pattern_info = pattern_detector.patterns.get(pattern_name)
+                if pattern_info:
+                    recommendations.append(pattern_info.recommended_action)
+        
+        # Add generic recommendations if none found
+        if not recommendations:
+            recommendations = ["Monitor logs regularly for emerging patterns"]
+        
         result = {
-            "patterns_found": [
-                {
-                    "pattern_type": "rate_limiting",
-                    "confidence": 0.95,
-                    "occurrences": 15,
-                    "description": "Rate limiting events detected on API endpoint",
-                    "affected_services": ["api"],
-                    "time_distribution": {
-                        "peak_hour": "14:00-15:00",
-                        "frequency": "every 4 minutes"
-                    },
-                    "sample_logs": [
-                        {
-                            "timestamp": "2025-06-30T14:30:00Z",
-                            "message": "Rate limit exceeded for IP 192.168.1.100"
-                        }
-                    ]
-                }
-            ],
-            "recommendations": [
-                "Consider implementing request batching for high-volume clients",
-                "Review rate limiting thresholds for authenticated users",
-                "Add rate limiting metrics to monitoring dashboard"
-            ],
-            "analysis_duration_ms": 850
+            "patterns_found": patterns_found,
+            "recommendations": recommendations[:10],  # Limit recommendations
+            "analysis_duration_ms": int((time.time() - start_time) * 1000)
         }
         
         return PatternResponse(**result)
@@ -326,26 +428,47 @@ async def get_conversation_logs(
     - Related system logs
     """
     try:
-        # Mock implementation - replace with actual conversation tracking
+        # Use real conversation tracking
+        conversation_data = await log_processor.get_conversation_logs(
+            conversation_id=conversation_id,
+            time_buffer="1h",  # Look back 1 hour
+            include_prompts=True,
+            include_responses=True,
+            include_metrics=True,
+            include_related_logs=True
+        )
+        
+        # Format for API response
+        logs = []
+        timeline = conversation_data.get("timeline", [])
+        
+        turn_number = 1
+        for event in timeline:
+            if event.get("event") in ["ai_completion", "request_type=ai_completion"]:
+                logs.append({
+                    "timestamp": event.get("timestamp"),
+                    "message": event.get("details", {}).get("message", "AI interaction"),
+                    "turn_number": turn_number,
+                    "user_input": "User query",  # Would need to extract from logs
+                    "ai_response_preview": "AI response...",  # Would need to extract from logs
+                    "tokens_used": event.get("details", {}).get("tokens", 0),
+                    "model": event.get("details", {}).get("model", "unknown")
+                })
+                turn_number += 1
+        
+        # Build summary from metadata and metrics
+        metadata = conversation_data.get("metadata", {})
+        metrics = conversation_data.get("metrics", {})
+        
         result = {
             "conversation_id": conversation_id,
-            "logs": [
-                {
-                    "timestamp": "2025-06-30T14:30:00Z",
-                    "message": "Conversation started",
-                    "turn_number": 1,
-                    "user_input": "How do I implement React hooks?",
-                    "ai_response_preview": "React hooks are functions that...",
-                    "tokens_used": 145,
-                    "model": "gpt-4"
-                }
-            ],
+            "logs": logs,
             "summary": {
-                "total_turns": 3,
-                "total_tokens": 450,
-                "average_response_time_ms": 1200,
-                "errors_encountered": 0,
-                "workspace": "react-docs"
+                "total_turns": len(logs),
+                "total_tokens": metrics.get("total_tokens", 0),
+                "average_response_time_ms": metrics.get("average_response_time", 0),
+                "errors_encountered": int(metrics.get("error_rate", 0) * len(timeline)) if timeline else 0,
+                "workspace": metadata.get("workspace_id", "unknown")
             }
         }
         
@@ -387,35 +510,45 @@ async def get_workspace_ai_summary(
     - Performance trends
     """
     try:
-        # Mock implementation - replace with actual workspace analysis
+        # Use real workspace analysis
+        workspace_data = await log_processor.get_workspace_ai_logs(
+            workspace_id=workspace_id,
+            time_range=time_range,
+            include_costs=True
+        )
+        
+        # Calculate derived metrics
+        total_requests = workspace_data.get("total_requests", 0)
+        error_count = workspace_data.get("error_count", 0)
+        error_rate = error_count / total_requests if total_requests > 0 else 0
+        
+        # Format error breakdown from top error patterns
+        error_breakdown = []
+        top_errors = workspace_data.get("top_error_patterns", [])
+        total_errors = sum(error.get("count", 0) for error in top_errors)
+        
+        for error in top_errors[:5]:  # Top 5 errors
+            count = error.get("count", 0)
+            percentage = (count / total_errors * 100) if total_errors > 0 else 0
+            error_breakdown.append({
+                "error_type": error.get("pattern", "unknown"),
+                "count": count,
+                "percentage": percentage
+            })
+        
         result = {
             "workspace_id": workspace_id,
             "time_range": time_range,
             "metrics": {
-                "total_requests": 1250,
-                "successful_requests": 1200,
-                "error_rate": 0.04,
-                "average_response_time_ms": 800,
-                "total_tokens_used": 125000,
-                "unique_users": 45
+                "total_requests": total_requests,
+                "successful_requests": total_requests - error_count,
+                "error_rate": error_rate,
+                "average_response_time_ms": workspace_data.get("average_response_time", 0),
+                "total_tokens_used": workspace_data.get("total_tokens", 0),
+                "unique_users": workspace_data.get("total_conversations", 0)  # Approximate
             },
-            "top_queries": [
-                "React hooks implementation",
-                "State management patterns",
-                "Component lifecycle"
-            ],
-            "error_breakdown": [
-                {
-                    "error_type": "timeout",
-                    "count": 30,
-                    "percentage": 60
-                },
-                {
-                    "error_type": "rate_limit",
-                    "count": 20,
-                    "percentage": 40
-                }
-            ]
+            "top_queries": [],  # Would need to extract from conversation data
+            "error_breakdown": error_breakdown
         }
         
         return WorkspaceSummary(**result)
@@ -453,16 +586,37 @@ async def export_logs(
     - Parquet for big data analysis
     - Markdown for reports
     """
-    # TODO: Implement export logic
-    logger.info(f"Log export requested: format={export_request.format}")
+    import uuid
+    from datetime import datetime, timedelta
     
-    return ExportResponse(
-        export_id="export_123",
-        format=export_request.format,
-        status="preparing",
-        download_url=None,
-        expires_at=None
-    )
+    try:
+        # Generate unique export ID
+        export_id = f"export_{uuid.uuid4().hex[:8]}"
+        
+        # For now, return a preparing status
+        # Real implementation would queue the export job
+        expires_at = datetime.utcnow() + timedelta(hours=24)
+        
+        logger.info(f"Log export requested: format={export_request.format}, export_id={export_id}")
+        
+        return ExportResponse(
+            export_id=export_id,
+            format=export_request.format,
+            status="preparing",
+            download_url=None,  # Would be generated after export completes
+            expires_at=expires_at.isoformat()
+        )
+        
+    except Exception as e:
+        logger.error(f"Export request failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Export failed",
+                "message": str(e),
+                "code": "EXPORT_ERROR"
+            }
+        )
 
 
 @router.websocket("/stream")
@@ -555,15 +709,21 @@ async def get_pattern_library() -> PatternLibrary:
     Returns:
         dict: Available patterns organized by category
     """
-    # TODO: Load from pattern detector
+    # Load from pattern detector
+    pattern_detector = log_processor.pattern_detector
+    patterns = pattern_detector.patterns
+    
+    # Organize patterns by category
+    categories = {}
+    for pattern_name, pattern in patterns.items():
+        category = pattern.category
+        if category not in categories:
+            categories[category] = []
+        categories[category].append(pattern_name)
+    
     return PatternLibrary(
-        categories={
-            "connectivity": ["connection_timeout", "connection_refused"],
-            "performance": ["slow_query", "high_latency"],
-            "ai": ["token_limit_exceeded", "model_timeout"],
-            "security": ["auth_failure", "rate_limit_exceeded"]
-        },
-        total_patterns=12
+        categories=categories,
+        total_patterns=len(patterns)
     )
 
 
@@ -581,14 +741,59 @@ async def get_ai_metrics(
     - Error rates
     - Performance percentiles
     """
-    # TODO: Implement metrics aggregation
-    return {
-        "time_range": time_range,
-        "aggregation_interval": aggregation_interval,
-        "metrics": {
-            "request_count": [],
-            "token_usage": [],
-            "error_rate": [],
-            "response_time_p95": []
+    try:
+        # Get AI logs for metrics calculation
+        query_params = {
+            "mode": "performance",
+            "time_range": time_range,
+            "services": ["all"],
+            "limit": 50000  # Large limit for metrics
         }
-    }
+        
+        logs_result = await log_processor.process_query(query_params, use_cache=False)
+        logs = logs_result.get("logs", [])
+        metadata = logs_result.get("metadata", {})
+        
+        # Calculate basic metrics
+        total_requests = len(logs)
+        error_count = len([log for log in logs if log.get("level") in ["error", "fatal"]])
+        error_rate = error_count / total_requests if total_requests > 0 else 0
+        
+        # Calculate token usage
+        token_usage = [log.get("tokens_used", 0) for log in logs if log.get("tokens_used")]
+        total_tokens = sum(token_usage) if token_usage else 0
+        
+        # Calculate response times
+        response_times = [log.get("duration", 0) for log in logs if log.get("duration")]
+        p95_response_time = sorted(response_times)[int(len(response_times) * 0.95)] if response_times else 0
+        
+        return {
+            "time_range": time_range,
+            "aggregation_interval": aggregation_interval,
+            "metrics": {
+                "request_count": [{"timestamp": metadata.get("query_time"), "value": total_requests}],
+                "token_usage": [{"timestamp": metadata.get("query_time"), "value": total_tokens}],
+                "error_rate": [{"timestamp": metadata.get("query_time"), "value": error_rate}],
+                "response_time_p95": [{"timestamp": metadata.get("query_time"), "value": p95_response_time}]
+            },
+            "summary": {
+                "total_requests": total_requests,
+                "total_tokens": total_tokens,
+                "error_rate": error_rate,
+                "p95_response_time_ms": p95_response_time
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get AI metrics: {e}")
+        return {
+            "time_range": time_range,
+            "aggregation_interval": aggregation_interval,
+            "metrics": {
+                "request_count": [],
+                "token_usage": [],
+                "error_rate": [],
+                "response_time_p95": []
+            },
+            "error": str(e)
+        }

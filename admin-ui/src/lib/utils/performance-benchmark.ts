@@ -3,17 +3,10 @@
  * Comprehensive performance testing for provider settings system
  */
 
-import { benchmarkFunction, comparePerformance, createTestData, componentTester } from './performance-testing';
+import { benchmarkFunction, createTestData } from './performance-testing';
 import { 
-  useDebounce, 
-  useDebouncedCallback, 
-  useThrottledCallback,
   shallowEqual,
-  deepEqual,
-  useStableMemo,
-  useOptimizedInput,
-  useOptimizedFormState,
-  useBatchedUpdates
+  deepEqual
 } from './performance-helpers';
 
 // Mock React hooks for testing
@@ -79,8 +72,7 @@ export async function benchmarkEqualityFunctions() {
 export async function benchmarkDebouncingMechanisms() {
   console.log('Benchmarking debouncing mechanisms...');
   
-  let callCount = 0;
-  const testFunction = () => { callCount++; };
+  const testFunction = () => { /* mock function for testing */ };
   
   // Test debounced callback
   const debouncedResult = await benchmarkFunction(
@@ -438,7 +430,7 @@ function generateBenchmarkSummary(results: any): string {
 export function saveBenchmarkResults(results: any, filename?: string) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const defaultFilename = `performance-benchmark-${timestamp}.json`;
-  const file = filename || defaultFilename;
+  // Note: filename parameter available but not used in this implementation
   
   const data = {
     timestamp: new Date().toISOString(),

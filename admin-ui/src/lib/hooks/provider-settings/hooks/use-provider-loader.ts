@@ -268,7 +268,7 @@ export function useProviderLoader(): UseProviderLoaderReturn {
       console.error('Failed to load provider settings:', error);
       
       // Handle error through global error handler
-      const errorResult = await errorHandlerRef.current.handle(error as Error, {
+      await errorHandlerRef.current.handle(error as Error, {
         testedProviders,
         connectionStatus,
         circuitBreakerState: circuitBreakerRef.current.getState()

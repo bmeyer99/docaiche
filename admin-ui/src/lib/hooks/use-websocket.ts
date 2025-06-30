@@ -150,7 +150,7 @@ export function useWebSocket(
     return () => {
       disconnect();
     };
-  }, [url]); // Remove connect and disconnect from deps to prevent recreation
+  }, [url, connect, disconnect]); // Added connect and disconnect dependencies
 
   return {
     ...state,
@@ -216,7 +216,7 @@ export function useAnalyticsWebSocket(timeRange: string = '24h', enabled: boolea
         // Note: We don't disconnect here because other components might be using it
       };
     });
-  }, [enabled]);
+  }, [enabled, timeRange]); // Added timeRange dependency
 
   // Handle time range changes
   useEffect(() => {

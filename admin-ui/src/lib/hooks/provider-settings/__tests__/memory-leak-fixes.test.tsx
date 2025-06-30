@@ -111,7 +111,7 @@ describe('Memory Leak Fixes', () => {
     it('should prevent overlapping saves', async () => {
       const { result } = renderHook(() => useProviderSaver());
       
-      const mockSave = jest.fn(() => new Promise(resolve => setTimeout(resolve, 100)));
+      // Test for overlapping saves prevention - no additional mocking needed for this test
       
       // Start two save operations
       const save1 = act(async () => {

@@ -344,7 +344,7 @@ export class NetworkRecoveryStrategy implements RecoveryStrategy {
            !!(error.message && error.message.includes('fetch'));
   }
 
-  async recover(error: Error, context: any): Promise<any> {
+  async recover(_error: Error, _context: any): Promise<any> {
     // Wait a bit and try to check network connectivity
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -364,7 +364,7 @@ export class ValidationRecoveryStrategy implements RecoveryStrategy {
     return error instanceof ValidationError;
   }
 
-  async recover(error: ValidationError, context: any): Promise<any> {
+  async recover(_error: ValidationError, _context: any): Promise<any> {
     return {
       type: 'user-input-required',
       message: `Please fix the following validation errors: ${error.validationErrors.join(', ')}`,
@@ -382,7 +382,7 @@ export class ConflictRecoveryStrategy implements RecoveryStrategy {
     return error instanceof ConflictError;
   }
 
-  async recover(error: ConflictError, context: any): Promise<any> {
+  async recover(_error: ConflictError, _context: any): Promise<any> {
     return {
       type: 'merge-required',
       message: 'Your changes conflict with recent server changes. Please review and merge.',

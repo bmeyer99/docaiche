@@ -19,7 +19,8 @@ export function ProfilerWrapper({
   children: ReactNode;
   onRender?: (id: string, phase: 'mount' | 'update', actualDuration: number) => void;
 }) {
-  const handleRender = useCallback(
+  // Development logging for profiler data
+  const logPerformanceData = useCallback(
     (id: string, phase: 'mount' | 'update', actualDuration: number) => {
       if (process.env.NODE_ENV === 'development') {
         console.log(`[Profiler] ${id} ${phase} took ${actualDuration.toFixed(2)}ms`);

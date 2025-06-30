@@ -37,13 +37,14 @@ scrape_configs:
           expression: '(?P<container_name>(?:[^|]*))\|(?P<image_name>(?:[^|]*))'
           source: tag
       
-      # Extract service name from container labels or name
-      - labels:
-          container_label_docaiche_service:
-      
-      # Fallback: extract service name from container name
+      # Extract DocAIche service name from container name
       - regex:
-          expression: '^/?(?P<service_name>[^-_]+)'
+          expression: '^/?docaiche-(?P<service>[^-]+)'
+          source: container_name
+      
+      # Fallback: extract generic service name  
+      - regex:
+          expression: '^/?(?P<service_name>[^-]+)'
           source: container_name
       
       # Add timestamp
@@ -54,6 +55,7 @@ scrape_configs:
       # Set labels for Loki
       - labels:
           stream:
+          service:
           service_name:
           container_name:
       

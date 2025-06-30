@@ -53,8 +53,7 @@ function validateModelSelectionResponse(data: unknown): ModelSelectionResponse {
 }
 
 export async function loadProviderConfigurations(
-  testedProviders: Record<string, TestedProvider>,
-  signal?: AbortSignal
+  testedProviders: Record<string, TestedProvider>
 ): Promise<Record<string, ProviderConfiguration>> {
   const rawResponse = await apiClient.getProviderConfigurations();
   const providerConfigs = validateProviderResponse(rawResponse);
@@ -89,7 +88,7 @@ export async function loadProviderConfigurations(
   return providersMap;
 }
 
-export async function loadModelSelection(signal?: AbortSignal): Promise<ProviderSettings['modelSelection']> {
+export async function loadModelSelection(): Promise<ProviderSettings['modelSelection']> {
   const rawResponse = await apiClient.getModelSelection();
   const validated = validateModelSelectionResponse(rawResponse);
   
@@ -103,8 +102,7 @@ export async function loadModelSelection(signal?: AbortSignal): Promise<Provider
 
 export async function saveProviderConfiguration(
   providerId: string,
-  config: ProviderConfiguration['config'],
-  signal?: AbortSignal
+  config: ProviderConfiguration['config']
 ): Promise<void> {
   // Sanitize config before sending to API
   const sanitizedConfig = sanitizeProviderConfig(providerId, config);
@@ -115,8 +113,7 @@ export async function saveProviderConfiguration(
 }
 
 export async function saveModelSelection(
-  modelSelection: ProviderSettings['modelSelection'],
-  signal?: AbortSignal
+  modelSelection: ProviderSettings['modelSelection']
 ): Promise<void> {
   // Validate model selection before sending
   try {

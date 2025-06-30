@@ -52,7 +52,7 @@ export default function CollectionsPage() {
       onSuccess: () => {
         // Data is handled in the component render
       },
-      onError: (error) => {
+      onError: () => {
         // Collections load failed
         toast({
           title: "Error",

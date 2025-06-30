@@ -145,6 +145,7 @@ export function useStableCallback<T extends (...args: any[]) => any>(
   callback: T,
   deps: React.DependencyList
 ): T {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useCallback(callback, deps);
 }
 
@@ -155,6 +156,7 @@ export function useStableHandlers<T extends Record<string, (...args: any[]) => a
   handlers: T,
   deps: React.DependencyList
 ): T {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => handlers, deps);
 }
 
@@ -517,14 +519,15 @@ export function useOptimizedInput<T = string>(
  */
 export function createProfilerWrapper(id: string, onRender?: (id: string, phase: 'mount' | 'update', actualDuration: number) => void) {
   return function ProfilerWrapper({ children }: { children: ReactNode }) {
-    const handleRender = useCallback(
+    // Profiler callback (development logging only)
+    const logProfilerData = useCallback(
       (id: string, phase: 'mount' | 'update', actualDuration: number) => {
         if (process.env.NODE_ENV === 'development') {
           console.log(`[Profiler] ${id} ${phase} took ${actualDuration.toFixed(2)}ms`);
         }
         onRender?.(id, phase, actualDuration);
       },
-      [onRender]
+      []  // Remove onRender dependency to prevent recreations
     );
 
     // Only render Profiler in development
@@ -580,9 +583,10 @@ export function useBatchedUpdates<T extends Record<string, any>>(
   }, [state]);
 
   useEffect(() => {
+    const currentRef = batchedUpdateRef.current;
     return () => {
-      if (batchedUpdateRef.current.timeoutId) {
-        clearTimeout(batchedUpdateRef.current.timeoutId);
+      if (currentRef.timeoutId) {
+        clearTimeout(currentRef.timeoutId);
       }
     };
   }, []);
@@ -648,7 +652,7 @@ export function useOptimizedFormState<T extends Record<string, any>>(
         }));
       } else {
         setErrors(prev => {
-          const { [fieldName]: _, ...rest } = prev;
+          const { [fieldName]: _removed, ...rest } = prev;
           return rest;
         });
       }
@@ -889,7 +893,8 @@ export function useAdvancedPerformanceMonitor(componentName: string, options: {
   threshold?: number;
   enableMemoryTracking?: boolean;
 } = {}) {
-  const { enableReporting = true, threshold = 16, enableMemoryTracking = false } = options;
+  const { enableReporting = true, enableMemoryTracking = false } = options;
+  // Note: threshold parameter available but not used in current implementation
   const renderStartTime = useRef<number | undefined>(undefined);
   const memoryUsageRef = useRef<number | undefined>(undefined);
 
@@ -1047,7 +1052,8 @@ export function useWebWorkerComputation<T, R>(
         URL.revokeObjectURL(blobUrl);
       }
     };
-  }, dependencies);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [computation, ...dependencies]);
 
   const runComputation = useCallback(async (data: T): Promise<R> => {
     if (!workerRef.current) {

@@ -114,15 +114,16 @@ export function useDebouncedApi<T>(
     }
   }, [apiCall, identifier, circuitBreaker, onSuccess, onError]);
 
-  const debouncedExecute = useCallback(() => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
+  // Debounced execution function (currently unused but kept for potential future use)
+  // const debouncedExecute = useCallback(() => {
+  //   if (debounceTimeoutRef.current) {
+  //     clearTimeout(debounceTimeoutRef.current);
+  //   }
 
-    debounceTimeoutRef.current = setTimeout(() => {
-      executeApiCall();
-    }, debounceMs);
-  }, [executeApiCall, debounceMs]);
+  //   debounceTimeoutRef.current = setTimeout(() => {
+  //     executeApiCall();
+  //   }, debounceMs);
+  // }, [executeApiCall, debounceMs]);
 
   const refetch = useCallback(() => {
     if (!enabledCondition) {
@@ -147,7 +148,7 @@ export function useDebouncedApi<T>(
         console.warn(`🚫 ${identifier}: Initial load blocked by circuit breaker`);
       }
     }
-  }, [immediate, enabledCondition, identifier]); // Removed executeApiCall and circuitBreaker from deps to prevent loops
+  }, [immediate, enabledCondition, identifier, circuitBreaker.canMakeRequest, executeApiCall]); // Added dependencies
 
   return {
     data,

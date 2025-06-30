@@ -3,14 +3,13 @@
  * Provides real-time performance metrics and analysis
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
 import { 
-  performanceStore, 
   useAdvancedPerformanceMonitor,
   useBundlePerformanceTracker 
 } from '@/lib/utils/performance-helpers';
@@ -36,27 +35,26 @@ export function PerformanceDashboard({
     trackInitialLoad();
   }, [trackInitialLoad]);
 
-  const refreshReport = () => {
+  const refreshReport = useCallback(() => {
     const newReport = generateReport();
     setReport(newReport);
-  };
+  }, [generateReport]);
 
   useEffect(() => {
     if (autoRefresh) {
       const interval = setInterval(refreshReport, refreshInterval);
       return () => clearInterval(interval);
     }
-  }, [autoRefresh, refreshInterval]);
+  }, [autoRefresh, refreshInterval, refreshReport]);
 
   useEffect(() => {
     refreshReport();
-  }, []);
+  }, [refreshReport]);
 
-  const { slowComponents, healthyComponents, bundleHealth } = useMemo(() => {
+  const { slowComponents, bundleHealth } = useMemo(() => {
     if (!report) return { slowComponents: [], healthyComponents: [], bundleHealth: 'good' };
 
     const slow = report.slowComponents || [];
-    const healthy = Object.keys(report.summary || {}).length - slow.length;
     
     let health = 'good';
     if (slow.length > 5) health = 'poor';
@@ -64,7 +62,6 @@ export function PerformanceDashboard({
 
     return {
       slowComponents: slow,
-      healthyComponents: healthy,
       bundleHealth: health
     };
   }, [report]);

@@ -25,8 +25,7 @@ import {
   ConflictError,
   NetworkError,
   TimeoutError,
-  createUserFriendlyMessage,
-  isRetryableError
+  createUserFriendlyMessage
 } from '../utils/error-handling';
 
 interface SaveOperation {
@@ -287,7 +286,7 @@ export function useProviderSaver(): UseProviderSaverReturn {
         console.error('Failed to save provider settings:', error);
         
         // Handle error through global error handler
-        const errorResult = await errorHandlerRef.current.handle(error as Error, {
+        await errorHandlerRef.current.handle(error as Error, {
           dirtyFields: Array.from(dirtyFields),
           operations
         });
