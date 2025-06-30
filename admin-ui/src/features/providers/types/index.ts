@@ -32,7 +32,7 @@ export interface ProviderConfig {
   projectId?: string
   region?: string
   customHeaders?: Record<string, string>
-  [key: string]: any // For provider-specific fields
+  [key: string]: string | number | boolean | undefined // For provider-specific fields
 }
 
 export interface Model {
@@ -139,7 +139,7 @@ export interface ProviderFormData {
   organizationId?: string
   projectId?: string
   region?: string
-  [key: string]: any
+  [key: string]: string | number | boolean | undefined
 }
 
 // API response types
