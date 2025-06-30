@@ -10,11 +10,17 @@ Provides WebSocket connections for:
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Set, Optional
+import psutil
+from sqlalchemy import select, func, and_, desc
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from fastapi.responses import HTMLResponse
+
+from ...database.models import SearchCache, ContentMetadata, FeedbackEvents, UsageSignals
+from ...database.manager import DatabaseManager
 
 
 logger = logging.getLogger(__name__)
@@ -83,43 +89,122 @@ manager = ConnectionManager()
 
 
 async def get_analytics_data_internal(time_range: str = "24h"):
-    """Get analytics data for WebSocket (simplified version)"""
+    """Get real analytics data from the database"""
     # Check system health dynamically
     system_health = await check_system_health()
+    
+    # Calculate time filter
+    now = datetime.utcnow()
+    if time_range == "30d":
+        start_time = now - timedelta(days=30)
+    elif time_range == "7d":
+        start_time = now - timedelta(days=7)
+    else:  # 24h
+        start_time = now - timedelta(hours=24)
+    
+    db_manager = DatabaseManager()
+    async with db_manager.get_session() as session:
+        # Get search metrics
+        search_count = await session.scalar(
+            select(func.count()).select_from(SearchCache)
+            .where(SearchCache.created_at >= start_time)
+        )
+        
+        avg_response_time = await session.scalar(
+            select(func.avg(SearchCache.execution_time_ms)).select_from(SearchCache)
+            .where(SearchCache.created_at >= start_time)
+        ) or 0
+        
+        # Get top queries
+        top_queries_result = await session.execute(
+            select(
+                SearchCache.original_query,
+                func.count().label('count')
+            )
+            .where(SearchCache.created_at >= start_time)
+            .group_by(SearchCache.original_query)
+            .order_by(desc('count'))
+            .limit(10)
+        )
+        top_queries = [
+            {"query": row[0], "count": row[1]} 
+            for row in top_queries_result
+        ]
+        
+        # Get queries by hour (last 24 hours)
+        hourly_stats = []
+        for i in range(24):
+            hour_start = now - timedelta(hours=i+1)
+            hour_end = now - timedelta(hours=i)
+            
+            hour_data = await session.execute(
+                select(
+                    func.count().label('count'),
+                    func.avg(SearchCache.execution_time_ms).label('avg_time')
+                )
+                .select_from(SearchCache)
+                .where(and_(
+                    SearchCache.created_at >= hour_start,
+                    SearchCache.created_at < hour_end
+                ))
+            )
+            row = hour_data.first()
+            hourly_stats.append({
+                "count": row.count if row else 0,
+                "responseTime": float(row.avg_time) if row and row.avg_time else 0
+            })
+        
+        # Get content metrics
+        total_docs = await session.scalar(
+            select(func.count()).select_from(ContentMetadata)
+        ) or 0
+        
+        avg_quality = await session.scalar(
+            select(func.avg(ContentMetadata.final_quality_score))
+            .select_from(ContentMetadata)
+        ) or 0
+        
+        # Get documents by technology
+        tech_distribution = await session.execute(
+            select(
+                ContentMetadata.technology,
+                func.count().label('count')
+            )
+            .group_by(ContentMetadata.technology)
+            .order_by(desc('count'))
+            .limit(10)
+        )
+        docs_by_tech = [
+            {"technology": row[0] or "Unknown", "count": row[1]}
+            for row in tech_distribution
+        ]
+        
+        # Calculate success rate (searches with results)
+        searches_with_results = await session.scalar(
+            select(func.count()).select_from(SearchCache)
+            .where(and_(
+                SearchCache.created_at >= start_time,
+                SearchCache.result_count > 0
+            ))
+        ) or 0
+        
+        success_rate = (searches_with_results / search_count) if search_count > 0 else 0
     
     return {
         "timeRange": time_range,
         "systemHealth": system_health,
         "searchMetrics": {
-            "totalSearches": 1247 if time_range == "30d" else 89 if time_range == "7d" else 12,
-            "avgResponseTime": 125,
-            "successRate": 0.95,
-            "topQueries": [
-                {"query": "python async", "count": 45},
-                {"query": "react hooks", "count": 32},
-                {"query": "docker compose", "count": 28},
-                {"query": "fastapi tutorial", "count": 22},
-                {"query": "typescript types", "count": 19},
-            ],
-            "queriesByHour": [
-                {"count": 5, "responseTime": 120},
-                {"count": 8, "responseTime": 115},
-                {"count": 12, "responseTime": 130},
-                {"count": 10, "responseTime": 125},
-                {"count": 7, "responseTime": 118},
-            ] + [{"count": 3, "responseTime": 125}] * 19,  # Fill 24 hours
+            "totalSearches": search_count or 0,
+            "avgResponseTime": float(avg_response_time) if avg_response_time else 0,
+            "successRate": success_rate,
+            "topQueries": top_queries,
+            "queriesByHour": list(reversed(hourly_stats)),  # Reverse to show oldest to newest
         },
         "contentMetrics": {
-            "totalDocuments": 15432,
-            "totalChunks": 89765,
-            "avgQualityScore": 0.82,
-            "documentsByTechnology": [
-                {"technology": "Python", "count": 5432},
-                {"technology": "JavaScript", "count": 3245},
-                {"technology": "React", "count": 2876},
-                {"technology": "TypeScript", "count": 2156},
-                {"technology": "Docker", "count": 1789},
-            ],
+            "totalDocuments": total_docs,
+            "totalChunks": total_docs * 10,  # Estimate chunks
+            "avgQualityScore": float(avg_quality) if avg_quality else 0,
+            "documentsByTechnology": docs_by_tech,
         },
     }
 
@@ -229,28 +314,84 @@ async def get_health_status_internal():
 
 
 async def get_stats_data_internal():
-    """Get stats data for WebSocket (simplified version)"""
+    """Get real stats data from the database and system"""
+    db_manager = DatabaseManager()
+    
+    async with db_manager.get_session() as session:
+        # Get search statistics
+        total_searches = await session.scalar(
+            select(func.count()).select_from(SearchCache)
+        ) or 0
+        
+        avg_response_time = await session.scalar(
+            select(func.avg(SearchCache.execution_time_ms)).select_from(SearchCache)
+        ) or 0
+        
+        # Calculate cache hit rate
+        cache_hits = await session.scalar(
+            select(func.count()).select_from(SearchCache)
+            .where(SearchCache.cache_hit == True)
+        ) or 0
+        
+        cache_hit_rate = (cache_hits / total_searches) if total_searches > 0 else 0
+        
+        # Get content statistics
+        total_documents = await session.scalar(
+            select(func.count()).select_from(ContentMetadata)
+        ) or 0
+        
+        # Count unique workspaces from SearchCache
+        workspace_count = await session.scalar(
+            select(func.count(func.distinct(SearchCache.workspace_slugs)))
+            .select_from(SearchCache)
+            .where(SearchCache.workspace_slugs.isnot(None))
+        ) or 0
+        
+        # Get Redis cache stats (simplified)
+        import redis
+        try:
+            r = redis.from_url("redis://redis:6379")
+            redis_info = r.info()
+            total_keys = r.dbsize()
+            memory_usage_mb = redis_info.get('used_memory', 0) / (1024 * 1024)
+        except:
+            total_keys = 0
+            memory_usage_mb = 0
+    
+    # Get system statistics
+    try:
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        memory_info = psutil.virtual_memory()
+        disk_info = psutil.disk_usage('/')
+        
+        memory_usage_mb = memory_info.used / (1024 * 1024)
+        disk_usage_mb = disk_info.used / (1024 * 1024)
+    except:
+        cpu_percent = 0
+        memory_usage_mb = 0
+        disk_usage_mb = 0
+    
     return {
         "search_stats": {
-            "total_searches": 1247,
-            "avg_response_time_ms": 125,
-            "cache_hit_rate": 0.73,
+            "total_searches": total_searches,
+            "avg_response_time_ms": float(avg_response_time) if avg_response_time else 0,
+            "cache_hit_rate": cache_hit_rate,
         },
         "cache_stats": {
-            "hit_rate": 0.73,
-            "miss_rate": 0.27,
-            "total_keys": 8976,
-            "memory_usage_mb": 128,
+            "hit_rate": cache_hit_rate,
+            "miss_rate": 1 - cache_hit_rate,
+            "total_keys": total_keys,
+            "memory_usage_mb": round(memory_usage_mb, 2),
         },
         "content_stats": {
-            "total_documents": 15432,
-            "total_chunks": 89765,
-            "workspaces": 5,
+            "total_documents": total_documents,
+            "total_chunks": total_documents * 10,  # Estimate
+            "workspaces": workspace_count,
         },
         "system_stats": {
-            "cpu_usage_percent": 23.5,
-            "memory_usage_mb": 512,
-            "disk_usage_mb": 2048,
+            "cpu_usage_percent": round(cpu_percent, 1),
+            "memory_usage_mb": round(memory_usage_mb, 2),
+            "disk_usage_mb": round(disk_usage_mb, 2),
         },
     }
 
