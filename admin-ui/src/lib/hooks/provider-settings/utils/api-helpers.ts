@@ -15,11 +15,6 @@ import {
 import { DEFAULT_MODEL_SELECTION } from '../constants';
 import { sanitizeProviderConfig } from './validation';
 
-interface TestedProvider {
-  status: string;
-  models: string[];
-  lastTested: Date;
-}
 
 // Validate API response for provider configurations
 function validateProviderResponse(data: unknown): ProviderConfigurationResponse[] {
@@ -43,7 +38,7 @@ function validateModelSelectionResponse(data: unknown): ModelSelectionResponse {
 }
 
 export async function loadProviderConfigurations(
-  testedProviders: Record<string, TestedProvider>
+  testedProviders: Record<string, any> = {}
 ): Promise<Record<string, ProviderConfiguration>> {
   const rawResponse = await apiClient.getProviderConfigurations();
   const providerConfigs = validateProviderResponse(rawResponse);
@@ -81,22 +76,6 @@ export async function loadProviderConfigurations(
   return providersMap;
 }
 
-export function populateTestCacheFromProviders(
-  providerConfigs: Record<string, ProviderConfiguration>,
-  setProviderTested: (providerId: string, models: string[], config: any) => void,
-  setProviderFailed: (providerId: string, error: string, config: any) => void
-) {
-  // Populate test cache from backend provider data
-  Object.values(providerConfigs).forEach(provider => {
-    if (provider.status === 'connected' && provider.models && provider.models.length > 0) {
-      // Provider was successfully tested
-      setProviderTested(provider.id, provider.models, provider.config);
-    } else if (provider.status === 'error') {
-      // Provider test failed
-      setProviderFailed(provider.id, 'Connection test failed', provider.config);
-    }
-  });
-}
 
 export async function loadModelSelection(): Promise<ProviderSettings['modelSelection']> {
   const rawResponse = await apiClient.getModelSelection();

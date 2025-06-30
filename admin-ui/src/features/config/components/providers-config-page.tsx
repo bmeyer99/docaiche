@@ -12,8 +12,7 @@ import { Icons } from '@/components/icons';
 import { AI_PROVIDERS, ProviderDefinition } from '@/lib/config/providers';
 import { useToast } from '@/hooks/use-toast';
 import { useApiClient } from '@/lib/hooks/use-api-client';
-import { useProviderTestCache } from '@/lib/hooks/use-provider-test-cache';
-import { useModelSelection } from '@/lib/hooks/use-provider-settings';
+import { useModelSelection, useProviderSettings } from '@/lib/hooks/use-provider-settings';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2, Clock } from 'lucide-react';
@@ -74,12 +73,8 @@ export default function ProvidersConfigPage() {
   const [customModelInput, setCustomModelInput] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const apiClient = useApiClient();
-  const testCache = useProviderTestCache();
   const { modelSelection: config, updateModelSelection } = useModelSelection();
-
-  // Debug logging
-  console.log('ProvidersConfigPage - Model Selection Config:', config);
-  console.log('ProvidersConfigPage - Test Cache:', testCache.testedProviders);
+  const { providers: providerConfigs } = useProviderSettings();
 
   // No need to load configuration anymore - it comes from context
 
@@ -162,12 +157,7 @@ export default function ProvidersConfigPage() {
     try {
       await apiClient.addCustomModel(providerId, modelName);
       
-      // Reload models for this provider
-      const response = await apiClient.getProviderModels(providerId);
-      if (response?.models) {
-        const currentProvider = testCache.testedProviders[providerId];
-        testCache.setProviderTested(providerId, response.models, currentProvider?.config || {});
-      }
+      // Models will be updated through the provider context when the provider is tested
 
       // Clear input
       setCustomModelInput(prev => ({ ...prev, [providerId]: '' }));
@@ -195,16 +185,17 @@ export default function ProvidersConfigPage() {
   };
 
   const getProviderTestStatus = (providerId: string) => {
-    const status = testCache.getProviderStatus(providerId);
-    const models = testCache.getProviderModels(providerId);
+    const providerConfig = providerConfigs[providerId];
+    const status = providerConfig?.status || 'untested';
+    const models = providerConfig?.models || [];
     
     return {
       status,
       models,
-      tested: status === 'tested',
+      tested: status === 'tested' || status === 'connected',
       testing: status === 'testing',
       failed: status === 'failed',
-      untested: status === 'untested'
+      untested: !providerConfig || status === 'untested' || status === 'disconnected' || status === 'available'
     };
   };
 
@@ -301,7 +292,7 @@ export default function ProvidersConfigPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {providerTestStatus?.models
-                    .filter((model) => {
+                    .filter((model: string) => {
                       // Always filter embedding models for embeddings section
                       if (section === 'embeddings') {
                         // Common embedding model patterns
@@ -325,7 +316,7 @@ export default function ProvidersConfigPage() {
                       
                       return true;
                     })
-                    .map((model) => (
+                    .map((model: string) => (
                       <SelectItem key={model} value={model}>
                         {model}
                       </SelectItem>
@@ -420,11 +411,11 @@ export default function ProvidersConfigPage() {
   };
 
   // Count how many providers are tested successfully
-  const testedProviders = Object.values(testCache.testedProviders).filter(p => p.status === 'tested');
+  const testedProviders = Object.values(providerConfigs).filter(p => p.status === 'tested' || p.status === 'connected');
   const totalProviders = Object.keys(AI_PROVIDERS).length;
   
   // Only count providers that have been successfully tested, not just "configured"
-  const configuredProviders = testedProviders; // This replaces the old logic that was counting untested providers
+  const configuredProviders = testedProviders;
 
   return (
     <div className="flex flex-col gap-6 p-6">

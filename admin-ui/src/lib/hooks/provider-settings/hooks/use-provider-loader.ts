@@ -5,8 +5,7 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { 
   loadProviderConfigurations, 
-  loadModelSelection,
-  populateTestCacheFromProviders 
+  loadModelSelection
 } from '../utils/api-helpers';
 import { 
   initializeMissingProviders, 
@@ -138,7 +137,7 @@ export function useProviderLoader(): UseProviderLoaderReturn {
     };
   }, []);
 
-  const loadSettings = useCallback(async (testedProviders: Record<string, any>) => {
+  const loadSettings = useCallback(async (testedProviders: Record<string, any> = {}) => {
     const startTime = Date.now();
     let attempt: LoadAttempt = {
       timestamp: new Date(),

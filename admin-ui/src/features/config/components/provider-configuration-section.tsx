@@ -30,7 +30,6 @@ function ProviderForm({ provider }: ProviderFormProps) {
   const providerConfig = providers[provider.id];
 
   const [localConfig, setLocalConfig] = useState<Record<string, any>>({});
-  const [forceRender, setForceRender] = useState(0);
 
   const handleFieldChange = (fieldKey: string, value: string | number | boolean) => {
     setLocalConfig(prev => ({
@@ -48,10 +47,6 @@ function ProviderForm({ provider }: ProviderFormProps) {
       const response = await apiClient.testProviderConnection(provider.id, config);
       
       if (response.success) {
-        console.log('Test successful, updating provider status...');
-        console.log('Provider ID:', provider.id);
-        console.log('Models found:', response.models?.length);
-        
         // Update provider status and models
         updateProvider(provider.id, {
           status: 'tested',
@@ -59,11 +54,6 @@ function ProviderForm({ provider }: ProviderFormProps) {
           config: config
         });
         setLocalConfig({}); // Clear local changes since they're now saved
-        
-        console.log('Provider updated, showing toast...');
-        
-        // Force component re-render
-        setForceRender(prev => prev + 1);
         
         toast({
           title: "Connection Successful",
@@ -98,13 +88,11 @@ function ProviderForm({ provider }: ProviderFormProps) {
   };
 
   const getStatusBadge = () => {
-    console.log('getStatusBadge - providerConfig?.status:', providerConfig?.status);
-    console.log('getStatusBadge - isTesting:', isTesting);
     
     if (isTesting) {
       return <Badge variant="outline" className="border-blue-500 text-blue-600">Testing...</Badge>;
     }
-    if (providerConfig?.status === 'tested') {
+    if (providerConfig?.status === 'tested' || providerConfig?.status === 'connected') {
       return <Badge variant="outline" className="border-green-500 text-green-600">Connected ({providerConfig.models?.length || 0} models)</Badge>;
     }
     if (providerConfig?.status === 'failed') {
@@ -195,7 +183,7 @@ function ProviderForm({ provider }: ProviderFormProps) {
           </Alert>
         )}
 
-        {providerConfig?.status === 'tested' && (
+        {(providerConfig?.status === 'tested' || providerConfig?.status === 'connected') && (
           <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
             <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
             <AlertDescription className="text-green-800 dark:text-green-200">

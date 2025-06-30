@@ -5,7 +5,6 @@
  */
 
 import React, { createContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
-import { useProviderTestCache } from '../use-provider-test-cache';
 import { ProviderConfiguration } from '@/lib/config/providers';
 import { useProviderLoader } from './hooks/use-provider-loader';
 import { useProviderSaver } from './hooks/use-provider-saver';
@@ -35,7 +34,6 @@ import { useIsMounted, CleanupManager } from './utils/cleanup-helpers';
 export const ProviderSettingsContext = createContext<ProviderSettingsContextValue | null>(null);
 
 export function ProviderSettingsProvider({ children }: { children: ReactNode }) {
-  const { testedProviders, setProviderTested } = useProviderTestCache();
   const { isLoading, loadError, loadSettings: loadSettingsCore } = useProviderLoader();
   const { isSaving, saveError, saveAllChanges: saveAllChangesCore, clearSaveError } = useProviderSaver();
   const isMounted = useIsMounted();
@@ -64,7 +62,7 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
         providers: loadedProviders, 
         modelSelection: loadedModelSelection, 
         savedState: newSavedState 
-      } = await loadSettingsCore(testedProviders);
+      } = await loadSettingsCore({});
       
       // Check if still mounted
       if (!isMounted()) return;
@@ -74,17 +72,6 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
       setModelSelection(loadedModelSelection);
       setSavedState(newSavedState);
       
-      // Populate test cache from loaded provider data
-      const { populateTestCacheFromProviders } = await import('./utils/api-helpers');
-      populateTestCacheFromProviders(
-        loadedProviders,
-        setProviderTested,
-        (providerId: string, error: string) => {
-          // Map to test cache failed method if available
-          // For now, just log since we don't have the failed method here
-          console.log(`Provider ${providerId} test failed: ${error}`);
-        }
-      );
       
       // Clear dirty fields since we just loaded
       setDirtyFields(new Set());
@@ -97,7 +84,7 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
         return;
       }
     }
-  }, [testedProviders, loadSettingsCore, isMounted, setProviderTested]);
+  }, [loadSettingsCore, isMounted]);
 
   /**
    * Update a provider's configuration with validation
@@ -195,23 +182,6 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
       // Clear dirty fields
       setDirtyFields(new Set());
       
-      // Update test cache with saved configurations
-      const providerUpdates = new Map<string, ProviderConfiguration['config']>();
-      dirtyFields.forEach(field => {
-        if (field.startsWith('provider.')) {
-          const [, providerId] = field.split('.');
-          if (!providerUpdates.has(providerId)) {
-            providerUpdates.set(providerId, providers[providerId].config);
-          }
-        }
-      });
-      
-      providerUpdates.forEach((config, providerId) => {
-        const testedProvider = testedProviders[providerId];
-        if (testedProvider?.status === 'tested') {
-          setProviderTested(providerId, testedProvider.models, config);
-        }
-      });
       
     } catch (error) {
       // Check for abort/unmount errors
@@ -221,7 +191,7 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
       }
       // Other errors are already handled in saveAllChangesCore
     }
-  }, [dirtyFields, providers, modelSelection, testedProviders, setProviderTested, saveAllChangesCore, isMounted]);
+  }, [dirtyFields, providers, modelSelection, saveAllChangesCore, isMounted]);
 
   /**
    * Reset to last saved state
@@ -262,29 +232,6 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
     loadSettings();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync with test cache updates
-  useEffect(() => {
-    if (!isMounted()) return;
-
-    setProviders(prev => {
-      let updated = false;
-      const next = { ...prev };
-      
-      Object.entries(testedProviders).forEach(([providerId, testedProvider]) => {
-        if (prev[providerId] && testedProvider.status === 'tested') {
-          next[providerId] = {
-            ...prev[providerId],
-            models: testedProvider.models,
-            status: 'connected',
-            lastTested: testedProvider.lastTested.toISOString(),
-          };
-          updated = true;
-        }
-      });
-      
-      return updated ? next : prev;
-    });
-  }, [testedProviders, isMounted]);
 
   // Add beforeunload handler for unsaved changes
   useEffect(() => {
