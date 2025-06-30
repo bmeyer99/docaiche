@@ -1,0 +1,303 @@
+{
+  "url": "http://192.168.4.199:4080/dashboard/logs",
+  "duration": 20,
+  "timestamp": "2025-06-30T01:08:58.579Z",
+  "summary": {
+    "wsConnections": 1,
+    "wsMessages": 10,
+    "apiCalls": 3,
+    "errors": 0,
+    "consoleLogs": 0
+  },
+  "websockets": [
+    {
+      "timestamp": "2025-06-30T01:08:31.514Z",
+      "id": "1820436.58",
+      "url": "ws://192.168.4.199:4080/api/v1/logs/ws/browser",
+      "status": "created"
+    }
+  ],
+  "wsMessages": [
+    {
+      "timestamp": "2025-06-30T01:08:31.561Z",
+      "requestId": "1820436.58",
+      "type": "connected",
+      "data": {
+        "service": "browser"
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.622Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "debug",
+        "service": "browser",
+        "message": "API GET /api/v1/logs/services - pending",
+        "metadata": {
+          "metadata": {
+            "apiCall": {
+              "method": "GET",
+              "url": "/api/v1/logs/services"
+            },
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "debug",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.632Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "debug",
+        "service": "browser",
+        "message": "API GET http://192.168.4.199:4080/dashboard/analytics?_rsc=1dr0u - pending",
+        "metadata": {
+          "metadata": {
+            "apiCall": {
+              "method": "GET",
+              "url": "http://192.168.4.199:4080/dashboard/analytics?_rsc=1dr0u"
+            },
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "debug",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.632Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "debug",
+        "service": "browser",
+        "message": "API GET http://192.168.4.199:4080/dashboard/providers?_rsc=1dr0u - pending",
+        "metadata": {
+          "metadata": {
+            "apiCall": {
+              "method": "GET",
+              "url": "http://192.168.4.199:4080/dashboard/providers?_rsc=1dr0u"
+            },
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "debug",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.632Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "debug",
+        "service": "browser",
+        "message": "API GET http://192.168.4.199:4080/dashboard/documents?_rsc=1dr0u - pending",
+        "metadata": {
+          "metadata": {
+            "apiCall": {
+              "method": "GET",
+              "url": "http://192.168.4.199:4080/dashboard/documents?_rsc=1dr0u"
+            },
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "debug",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.633Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "debug",
+        "service": "browser",
+        "message": "API GET /api/v1/logs/services - 200",
+        "metadata": {
+          "metadata": {
+            "apiCall": {
+              "method": "GET",
+              "url": "/api/v1/logs/services",
+              "status": 200
+            },
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "debug",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.633Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "debug",
+        "service": "browser",
+        "message": "API GET http://192.168.4.199:4080/dashboard/analytics?_rsc=1dr0u - 200",
+        "metadata": {
+          "metadata": {
+            "apiCall": {
+              "method": "GET",
+              "url": "http://192.168.4.199:4080/dashboard/analytics?_rsc=1dr0u",
+              "status": 200
+            },
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "debug",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.633Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "debug",
+        "service": "browser",
+        "message": "API GET http://192.168.4.199:4080/dashboard/providers?_rsc=1dr0u - 200",
+        "metadata": {
+          "metadata": {
+            "apiCall": {
+              "method": "GET",
+              "url": "http://192.168.4.199:4080/dashboard/providers?_rsc=1dr0u",
+              "status": 200
+            },
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "debug",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.633Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "debug",
+        "service": "browser",
+        "message": "API GET http://192.168.4.199:4080/dashboard/documents?_rsc=1dr0u - 200",
+        "metadata": {
+          "metadata": {
+            "apiCall": {
+              "method": "GET",
+              "url": "http://192.168.4.199:4080/dashboard/documents?_rsc=1dr0u",
+              "status": 200
+            },
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "debug",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-06-30T01:08:37.633Z",
+      "requestId": "1820436.58",
+      "type": "log",
+      "data": {
+        "timestamp": "2025-06-30T01:08:36.436000Z",
+        "level": "info",
+        "service": "browser",
+        "message": "DocAIche Admin UI initialized",
+        "metadata": {
+          "metadata": {
+            "timestamp": "2025-06-30T01:08:31.472Z",
+            "page": "/dashboard/logs",
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/138.0.0.0 Safari/537.36",
+            "url": "http://192.168.4.199:4080/dashboard/logs"
+          },
+          "app": "docaiche-admin-ui",
+          "component": "browser",
+          "detected_level": "info",
+          "environment": "production",
+          "ingested_at": "2025-06-30T01:08:36.446583",
+          "service_name": "docaiche-admin-ui",
+          "source": "browser"
+        }
+      }
+    }
+  ],
+  "apiCalls": [
+    {
+      "timestamp": "2025-06-30T01:08:31.486Z",
+      "method": "GET",
+      "url": "http://192.168.4.199:4080/api/v1/logs/services"
+    },
+    {
+      "timestamp": "2025-06-30T01:08:31.512Z",
+      "method": "GET",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser?limit=500"
+    },
+    {
+      "timestamp": "2025-06-30T01:08:36.439Z",
+      "method": "POST",
+      "url": "http://192.168.4.199:4080/api/v1/logs/browser"
+    }
+  ],
+  "errors": [],
+  "consoleLogs": []
+}
