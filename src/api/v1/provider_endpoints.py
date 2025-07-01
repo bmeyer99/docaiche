@@ -14,6 +14,7 @@ from .schemas import ProviderResponse, ProviderTestResponse, ProviderConfigReque
 from .middleware import limiter, get_trace_id
 from .dependencies import get_configuration_manager
 from src.core.config.manager import ConfigurationManager
+from src.logging_config import MetricsLogger
 
 # Import the new provider registry system
 try:
@@ -32,6 +33,7 @@ except ImportError as e:
     REGISTRY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+metrics = MetricsLogger(logger)
 
 # Import enhanced logging for provider security monitoring
 try:
@@ -519,11 +521,37 @@ async def test_provider_connection(
     this will return available models. For others, it tests the connection only.
     """
     start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    trace_id = get_trace_id(request)
+    correlation_id = f"test_provider_{provider_id}_{int(time.time() * 1000)}"
     
     try:
         import httpx
 
-        logger.info(f"Testing connection to {provider_id}")
+        # Log provider test start with comprehensive details
+        logger.info(f"Testing connection to {provider_id}", extra={
+            "event": "provider_test_start",
+            "correlation_id": correlation_id,
+            "trace_id": trace_id,
+            "provider_id": provider_id,
+            "client_ip": client_ip,
+            "base_url": test_config.base_url,
+            "has_api_key": bool(test_config.api_key),
+            "operation": "provider_test"
+        })
+        
+        # Log security-sensitive operation
+        if _security_logger:
+            _security_logger.log_sensitive_operation(
+                operation="provider_test",
+                resource=f"provider_{provider_id}",
+                client_ip=client_ip,
+                trace_id=trace_id,
+                additional_data={
+                    "provider_id": provider_id,
+                    "base_url": test_config.base_url
+                }
+            )
 
         if provider_id.lower() == "ollama":
             # Test Ollama connection and get available models
@@ -563,6 +591,30 @@ async def test_provider_connection(
                         success=True, models=model_names
                     )
                     
+                    # Log successful test completion
+                    logger.info(f"Provider {provider_id} test completed successfully", extra={
+                        "event": "provider_test_success",
+                        "correlation_id": correlation_id,
+                        "trace_id": trace_id,
+                        "provider_id": provider_id,
+                        "duration_seconds": round(duration_ms / 1000, 3),
+                        "model_count": len(models),
+                        "models_discovered": model_names,
+                        "status": "success",
+                        "queryable": True
+                    })
+                    
+                    # Record metrics
+                    metrics.record_metric("provider_test_duration", duration_ms / 1000, {
+                        "provider_id": provider_id,
+                        "status": "success",
+                        "queryable": "true"
+                    })
+                    
+                    metrics.record_metric("provider_test_models_discovered", len(models), {
+                        "provider_id": provider_id
+                    })
+                    
                     return ProviderTestResponse(
                         success=True,
                         message=f"Connection successful. {len(models)} models available.",
@@ -571,6 +623,7 @@ async def test_provider_connection(
                     )
                 else:
                     duration_ms = (time.time() - start_time) * 1000
+                    error_msg = f"Connection failed: HTTP {response.status_code}"
                     
                     # Log failed Ollama provider test
                     if _service_logger:
@@ -582,9 +635,35 @@ async def test_provider_connection(
                             status_code=response.status_code
                         )
                     
+                    # Log failed test completion
+                    logger.error(f"Provider {provider_id} test failed", extra={
+                        "event": "provider_test_failed",
+                        "correlation_id": correlation_id,
+                        "trace_id": trace_id,
+                        "provider_id": provider_id,
+                        "duration_seconds": round(duration_ms / 1000, 3),
+                        "status_code": response.status_code,
+                        "error_message": error_msg,
+                        "status": "failed",
+                        "queryable": True
+                    })
+                    
+                    # Record failure metrics
+                    metrics.record_metric("provider_test_duration", duration_ms / 1000, {
+                        "provider_id": provider_id,
+                        "status": "failed",
+                        "error_type": f"http_{response.status_code}"
+                    })
+                    
+                    # Update provider config with failure results
+                    await update_provider_test_results(
+                        config_manager, provider_id, test_config.dict(), 
+                        success=False, error=error_msg
+                    )
+                    
                     return ProviderTestResponse(
                         success=False,
-                        message=f"Connection failed: HTTP {response.status_code}",
+                        message=error_msg,
                         latency=response.elapsed.total_seconds() * 1000,
                     )
 
@@ -844,13 +923,66 @@ async def test_provider_connection(
             )
 
     except httpx.TimeoutException:
+        duration = time.time() - start_time
+        error_msg = "Connection timeout"
+        
+        logger.error(f"Provider {provider_id} test timeout", extra={
+            "event": "provider_test_timeout",
+            "correlation_id": correlation_id,
+            "trace_id": trace_id,
+            "provider_id": provider_id,
+            "duration_seconds": round(duration, 3),
+            "error_message": error_msg,
+            "status": "timeout"
+        })
+        
+        # Record timeout metrics
+        metrics.record_metric("provider_test_duration", duration, {
+            "provider_id": provider_id,
+            "status": "timeout",
+            "error_type": "timeout"
+        })
+        
+        # Update provider config with timeout results
+        await update_provider_test_results(
+            config_manager, provider_id, test_config.dict(), 
+            success=False, error=error_msg
+        )
+        
         return ProviderTestResponse(
             success=False, message="Connection timeout", latency=10000
         )
     except Exception as e:
-        logger.error(f"Provider test failed: {e}")
+        duration = time.time() - start_time
+        error_msg = f"Test failed: {str(e)}"
+        
+        logger.error(f"Provider {provider_id} test exception", extra={
+            "event": "provider_test_exception",
+            "correlation_id": correlation_id,
+            "trace_id": trace_id,
+            "provider_id": provider_id,
+            "duration_seconds": round(duration, 3),
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "error_message": error_msg,
+            "status": "exception"
+        })
+        
+        # Record exception metrics
+        metrics.record_metric("provider_test_duration", duration, {
+            "provider_id": provider_id,
+            "status": "exception",
+            "error_type": type(e).__name__
+        })
+        
+        # Update provider config with exception results
+        await update_provider_test_results(
+            config_manager, provider_id, test_config.dict(), 
+            success=False, error=error_msg
+        )
+        
         return ProviderTestResponse(
-            success=False, message=f"Test failed: {str(e)}", latency=0
+            success=False, message=error_msg, latency=0
         )
 
 
@@ -869,6 +1001,7 @@ async def update_provider_config(
     start_time = time.time()
     client_ip = request.client.host if request.client else "unknown"
     trace_id = get_trace_id(request)
+    correlation_id = f"config_provider_{provider_id}_{int(time.time() * 1000)}"
     
     try:
         # Validate that at least one field is provided
@@ -878,6 +1011,18 @@ async def update_provider_config(
                 status_code=400, 
                 detail="At least one configuration field must be provided"
             )
+
+        # Log provider config update start
+        logger.info(f"Updating provider {provider_id} configuration", extra={
+            "event": "provider_config_update_start",
+            "correlation_id": correlation_id,
+            "trace_id": trace_id,
+            "provider_id": provider_id,
+            "client_ip": client_ip,
+            "fields_updated": list(provided_fields.keys()),
+            "has_api_key": bool(provided_fields.get("api_key")),
+            "operation": "provider_config_update"
+        })
 
         # Log the partial update attempt
         if _security_logger:
@@ -922,7 +1067,27 @@ async def update_provider_config(
                 fields_updated=list(provided_fields.keys())
             )
 
-        logger.info(f"Partial configuration update for provider {provider_id}: {list(provided_fields.keys())}")
+        # Log successful configuration update
+        logger.info(f"Provider {provider_id} configuration updated successfully", extra={
+            "event": "provider_config_update_success",
+            "correlation_id": correlation_id,
+            "trace_id": trace_id,
+            "provider_id": provider_id,
+            "fields_updated": list(provided_fields.keys()),
+            "duration_seconds": round(duration_ms / 1000, 3),
+            "status": "updated"
+        })
+        
+        # Record successful config update metrics
+        metrics.record_metric("provider_config_update_duration", duration_ms / 1000, {
+            "provider_id": provider_id,
+            "status": "success"
+        })
+        
+        metrics.record_metric("provider_config_update_count", 1, {
+            "provider_id": provider_id,
+            "status": "success"
+        })
 
         return {
             "status": "updated", 
@@ -936,6 +1101,30 @@ async def update_provider_config(
     except Exception as e:
         duration_ms = (time.time() - start_time) * 1000
         
+        # Log configuration update failure with comprehensive details
+        logger.error(f"Provider {provider_id} configuration update failed", extra={
+            "event": "provider_config_update_failed",
+            "correlation_id": correlation_id,
+            "trace_id": trace_id,
+            "provider_id": provider_id,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "duration_seconds": round(duration_ms / 1000, 3),
+            "status": "failed"
+        })
+        
+        # Record failure metrics
+        metrics.record_metric("provider_config_update_duration", duration_ms / 1000, {
+            "provider_id": provider_id,
+            "status": "failed",
+            "error_type": type(e).__name__
+        })
+        
+        metrics.record_metric("provider_config_update_count", 1, {
+            "provider_id": provider_id,
+            "status": "failed"
+        })
+        
         # Log configuration update failure
         if _security_logger:
             _security_logger.log_admin_action(
@@ -948,7 +1137,6 @@ async def update_provider_config(
                 duration_ms=duration_ms
             )
 
-        logger.error(f"Failed to update provider config for {provider_id}: {e}")
         raise HTTPException(
             status_code=500, detail="Failed to update provider configuration"
         )

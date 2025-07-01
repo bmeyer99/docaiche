@@ -44,6 +44,17 @@ async def lifespan(app: FastAPI):
         await config_manager.initialize()
         await config_manager.load_configuration()
         print("✅ Configuration manager initialized and loaded")
+        
+        # Initialize provider configurations in database
+        from src.startup.init_providers import initialize_providers
+        success = await initialize_providers()
+        if success:
+            print("✅ Provider database initialization completed")
+        else:
+            print("⚠️ Provider database initialization failed")
+            
+        # Don't close the config manager here - it will be used throughout the app lifecycle
+        
     except Exception as e:
         print(f"⚠️ Configuration manager initialization failed: {e}")
 

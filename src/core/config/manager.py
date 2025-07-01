@@ -63,6 +63,7 @@ class ConfigurationManager:
         self._config_file_mtime: Optional[float] = None
         self._db_manager: Optional[Any] = None
         self._watch_config_file = True
+        self._service_config_manager = None
         self._initialized = True
         logger.info("ConfigurationManager singleton initialized")
 
@@ -336,6 +337,9 @@ class ConfigurationManager:
 
             # Reload configuration to reflect changes
             await self.load_configuration()
+            
+            # Trigger service restart if needed
+            await self._handle_config_change(config_key, config_value)
 
         except Exception as e:
             logger.error(f"Failed to update configuration in database: {e}")

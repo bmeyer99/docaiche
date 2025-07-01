@@ -145,6 +145,28 @@ class MetricsLogger:
             f"CACHE_{operation.upper()} key={key} hit={hit}",
             extra=extra
         )
+    
+    def record_metric(self, metric_name: str, value: float, labels: dict = None, **kwargs):
+        """Record metric for Prometheus/monitoring extraction"""
+        extra = {
+            'metric_name': metric_name,
+            'metric_value': value,
+            'metric_type': 'counter' if metric_name.endswith('_count') else 'gauge',
+            **kwargs
+        }
+        
+        if labels:
+            extra['metric_labels'] = labels
+            labels_str = ' '.join(f'{k}="{v}"' for k, v in labels.items())
+            self.logger.info(
+                f"METRIC {metric_name}={value} {labels_str}",
+                extra=extra
+            )
+        else:
+            self.logger.info(
+                f"METRIC {metric_name}={value}",
+                extra=extra
+            )
 
 
 class DatabaseLogger:
