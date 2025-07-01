@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { 
   ProvidersPageState, 
   ProviderConfig, 
@@ -56,20 +56,34 @@ export function ProvidersPage() {
 
   // Transform global providers to match local format
   const providers = useMemo(() => {
-    return Object.entries(globalProviders).map(([id, config]) => ({
-      id,
-      name: config.name,
-      category: config.category as ProviderCategory,
-      description: config.description || '',
-      requiresApiKey: config.requiresApiKey || false,
-      supportsEmbedding: config.supportsEmbedding || false,
-      supportsChat: config.supportsChat || false,
-      isQueryable: ['ollama', 'lmstudio', 'openrouter'].includes(id),
-      status: config.status as 'configured' | 'not_configured' | 'failed',
-      lastTested: config.lastTested,
-      configured: config.configured || false,
-      enabled: config.enabled || false
-    }))
+    const transformed = Object.entries(globalProviders).map(([id, config]) => {
+      // Map status properly based on backend values
+      let localStatus: 'configured' | 'not_configured' | 'failed' = 'not_configured'
+      if (config.status === 'connected' || config.status === 'tested') {
+        localStatus = 'configured'
+      } else if (config.status === 'error' || config.status === 'failed') {
+        localStatus = 'failed'
+      }
+      
+      const result = {
+        id,
+        name: config.name,
+        category: config.category as ProviderCategory,
+        description: config.description || '',
+        requiresApiKey: config.requiresApiKey || false,
+        supportsEmbedding: config.supportsEmbedding || false,
+        supportsChat: config.supportsChat || false,
+        isQueryable: ['ollama', 'lmstudio', 'openrouter'].includes(id),
+        status: localStatus,
+        lastTested: config.lastTested,
+        configured: config.status === 'connected' || config.status === 'tested',
+        enabled: config.enabled || false
+      }
+      
+      return result
+    })
+    
+    return transformed
   }, [globalProviders])
   
   // Transform global model selection to local format
@@ -104,41 +118,25 @@ export function ProvidersPage() {
   if (selectedProviderTestResult?.success) completedSteps.add('test')
   if (modelSelection.textGeneration.model) completedSteps.add('models')
 
-  // Load models for configured providers
+  // Load models only for the selected provider when it changes
   useEffect(() => {
+    if (!selectedProvider || !selectedProviderInfo?.isQueryable) {
+      return
+    }
+    
     const abortController = new AbortController()
     
     const loadModels = async () => {
-      const configuredProviders = providers.filter(p => p.configured && p.status === 'configured')
-      const newAvailableModels = new Map<string, Model[]>()
-      
-      // Batch load models to improve performance
-      const modelPromises = configuredProviders.map(async (provider) => {
-        try {
-          // Check if aborted before making the call
-          if (abortController.signal.aborted) return null
-          
-          const models = await getProviderModels(provider.id)
-          return { providerId: provider.id, models }
-        } catch (error) {
-          // Ignore abort errors
-          if (error instanceof Error && error.name === 'AbortError') return null
-          return { providerId: provider.id, models: [] }
+      try {
+        const models = await getProviderModels(selectedProvider)
+        if (!abortController.signal.aborted) {
+          setAvailableModels(prev => new Map(prev).set(selectedProvider, models))
         }
-      })
-      
-      const modelResults = await Promise.all(modelPromises)
-      
-      // Check if aborted before updating state
-      if (abortController.signal.aborted) return
-      
-      for (const result of modelResults) {
-        if (result) {
-          newAvailableModels.set(result.providerId, result.models)
+      } catch (error) {
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error(`Failed to load models for provider ${selectedProvider}:`, error)
         }
       }
-      
-      setAvailableModels(newAvailableModels)
     }
     
     loadModels()
@@ -146,7 +144,7 @@ export function ProvidersPage() {
     return () => {
       abortController.abort()
     }
-  }, [providers, getProviderModels])
+  }, [selectedProvider, selectedProviderInfo?.isQueryable, getProviderModels])
 
   // Handlers
   const handleProviderSelect = (providerId: string) => {
@@ -287,6 +285,8 @@ export function ProvidersPage() {
       
       {/* Main Content Area */}
       <div className="flex gap-6">
+        {/* Test Button - Remove this in production */}
+        
         {/* Provider Selection */}
         <ProviderCards
           providers={providers}

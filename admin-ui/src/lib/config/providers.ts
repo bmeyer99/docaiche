@@ -20,6 +20,11 @@ export interface ProviderConfiguration {
   status: 'connected' | 'disconnected' | 'error' | 'available' | 'tested' | 'failed' | 'testing';
   lastTested?: string | null;
   models?: string[];
+  category?: ProviderCategory;
+  description?: string;
+  requiresApiKey?: boolean;
+  supportsEmbedding?: boolean;
+  supportsChat?: boolean;
 }
 
 // Provider Configuration Interface

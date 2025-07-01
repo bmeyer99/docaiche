@@ -68,7 +68,10 @@ export function ProviderCards({
           "hover:shadow-md hover:border-primary/50",
           selectedProvider === provider.id && "ring-2 ring-primary border-primary selected"
         )}
-        onClick={() => onProviderSelect(provider.id)}
+        onClick={() => {
+          console.log('[ProviderCard] Clicked provider:', provider.id)
+          onProviderSelect(provider.id)
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()

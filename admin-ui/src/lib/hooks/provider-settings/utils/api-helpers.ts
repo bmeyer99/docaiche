@@ -46,31 +46,36 @@ export async function loadProviderConfigurations(
   
   // Process provider configurations - backend now provides all test data
   providerConfigs.forEach((config) => {
-    const providerDef = AI_PROVIDERS[config.id];
-    if (providerDef) {
-      // Sanitize the provider config
-      const sanitizedConfig = sanitizeProviderConfig(config.id, config.config || {});
-      
-      // Map backend status to frontend status
-      let frontendStatus: 'connected' | 'disconnected' | 'error' | 'available' | 'tested' | 'failed' | 'testing' = 'disconnected';
-      if (config.status === 'tested') frontendStatus = 'connected';
-      else if (config.status === 'testing') frontendStatus = 'testing';
-      else if (config.status === 'failed') frontendStatus = 'error';
-      else if (config.status === 'connected') frontendStatus = 'connected';
-      else if (config.status === 'available') frontendStatus = 'available';
-      else if (config.status === 'error') frontendStatus = 'error';
-      
-      providersMap[config.id] = {
-        id: config.id,
-        providerId: config.id,
-        name: providerDef.displayName,
-        enabled: config.enabled ?? true,
-        config: sanitizedConfig,
-        status: frontendStatus,
-        lastTested: config.last_tested,
-        models: config.models || [],
-      };
-    }
+    // Use backend data directly, don't filter by AI_PROVIDERS
+    const sanitizedConfig = sanitizeProviderConfig(config.id, config.config || {});
+    
+    // Map backend status to frontend status
+    let frontendStatus: 'connected' | 'disconnected' | 'error' | 'available' | 'tested' | 'failed' | 'testing' = 'disconnected';
+    if (config.status === 'tested') frontendStatus = 'connected';
+    else if (config.status === 'testing') frontendStatus = 'testing';
+    else if (config.status === 'failed') frontendStatus = 'error';
+    else if (config.status === 'connected') frontendStatus = 'connected';
+    else if (config.status === 'available') frontendStatus = 'available';
+    else if (config.status === 'error') frontendStatus = 'error';
+    else if (config.status === 'untested') frontendStatus = 'disconnected';
+    
+    // Use data from backend API
+    providersMap[config.id] = {
+      id: config.id,
+      providerId: config.id,
+      name: (config.name as string) || config.id, // Use name from backend
+      enabled: config.enabled ?? true,
+      config: sanitizedConfig,
+      status: frontendStatus,
+      lastTested: config.last_tested,
+      models: config.models || [],
+      // Add additional fields from backend
+      category: config.category as any,
+      description: config.description as any,
+      requiresApiKey: config.requires_api_key as any,
+      supportsEmbedding: config.supports_embedding as any,
+      supportsChat: config.supports_chat as any,
+    };
   });
   
   return providersMap;

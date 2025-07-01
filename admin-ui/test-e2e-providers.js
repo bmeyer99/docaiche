@@ -109,8 +109,8 @@ async function runE2ETest() {
     // Test 1: Navigate to providers page
     console.log('\nTest 1: Navigating to providers page...');
     await page.goto(`${baseUrl}/dashboard/providers-new`, { 
-      waitUntil: 'networkidle0',
-      timeout: 30000
+      waitUntil: 'domcontentloaded',
+      timeout: 15000
     });
     
     // Wait for page to load
@@ -133,7 +133,7 @@ async function runE2ETest() {
       }
     }
     
-    await page.waitForTimeout(500);
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Test 3: Select OpenAI provider
     console.log('\nTest 3: Selecting OpenAI provider...');
@@ -183,7 +183,7 @@ async function runE2ETest() {
       throw new Error('Save Configuration button not found');
     }
     
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Test 6: Test connection
     console.log('\nTest 6: Testing connection...');
@@ -210,7 +210,7 @@ async function runE2ETest() {
     
     // Test 7: Check model selection panel
     console.log('\nTest 7: Checking model selection panel...');
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     const modelSelectionTitle = await page.$('h3');
     let foundModelSelection = false;

@@ -220,6 +220,15 @@ async def list_providers(
                 "supports_embedding": True,
                 "supports_chat": True,
             },
+            "openaicompatible_local": {
+                "name": "OpenAI Compatible",
+                "type": "text_generation",
+                "category": "local",
+                "description": "Generic OpenAI-compatible API endpoint",
+                "requires_api_key": False,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
             "mistral": {
                 "name": "Mistral AI",
                 "type": "text_generation",
@@ -229,12 +238,84 @@ async def list_providers(
                 "supports_embedding": True,
                 "supports_chat": True,
             },
+            "deepseek": {
+                "name": "DeepSeek",
+                "type": "text_generation",
+                "category": "cloud",
+                "description": "DeepSeek AI models for code and reasoning",
+                "requires_api_key": True,
+                "supports_embedding": False,
+                "supports_chat": True,
+            },
+            "xai": {
+                "name": "xAI",
+                "type": "text_generation",
+                "category": "cloud",
+                "description": "xAI's Grok models for advanced reasoning",
+                "requires_api_key": True,
+                "supports_embedding": False,
+                "supports_chat": True,
+            },
+            "openaicompatible_cloud": {
+                "name": "OpenAI Compatible",
+                "type": "text_generation",
+                "category": "cloud",
+                "description": "Generic OpenAI-compatible API endpoint",
+                "requires_api_key": True,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
             "litellm": {
                 "name": "LiteLLM",
                 "type": "text_generation",
-                "category": "gateway",
+                "category": "enterprise",
                 "description": "Universal proxy for 100+ LLM APIs with unified interface",
                 "requires_api_key": False,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "vertex": {
+                "name": "Google Vertex AI",
+                "type": "text_generation",
+                "category": "enterprise",
+                "description": "Google Cloud's enterprise AI platform with Gemini models",
+                "requires_api_key": True,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "gemini": {
+                "name": "Google Gemini",
+                "type": "text_generation",
+                "category": "enterprise",
+                "description": "Google Gemini models for multimodal AI",
+                "requires_api_key": True,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "bedrock": {
+                "name": "AWS Bedrock",
+                "type": "text_generation",
+                "category": "enterprise",
+                "description": "AWS managed service for foundation models",
+                "requires_api_key": True,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "azure": {
+                "name": "Azure OpenAI",
+                "type": "text_generation",
+                "category": "enterprise",
+                "description": "Microsoft Azure's OpenAI service with enterprise features",
+                "requires_api_key": True,
+                "supports_embedding": True,
+                "supports_chat": True,
+            },
+            "openaicompatible_enterprise": {
+                "name": "OpenAI Compatible",
+                "type": "text_generation",
+                "category": "enterprise",
+                "description": "Generic OpenAI-compatible API endpoint",
+                "requires_api_key": True,
                 "supports_embedding": True,
                 "supports_chat": True,
             },
@@ -286,12 +367,15 @@ async def list_providers(
             test_error = saved_config.get("test_error")
             
             # For non-queryable providers, add default models if not tested
-            if test_status == "untested" and provider_id.lower() in ["openai", "anthropic", "groq", "mistral"]:
+            if test_status == "untested" and provider_id.lower() in ["openai", "anthropic", "groq", "mistral", "deepseek", "gemini", "xai"]:
                 default_models = {
                     "openai": ["gpt-4-turbo", "gpt-4", "gpt-3.5-turbo", "text-embedding-3-small"],
                     "anthropic": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
                     "groq": ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
                     "mistral": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "mistral-embed"],
+                    "deepseek": ["deepseek-chat", "deepseek-coder"],
+                    "gemini": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"],
+                    "xai": ["grok-beta"],
                 }
                 models = default_models.get(provider_id.lower(), [])
 

@@ -157,7 +157,8 @@ class BrowserLogger {
       this.error(message, error, {
         apiCall: { method, url, status }
       });
-    } else {
+    } else if (process.env.NODE_ENV === 'development') {
+      // Only log successful API calls in development
       this.debug(message, {
         apiCall: { method, url, status }
       });
@@ -178,7 +179,8 @@ if (typeof window !== 'undefined') {
     const url = typeof input === 'string' ? input : (input instanceof Request ? input.url : input.toString());
     
     // Skip logging browser log endpoints to prevent infinite loops
-    if (!url.includes('/logs/browser')) {
+    // Also skip logging pending requests in production
+    if (!url.includes('/logs/browser') && process.env.NODE_ENV === 'development') {
       // Log the request
       browserLogger.trackApiCall(method, url);
     }
@@ -191,12 +193,11 @@ if (typeof window !== 'undefined') {
         browserLogger.trackApiCall(method, url, response.status);
       }
       
-      // Track model loading calls specifically
-      if (url.includes('/providers/') && url.includes('/models')) {
-        browserLogger.warn('Model loading API call detected', {
+      // Only track model loading calls in development or if there's an error
+      if (url.includes('/providers/') && url.includes('/models') && (process.env.NODE_ENV === 'development' || response.status >= 400)) {
+        browserLogger.debug('Model loading API call', {
           url,
-          status: response.status,
-          stack: new Error().stack
+          status: response.status
         });
       }
       

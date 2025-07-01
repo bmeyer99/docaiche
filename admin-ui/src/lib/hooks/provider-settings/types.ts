@@ -76,7 +76,7 @@ export const ProviderConfigurationResponseSchema = z.object({
   id: z.string(),
   enabled: z.boolean().optional(),
   config: z.record(z.string(), z.any()).optional(),
-  status: z.enum(['connected', 'disconnected', 'error', 'available', 'tested', 'failed', 'testing']).optional(),
+  status: z.enum(['connected', 'disconnected', 'error', 'available', 'tested', 'failed', 'testing', 'untested']).optional(),
   last_tested: z.string().nullable().optional(),
   models: z.array(z.string()).optional()
 }).passthrough();

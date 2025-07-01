@@ -37,7 +37,7 @@ export function useProvidersApi() {
   const fetchProviders = useCallback(async (): Promise<ProviderInfo[]> => {
     try {
       setIsLoading(true)
-      const response = await apiClient.get<ProviderResponse[]>('/api/v1/providers')
+      const response = await apiClient.get<ProviderResponse[]>('/providers')
       return response.map(transformProviderResponse)
     } catch (error) {
       toast({
@@ -54,7 +54,7 @@ export function useProvidersApi() {
   // Save provider configuration
   const saveProviderConfig = useCallback(async (config: ProviderConfig): Promise<void> => {
     try {
-      await apiClient.post(`/api/v1/providers/${config.id}/config`, config)
+      await apiClient.post(`/providers/${config.id}/config`, config)
       toast({
         title: 'Configuration saved',
         description: 'Provider configuration has been updated successfully'
@@ -77,7 +77,7 @@ export function useProvidersApi() {
         message: string
         models?: string[]
         error?: string
-      }>(`/api/v1/providers/${providerId}/test`, {})
+      }>(`/providers/${providerId}/test`, {})
       
       const result: TestResult = {
         success: response.success,
@@ -124,7 +124,7 @@ export function useProvidersApi() {
   // Get available models for a provider
   const getProviderModels = useCallback(async (providerId: string): Promise<Model[]> => {
     try {
-      const response = await apiClient.get<string[]>(`/api/v1/providers/${providerId}/models`)
+      const response = await apiClient.get<string[]>(`/providers/${providerId}/models`)
       return response.map(name => ({
         id: name,
         name: name,
@@ -143,7 +143,7 @@ export function useProvidersApi() {
   // Add custom model to provider
   const addCustomModel = useCallback(async (providerId: string, modelName: string): Promise<void> => {
     try {
-      await apiClient.post(`/api/v1/providers/${providerId}/models`, { model_name: modelName })
+      await apiClient.post(`/providers/${providerId}/models`, { model_name: modelName })
       toast({
         title: 'Model added',
         description: `Custom model "${modelName}" has been added successfully`
@@ -161,7 +161,7 @@ export function useProvidersApi() {
   // Remove custom model from provider
   const removeCustomModel = useCallback(async (providerId: string, modelName: string): Promise<void> => {
     try {
-      await apiClient.delete(`/api/v1/providers/${providerId}/models/${modelName}`)
+      await apiClient.delete(`/providers/${providerId}/models/${modelName}`)
       toast({
         title: 'Model removed',
         description: `Custom model "${modelName}" has been removed`
@@ -179,7 +179,7 @@ export function useProvidersApi() {
   // Save model selection configuration
   const saveModelSelection = useCallback(async (config: ModelSelectionConfig): Promise<void> => {
     try {
-      await apiClient.post('/api/v1/models/config', config)
+      await apiClient.post('/models/config', config)
       toast({
         title: 'Model selection saved',
         description: 'Your model preferences have been updated'
@@ -197,7 +197,7 @@ export function useProvidersApi() {
   // Get current model selection
   const getModelSelection = useCallback(async (): Promise<ModelSelectionConfig | null> => {
     try {
-      const response = await apiClient.get<ModelSelectionConfig>('/api/v1/models/config')
+      const response = await apiClient.get<ModelSelectionConfig>('/models/config')
       return response
     } catch (error) {
       // Model selection might not exist yet
