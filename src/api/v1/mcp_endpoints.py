@@ -556,14 +556,18 @@ async def external_search(
             )
         
         mcp_enhancer = search_orchestrator.mcp_enhancer
+        logger.info(f"[{trace_id}] Got MCP enhancer: {type(mcp_enhancer)}")
+        logger.info(f"[{trace_id}] External providers: {list(mcp_enhancer.external_providers.keys()) if hasattr(mcp_enhancer, 'external_providers') else 'No external_providers'}")
         
         # Execute external search
+        logger.info(f"[{trace_id}] Calling execute_external_search with query: {search_request.query}")
         external_results = await mcp_enhancer.execute_external_search(
             query=search_request.query,
             provider_ids=search_request.provider_ids,
             technology_hint=search_request.technology_hint,
             max_results=search_request.max_results
         )
+        logger.info(f"[{trace_id}] External search returned: {len(external_results)} results")
         
         # Convert results to response format
         response_results = []

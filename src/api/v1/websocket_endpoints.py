@@ -363,26 +363,42 @@ async def check_system_health():
                 # Skip WebSocket routes and internal routes
                 if route.path.startswith('/ws/') or route.path == '/openapi.json' or route.path == '/docs' or route.path == '/redoc':
                     continue
+                
+                # Skip parameterized routes (containing {})
+                if '{' in route.path or '}' in route.path:
+                    continue
                     
                 # Only monitor GET endpoints (health checks)
                 if 'GET' in route.methods:
-                    # Extract a friendly name from the path
-                    path_parts = route.path.strip('/').split('/')
-                    if path_parts:
-                        name = path_parts[-1].replace('-', ' ').replace('_', ' ').title()
-                        if name == 'V1':
-                            name = 'API Root'
-                        elif name == 'Health':
-                            name = 'Health Check'
-                        elif name == 'Mcp':
-                            name = 'MCP Tools'
-                        elif name == 'Recent':
-                            name = 'Recent Activity'
+                    # Only include top-level API routes
+                    if route.path.startswith('/api/v1/') or route.path == '/mcp':
+                        # Extract a friendly name from the path
+                        path_parts = route.path.strip('/').split('/')
+                        if path_parts:
+                            # Get the last meaningful part
+                            name = path_parts[-1].replace('-', ' ').replace('_', ' ').title()
                             
-                        api_endpoints.append({
-                            "path": route.path,
-                            "name": name
-                        })
+                            # Special cases for better names
+                            name_map = {
+                                'V1': 'API Root',
+                                'Health': 'Health Check',
+                                'Mcp': 'MCP Tools',
+                                'Recent': 'Recent Activity',
+                                'Config': 'Configuration',
+                                'Analytics': 'Analytics',
+                                'Providers': 'Providers',
+                                'Stats': 'Statistics',
+                                'Metrics': 'Metrics',
+                                'Search': 'Search',
+                                'Logs': 'Logs',
+                            }
+                            
+                            name = name_map.get(name, name)
+                            
+                            api_endpoints.append({
+                                "path": route.path,
+                                "name": name
+                            })
         
         # Sort endpoints by path for consistent ordering
         api_endpoints.sort(key=lambda x: x['path'])
@@ -395,7 +411,7 @@ async def check_system_health():
                 response_time_ms = 0
                 
                 try:
-                    async with session.get(f"http://admin-ui:3000{endpoint['path']}") as response:
+                    async with session.get(f"http://admin-ui:4080{endpoint['path']}") as response:
                         response_time_ms = int((time.time() - start_time) * 1000)
                         # Any response means the endpoint is reachable
                         endpoint_status = "healthy"
@@ -415,7 +431,9 @@ async def check_system_health():
                     "status": endpoint_status,
                     "message": endpoint_message,
                     "response_time": response_time_ms,
-                    "group": "infrastructure"
+                    "group": "infrastructure",
+                    "name": endpoint['name'],
+                    "path": endpoint['path']
                 }
     
     except Exception as e:
@@ -476,7 +494,7 @@ async def check_system_health():
         # Try the Next.js health endpoint first
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
-                async with session.get("http://admin-ui:3000") as response:
+                async with session.get("http://admin-ui:4080") as response:
                     if response.status == 200:
                         admin_ui_healthy = True
                         admin_ui_message = "Admin interface available"
@@ -487,7 +505,7 @@ async def check_system_health():
         if not admin_ui_healthy:
             try:
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
-                    async with session.get("http://admin-ui:3000/api/health") as response:
+                    async with session.get("http://admin-ui:4080/api/health") as response:
                         if response.status == 200:
                             admin_ui_healthy = True
                             admin_ui_message = "Admin interface available"

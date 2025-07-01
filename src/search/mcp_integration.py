@@ -138,6 +138,9 @@ class MCPSearchEnhancer:
         Returns:
             Optimized results from external providers
         """
+        logger.info(f"execute_external_search called with query: {query}")
+        logger.info(f"Available providers: {list(self.external_providers.keys())}")
+        
         if not hasattr(self, '_external_orchestrator'):
             # Initialize orchestrator lazily
             await self._init_external_orchestrator()
