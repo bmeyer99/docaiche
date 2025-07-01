@@ -261,8 +261,19 @@ async def initialize_providers(config_manager: ConfigurationManager = None) -> b
         # Use direct database connection for startup initialization
         # This bypasses the configuration manager's dependency on itself
         from src.database.manager import DatabaseManager
+        import os
         
-        db_manager = DatabaseManager()
+        # Get the absolute path for the database
+        db_path = os.getenv("DB_PATH", "/data/docaiche.db")
+        database_url = f"sqlite+aiosqlite:///{db_path}"
+        
+        logger.debug(f"Using database URL: {database_url}", extra={
+            "event": "provider_init_db_connect",
+            "correlation_id": correlation_id,
+            "database_url": database_url
+        })
+        
+        db_manager = DatabaseManager(database_url)
         await db_manager.initialize()
         
         # Initialize providers with enhanced logging
@@ -305,7 +316,7 @@ async def initialize_providers(config_manager: ConfigurationManager = None) -> b
     except Exception as e:
         duration = time.time() - start_time
         
-        logger.error("❌ Provider initialization failed", extra={
+        logger.error(f"❌ Provider initialization failed: {str(e)}", extra={
             "event": "provider_init_error",
             "correlation_id": correlation_id,
             "error": str(e),
@@ -314,6 +325,10 @@ async def initialize_providers(config_manager: ConfigurationManager = None) -> b
             "operation": "startup_initialization",
             "status": "failed"
         })
+        
+        # Log the full traceback for debugging
+        import traceback
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         
         # Record error metrics
         metrics.record_metric("provider_initialization_duration", duration, {
@@ -658,18 +673,15 @@ async def _initialize_model_selection_direct(db_manager, correlation_id: str) ->
 async def _get_config_from_db(db_manager, config_key: str) -> Optional[Dict[str, Any]]:
     """Get configuration value from database directly"""
     try:
-        async with db_manager.get_session() as session:
-            from src.database.models import ConfigurationEntry
-            from sqlalchemy import select
-            
-            stmt = select(ConfigurationEntry).where(ConfigurationEntry.key == config_key)
-            result = await session.execute(stmt)
-            entry = result.scalar_one_or_none()
-            
-            if entry and entry.value:
-                import json
-                return json.loads(entry.value)
-            return None
+        row = await db_manager.fetch_one(
+            "SELECT value FROM system_config WHERE key = :param_0",
+            (config_key,)
+        )
+        
+        if row and row.value:
+            import json
+            return json.loads(row.value)
+        return None
             
     except Exception as e:
         logger.error(f"Failed to get config '{config_key}' from database: {e}")
@@ -679,34 +691,21 @@ async def _get_config_from_db(db_manager, config_key: str) -> Optional[Dict[str,
 async def _save_config_to_db(db_manager, config_key: str, config_value: Any) -> None:
     """Save configuration value to database directly"""
     try:
-        async with db_manager.get_session() as session:
-            from src.database.models import ConfigurationEntry
-            from sqlalchemy import select
-            import json
-            
-            # Serialize value as JSON
-            serialized_value = json.dumps(config_value, default=str)
-            
-            # Check if entry exists
-            stmt = select(ConfigurationEntry).where(ConfigurationEntry.key == config_key)
-            result = await session.execute(stmt)
-            entry = result.scalar_one_or_none()
-            
-            if entry:
-                # Update existing entry
-                entry.value = serialized_value
-                entry.updated_at = datetime.now()
-            else:
-                # Create new entry
-                entry = ConfigurationEntry(
-                    key=config_key,
-                    value=serialized_value,
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
-                )
-                session.add(entry)
-            
-            await session.commit()
+        import json
+        
+        # Serialize value as JSON
+        serialized_value = json.dumps(config_value, default=str)
+        
+        # Use INSERT OR REPLACE to handle both insert and update
+        await db_manager.execute(
+            """
+            INSERT OR REPLACE INTO system_config (key, value, created_at, updated_at)
+            VALUES (:param_0, :param_1, 
+                    COALESCE((SELECT created_at FROM system_config WHERE key = :param_0), datetime('now')),
+                    datetime('now'))
+            """,
+            (config_key, serialized_value)
+        )
             
     except Exception as e:
         logger.error(f"Failed to save config '{config_key}' to database: {e}")

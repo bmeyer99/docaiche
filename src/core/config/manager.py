@@ -519,6 +519,54 @@ class ConfigurationManager:
             except asyncio.CancelledError:
                 pass
 
+    async def _handle_config_change(self, config_key: str, config_value: Any) -> None:
+        """
+        Handle configuration changes and trigger service restarts if needed
+        
+        Args:
+            config_key: Configuration key that was changed
+            config_value: New configuration value
+        """
+        try:
+            # Initialize service config manager if not already done
+            if not self._service_config_manager:
+                from src.core.services.config_manager import ServiceConfigManager
+                self._service_config_manager = ServiceConfigManager(self)
+            
+            # Generate correlation ID for tracking
+            correlation_id = f"config_{config_key}_{int(time.time() * 1000)}"
+            
+            logger.info(f"Processing configuration change for {config_key}", extra={
+                "event": "config_change_detected",
+                "correlation_id": correlation_id,
+                "config_key": config_key,
+                "has_service_manager": self._service_config_manager is not None
+            })
+            
+            # Handle the configuration change and potential service restarts
+            result = await self._service_config_manager.handle_config_change(
+                config_key, 
+                config_value,
+                correlation_id
+            )
+            
+            if result.get("services_restarted"):
+                logger.info(f"Services restarted for config change: {result}", extra={
+                    "event": "config_change_processed",
+                    "correlation_id": correlation_id,
+                    "config_key": config_key,
+                    "services_restarted": len(result.get("services_restarted", {})),
+                    "success": result.get("success", False)
+                })
+            
+        except Exception as e:
+            logger.error(f"Failed to handle configuration change for {config_key}: {e}", extra={
+                "event": "config_change_error",
+                "config_key": config_key,
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
+
 
 # Singleton instance getter for dependency injection
 _config_manager: Optional[ConfigurationManager] = None
@@ -556,7 +604,6 @@ async def get_current_configuration() -> SystemConfiguration:
     return manager.get_configuration()
 
 
-# --- Implementation Engineer: Provide reload_configuration for import compatibility ---
 def reload_configuration():
     """
     Compatibility stub for FastAPI and enrichment imports.

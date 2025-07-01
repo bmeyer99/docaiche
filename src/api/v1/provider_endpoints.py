@@ -54,16 +54,20 @@ async def _load_providers_from_database(config_manager: ConfigurationManager) ->
     try:
         provider_definitions = {}
         
-        # Get list of all provider keys from database
-        all_config = await config_manager.get_all_settings()
-        provider_keys = [key for key in all_config.keys() if key.startswith("ai.providers.")]
+        # Get provider configurations from database
+        # Since we know the provider IDs, we can query them directly
+        known_providers = [
+            "ollama", "openai", "anthropic", "groq", "openrouter", 
+            "lmstudio", "openaicompatible_local", "mistral", "deepseek",
+            "xai", "gemini", "bedrock", "azure", "openaicompatible_enterprise"
+        ]
         
-        logger.info(f"Loading {len(provider_keys)} providers from database")
+        logger.info(f"Loading providers from database")
         
-        for config_key in provider_keys:
-            provider_id = config_key.replace("ai.providers.", "")
-            provider_config = all_config.get(config_key, {})
-            
+        for provider_id in known_providers:
+            config_key = f"ai.providers.{provider_id}"
+            # Use get_from_db for async access
+            provider_config = await config_manager.get_from_db(config_key)
             if not provider_config:
                 continue
                 
@@ -381,7 +385,7 @@ async def list_providers(
             # Get saved configuration for this provider
             config_key = f"ai.providers.{provider_id}"
             try:
-                saved_config = config_manager.get_setting(config_key) or {}
+                saved_config = await config_manager.get_from_db(config_key) or {}
             except Exception:
                 saved_config = {}
             

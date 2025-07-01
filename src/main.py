@@ -46,12 +46,30 @@ async def lifespan(app: FastAPI):
         print("✅ Configuration manager initialized and loaded")
         
         # Initialize provider configurations in database
-        from src.startup.init_providers import initialize_providers
-        success = await initialize_providers()
-        if success:
-            print("✅ Provider database initialization completed")
-        else:
-            print("⚠️ Provider database initialization failed")
+        try:
+            from src.startup.init_providers import initialize_providers
+            success = await initialize_providers()
+            if success:
+                print("✅ Provider database initialization completed")
+            else:
+                print("⚠️ Provider database initialization failed")
+        except Exception as e:
+            print(f"⚠️ Provider database initialization error: {e}")
+            
+        # Initialize default AnythingLLM workspace - ALWAYS RUN THIS
+        # This is independent of provider initialization
+        try:
+            from src.database.init_workspace import init_workspace
+            import asyncio
+            
+            # Run the sync function in a thread
+            workspace_success = await asyncio.to_thread(init_workspace)
+            if workspace_success:
+                print("✅ Default workspace initialization completed")
+            else:
+                print("⚠️ Default workspace initialization failed")
+        except Exception as e:
+            print(f"⚠️ Default workspace initialization error: {e}")
             
         # Don't close the config manager here - it will be used throughout the app lifecycle
         

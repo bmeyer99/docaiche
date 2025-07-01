@@ -245,6 +245,23 @@ class AnythingLLMClient:
         self._rate_limit_remaining = None
         self._rate_limit_reset = None
 
+        # Check if we have a valid API key (not AUTH_TOKEN)
+        if self.api_key and self.api_key == "docaiche-lab-default-key-2025":
+            logger.warning(
+                "AnythingLLM client initialized with AUTH_TOKEN instead of API key. "
+                "API functionality will be limited. Please create an API key through the AnythingLLM interface."
+            )
+            # Try to load API key from file if available
+            import os
+            api_key_file = "/data/.anythingllm-api-key"
+            if os.path.exists(api_key_file):
+                try:
+                    with open(api_key_file, 'r') as f:
+                        self.api_key = f.read().strip()
+                    logger.info("Loaded AnythingLLM API key from file")
+                except Exception as e:
+                    logger.error(f"Failed to load API key from file: {e}")
+
         # Circuit breaker configuration for internal service
         self.circuit_breaker = circuit(
             failure_threshold=config.circuit_breaker.failure_threshold,

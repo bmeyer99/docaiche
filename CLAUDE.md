@@ -21,3 +21,6 @@
 
 ### Remember
 Even small, seemingly insignificant changes require a rebuild. The container has no way to automatically detect or incorporate changes made after it was built.
+
+### API Communication
+- All API communications go through the admin-ui:4080/api/vi

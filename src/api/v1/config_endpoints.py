@@ -348,4 +348,10 @@ async def get_collections(
 
     except Exception as e:
         logger.error(f"Collections retrieval failed: {e}")
-        raise HTTPException(status_code=500, detail="Collections unavailable")
+        # Return empty collections list when AnythingLLM is not available
+        # This allows the UI to function while AnythingLLM is being configured
+        logger.warning("AnythingLLM unavailable - returning empty collections list. Please configure the API key.")
+        return CollectionsResponse(
+            collections=[], 
+            total_count=0
+        )

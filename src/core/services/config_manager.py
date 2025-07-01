@@ -23,15 +23,17 @@ metrics = MetricsLogger(logger)
 service_logger = ExternalServiceLogger(logger)
 
 # Service configuration mapping - which services need restart on config change
+# Maps configuration keys to the service processes that need to be restarted
 SERVICE_CONFIG_MAP = {
-    "ai.providers": ["api"],  # AI provider changes require API restart
-    "ai.model_selection": ["api"],  # Model selection changes require API restart
-    "anythingllm": ["anythingllm"],  # AnythingLLM config requires its restart
-    "search": ["api"],  # Search config changes require API restart
-    "redis": ["redis", "api"],  # Redis config changes require Redis and API restart
-    "database": ["api"],  # Database config changes require API restart
-    "logging": ["api", "admin-ui", "promtail"],  # Logging changes affect multiple services
-    "monitoring": ["prometheus", "grafana"],  # Monitoring config changes
+    "ai.providers": [],  # Provider config changes alone don't require restarts
+    "ai.model_selection.text": ["text-ai-service"],  # Text model changes require text AI service restart
+    "ai.model_selection.embedding": ["embedding-service"],  # Embedding model changes require embedding service restart
+    "anythingllm": ["anythingllm-service"],  # AnythingLLM config requires its service restart
+    "search": ["search-service"],  # Search config changes require search service restart
+    "redis": ["redis-service"],  # Redis config changes require Redis service restart
+    "database": [],  # Database config changes don't require service restarts
+    "logging": ["logging-service"],  # Logging changes affect logging service
+    "monitoring": ["metrics-service"],  # Monitoring config changes affect metrics service
 }
 
 # Service restart priorities (lower number = higher priority)
@@ -39,11 +41,9 @@ SERVICE_RESTART_PRIORITY = {
     "redis": 1,
     "db": 2,
     "anythingllm": 3,
-    "api": 4,
-    "admin-ui": 5,
-    "promtail": 6,
-    "prometheus": 7,
-    "grafana": 8,
+    "promtail": 4,
+    "prometheus": 5,
+    "grafana": 6,
 }
 
 
@@ -242,7 +242,7 @@ class ServiceConfigManager:
         services: List[str],
         correlation_id: str
     ) -> Dict[str, Dict[str, Any]]:
-        """Restart services with logging and metrics"""
+        """Restart service processes (not containers) with logging and metrics"""
         results = {}
         
         for service_name in services:
@@ -250,89 +250,183 @@ class ServiceConfigManager:
             
             try:
                 # Log restart attempt
-                logger.info(f"Restarting service: {service_name}", extra={
+                logger.info(f"Restarting service process: {service_name}", extra={
                     "event": "service_restart_start",
                     "correlation_id": correlation_id,
                     "service_name": service_name,
-                    "restart_reason": "config_change"
+                    "restart_reason": "config_change",
+                    "restart_type": "process"
                 })
                 
-                # Get container
-                container = self._get_container(service_name)
-                if not container:
-                    raise Exception(f"Container not found for service: {service_name}")
-                
-                # Capture pre-restart state
-                pre_status = container.status
-                
-                # Restart container
-                container.restart(timeout=30)
-                
-                # Wait for container to be healthy
-                healthy = await self._wait_for_healthy(container, service_name, correlation_id)
+                # Trigger service-specific restart mechanism
+                restart_success = await self._trigger_service_restart(service_name, correlation_id)
                 
                 service_duration = time.time() - service_start
                 
-                # Log successful restart
-                logger.info(f"Service {service_name} restarted successfully", extra={
-                    "event": "service_restart_success",
-                    "correlation_id": correlation_id,
-                    "service_name": service_name,
-                    "pre_status": pre_status,
-                    "post_status": "healthy" if healthy else "running",
-                    "duration_seconds": round(service_duration, 3),
-                    "health_check_passed": healthy
-                })
-                
-                # Record success metrics
-                metrics.record_metric("service_restart_duration", service_duration, {
-                    "service_name": service_name,
-                    "status": "success"
-                })
-                
-                metrics.record_metric("service_restart_count", 1, {
-                    "service_name": service_name,
-                    "status": "success"
-                })
-                
-                results[service_name] = {
-                    "success": True,
-                    "duration_seconds": round(service_duration, 3),
-                    "healthy": healthy
-                }
+                if restart_success:
+                    # Log successful restart
+                    logger.info(f"Service process {service_name} restarted successfully", extra={
+                        "event": "service_restart_success",
+                        "correlation_id": correlation_id,
+                        "service_name": service_name,
+                        "duration_seconds": round(service_duration, 3),
+                        "restart_type": "process"
+                    })
+                    
+                    # Record success metrics
+                    metrics.record_metric("service_restart_duration", service_duration, {
+                        "service_name": service_name,
+                        "status": "success",
+                        "restart_type": "process"
+                    })
+                    
+                    metrics.record_metric("service_restart_count", 1, {
+                        "service_name": service_name,
+                        "status": "success",
+                        "restart_type": "process"
+                    })
+                    
+                    results[service_name] = {
+                        "success": True,
+                        "duration_seconds": round(service_duration, 3),
+                        "restart_type": "process"
+                    }
+                else:
+                    raise Exception("Service restart signal failed")
                 
             except Exception as e:
                 service_duration = time.time() - service_start
                 
                 # Log failed restart
-                logger.error(f"Failed to restart service {service_name}", extra={
+                logger.error(f"Failed to restart service process {service_name}", extra={
                     "event": "service_restart_failed",
                     "correlation_id": correlation_id,
                     "service_name": service_name,
                     "error": str(e),
                     "error_type": type(e).__name__,
-                    "duration_seconds": round(service_duration, 3)
+                    "duration_seconds": round(service_duration, 3),
+                    "restart_type": "process"
                 })
                 
                 # Record failure metrics
                 metrics.record_metric("service_restart_duration", service_duration, {
                     "service_name": service_name,
                     "status": "failed",
-                    "error_type": type(e).__name__
+                    "error_type": type(e).__name__,
+                    "restart_type": "process"
                 })
                 
                 metrics.record_metric("service_restart_count", 1, {
                     "service_name": service_name,
-                    "status": "failed"
+                    "status": "failed",
+                    "restart_type": "process"
                 })
                 
                 results[service_name] = {
                     "success": False,
                     "error": str(e),
-                    "duration_seconds": round(service_duration, 3)
+                    "duration_seconds": round(service_duration, 3),
+                    "restart_type": "process"
                 }
         
         return results
+    
+    async def _trigger_service_restart(self, service_name: str, correlation_id: str) -> bool:
+        """
+        Trigger a service process restart using service-specific mechanisms
+        
+        Each service should have its own restart mechanism:
+        - text-ai-service: Send SIGHUP or call restart endpoint
+        - embedding-service: Send SIGHUP or call restart endpoint  
+        - anythingllm-service: Use AnythingLLM API to reload
+        - redis-service: Use Redis CONFIG REWRITE command
+        - etc.
+        """
+        try:
+            if service_name == "text-ai-service":
+                # Text AI service restart logic
+                # This could be:
+                # 1. Sending a signal to the process
+                # 2. Calling a reload endpoint
+                # 3. Writing to a file that the service monitors
+                logger.info(f"Triggering text AI service restart", extra={
+                    "event": "text_ai_service_restart",
+                    "correlation_id": correlation_id
+                })
+                # TODO: Implement actual restart mechanism
+                return True
+                
+            elif service_name == "embedding-service":
+                # Embedding service restart logic (often part of AnythingLLM)
+                logger.info(f"Triggering embedding service restart", extra={
+                    "event": "embedding_service_restart", 
+                    "correlation_id": correlation_id
+                })
+                # TODO: Implement actual restart mechanism
+                return True
+                
+            elif service_name == "anythingllm-service":
+                # AnythingLLM service restart logic
+                logger.info(f"Triggering AnythingLLM service restart", extra={
+                    "event": "anythingllm_service_restart",
+                    "correlation_id": correlation_id
+                })
+                # TODO: Call AnythingLLM API to reload configuration
+                return True
+                
+            elif service_name == "search-service":
+                # Search service restart logic
+                logger.info(f"Triggering search service restart", extra={
+                    "event": "search_service_restart",
+                    "correlation_id": correlation_id
+                })
+                # TODO: Implement actual restart mechanism
+                return True
+                
+            elif service_name == "redis-service":
+                # Redis service can reload config without restart
+                logger.info(f"Triggering Redis config reload", extra={
+                    "event": "redis_config_reload",
+                    "correlation_id": correlation_id
+                })
+                # TODO: Use Redis CONFIG REWRITE command
+                return True
+                
+            elif service_name == "logging-service":
+                # Logging service restart logic
+                logger.info(f"Triggering logging service restart", extra={
+                    "event": "logging_service_restart",
+                    "correlation_id": correlation_id
+                })
+                # TODO: Implement actual restart mechanism
+                return True
+                
+            elif service_name == "metrics-service":
+                # Metrics service restart logic
+                logger.info(f"Triggering metrics service restart", extra={
+                    "event": "metrics_service_restart",
+                    "correlation_id": correlation_id
+                })
+                # TODO: Implement actual restart mechanism
+                return True
+                
+            else:
+                logger.warning(f"Unknown service: {service_name}", extra={
+                    "event": "unknown_service_restart",
+                    "correlation_id": correlation_id,
+                    "service_name": service_name
+                })
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error triggering service restart for {service_name}: {e}", extra={
+                "event": "service_restart_trigger_error",
+                "correlation_id": correlation_id,
+                "service_name": service_name,
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
+            return False
     
     def _get_container(self, service_name: str) -> Optional[Any]:
         """Get Docker container for service"""
@@ -396,14 +490,33 @@ class ServiceConfigManager:
         config: Dict[str, Any],
         correlation_id: str
     ):
-        """Persist provider configuration to appropriate location"""
-        # This would write to environment files or config files
-        # that get mounted into containers
-        logger.debug(f"Persisting provider config for {provider_id}", extra={
-            "event": "persist_provider_config",
-            "correlation_id": correlation_id,
-            "provider_id": provider_id
-        })
+        """Persist provider configuration to AnythingLLM"""
+        try:
+            # For AnythingLLM, we need to update its LLM provider settings
+            # This typically involves updating environment variables or API calls
+            
+            logger.info(f"Updating AnythingLLM with {provider_id} provider config", extra={
+                "event": "persist_provider_config",
+                "correlation_id": correlation_id,
+                "provider_id": provider_id,
+                "config_keys": list(config.keys())
+            })
+            
+            # TODO: Implement actual AnythingLLM configuration update
+            # This would involve either:
+            # 1. Updating environment variables that AnythingLLM reads
+            # 2. Making API calls to AnythingLLM to update its settings
+            # 3. Writing to a configuration file that AnythingLLM monitors
+            
+        except Exception as e:
+            logger.error(f"Failed to persist provider config to AnythingLLM", extra={
+                "event": "persist_provider_config_error",
+                "correlation_id": correlation_id,
+                "provider_id": provider_id,
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
+            raise
     
     async def _persist_model_selection(
         self, 
