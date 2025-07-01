@@ -10,3 +10,13 @@ providers:
     allowUiUpdates: true
     options:
       path: /etc/grafana/provisioning/dashboards
+  
+  - name: 'docaiche-dashboards'
+    orgId: 1
+    folder: 'DocAIche'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

@@ -282,7 +282,7 @@ async def initialize_providers(config_manager: ConfigurationManager = None) -> b
         # Initialize model selection with enhanced logging
         model_selection_result = await _initialize_model_selection_direct(db_manager, correlation_id)
         
-        await db_manager.close()
+        # DatabaseManager doesn't have a close method - it manages connections internally
         
         # Calculate metrics
         duration = time.time() - start_time
@@ -395,10 +395,11 @@ async def _initialize_providers_direct(db_manager, correlation_id: str) -> Dict[
             })
             
             # Prepare configuration for database storage
+            # Don't include createdAt as it's not in the schema
             db_config = {
                 **provider_config,
-                "createdAt": datetime.now().isoformat(),
-                "initializedBy": "startup_init"
+                "initializedBy": "startup_init",
+                "initTimestamp": datetime.now().isoformat()
             }
             
             # Save to database (direct)
@@ -523,7 +524,7 @@ async def _update_provider_if_needed_direct(db_manager, provider_id: str, new_co
         
         # Update metadata if any changes were made
         if config_updated:
-            existing_config["lastUpdated"] = datetime.now().isoformat()
+            existing_config["updateTimestamp"] = datetime.now().isoformat()
             existing_config["updatedBy"] = "startup_update"
             
             # Save updated configuration
@@ -617,8 +618,8 @@ async def _initialize_model_selection_direct(db_manager, correlation_id: str) ->
         # Prepare model selection configuration
         db_config = {
             **DEFAULT_MODEL_SELECTION,
-            "createdAt": datetime.now().isoformat(),
-            "initializedBy": "startup_init"
+            "initializedBy": "startup_init",
+            "initTimestamp": datetime.now().isoformat()
         }
         
         # Save to database
@@ -697,14 +698,13 @@ async def _save_config_to_db(db_manager, config_key: str, config_value: Any) -> 
         serialized_value = json.dumps(config_value, default=str)
         
         # Use INSERT OR REPLACE to handle both insert and update
+        # SystemConfig schema has: key, value, schema_version, updated_at, updated_by
         await db_manager.execute(
             """
-            INSERT OR REPLACE INTO system_config (key, value, created_at, updated_at)
-            VALUES (:param_0, :param_1, 
-                    COALESCE((SELECT created_at FROM system_config WHERE key = :param_0), datetime('now')),
-                    datetime('now'))
+            INSERT OR REPLACE INTO system_config (key, value, schema_version, updated_at, updated_by)
+            VALUES (:param_0, :param_1, :param_2, datetime('now'), :param_3)
             """,
-            (config_key, serialized_value)
+            (config_key, serialized_value, "1.0", "startup_init")
         )
             
     except Exception as e:
