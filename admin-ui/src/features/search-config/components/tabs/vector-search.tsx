@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Vector Search configuration tab
  */

@@ -21,7 +21,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from fastapi.responses import HTMLResponse
 
 from ...database.models import SearchCache, ContentMetadata, FeedbackEvents, UsageSignals
-from .dependencies import get_database_manager
+from .dependencies import get_database_manager, get_cache_manager, get_anythingllm_client, get_search_orchestrator
 
 
 logger = logging.getLogger(__name__)
@@ -211,84 +211,339 @@ async def get_analytics_data_internal(time_range: str = "24h"):
 
 
 async def check_system_health():
-    """Check health status of all system components"""
+    """Check health status of all system components - organized by service groups"""
     import redis
+    import aiohttp
+    import asyncio
+    import time
+    from src.core.config import get_system_configuration
     
     health_status = {}
     
-    # Check Database - simplified for WebSocket
+    # ==============================================================================
+    # CORE INFRASTRUCTURE - Essential services that everything depends on
+    # ==============================================================================
+    
+    # Database Health Check
     try:
+        db_manager = await get_database_manager()
+        db_health = await db_manager.health_check()
         health_status["database"] = {
-            "status": "healthy",
-            "message": "Database operational"
+            "status": "healthy" if db_health.get("status") == "healthy" else "unhealthy",
+            "message": db_health.get("message", "Database operational"),
+            "response_time": db_health.get("response_time_ms"),
+            "group": "infrastructure"
         }
     except Exception as e:
         health_status["database"] = {
-            "status": "failed",
-            "message": f"Connection failed: {str(e)[:50]}",
-            "action": {"label": "Check DB", "url": "/dashboard/settings"}
+            "status": "unhealthy",
+            "message": f"Connection failed: {str(e)[:100]}",
+            "action": {"label": "Check Configuration", "url": "/dashboard/search-config"},
+            "group": "infrastructure"
         }
     
-    # Check Redis
+    # Redis/Cache Health Check
     try:
-        r = redis.from_url("redis://redis:6379")
-        r.ping()
-        health_status["redis"] = {
-            "status": "healthy",
-            "message": "Redis cache operational"
+        cache_manager = await get_cache_manager()
+        cache_health = await cache_manager.health_check()
+        health_status["cache"] = {
+            "status": "healthy" if cache_health.get("status") == "healthy" else "unhealthy",
+            "message": cache_health.get("message", "Cache operational"),
+            "response_time": cache_health.get("response_time_ms"),
+            "group": "infrastructure"
         }
     except Exception as e:
-        health_status["redis"] = {
-            "status": "failed",
-            "message": "Cache unavailable",
-            "action": {"label": "Check Redis", "url": "/dashboard/settings"}
+        health_status["cache"] = {
+            "status": "unhealthy",
+            "message": f"Cache unavailable: {str(e)[:50]}",
+            "action": {"label": "Check Redis", "url": "/dashboard/settings"},
+            "group": "infrastructure"
         }
     
-    # Check AI Providers - simplify to avoid database issues
+    # API Core Health Check
     try:
-        # For now, just return a simple status without complex database operations
-        health_status["ai_providers"] = {
-            "status": "degraded", 
-            "message": "Provider check simplified",
-            "action": {"label": "Configure", "url": "/dashboard/providers"}
+        # Test internal API responsiveness
+        start_time = time.time()
+        db_status = health_status.get("database", {}).get("status")
+        cache_status = health_status.get("cache", {}).get("status") 
+        response_time = int((time.time() - start_time) * 1000)
+        
+        if db_status == "healthy" and cache_status == "healthy":
+            health_status["api_core"] = {
+                "status": "healthy",
+                "message": "All API endpoints responsive",
+                "response_time": response_time,
+                "group": "infrastructure"
+            }
+        else:
+            health_status["api_core"] = {
+                "status": "degraded",
+                "message": "API running with limited functionality",
+                "response_time": response_time,
+                "group": "infrastructure"
+            }
+    except Exception as e:
+        health_status["api_core"] = {
+            "status": "unhealthy",
+            "message": "API core services unavailable",
+            "group": "infrastructure"
+        }
+    
+    # ==============================================================================
+    # SEARCH & AI SERVICES - Document search and AI enhancement capabilities  
+    # ==============================================================================
+    
+    # Vector Store (AnythingLLM) Health Check
+    try:
+        anythingllm_client = await get_anythingllm_client()
+        llm_health = await anythingllm_client.health_check()
+        health_status["vector_store"] = {
+            "status": "healthy" if llm_health.get("status") == "healthy" else "degraded",
+            "message": llm_health.get("message", "Vector store operational"),
+            "response_time": llm_health.get("response_time_ms"),
+            "group": "search_ai"
         }
     except Exception as e:
-        logger.error(f"AI providers health check failed: {e}")
-        health_status["ai_providers"] = {
+        health_status["vector_store"] = {
             "status": "degraded",
-            "message": "Provider check failed",
-            "action": {"label": "Configure", "url": "/dashboard/providers"}
+            "message": "Vector store not configured or unreachable",
+            "action": {"label": "Configure AnythingLLM", "url": "/dashboard/settings"},
+            "group": "search_ai"
         }
     
-    # Check AnythingLLM
-    health_status["anythingllm"] = {
-        "status": "healthy",
-        "message": "Vector store running"
-    }
+    # AI Text Providers Health Check (OpenAI, Ollama, etc.)
+    try:
+        config = get_system_configuration()
+        ai_config = getattr(config, "ai", None)
+        
+        # Check if any AI providers are configured
+        ollama_enabled = bool(ai_config and getattr(ai_config, "ollama", None))
+        openai_enabled = bool(ai_config and getattr(ai_config, "openai", None))
+        anthropic_enabled = bool(ai_config and getattr(ai_config, "anthropic", None))
+        
+        provider_count = sum([ollama_enabled, openai_enabled, anthropic_enabled])
+        
+        if provider_count > 0:
+            health_status["text_ai_providers"] = {
+                "status": "healthy",
+                "message": f"{provider_count} AI provider(s) configured and available",
+                "details": {
+                    "ollama": "enabled" if ollama_enabled else "disabled",
+                    "openai": "enabled" if openai_enabled else "disabled", 
+                    "anthropic": "enabled" if anthropic_enabled else "disabled"
+                },
+                "group": "search_ai"
+            }
+        else:
+            health_status["text_ai_providers"] = {
+                "status": "degraded",
+                "message": "No AI providers configured",
+                "action": {"label": "Configure Providers", "url": "/dashboard/providers"},
+                "group": "search_ai"
+            }
+    except Exception as e:
+        health_status["text_ai_providers"] = {
+            "status": "degraded",
+            "message": "Unable to check AI provider configuration",
+            "action": {"label": "Configure Providers", "url": "/dashboard/providers"},
+            "group": "search_ai"
+        }
     
-    # Check Monitoring Stack
-    health_status["monitoring"] = {
-        "status": "healthy",
-        "message": "Grafana & Loki operational"
-    }
+    # API Endpoints Health Check - Monitor critical endpoints individually
+    try:
+        # Define critical API endpoints to monitor
+        api_endpoints = [
+            {"path": "/api/v1/health", "name": "Health Check"},
+            {"path": "/api/v1/search", "name": "Search API"},
+            {"path": "/api/v1/config", "name": "Configuration API"},
+            {"path": "/api/v1/providers", "name": "Providers API"},
+            {"path": "/api/v1/analytics", "name": "Analytics API"},
+            {"path": "/api/v1/admin/activity/recent", "name": "Activity API"},
+        ]
+        
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3)) as session:
+            for endpoint in api_endpoints:
+                start_time = time.time()
+                endpoint_status = "healthy"
+                endpoint_message = "Responsive"
+                response_time_ms = 0
+                
+                try:
+                    async with session.get(f"http://admin-ui:4080{endpoint['path']}") as response:
+                        response_time_ms = int((time.time() - start_time) * 1000)
+                        if response.status < 400:
+                            endpoint_status = "healthy"
+                            endpoint_message = f"HTTP {response.status}"
+                        elif response.status < 500:
+                            endpoint_status = "degraded" 
+                            endpoint_message = f"HTTP {response.status}"
+                        else:
+                            endpoint_status = "unhealthy"
+                            endpoint_message = f"HTTP {response.status}"
+                                
+                except asyncio.TimeoutError:
+                    endpoint_status = "unhealthy"
+                    endpoint_message = "Timeout"
+                    response_time_ms = 3000
+                except Exception as e:
+                    endpoint_status = "unhealthy"
+                    endpoint_message = f"Error: {str(e)[:50]}"
+                    response_time_ms = int((time.time() - start_time) * 1000)
+                
+                # Create individual endpoint health status
+                health_status[f"api_endpoint_{endpoint['path'].replace('/', '_').replace('-', '_')}"] = {
+                    "status": endpoint_status,
+                    "message": endpoint_message,
+                    "response_time": response_time_ms,
+                    "group": "infrastructure"
+                }
     
-    # Check API Health
-    health_status["api"] = {
-        "status": "healthy",
-        "message": "All endpoints responsive"
-    }
-    
-    # Check Search Service
-    if health_status["ai_providers"]["status"] == "healthy":
+    except Exception as e:
+        health_status["api_endpoints_error"] = {
+            "status": "unhealthy",
+            "message": f"API endpoint monitoring failed: {str(e)[:100]}",
+            "group": "infrastructure"
+        }
+
+    # Search Orchestrator Health Check
+    try:
+        search_orchestrator = await get_search_orchestrator()
+        search_health = await search_orchestrator.health_check()
+        
+        # Determine overall search capability
+        vector_status = health_status.get("vector_store", {}).get("status")
+        ai_status = health_status.get("text_ai_providers", {}).get("status")
+        
+        if search_health.get("overall_status") == "healthy" and vector_status == "healthy" and ai_status == "healthy":
+            health_status["search_service"] = {
+                "status": "healthy",
+                "message": "Full search capabilities available",
+                "response_time": search_health.get("response_time_ms"),
+                "group": "search_ai"
+            }
+        elif search_health.get("overall_status") == "healthy":
+            health_status["search_service"] = {
+                "status": "degraded", 
+                "message": "Basic search available, limited AI enhancement",
+                "action": {"label": "Check AI Setup", "url": "/dashboard/providers"},
+                "group": "search_ai"
+            }
+        else:
+            health_status["search_service"] = {
+                "status": "unhealthy",
+                "message": "Search service unavailable",
+                "action": {"label": "Check Configuration", "url": "/dashboard/search-config"},
+                "group": "search_ai"
+            }
+    except Exception as e:
         health_status["search_service"] = {
+            "status": "unhealthy",
+            "message": "Search orchestrator error",
+            "action": {"label": "Check Configuration", "url": "/dashboard/search-config"},
+            "group": "search_ai"
+        }
+    
+    # ==============================================================================
+    # MONITORING & OPERATIONS - Observability and management tools
+    # ==============================================================================
+    
+    # Admin UI Health Check
+    try:
+        # Check if we can reach the admin UI - try multiple endpoints
+        admin_ui_healthy = False
+        admin_ui_message = "Admin interface status unknown"
+        
+        # Try the Next.js health endpoint first
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+                async with session.get("http://admin-ui:3000") as response:
+                    if response.status == 200:
+                        admin_ui_healthy = True
+                        admin_ui_message = "Admin interface available"
+        except Exception:
+            pass
+        
+        # If that fails, try the internal API health
+        if not admin_ui_healthy:
+            try:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+                    async with session.get("http://admin-ui:3000/api/health") as response:
+                        if response.status == 200:
+                            admin_ui_healthy = True
+                            admin_ui_message = "Admin interface available"
+            except Exception:
+                pass
+        
+        if admin_ui_healthy:
+            health_status["admin_ui"] = {
+                "status": "healthy", 
+                "message": admin_ui_message,
+                "group": "monitoring"
+            }
+        else:
+            health_status["admin_ui"] = {
+                "status": "degraded",
+                "message": "Admin interface not responding on expected ports",
+                "group": "monitoring"
+            }
+    except Exception:
+        health_status["admin_ui"] = {
+            "status": "degraded",
+            "message": "Admin interface status unknown",
+            "group": "monitoring"
+        }
+    
+    # Monitoring Stack Health Check (Grafana, Prometheus, Loki)
+    monitoring_services = []
+    
+    # Check Grafana
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+            async with session.get("http://grafana:3000/api/health") as response:
+                if response.status == 200:
+                    monitoring_services.append("Grafana")
+    except Exception:
+        pass
+    
+    # Check Prometheus  
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+            async with session.get("http://prometheus:9090/-/healthy") as response:
+                if response.status == 200:
+                    monitoring_services.append("Prometheus")
+    except Exception:
+        pass
+    
+    # Check Loki
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+            async with session.get("http://loki:3100/ready") as response:
+                if response.status == 200:
+                    monitoring_services.append("Loki")
+    except Exception:
+        pass
+    
+    if len(monitoring_services) >= 2:
+        health_status["monitoring_stack"] = {
             "status": "healthy",
-            "message": "Search fully operational"
+            "message": f"Monitoring active: {', '.join(monitoring_services)}",
+            "details": {"active_services": monitoring_services},
+            "action": {"label": "View Dashboards", "url": "/grafana"},
+            "group": "monitoring"
+        }
+    elif len(monitoring_services) == 1:
+        health_status["monitoring_stack"] = {
+            "status": "degraded",
+            "message": f"Partial monitoring: {monitoring_services[0]} only",
+            "details": {"active_services": monitoring_services},
+            "group": "monitoring"
         }
     else:
-        health_status["search_service"] = {
+        health_status["monitoring_stack"] = {
             "status": "degraded",
-            "message": "Limited functionality - no AI providers",
-            "action": {"label": "Configure AI", "url": "/dashboard/providers"}
+            "message": "Monitoring services not responding",
+            "action": {"label": "Check Services", "url": "/dashboard/logs"},
+            "group": "monitoring"
         }
     
     return health_status

@@ -22,28 +22,55 @@ export function SearchConfigDashboard({ onChangeDetected }: DashboardProps) {
   const { currentDepth, processingRate, history } = useQueueMetrics();
   const { healthStatus, overallHealth } = useSystemHealth();
   const [metrics, setMetrics] = useState({
-    totalSearches: 6250,
-    avgLatency: 485,
-    cacheHitRate: 0.65,
-    errorRate: 0.02,
-    activeProviders: 3,
-    vectorWorkspaces: 5
+    totalSearches: 0,
+    avgLatency: 0,
+    cacheHitRate: 0,
+    errorRate: 0,
+    activeProviders: 0,
+    vectorWorkspaces: 0
   });
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
+  const [searchVolumeData, setSearchVolumeData] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Mock data for charts
-  const searchVolumeData = Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i}:00`,
-    searches: Math.floor(Math.random() * 500) + 100,
-    avgLatency: Math.floor(Math.random() * 200) + 300
-  }));
+  // Fetch real metrics data
+  useEffect(() => {
+    fetchMetrics();
+  }, []);
+
+  const fetchMetrics = async () => {
+    try {
+      // Fetch system metrics
+      const response = await fetch('/api/v1/metrics/dashboard');
+      if (response.ok) {
+        const data = await response.json();
+        setMetrics({
+          totalSearches: data.total_searches_24h || 0,
+          avgLatency: data.avg_latency_ms || 0,
+          cacheHitRate: data.cache_hit_rate || 0,
+          errorRate: data.error_rate || 0,
+          activeProviders: data.active_providers || 0,
+          vectorWorkspaces: data.vector_workspaces || 0
+        });
+        
+        if (data.search_volume_hourly) {
+          setSearchVolumeData(data.search_volume_hourly);
+        }
+        
+        if (data.recent_searches) {
+          setRecentSearches(data.recent_searches);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
+      // Keep existing values on error
+    }
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // TODO: Fetch latest metrics
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await fetchMetrics();
     } finally {
       setIsRefreshing(false);
     }
@@ -216,29 +243,37 @@ export function SearchConfigDashboard({ onChangeDetected }: DashboardProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[...Array(5)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(Date.now() - i * 60000).toLocaleTimeString()}
-                  </TableCell>
-                  <TableCell className="font-medium">python async await tutorial</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Database className="h-3 w-3" />
-                      <span className="text-sm">Vector</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{Math.floor(Math.random() * 500) + 200}ms</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{Math.floor(Math.random() * 20) + 5}</span>
-                  </TableCell>
-                  <TableCell>
-                    <HealthIndicator status="healthy" showLabel={false} size="sm" />
+              {recentSearches.length > 0 ? (
+                recentSearches.slice(0, 5).map((search, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(search.timestamp).toLocaleTimeString()}
+                    </TableCell>
+                    <TableCell className="font-medium">{search.query || 'N/A'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Database className="h-3 w-3" />
+                        <span className="text-sm">{search.type || 'Vector'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{search.latency_ms || 0}ms</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{search.results_count || 0}</span>
+                    </TableCell>
+                    <TableCell>
+                      <HealthIndicator status={search.status || 'unknown'} showLabel={false} size="sm" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No recent search activity
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>

@@ -6,7 +6,7 @@ Comprehensive exception framework for the MCP search system with
 structured error codes and detailed context.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 

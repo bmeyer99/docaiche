@@ -1,8 +1,10 @@
+'use client';
+
 /**
  * Search Providers configuration tab
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +25,7 @@ import {
   PlayCircle
 } from 'lucide-react';
 import { ProviderCard } from '../shared/provider-card';
+import { HealthIndicator } from '../shared/health-indicator';
 import { ProviderStatus, ProviderConfig } from '../../types';
 
 interface SearchProvidersConfigProps {
@@ -30,72 +33,32 @@ interface SearchProvidersConfigProps {
 }
 
 export function SearchProvidersConfig({ onChangeDetected }: SearchProvidersConfigProps) {
-  const [providers, setProviders] = useState<ProviderStatus[]>([
-    {
-      id: 'brave_search',
-      name: 'Brave Search',
-      type: 'brave',
-      enabled: true,
-      health: 'healthy',
-      latency_ms: 280,
-      error_rate: 0.02,
-      last_check: new Date().toISOString(),
-      circuit_breaker_state: 'closed',
-      rate_limit_remaining: 45
-    },
-    {
-      id: 'google_search',
-      name: 'Google Custom Search',
-      type: 'google',
-      enabled: true,
-      health: 'healthy',
-      latency_ms: 320,
-      error_rate: 0.01,
-      last_check: new Date().toISOString(),
-      circuit_breaker_state: 'closed',
-      rate_limit_remaining: 95
-    },
-    {
-      id: 'bing_search',
-      name: 'Bing Web Search',
-      type: 'bing',
-      enabled: false,
-      health: 'unknown',
-      latency_ms: undefined,
-      error_rate: 0.0,
-      last_check: new Date().toISOString(),
-      circuit_breaker_state: 'closed',
-      rate_limit_remaining: undefined
-    }
-  ]);
-
-  const [providerConfigs, setProviderConfigs] = useState<Record<string, ProviderConfig>>({
-    brave_search: {
-      id: 'brave_search',
-      type: 'brave',
-      name: 'Brave Search',
-      enabled: true,
-      priority: 100,
-      config: { api_key: 'BSA_xxx...xxx' },
-      rate_limits: { requests_per_minute: 60, requests_per_day: 10000 },
-      cost_limits: { monthly_budget_usd: 100.0, cost_per_request: 0.005 }
-    },
-    google_search: {
-      id: 'google_search',
-      type: 'google',
-      name: 'Google Custom Search',
-      enabled: true,
-      priority: 90,
-      config: { api_key: 'AIza...xxx', cx: '123456789' },
-      rate_limits: { requests_per_minute: 100, requests_per_day: 10000 },
-      cost_limits: { monthly_budget_usd: 50.0, cost_per_request: 0.005 }
-    }
-  });
+  const [providers, setProviders] = useState<ProviderStatus[]>([]);
+  const [providerConfigs, setProviderConfigs] = useState<Record<string, ProviderConfig>>({});
 
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [testResults, setTestResults] = useState<Record<string, any>>({});
+
+  // Fetch providers data on component mount
+  useEffect(() => {
+    fetchProviders();
+  }, []);
+
+  const fetchProviders = async () => {
+    try {
+      const response = await fetch('/api/v1/mcp/providers');
+      if (response.ok) {
+        const data = await response.json();
+        setProviders(data.providers || []);
+        setProviderConfigs(data.configs || {});
+      }
+    } catch (error) {
+      console.error('Failed to fetch providers:', error);
+      // Keep empty arrays/objects on error
+    }
+  };
 
   // Cost tracking
   const totalMonthlyCost = Object.values(providerConfigs).reduce(
@@ -137,22 +100,36 @@ export function SearchProvidersConfig({ onChangeDetected }: SearchProvidersConfi
     setTestResults(prev => ({ ...prev, [providerId]: { loading: true } }));
     
     try {
-      // TODO: Test provider
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await fetch(`/api/v1/mcp/providers/${providerId}/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: 'test search query' }),
+      });
       
-      setTestResults(prev => ({
-        ...prev,
-        [providerId]: {
-          success: true,
-          execution_time_ms: 285,
-          results_count: 10,
-          sample_results: [{ title: 'Test Result', url: 'https://example.com' }]
-        }
-      }));
+      if (response.ok) {
+        const result = await response.json();
+        setTestResults(prev => ({
+          ...prev,
+          [providerId]: {
+            success: true,
+            execution_time_ms: result.execution_time_ms,
+            results_count: result.results_count,
+            sample_results: result.sample_results
+          }
+        }));
+      } else {
+        const error = await response.json();
+        setTestResults(prev => ({
+          ...prev,
+          [providerId]: { success: false, error: error.detail || 'Test failed' }
+        }));
+      }
     } catch (error) {
       setTestResults(prev => ({
         ...prev,
-        [providerId]: { success: false, error: 'Test failed' }
+        [providerId]: { success: false, error: 'Network error' }
       }));
     }
   };
@@ -336,9 +313,9 @@ export function SearchProvidersConfig({ onChangeDetected }: SearchProvidersConfi
                   <div className="mt-3">
                     <div className="flex justify-between text-sm mb-1">
                       <span>Current Month Usage</span>
-                      <span>$23.45 / ${config.cost_limits?.monthly_budget_usd || 0}</span>
+                      <span>${(config as any).current_month_cost || 0} / ${config.cost_limits?.monthly_budget_usd || 0}</span>
                     </div>
-                    <Progress value={23.45 / (config.cost_limits?.monthly_budget_usd || 100) * 100} />
+                    <Progress value={((config as any).current_month_cost || 0) / (config.cost_limits?.monthly_budget_usd || 100) * 100} />
                   </div>
                 </div>
               ))}

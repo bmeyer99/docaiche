@@ -55,7 +55,16 @@ export const API_ENDPOINTS = {
   
   // Feedback & Signals
   FEEDBACK: '/feedback',
-  SIGNALS: '/signals'
+  SIGNALS: '/signals',
+  
+  // MCP (Model Context Protocol) Management
+  MCP: {
+    PROVIDERS: '/mcp/providers',
+    PROVIDER: (id: string) => `/mcp/providers/${id}`,
+    CONFIG: '/mcp/config',
+    SEARCH: '/mcp/search',
+    STATS: '/mcp/stats'
+  }
 } as const;
 
 // API Response Types based on api-simplified.yaml
@@ -198,6 +207,126 @@ export interface ProviderConfig {
   api_key?: string;
   model?: string;
   parameters?: Record<string, any>;
+}
+
+// MCP (Model Context Protocol) Types
+export interface MCPProviderConfig {
+  provider_id: string;
+  provider_type: string;
+  enabled: boolean;
+  api_key?: string;
+  api_endpoint?: string;
+  priority: number;
+  max_results: number;
+  timeout_seconds: number;
+  rate_limit_per_minute: number;
+  custom_headers: Record<string, string>;
+  custom_params: Record<string, any>;
+}
+
+export interface MCPProviderCapability {
+  feature: string;
+  supported: boolean;
+  description: string;
+}
+
+export interface MCPProviderHealth {
+  provider_id: string;
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  last_check: string;
+  response_time_ms?: number;
+  error_message?: string;
+  success_rate?: number;
+}
+
+export interface MCPProviderStats {
+  provider_id: string;
+  total_requests: number;
+  successful_requests: number;
+  failed_requests: number;
+  avg_response_time_ms: number;
+  last_24h_requests: number;
+  circuit_breaker_open: boolean;
+}
+
+export interface MCPProvider {
+  provider_id: string;
+  config: MCPProviderConfig;
+  capabilities: MCPProviderCapability[];
+  health: MCPProviderHealth;
+  stats: MCPProviderStats;
+}
+
+export interface MCPProvidersResponse {
+  providers: MCPProvider[];
+  total_count: number;
+  healthy_count: number;
+}
+
+export interface MCPSearchConfig {
+  enable_external_search: boolean;
+  enable_hedged_requests: boolean;
+  hedged_delay_seconds: number;
+  max_concurrent_providers: number;
+  external_search_threshold: number;
+  cache_ttl_seconds: number;
+  enable_performance_monitoring: boolean;
+}
+
+export interface MCPCacheConfig {
+  l1_cache_size: number;
+  l2_cache_ttl: number;
+  compression_threshold: number;
+  enable_compression: boolean;
+  enable_stats: boolean;
+}
+
+export interface MCPConfigResponse {
+  config: MCPSearchConfig;
+  cache_config: MCPCacheConfig;
+  last_updated: string;
+}
+
+export interface MCPPerformanceStats {
+  total_searches: number;
+  cache_hits: number;
+  cache_misses: number;
+  avg_response_time_ms: number;
+  hedged_requests: number;
+  circuit_breaks: number;
+  provider_stats: MCPProviderStats[];
+}
+
+export interface MCPStatsResponse {
+  stats: MCPPerformanceStats;
+  collection_period_hours: number;
+  last_reset: string;
+}
+
+export interface MCPExternalSearchRequest {
+  query: string;
+  technology_hint?: string;
+  max_results: number;
+  provider_ids?: string[];
+  force_external: boolean;
+}
+
+export interface MCPExternalSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  provider: string;
+  content_type: string;
+  published_date?: string;
+  relevance_score?: number;
+}
+
+export interface MCPExternalSearchResponse {
+  results: MCPExternalSearchResult[];
+  total_results: number;
+  providers_used: string[];
+  execution_time_ms: number;
+  cache_hit: boolean;
 }
 
 // Status check helper

@@ -27,7 +27,7 @@ router = APIRouter(prefix="/monitoring", tags=["monitoring"])
 
 @router.get("/metrics/search", response_model=SearchMetrics)
 async def get_search_metrics(
-    time_range: str = Query("1h", regex="^(1h|6h|24h|7d|30d)$")
+    time_range: str = Query("1h", pattern="^(1h|6h|24h|7d|30d)$")
 ):
     """
     Get search performance metrics.
@@ -79,7 +79,7 @@ async def get_search_metrics(
 
 @router.get("/metrics/providers", response_model=List[ProviderMetrics])
 async def get_provider_metrics(
-    time_range: str = Query("24h", regex="^(1h|6h|24h|7d|30d)$")
+    time_range: str = Query("24h", pattern="^(1h|6h|24h|7d|30d)$")
 ):
     """
     Get provider usage metrics.

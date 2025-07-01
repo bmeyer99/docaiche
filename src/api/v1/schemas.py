@@ -80,6 +80,9 @@ class SearchResponse(BaseModel):
     enrichment_triggered: bool = Field(
         False, description="Whether knowledge enrichment was triggered"
     )
+    external_search_used: bool = Field(
+        False, description="Whether external search providers were used"
+    )
 
 
 # Feedback Models

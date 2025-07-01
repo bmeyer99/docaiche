@@ -22,7 +22,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 
 interface IngestionConfigProps {

@@ -120,6 +120,7 @@ async def search_documents_post(
             execution_time_ms=int(execution_time),
             cache_hit=cache_hit,
             enrichment_triggered=getattr(search_response, 'enrichment_triggered', False),
+            external_search_used=getattr(search_response, 'external_search_used', False),
         )
 
     except Exception as e:

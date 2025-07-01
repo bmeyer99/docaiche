@@ -265,13 +265,13 @@ class SearchConfiguration(BaseModel):
     workspace_selection_strategy: str = Field(
         default="ai_driven",
         description="Strategy for workspace selection: 'ai_driven', 'all', 'manual'",
-        regex="^(ai_driven|all|manual)$"
+        pattern="^(ai_driven|all|manual)$"
     )
     
     result_ranking_algorithm: str = Field(
         default="hybrid",
         description="Result ranking algorithm: 'relevance', 'recency', 'hybrid'",
-        regex="^(relevance|recency|hybrid)$"
+        pattern="^(relevance|recency|hybrid)$"
     )
     
     external_provider_priority: List[str] = Field(

@@ -206,7 +206,6 @@ export function MonitoringConfig({}: MonitoringConfigProps) {
                       value={logFilter}
                       onChange={(e) => setLogFilter(e.target.value)}
                       className="w-full"
-                      icon={<Search className="h-4 w-4" />}
                     />
                   </div>
                   <Select value={logLevel} onValueChange={setLogLevel}>

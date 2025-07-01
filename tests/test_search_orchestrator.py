@@ -64,7 +64,7 @@ class TestSearchOrchestrator:
             technology_hint="PYTHON"
         )
         
-        normalized = orchestrator._normalize_query(original_query)
+        normalized = await orchestrator._normalize_query(original_query)
         
         assert normalized.query == "fastapi tutorial"
         assert normalized.technology_hint == "python"
@@ -75,6 +75,9 @@ class TestSearchOrchestrator:
         # Mock dependencies with health check methods
         mock_db = Mock()
         mock_db.health_check = AsyncMock(return_value={"status": "healthy"})
+        mock_db.fetch_all = AsyncMock(return_value=[
+            {"slug": "test_workspace", "technology": "python"}
+        ])
         
         mock_cache = Mock()
         mock_cache_manager = Mock()
@@ -91,11 +94,16 @@ class TestSearchOrchestrator:
         # Replace search_cache with mock
         orchestrator.search_cache = mock_cache_manager
         
+        # Mock workspace strategy
+        orchestrator.workspace_strategy.get_available_workspaces = AsyncMock(return_value=[
+            {"slug": "test_workspace", "technology": "python"}
+        ])
+        
         # Test health check
         health = await orchestrator.health_check()
         
-        assert health["status"] == "healthy"
-        assert "components" in health
+        assert health["overall_status"] == "healthy"
+        assert "services" in health
         assert "timestamp" in health
 
 

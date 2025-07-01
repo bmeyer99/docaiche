@@ -6,6 +6,7 @@ Provider for Microsoft Bing Web Search API.
 """
 
 from typing import Dict, Any, Optional
+from datetime import datetime
 import aiohttp
 import asyncio
 import logging

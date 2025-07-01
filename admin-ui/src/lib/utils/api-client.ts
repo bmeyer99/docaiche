@@ -17,7 +17,15 @@ import {
   type AdminSearchResponse,
   type UploadResponse,
   type ProblemDetail,
-  type ActivityItem
+  type ActivityItem,
+  type MCPProvidersResponse,
+  type MCPProvider,
+  type MCPProviderConfig,
+  type MCPConfigResponse,
+  type MCPSearchConfig,
+  type MCPExternalSearchRequest,
+  type MCPExternalSearchResponse,
+  type MCPStatsResponse
 } from '../config/api';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { type ProviderConfiguration } from '../config/providers';
@@ -769,6 +777,68 @@ export class DocaicheApiClient {
    */
   async getAnalytics(timeRange: string = '24h'): Promise<Record<string, unknown>> {
     return this.get<Record<string, unknown>>(`/analytics?timeRange=${timeRange}`);
+  }
+
+  /**
+   * MCP (Model Context Protocol) Methods
+   */
+  
+  // MCP Provider Management
+  async getMCPProviders(enabledOnly: boolean = false): Promise<MCPProvidersResponse> {
+    const params = enabledOnly ? '?enabled_only=true' : '';
+    return this.get<MCPProvidersResponse>(`${API_ENDPOINTS.MCP.PROVIDERS}${params}`);
+  }
+
+  async getMCPProvider(providerId: string): Promise<MCPProvider> {
+    return this.get<MCPProvider>(API_ENDPOINTS.MCP.PROVIDER(providerId));
+  }
+
+  async createMCPProvider(config: MCPProviderConfig): Promise<MCPProvider> {
+    return this.post<MCPProvider>(API_ENDPOINTS.MCP.PROVIDERS, { config });
+  }
+
+  async updateMCPProvider(providerId: string, updates: Partial<MCPProviderConfig>): Promise<MCPProvider> {
+    return this.put<MCPProvider>(API_ENDPOINTS.MCP.PROVIDER(providerId), updates);
+  }
+
+  async deleteMCPProvider(providerId: string): Promise<{ message: string }> {
+    return this.delete<{ message: string }>(API_ENDPOINTS.MCP.PROVIDER(providerId));
+  }
+
+  // MCP Configuration
+  async getMCPConfig(): Promise<MCPConfigResponse> {
+    return this.get<MCPConfigResponse>(API_ENDPOINTS.MCP.CONFIG);
+  }
+
+  async updateMCPConfig(config: MCPSearchConfig): Promise<MCPConfigResponse> {
+    return this.post<MCPConfigResponse>(API_ENDPOINTS.MCP.CONFIG, { config });
+  }
+
+  // MCP Search
+  async performExternalSearch(request: MCPExternalSearchRequest): Promise<MCPExternalSearchResponse> {
+    return this.post<MCPExternalSearchResponse>(API_ENDPOINTS.MCP.SEARCH, request);
+  }
+
+  // MCP Performance Statistics
+  async getMCPStats(): Promise<MCPStatsResponse> {
+    return this.get<MCPStatsResponse>(API_ENDPOINTS.MCP.STATS);
+  }
+
+  // MCP Provider Testing
+  async testMCPProvider(providerId: string, testQuery: string = 'test'): Promise<{
+    provider_id: string;
+    success: boolean;
+    response_time_ms: number;
+    results_count: number;
+    error_message?: string;
+  }> {
+    return this.post<{
+      provider_id: string;
+      success: boolean;
+      response_time_ms: number;
+      results_count: number;
+      error_message?: string;
+    }>(`${API_ENDPOINTS.MCP.PROVIDER(providerId)}/test`, { test_query: testQuery });
   }
 }
 

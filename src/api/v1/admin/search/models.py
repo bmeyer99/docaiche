@@ -83,14 +83,14 @@ class ConfigValidationResponse(BaseModel):
 
 class ConfigExportRequest(BaseModel):
     """Request to export configuration."""
-    format: str = Field(default="json", regex="^(json|yaml)$")
+    format: str = Field(default="json", pattern="^(json|yaml)$")
     include_secrets: bool = Field(default=False)
     sections: Optional[List[str]] = Field(default=None, description="Specific sections to export")
 
 
 class ConfigImportRequest(BaseModel):
     """Request to import configuration."""
-    format: str = Field(default="json", regex="^(json|yaml)$")
+    format: str = Field(default="json", pattern="^(json|yaml)$")
     data: str = Field(description="Configuration data to import")
     validate_only: bool = Field(default=False, description="Only validate, don't apply")
     merge: bool = Field(default=False, description="Merge with existing config")
@@ -308,7 +308,7 @@ class LogQuery(BaseModel):
     """Log search query."""
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    level: Optional[str] = Field(default=None, regex="^(DEBUG|INFO|WARNING|ERROR)$")
+    level: Optional[str] = Field(default=None, pattern="^(DEBUG|INFO|WARNING|ERROR)$")
     component: Optional[str] = None
     search_text: Optional[str] = None
     limit: int = Field(default=100, ge=1, le=1000)
@@ -320,7 +320,7 @@ class AlertConfig(BaseModel):
     name: str
     type: str = Field(description="Alert type (threshold, anomaly, etc.)")
     condition: Dict[str, Any]
-    severity: str = Field(regex="^(low|medium|high|critical)$")
+    severity: str = Field(pattern="^(low|medium|high|critical)$")
     enabled: bool = True
     notification_channels: List[str]
     cooldown_minutes: int = Field(default=15, ge=1)

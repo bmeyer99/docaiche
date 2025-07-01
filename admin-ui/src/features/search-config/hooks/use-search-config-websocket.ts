@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * WebSocket hooks for Search Configuration real-time updates
  */
@@ -28,22 +30,9 @@ export function useSearchConfigWebSocket(options: UseSearchConfigWebSocketOption
     autoConnect = true
   } = options;
 
-  const { 
-    isConnected, 
-    connect, 
-    disconnect, 
-    sendMessage 
-  } = useWebSocket({
-    url: '/api/v1/admin/search/ws',
-    autoConnect,
-    reconnectAttempts: 5,
-    reconnectInterval: 3000
-  });
-
-  // Message handler
-  const handleMessage = useCallback((event: MessageEvent) => {
+  const handleMessage = useCallback((data: any) => {
     try {
-      const message: WebSocketMessage = JSON.parse(event.data);
+      const message: WebSocketMessage = data;
       
       switch (message.type) {
         case 'config_update':
@@ -69,6 +58,18 @@ export function useSearchConfigWebSocket(options: UseSearchConfigWebSocketOption
       console.error('Failed to parse WebSocket message:', error);
     }
   }, [onConfigUpdate, onHealthUpdate, onMetricsUpdate, onAlert]);
+  
+  const wsState = useWebSocket(
+    '/api/v1/admin/search/ws',
+    {
+      reconnect: autoConnect,
+      reconnectAttempts: 5,
+      reconnectInterval: 3000,
+      onMessage: handleMessage
+    }
+  );
+  
+  const { isConnected, connect, disconnect, sendMessage } = wsState;
 
   // Subscribe to specific updates
   const subscribe = useCallback((topics: string[]) => {

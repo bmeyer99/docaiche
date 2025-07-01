@@ -19,6 +19,14 @@ export const navItems: NavItem[] = [
     items: []
   },
   {
+    title: 'External Search',
+    url: '/dashboard/external-search',
+    icon: 'search',
+    isActive: false,
+    shortcut: ['e', 's'],
+    items: []
+  },
+  {
     title: 'Documents',
     url: '/dashboard/documents',
     icon: 'fileText',

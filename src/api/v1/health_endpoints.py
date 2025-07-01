@@ -347,6 +347,16 @@ async def get_analytics(
     GET /api/v1/analytics - Get system analytics data
     """
     try:
+        # Import system health check function and get system health for dashboard
+        try:
+            from .websocket_endpoints import check_system_health
+            system_health = await check_system_health()
+            logger.info(f"System health keys in analytics: {list(system_health.keys())}")
+        except Exception as e:
+            logger.error(f"System health check failed in analytics: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            system_health = {}
         # Calculate date range
         end_date = datetime.utcnow()
         if timeRange == "24h":
@@ -425,6 +435,7 @@ async def get_analytics(
         
         return {
             "timeRange": timeRange,
+            "systemHealth": system_health,
             "searchMetrics": {
                 "totalSearches": search_result.get("total_searches", 0) if search_result else 0,
                 "avgResponseTime": float(search_result.get("avg_response_time") or 0) if search_result else 0,

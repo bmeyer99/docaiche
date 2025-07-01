@@ -258,8 +258,7 @@ async def get_search_orchestrator(
     # Always recreate if db_manager was reinitialized or is different
     if _search_orchestrator is None or (hasattr(_search_orchestrator, 'db_manager') and _search_orchestrator.db_manager != db_manager):
         try:
-            # Import enhanced orchestrator
-            from src.search.orchestrator_enhanced import EnhancedSearchOrchestrator
+            # Import LLM client for MCP integration
             from src.llm.client import LLMProviderClient
             
             # Get configuration and create LLM client
@@ -271,22 +270,23 @@ async def get_search_orchestrator(
                     llm_client = LLMProviderClient(
                         config.ai.model_dump() if hasattr(config.ai, 'model_dump') else config.ai.dict()
                     )
-                    logger.info("LLM client initialized for enhanced orchestrator")
+                    logger.info("LLM client initialized for MCP search orchestrator")
                 except Exception as e:
                     logger.warning(f"Failed to initialize LLM client: {e}")
             
-            # Create enhanced orchestrator
-            _search_orchestrator = EnhancedSearchOrchestrator(
+            # Create search orchestrator with LLM client for MCP integration
+            _search_orchestrator = SearchOrchestrator(
                 db_manager=db_manager,
                 cache_manager=cache_manager,
                 anythingllm_client=anythingllm_client,
-                llm_client=llm_client
+                llm_client=llm_client,
+                knowledge_enricher=None,
             )
-            logger.info("Enhanced search orchestrator initialized successfully")
+            logger.info("Search orchestrator with MCP integration initialized successfully")
         except Exception as e:
-            logger.warning(f"Failed to initialize enhanced search orchestrator: {e}")
-            logger.info("Falling back to basic search orchestrator")
-            # Fall back to basic orchestrator
+            logger.warning(f"Failed to initialize search orchestrator with LLM client: {e}")
+            logger.info("Falling back to basic search orchestrator without MCP")
+            # Fall back to basic orchestrator without MCP
             _search_orchestrator = SearchOrchestrator(
                 db_manager=db_manager,
                 cache_manager=cache_manager,

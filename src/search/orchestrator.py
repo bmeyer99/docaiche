@@ -19,6 +19,7 @@ from .models import SearchQuery, SearchResults, EvaluationResult
 from .strategies import WorkspaceSearchStrategy
 from .ranking import ResultRanker
 from .cache import SearchCacheManager
+from .mcp_integration import MCPSearchEnhancer, create_mcp_enhancer
 from .exceptions import SearchOrchestrationError, SearchTimeoutError
 from src.database.connection import DatabaseManager, CacheManager
 from src.clients.anythingllm import AnythingLLMClient
@@ -75,6 +76,18 @@ class SearchOrchestrator:
         )
         self.result_ranker = ResultRanker()
         self.search_cache = SearchCacheManager(cache_manager)
+        
+        # Initialize MCP enhancer for external search capabilities
+        self.mcp_enhancer: Optional[MCPSearchEnhancer] = None
+        if llm_client:
+            try:
+                self.mcp_enhancer = create_mcp_enhancer(
+                    llm_client=llm_client,
+                    enable_external_providers=True
+                )
+                logger.info("MCP search enhancer initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize MCP enhancer: {e}")
 
         # Performance timeouts from PRD-009
         self.search_timeout = 30.0  # Total search timeout
@@ -217,6 +230,22 @@ class SearchOrchestrator:
                     logger.warning(f"AI evaluation failed: {e}")
                     # Continue without evaluation
 
+            # Step 4.5: External Search Enhancement (if needed)
+            external_results_added = False
+            if (self.mcp_enhancer and 
+                (not search_results.results or 
+                 (evaluation_result and evaluation_result.quality_score < 0.6))):
+                try:
+                    external_results = await self._enhance_with_external_search(
+                        normalized_query, search_results
+                    )
+                    if external_results:
+                        search_results.results.extend(external_results)
+                        external_results_added = True
+                        logger.info(f"Added {len(external_results)} external search results")
+                except Exception as e:
+                    logger.warning(f"External search enhancement failed: {e}")
+
             # Step 5: Enrichment Decision
             enrichment_triggered = False
             if evaluation_result and evaluation_result.needs_enrichment:
@@ -234,6 +263,7 @@ class SearchOrchestrator:
                 cache_hit=False,
                 workspaces_searched=search_results.workspaces_searched,
                 enrichment_triggered=enrichment_triggered,
+                external_search_used=external_results_added,
             )
 
             # Step 7: Cache Results with graceful degradation and circuit breaker
@@ -419,6 +449,83 @@ class SearchOrchestrator:
         except Exception as e:
             logger.error(f"Failed to trigger enrichment: {e}")
             return False
+
+    async def _enhance_with_external_search(
+        self,
+        query: SearchQuery,
+        current_results: SearchResults
+    ) -> List[Any]:
+        """
+        Enhance search results with external search providers.
+        
+        Uses the MCP search enhancer to get external results when:
+        - No internal results found
+        - Quality score is low (< 0.6)
+        - Results are insufficient
+        
+        Args:
+            query: Normalized search query
+            current_results: Current internal search results
+            
+        Returns:
+            List of external search results converted to internal format
+        """
+        if not self.mcp_enhancer or not self.mcp_enhancer.is_external_search_available():
+            return []
+        
+        try:
+            logger.info(f"Enhancing search with external providers for query: {query.query[:50]}...")
+            
+            # Generate optimized external query
+            external_query = await self.mcp_enhancer.get_external_search_query(
+                query.query,
+                technology_hint=query.technology_hint
+            )
+            
+            # Execute external search with performance optimizations
+            external_results = await self.mcp_enhancer.execute_external_search(
+                query=external_query,
+                technology_hint=query.technology_hint,
+                max_results=10
+            )
+            
+            if not external_results:
+                return []
+            
+            # Convert external results to internal SearchResult format
+            from .models import SearchResult
+            converted_results = []
+            
+            for ext_result in external_results[:5]:  # Limit external results
+                try:
+                    search_result = SearchResult(
+                        content_id=f"external_{len(converted_results)}",
+                        title=ext_result.get('title', 'External Result'),
+                        content_snippet=ext_result.get('snippet', ''),
+                        source_url=ext_result.get('url', ''),
+                        relevance_score=0.7,  # Default external relevance
+                        metadata={
+                            'source': 'external_search',
+                            'provider': ext_result.get('provider', 'unknown'),
+                            'content_type': ext_result.get('content_type', 'web_page'),
+                            'external': True
+                        },
+                        technology='external',
+                        workspace_slug='external_search',
+                        chunk_index=None
+                    )
+                    converted_results.append(search_result)
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to convert external result: {e}")
+                    continue
+            
+            logger.info(f"Successfully converted {len(converted_results)} external results")
+            return converted_results
+            
+        except Exception as e:
+            logger.error(f"External search enhancement failed: {e}")
+            return []
 
     async def _normalize_query(self, query: "SearchQuery") -> "SearchQuery":
         """
@@ -750,7 +857,8 @@ class SearchOrchestrator:
                 technology_hint=tech_hint,
                 execution_time_ms=results.query_time_ms,
                 cache_hit=results.cache_hit,
-                enrichment_triggered=results.enrichment_triggered
+                enrichment_triggered=results.enrichment_triggered,
+                external_search_used=results.external_search_used
             )
         except Exception as e:
             logger.error(f"Failed to create SearchResponse: {e}")

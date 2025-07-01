@@ -69,7 +69,7 @@ export default function WebSocketAnalyticsPage() {
       {/* Header with WebSocket Status */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">DocAIche Dashboard</h1>
+          <h1 className="text-3xl font-bold">TEST CHANGES WORKING - DocAIche Dashboard</h1>
           <p className="text-muted-foreground">
             Real-time system monitoring and analytics
           </p>
@@ -116,37 +116,175 @@ export default function WebSocketAnalyticsPage() {
               System Health Overview
             </CardTitle>
             <CardDescription>
-              Real-time status of all system components
+              Real-time status of all system components organized by service group
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(analytics.systemHealth).map(([component, health]: [string, any]) => (
-                <div key={component} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      health.status === 'healthy' ? 'bg-green-500' :
-                      health.status === 'degraded' ? 'bg-yellow-500' :
-                      health.status === 'failed' ? 'bg-red-500' :
-                      'bg-gray-500'
-                    } animate-pulse`} />
-                    <div>
-                      <div className="font-medium capitalize">{component.replace(/_/g, ' ')}</div>
-                      <div className="text-xs text-muted-foreground">{health.message}</div>
-                    </div>
-                  </div>
-                  {health.action && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => window.location.href = health.action.url}
-                    >
-                      {health.action.label}
-                    </Button>
-                  )}
+            {(() => {
+              // Group services by their category
+              const serviceGroups = {
+                infrastructure: { title: 'Core Infrastructure', icon: '🏗️', services: [] as any[] },
+                search_ai: { title: 'Search & AI Services', icon: '🔍', services: [] as any[] },
+                monitoring: { title: 'Monitoring & Operations', icon: '📊', services: [] as any[] }
+              };
+
+              // Categorize services and group API endpoints
+              const apiEndpoints: any[] = [];
+              
+              Object.entries(analytics.systemHealth).forEach(([component, health]: [string, any]) => {
+                const group = health.group || 'infrastructure';
+                
+                // Check if this is an API endpoint
+                if (component.startsWith('api_endpoint_')) {
+                  apiEndpoints.push({ component, health });
+                  return; // Don't add as separate service
+                }
+                
+                if (group in serviceGroups) {
+                  serviceGroups[group as keyof typeof serviceGroups].services.push({ component, health });
+                }
+              });
+              
+              // TEST - Add visible test marker
+              console.log('FRONTEND CHANGES ACTIVE - TEST MARKER');
+              console.log('API Endpoints found:', apiEndpoints.length);
+              console.log('API Core services:', serviceGroups.infrastructure.services.map(s => s.component));
+              
+              // Add API endpoints data to the API Core service if it exists
+              const apiCoreIndex = serviceGroups.infrastructure.services.findIndex(s => s.component === 'api_core');
+              console.log('API Core index:', apiCoreIndex);
+              if (apiCoreIndex !== -1) {
+                serviceGroups.infrastructure.services[apiCoreIndex].endpoints = apiEndpoints;
+                console.log('Added endpoints to API Core:', apiEndpoints.length);
+              }
+
+              // Helper function to get status color
+              const getStatusColor = (status: string) => {
+                switch (status) {
+                  case 'healthy': return 'bg-green-500';
+                  case 'degraded': return 'bg-yellow-500';
+                  case 'unhealthy': 
+                  case 'failed': return 'bg-red-500';
+                  default: return 'bg-gray-500';
+                }
+              };
+
+              // Helper function to format component names
+              const formatComponentName = (component: string) => {
+                // Handle API endpoint names specially
+                if (component.startsWith('api_endpoint_')) {
+                  const path = component.replace('api_endpoint_', '').replace(/_/g, '/');
+                  const pathParts = path.split('/').filter(p => p);
+                  if (pathParts.length >= 3) {
+                    // Extract meaningful name from path like /api/v1/health -> Health
+                    const endpointName = pathParts[pathParts.length - 1];
+                    return endpointName
+                      .replace(/\b\w/g, l => l.toUpperCase())
+                      .replace('Api', 'API')
+                      .replace('Ai', 'AI') + ' Endpoint';
+                  }
+                  return path;
+                }
+                
+                return component
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, l => l.toUpperCase())
+                  .replace('Api Core', 'API Core')
+                  .replace('Ai ', 'AI ');
+              };
+
+              return (
+                <div className="space-y-6">
+                  {Object.entries(serviceGroups).map(([groupKey, group]) => {
+                    if (group.services.length === 0) return null;
+                    
+                    // Calculate group health summary
+                    const healthyCounts = group.services.filter(s => s.health.status === 'healthy').length;
+                    const totalCounts = group.services.length;
+                    const groupStatus = healthyCounts === totalCounts ? 'healthy' : 
+                                      healthyCounts > 0 ? 'degraded' : 'unhealthy';
+
+                    return (
+                      <div key={groupKey} className="space-y-3">
+                        <div className="flex items-center gap-3 pb-2 border-b">
+                          <span className="text-lg">{group.icon}</span>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-base">{group.title}</h3>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <div className={`w-2 h-2 rounded-full ${getStatusColor(groupStatus)}`} />
+                              <span>{healthyCounts}/{totalCounts} services healthy</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {group.services.map(({ component, health, endpoints }) => (
+                            <div key={component} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className={`w-3 h-3 rounded-full ${getStatusColor(health.status)} ${
+                                  health.status === 'healthy' ? 'animate-pulse' : ''
+                                }`} />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium text-sm truncate">
+                                    {formatComponentName(component)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {health.message}
+                                  </div>
+                                  {health.response_time !== undefined && health.response_time !== null && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {health.response_time === 0 ? 'idle' : `${health.response_time}ms response`}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Show API endpoints as small badges if this is API Core */}
+                                  {component === 'api_core' && endpoints && endpoints.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {endpoints.map(({ component: endpointComponent, health: endpointHealth }: any) => {
+                                        const endpointName = endpointComponent
+                                          .replace('api_endpoint_', '')
+                                          .replace(/_/g, '/')
+                                          .split('/')
+                                          .pop() || 'unknown';
+                                        
+                                        return (
+                                          <Badge 
+                                            key={endpointComponent}
+                                            variant="outline" 
+                                            className={`text-xs px-1.5 py-0.5 ${
+                                              endpointHealth.status === 'healthy' ? 'border-green-300 text-green-700' :
+                                              endpointHealth.status === 'degraded' ? 'border-yellow-300 text-yellow-700' :
+                                              'border-red-300 text-red-700'
+                                            }`}
+                                            title={`${endpointName}: ${endpointHealth.message} (${endpointHealth.response_time || 0}ms)`}
+                                          >
+                                            {endpointName}
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {health.action && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="ml-2 flex-shrink-0"
+                                  onClick={() => window.location.href = health.action.url}
+                                >
+                                  {health.action.label}
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}

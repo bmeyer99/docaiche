@@ -114,6 +114,37 @@ enrichment:
   enable_quality_assessment: true
   min_confidence_threshold: 0.7
 
+# MCP External Search Providers Configuration
+mcp:
+  external_search:
+    enabled: true
+    providers:
+      brave_search:
+        enabled: true
+        api_key: "${BRAVE_API_KEY}"  # Get free API key from https://brave.com/search/api/
+        priority: 1
+        max_requests_per_minute: 60
+        timeout_seconds: 3
+      google_search:
+        enabled: false  # Enable when API key available
+        api_key: "${GOOGLE_SEARCH_API_KEY}"
+        search_engine_id: "${GOOGLE_SEARCH_ENGINE_ID}"
+        priority: 2
+        max_requests_per_minute: 100
+        timeout_seconds: 3
+      duckduckgo:
+        enabled: true  # No API key required
+        priority: 3
+        max_requests_per_minute: 30
+        timeout_seconds: 4
+    circuit_breaker:
+      failure_threshold: 3
+      recovery_timeout: 300
+      timeout_seconds: 5
+    cache:
+      ttl_seconds: 3600
+      enabled: true
+
 # API Response Pipeline Configuration
 api_response_pipeline:
   cache:
@@ -143,6 +174,9 @@ api_response_pipeline:
 #    - ANYTHINGLLM_API_KEY: Required for AnythingLLM integration
 #    - GITHUB_API_TOKEN: Required for GitHub repository access
 #    - OPENAI_API_KEY: Required if using OpenAI as primary/fallback provider
+#    - BRAVE_API_KEY: Required for Brave Search external provider (get free at https://brave.com/search/api/)
+#    - GOOGLE_SEARCH_API_KEY: Optional for Google Custom Search API
+#    - GOOGLE_SEARCH_ENGINE_ID: Required if using Google Custom Search
 #
 # 5. Docker Compose Alignment:
 #    - Redis memory settings must match docker-compose.yml
