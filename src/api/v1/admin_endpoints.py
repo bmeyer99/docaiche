@@ -33,7 +33,6 @@ router = APIRouter()
 
 
 @router.get("/admin/search-content", response_model=AdminSearchResponse, tags=["admin"])
-@limiter.limit("20/minute")
 async def admin_search_content(
     request: Request,
     search_term: Optional[str] = Query(None, description="Search term"),
@@ -51,7 +50,7 @@ async def admin_search_content(
     Returns AdminSearchResponse.
 
     Args:
-        request: FastAPI request object (required for rate limiting)
+        request: FastAPI request object
         search_term: Optional search term filter
         content_type: Optional content type filter
         technology: Optional technology filter
@@ -233,7 +232,6 @@ async def admin_search_content(
 
 
 @router.delete("/content/{content_id}", status_code=202, tags=["admin"])
-@limiter.limit("10/minute")
 async def flag_content(
     request: Request,
     content_id: str,
@@ -245,7 +243,7 @@ async def flag_content(
     DELETE /api/v1/content/{id} - Flags content for removal (admin action)
 
     Args:
-        request: FastAPI request object (required for rate limiting)
+        request: FastAPI request object
         content_id: ID of content to flag for removal
         background_tasks: FastAPI background tasks for processing
         db_manager: Database manager dependency

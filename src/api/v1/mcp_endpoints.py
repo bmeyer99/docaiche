@@ -51,7 +51,6 @@ router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 
 @router.get("/providers", response_model=ProvidersListResponse)
-@limiter.limit("10/minute")
 async def list_providers(
     request: Request,
     enabled_only: bool = Query(False, description="Only return enabled providers"),
@@ -239,7 +238,6 @@ async def list_providers(
 
 
 @router.post("/providers", response_model=ProviderResponse)
-@limiter.limit("5/minute")
 async def create_provider(
     request: Request,
     create_request: CreateProviderRequest,
@@ -320,7 +318,6 @@ async def create_provider(
 
 
 @router.get("/providers/{provider_id}", response_model=ProviderResponse)
-@limiter.limit("20/minute")
 async def get_provider(
     request: Request,
     provider_id: str,
@@ -395,7 +392,6 @@ async def get_provider(
 
 
 @router.put("/providers/{provider_id}", response_model=ProviderResponse)
-@limiter.limit("5/minute")
 async def update_provider(
     request: Request,
     provider_id: str,
@@ -440,7 +436,6 @@ async def update_provider(
 
 
 @router.delete("/providers/{provider_id}")
-@limiter.limit("5/minute")
 async def delete_provider(
     request: Request,
     provider_id: str,
@@ -482,7 +477,6 @@ async def delete_provider(
 
 
 @router.get("/config", response_model=SearchConfigResponse)
-@limiter.limit("10/minute")
 async def get_search_config(
     request: Request,
     search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator)
@@ -529,7 +523,6 @@ async def get_search_config(
 
 
 @router.post("/search", response_model=ExternalSearchResponse)
-@limiter.limit("20/minute")
 async def external_search(
     request: Request,
     search_request: ExternalSearchRequest,
@@ -608,7 +601,6 @@ async def external_search(
 
 
 @router.get("/stats", response_model=PerformanceStatsResponse)
-@limiter.limit("10/minute")
 async def get_performance_stats(
     request: Request,
     search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator)

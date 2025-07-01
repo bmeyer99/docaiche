@@ -33,7 +33,6 @@ router = APIRouter()
 
 
 @router.get("/admin/activity/recent", response_model=List[ActivityItem], tags=["admin"])
-@limiter.limit("30/minute")
 async def get_recent_activity(
     request: Request,
     limit: int = Query(20, ge=1, le=100),
@@ -208,7 +207,6 @@ async def get_recent_activity(
 @router.get(
     "/admin/activity/searches", response_model=List[ActivityItem], tags=["admin"]
 )
-@limiter.limit("30/minute")
 async def get_recent_searches(
     request: Request,
     limit: int = Query(20, ge=1, le=100),
@@ -300,7 +298,6 @@ async def get_recent_searches(
 
 
 @router.get("/admin/activity/errors", response_model=List[ActivityItem], tags=["admin"])
-@limiter.limit("30/minute")
 async def get_recent_errors(
     request: Request,
     limit: int = Query(20, ge=1, le=50),
@@ -321,7 +318,6 @@ async def get_recent_errors(
 
 
 @router.get("/admin/dashboard", tags=["admin"])
-@limiter.limit("20/minute")
 async def get_dashboard_data(
     request: Request, 
     db_manager: DatabaseManager = Depends(get_database_manager),

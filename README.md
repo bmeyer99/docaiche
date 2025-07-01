@@ -52,7 +52,7 @@ The AI Documentation Cache System is a production-ready, microservices-based pla
 - **Web UI**: FastAPI + Jinja2, admin/configuration dashboard
 - **AnythingLLM**: Vector DB for semantic search
 - **Ollama**: Local LLM provider (optional, can use OpenAI)
-- **Redis**: High-speed cache for queries, sessions, and rate limiting
+- **Redis**: High-speed cache for queries, sessions
 - **SQLite**: Persistent metadata and content storage
 
 **Component Diagram:**

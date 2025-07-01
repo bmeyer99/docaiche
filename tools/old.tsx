@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useAnalyticsWebSocket } from '@/lib/hooks/use-websocket';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -188,11 +188,6 @@ export default function WebSocketAnalyticsPage() {
 
               return (
                 <div className="space-y-6">
-                  {/* API Endpoints Section - Full Width at Top */}
-                  {apiEndpoints.length > 0 && (
-                    <ApiEndpointsList endpoints={apiEndpoints} />
-                  )}
-                  
                   {Object.entries(serviceGroups).map(([groupKey, group]) => {
                     if (group.services.length === 0) return null;
                     
@@ -235,6 +230,98 @@ export default function WebSocketAnalyticsPage() {
                                     </div>
                                   )}
                                   
+                                  {/* Show API endpoints as small badges if this is API Core */}
+                                  {component === 'api_core' && endpoints && endpoints.length > 0 && (() => {
+                                    const [showAllEndpoints, setShowAllEndpoints] = React.useState(false);
+                                    const maxVisible = 8; // Show first 8 endpoints by default
+                                    const visibleEndpoints = showAllEndpoints ? endpoints : endpoints.slice(0, maxVisible);
+                                    
+                                    return (
+                                      <div className="mt-3 border-t pt-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <span className="text-xs text-muted-foreground">
+                                            {endpoints.length} endpoints monitored
+                                          </span>
+                                          {endpoints.length > maxVisible && (
+                                            <button
+                                              onClick={() => setShowAllEndpoints(!showAllEndpoints)}
+                                              className="text-xs text-primary hover:underline"
+                                            >
+                                              {showAllEndpoints ? 'Show less' : `Show all (${endpoints.length})`}
+                                            </button>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Mobile view: Horizontal scroll */}
+                                        <div className="md:hidden overflow-x-auto pb-2">
+                                          <div className="flex gap-3 text-xs">
+                                            {visibleEndpoints.map(({ component: endpointComponent, health: endpointHealth }: any) => {
+                                              const endpointName = endpointHealth.name || endpointComponent
+                                                .replace('api_endpoint_', '')
+                                                .replace(/_/g, '/')
+                                                .split('/')
+                                                .pop() || 'unknown';
+                                              
+                                              const isHealthy = endpointHealth.status === 'healthy';
+                                              const hasError = endpointHealth.message && 
+                                                (endpointHealth.message.toLowerCase().includes('timeout') || 
+                                                 endpointHealth.message.toLowerCase().includes('connection'));
+                                              
+                                              return (
+                                                <div 
+                                                  key={endpointComponent}
+                                                  className="flex-shrink-0 px-2 py-1 rounded-md bg-muted/50"
+                                                  title={`${endpointHealth.path || endpointComponent.replace('api_endpoint_', '').replace(/_/g, '/')}: ${endpointHealth.message}`}
+                                                >
+                                                  <div className={hasError ? "text-red-600" : ""}>
+                                                    {endpointName}
+                                                  </div>
+                                                  {isHealthy && !hasError && (
+                                                    <div className="text-green-600 font-medium">
+                                                      {endpointHealth.response_time || 0}ms
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Desktop view: Grid */}
+                                        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 text-xs">
+                                          {visibleEndpoints.map(({ component: endpointComponent, health: endpointHealth }: any) => {
+                                            const endpointName = endpointHealth.name || endpointComponent
+                                              .replace('api_endpoint_', '')
+                                              .replace(/_/g, '/')
+                                              .split('/')
+                                              .pop() || 'unknown';
+                                            
+                                            const isHealthy = endpointHealth.status === 'healthy';
+                                            const hasError = endpointHealth.message && 
+                                              (endpointHealth.message.toLowerCase().includes('timeout') || 
+                                               endpointHealth.message.toLowerCase().includes('connection'));
+                                            
+                                            return (
+                                              <div 
+                                                key={endpointComponent}
+                                                className="flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted/70 transition-colors"
+                                                title={`${endpointHealth.path || endpointComponent.replace('api_endpoint_', '').replace(/_/g, '/')}: ${endpointHealth.message}`}
+                                              >
+                                                <span className={`${hasError ? "text-red-600" : "text-foreground"} font-medium`}>
+                                                  {endpointName}
+                                                </span>
+                                                {isHealthy && !hasError && (
+                                                  <span className="text-green-600 font-semibold">
+                                                    {endpointHealth.response_time || 0}ms
+                                                  </span>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                               {health.action && (
@@ -628,105 +715,6 @@ export default function WebSocketAnalyticsPage() {
           </TabsContent>
         </Tabs>
       )}
-    </div>
-  );
-}
-
-// Component for API endpoints list with show more/less functionality
-function ApiEndpointsList({ endpoints }: { endpoints: any[] }) {
-  const [showAllEndpoints, setShowAllEndpoints] = useState(false);
-  const maxVisible = 20; // Show first 20 endpoints by default (more room now)
-  const visibleEndpoints = showAllEndpoints ? endpoints : endpoints.slice(0, maxVisible);
-  
-  return (
-    <div className="bg-muted/30 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-lg">🌐</span>
-          <div>
-            <h3 className="font-semibold text-base">API Endpoints</h3>
-            <span className="text-sm text-muted-foreground">
-              {endpoints.length} endpoints monitored
-            </span>
-          </div>
-        </div>
-        {endpoints.length > maxVisible && (
-          <button
-            onClick={() => setShowAllEndpoints(!showAllEndpoints)}
-            className="text-sm text-primary hover:underline"
-          >
-            {showAllEndpoints ? 'Show less' : `Show all (${endpoints.length})`}
-          </button>
-        )}
-      </div>
-      
-      {/* Mobile view: Horizontal scroll */}
-      <div className="md:hidden overflow-x-auto pb-2">
-        <div className="flex gap-3 text-xs">
-          {visibleEndpoints.map(({ component: endpointComponent, health: endpointHealth }: any) => {
-            const endpointName = endpointHealth.name || endpointComponent
-              .replace('api_endpoint_', '')
-              .replace(/_/g, '/')
-              .split('/')
-              .pop() || 'unknown';
-            
-            const isHealthy = endpointHealth.status === 'healthy';
-            const hasError = endpointHealth.message && 
-              (endpointHealth.message.toLowerCase().includes('timeout') || 
-               endpointHealth.message.toLowerCase().includes('connection'));
-            
-            return (
-              <div 
-                key={endpointComponent}
-                className="flex-shrink-0 px-2 py-1 rounded-md bg-muted/50"
-                title={`${endpointHealth.path || endpointComponent.replace('api_endpoint_', '').replace(/_/g, '/')}: ${endpointHealth.message}`}
-              >
-                <div className={hasError ? "text-red-600" : ""}>
-                  {endpointName}
-                </div>
-                {isHealthy && !hasError && (
-                  <div className="text-green-600 font-medium">
-                    {endpointHealth.response_time || 0}ms
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      
-      {/* Desktop view: Grid - More columns for horizontal layout */}
-      <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 text-xs">
-        {visibleEndpoints.map(({ component: endpointComponent, health: endpointHealth }: any) => {
-          const endpointName = endpointHealth.name || endpointComponent
-            .replace('api_endpoint_', '')
-            .replace(/_/g, '/')
-            .split('/')
-            .pop() || 'unknown';
-          
-          const isHealthy = endpointHealth.status === 'healthy';
-          const hasError = endpointHealth.message && 
-            (endpointHealth.message.toLowerCase().includes('timeout') || 
-             endpointHealth.message.toLowerCase().includes('connection'));
-          
-          return (
-            <div 
-              key={endpointComponent}
-              className="flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted/70 transition-colors"
-              title={`${endpointHealth.path || endpointComponent.replace('api_endpoint_', '').replace(/_/g, '/')}: ${endpointHealth.message}`}
-            >
-              <span className={`${hasError ? "text-red-600" : "text-foreground"} font-medium`}>
-                {endpointName}
-              </span>
-              {isHealthy && !hasError && (
-                <span className="text-green-600 font-semibold">
-                  {endpointHealth.response_time || 0}ms
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }

@@ -92,7 +92,6 @@ def calculate_network_stats(stats: dict) -> Dict[str, float]:
 
 
 @router.get("")
-@limiter.limit("30/minute")
 async def list_containers(
     request: Request,
     all: bool = False,
@@ -173,7 +172,6 @@ async def list_containers(
 
 
 @router.post("/{container_id}/action")
-@limiter.limit("10/minute")
 async def container_action(
     request: Request,
     container_id: str,
@@ -238,7 +236,6 @@ async def container_action(
 
 
 @router.get("/{container_id}/logs")
-@limiter.limit("20/minute")
 async def get_container_logs(
     request: Request,
     container_id: str,
@@ -308,7 +305,6 @@ async def get_container_logs(
 
 
 @router.get("/{container_id}/stats")
-@limiter.limit("30/minute")
 async def get_container_stats(
     request: Request,
     container_id: str,
@@ -525,7 +521,6 @@ async def websocket_terminal(
 
 
 @router.get("/{container_id}/inspect")
-@limiter.limit("30/minute")
 async def inspect_container(
     request: Request,
     container_id: str,

@@ -9,7 +9,8 @@ with comprehensive middleware, error handling, and rate limiting.
 import logging
 from fastapi import APIRouter
 from fastapi.exceptions import RequestValidationError
-from slowapi.errors import RateLimitExceeded
+# Rate limiter error import disabled per admin-ui requirements
+# from slowapi.errors import RateLimitExceeded
 
 from .search_endpoints import router as search_router
 from .admin_endpoints import router as admin_router
@@ -29,7 +30,6 @@ from .ai_logs_endpoints import router as ai_logs_router
 from .mcp import router as mcp_router
 from .mcp_endpoints import router as mcp_management_router
 from .service_endpoints import router as service_router
-from .middleware import limiter, rate_limit_handler
 from .exceptions import (
     validation_exception_handler,
     http_exception_handler,
@@ -61,8 +61,8 @@ api_router.include_router(mcp_router)
 api_router.include_router(mcp_management_router)
 api_router.include_router(service_router)
 
-# Add rate limiter state to router
-api_router.state = type("State", (), {"limiter": limiter})()
+# Rate limiter disabled per admin-ui requirements
+# api_router.state = type("State", (), {"limiter": limiter})()
 
 
 def setup_exception_handlers(app):
@@ -74,9 +74,6 @@ def setup_exception_handlers(app):
     """
     # API-004: Custom RequestValidationError handler
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
-
-    # Rate limiting exception handler for API-005
-    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
     # HTTP exception handler for structured error responses
     app.add_exception_handler(Exception, http_exception_handler)

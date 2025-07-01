@@ -371,7 +371,7 @@ async def check_system_health():
                 # Only monitor GET endpoints (health checks)
                 if 'GET' in route.methods:
                     # Only include top-level API routes
-                    if route.path.startswith('/api/v1/') or route.path == '/mcp':
+                    if route.path.startswith('/api/v1/'):
                         # Extract a friendly name from the path
                         path_parts = route.path.strip('/').split('/')
                         if path_parts:
@@ -400,6 +400,7 @@ async def check_system_health():
                                 "name": name
                             })
         
+        
         # Sort endpoints by path for consistent ordering
         api_endpoints.sort(key=lambda x: x['path'])
         
@@ -411,7 +412,7 @@ async def check_system_health():
                 response_time_ms = 0
                 
                 try:
-                    async with session.get(f"http://admin-ui:4080{endpoint['path']}") as response:
+                    async with session.get(f"http://admin-ui:3000{endpoint['path']}") as response:
                         response_time_ms = int((time.time() - start_time) * 1000)
                         # Any response means the endpoint is reachable
                         endpoint_status = "healthy"
@@ -616,38 +617,53 @@ async def get_service_metrics():
         cpu_percent = psutil.cpu_percent(interval=0.1)
         memory_info = psutil.virtual_memory()
         
-        # Create mock service data for now
-        services = ["api", "admin-ui", "redis", "database", "anythingllm"]
-        
-        for i, service_name in enumerate(services):
-            # Distribute system resources across services
-            service_cpu = round(cpu_percent / len(services) + (i * 2), 2)
-            service_memory = round(memory_info.used / (1024 * 1024) / len(services) + (i * 50), 2)
+        # Get real container metrics from Docker
+        try:
+            import docker
+            client = docker.from_env()
+            containers = client.containers.list()
             
-            services_metrics[service_name] = {
+            for container in containers:
+                if container.name.startswith("docaiche-"):
+                    service_name = container.name.replace("docaiche-", "").replace("-1", "")
+                    stats = container.stats(stream=False)
+                    
+                    # Calculate CPU percentage
+                    cpu_delta = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
+                    system_delta = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
+                    cpu_percent = (cpu_delta / system_delta) * len(stats['cpu_stats']['cpu_usage']['percpu_usage']) * 100 if system_delta > 0 else 0
+                    
+                    # Calculate memory usage
+                    memory_usage = stats['memory_stats']['usage']
+                    memory_limit = stats['memory_stats']['limit']
+                    memory_percent = (memory_usage / memory_limit) * 100 if memory_limit > 0 else 0
+                    
+                    services_metrics[service_name] = {
+                        "status": container.status,
+                        "cpu_percent": round(cpu_percent, 2),
+                        "memory_usage_mb": round(memory_usage / (1024 * 1024), 2),
+                        "memory_percent": round(memory_percent, 2),
+                        "network_rx_mb": 0,  # Real network stats require additional processing
+                        "network_tx_mb": 0,
+                        "uptime": container.attrs['State']['StartedAt']
+                    }
+        except Exception as docker_e:
+            logger.warning(f"Docker metrics unavailable: {docker_e}")
+            # Fall back to basic system metrics only
+            services_metrics["system"] = {
                 "status": "running",
-                "cpu_percent": service_cpu,
-                "memory_usage_mb": service_memory,
-                "memory_percent": round((service_memory / (memory_info.total / (1024 * 1024))) * 100, 2),
-                "network_rx_mb": round(0.5 + (i * 0.1), 2),
-                "network_tx_mb": round(0.3 + (i * 0.05), 2),
-                "uptime": "2024-01-01T00:00:00Z"
+                "cpu_percent": cpu_percent,
+                "memory_usage_mb": round(memory_info.used / (1024 * 1024), 2),
+                "memory_percent": round(memory_info.percent, 2),
+                "network_rx_mb": 0,
+                "network_tx_mb": 0,
+                "uptime": "unknown"
             }
                 
     except Exception as e:
         logger.error(f"Error getting service metrics: {e}")
-        # Return basic service structure even if psutil fails
-        services = ["api", "admin-ui", "redis", "database", "anythingllm"]
-        for service_name in services:
-            services_metrics[service_name] = {
-                "status": "unknown",
-                "cpu_percent": 0,
-                "memory_usage_mb": 0,
-                "memory_percent": 0,
-                "network_rx_mb": 0,
-                "network_tx_mb": 0,
-                "error": str(e)
-            }
+        # Return empty metrics on failure
+        services_metrics = {"error": f"Metrics unavailable: {str(e)}"}
     
     return services_metrics
 

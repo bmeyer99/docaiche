@@ -40,7 +40,6 @@ router = APIRouter()
 
 
 @router.post("/search", response_model=SearchResponse, tags=["search"])
-@limiter.limit("30/minute")
 async def search_documents_post(
     request: Request,
     search_request: SearchRequest,
@@ -129,7 +128,6 @@ async def search_documents_post(
 
 
 @router.get("/search", response_model=SearchResponse, tags=["search"])
-@limiter.limit("60/minute")
 async def search_documents_get(
     request: Request,
     q: str = Query(..., description="Search query string"),
@@ -165,7 +163,6 @@ async def search_documents_get(
 
 
 @router.post("/feedback", status_code=202, tags=["feedback"])
-@limiter.limit("20/minute")
 async def submit_feedback(
     request: Request,
     feedback_request: FeedbackRequest,
@@ -207,7 +204,6 @@ async def submit_feedback(
 
 
 @router.post("/signals", status_code=202, tags=["feedback"])
-@limiter.limit("100/minute")
 async def submit_signal(
     request: Request, 
     signal_request: SignalRequest, 

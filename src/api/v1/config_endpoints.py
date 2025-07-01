@@ -21,7 +21,7 @@ from .schemas import (
     Collection,
     CollectionsResponse,
 )
-from .middleware import limiter, get_trace_id
+from .middleware import get_trace_id
 from .dependencies import get_anythingllm_client, reset_service_instances
 from src.clients.anythingllm import AnythingLLMClient
 from src.core.config import get_settings, get_configuration_manager
@@ -41,7 +41,6 @@ router = APIRouter()
 
 
 @router.get("/config", response_model=ConfigurationResponse, tags=["config"])
-@limiter.limit("10/minute")
 async def get_configuration(request: Request) -> ConfigurationResponse:
     """
     GET /api/v1/config - Retrieves the current system configuration
@@ -50,7 +49,7 @@ async def get_configuration(request: Request) -> ConfigurationResponse:
     Integrates with ConfigurationManager for comprehensive configuration access
 
     Args:
-        request: FastAPI request object (required for rate limiting)
+        request: FastAPI request object
 
     Returns:
         ConfigurationResponse with current configuration items
@@ -194,7 +193,6 @@ async def get_configuration(request: Request) -> ConfigurationResponse:
 
 
 @router.post("/config", status_code=202, tags=["config"])
-@limiter.limit("5/minute")
 async def update_configuration(
     request: Request,
     config_request: ConfigurationUpdateRequest,
@@ -207,7 +205,7 @@ async def update_configuration(
     Updates configuration using ConfigurationManager with database persistence
 
     Args:
-        request: FastAPI request object (required for rate limiting)
+        request: FastAPI request object
         config_request: Configuration update request
         background_tasks: FastAPI background tasks for processing
 
@@ -302,7 +300,6 @@ async def update_configuration(
 
 
 @router.get("/collections", response_model=CollectionsResponse, tags=["search"])
-@limiter.limit("30/minute")
 async def get_collections(
     request: Request,
     anythingllm_client: AnythingLLMClient = Depends(get_anythingllm_client),
@@ -311,7 +308,7 @@ async def get_collections(
     GET /api/v1/collections - Lists available documentation collections (workspaces)
 
     Args:
-        request: FastAPI request object (required for rate limiting)
+        request: FastAPI request object
         anythingllm_client: AnythingLLM client dependency
 
     Returns:

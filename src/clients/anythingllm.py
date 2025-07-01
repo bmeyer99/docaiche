@@ -12,24 +12,7 @@ import logging
 import time
 from typing import List, Optional, Dict, Any
 
-try:
-    from circuitbreaker import circuit
-except ImportError:
-    # Fallback if circuitbreaker is not available
-    def circuit(*args, **kwargs):
-        def decorator(func):
-            func.circuit_breaker = type(
-                "MockCircuitBreaker",
-                (),
-                {
-                    "state": type("MockState", (), {"name": "CLOSED"})(),
-                    "failure_count": 0,
-                    "last_failure_time": None,
-                },
-            )()
-            return func
-
-        return decorator
+# Circuit breaker removed per admin-ui requirements
 
 
 from src.core.config.models import AnythingLLMConfig
@@ -317,7 +300,6 @@ class AnythingLLMClient:
             await self.session.close()
             logger.info("AnythingLLM client session closed")
 
-    @circuit
     async def health_check(self) -> Dict[str, Any]:
         """Check AnythingLLM service health and circuit breaker status"""
         start_time = time.time()
@@ -399,7 +381,6 @@ class AnythingLLMClient:
                 },
             }
 
-    @circuit
     async def list_workspaces(self) -> List[Dict[str, Any]]:
         """List all available workspaces"""
         start_time = time.time()
@@ -419,7 +400,6 @@ class AnythingLLMClient:
             
             return data.get("workspaces", [])
 
-    @circuit
     async def get_or_create_workspace(
         self, workspace_slug: str, name: str = None
     ) -> Dict[str, Any]:
@@ -447,7 +427,6 @@ class AnythingLLMClient:
         ) as response:
             return await _safe_extract_json(response)
 
-    @circuit
     async def upload_document(
         self, workspace_slug: str, document: ProcessedDocument
     ) -> UploadResult:
@@ -602,7 +581,6 @@ class AnythingLLMClient:
 
         return False
 
-    @circuit
     async def search_workspace(
         self, workspace_slug: str, query: str, limit: int = 20
     ) -> List[Dict[str, Any]]:
@@ -635,7 +613,6 @@ class AnythingLLMClient:
             
             return results
 
-    @circuit
     async def list_workspace_documents(
         self, workspace_slug: str
     ) -> List[Dict[str, Any]]:
@@ -646,7 +623,6 @@ class AnythingLLMClient:
             data = await _safe_extract_json(response)
             return data.get("documents", [])
 
-    @circuit
     async def delete_document(self, workspace_slug: str, document_id: str) -> bool:
         """Delete document from workspace"""
         try:

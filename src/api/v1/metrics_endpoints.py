@@ -61,7 +61,6 @@ DASHBOARDS = {
 
 
 @router.get("/dashboards")
-@limiter.limit("30/minute")
 async def list_dashboards(
     request: Request,
     tags: Optional[List[str]] = Query(None),
@@ -99,7 +98,6 @@ async def list_dashboards(
 
 
 @router.get("/query")
-@limiter.limit("20/minute")
 async def query_metrics(
     request: Request,
     query: str = Query(..., description="PromQL query"),
@@ -159,7 +157,6 @@ async def query_metrics(
 
 
 @router.get("/instant")
-@limiter.limit("30/minute")
 async def instant_query(
     request: Request,
     query: str = Query(..., description="PromQL query"),
@@ -212,7 +209,6 @@ async def instant_query(
 
 
 @router.get("/alerts")
-@limiter.limit("30/minute")
 async def get_alerts(
     request: Request,
     active_only: bool = True,
@@ -333,7 +329,6 @@ async def get_alerts(
 
 
 @router.get("/targets")
-@limiter.limit("30/minute")
 async def get_targets(
     request: Request,
     current_user: Optional[dict] = Depends(get_current_user_optional)
@@ -385,7 +380,6 @@ async def get_targets(
 
 
 @router.get("/series")
-@limiter.limit("20/minute")
 async def get_series(
     request: Request,
     match: List[str] = Query(..., description="Series selector (can be specified multiple times)"),
@@ -446,7 +440,6 @@ async def get_series(
 
 
 @router.get("/labels")
-@limiter.limit("30/minute")
 async def get_labels(
     request: Request,
     current_user: Optional[dict] = Depends(get_current_user_optional)
@@ -486,7 +479,6 @@ async def get_labels(
 
 
 @router.get("/label/{label}/values")
-@limiter.limit("30/minute")
 async def get_label_values(
     request: Request,
     label: str,
@@ -530,7 +522,6 @@ async def get_label_values(
 
 
 @router.get("/dashboard")
-@limiter.limit("30/minute")
 async def get_dashboard_metrics(
     request: Request,
     current_user = Depends(get_current_user_optional),

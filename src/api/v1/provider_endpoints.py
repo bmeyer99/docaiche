@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from .schemas import ProviderResponse, ProviderTestResponse, ProviderConfigRequest
-from .middleware import limiter, get_trace_id
+from .middleware import get_trace_id
 from .dependencies import get_configuration_manager
 from src.core.config.manager import ConfigurationManager
 from src.logging_config import MetricsLogger

@@ -10,7 +10,7 @@ from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, Request, Query
 
-from .middleware import limiter, get_trace_id
+from .middleware import get_trace_id
 from .schemas import StatsResponse
 from .dependencies import (
     get_database_manager,
@@ -221,7 +221,6 @@ async def health_check(
 
 
 @router.get("/stats", tags=["health"])
-@limiter.limit("10/minute")
 async def get_stats(
     request: Request,
     db_manager: DatabaseManager = Depends(get_database_manager),
@@ -335,7 +334,6 @@ async def get_stats(
 
 
 @router.get("/analytics", tags=["analytics"])
-@limiter.limit("30/minute")
 async def get_analytics(
     request: Request,
     timeRange: str = Query(

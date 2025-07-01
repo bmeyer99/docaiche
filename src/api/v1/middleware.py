@@ -3,7 +3,7 @@ API v1 Middleware Components - PRD-001: HTTP API Foundation
 API-007: Implement structured logging middleware
 API-010: Implement request/response logging middleware
 
-This module implements middleware for structured logging, rate limiting,
+This module implements middleware for structured logging,
 and request/response logging with trace IDs for operational visibility.
 """
 
@@ -14,9 +14,10 @@ import uuid
 from typing import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
+# Rate limiter imports disabled per admin-ui requirements
+# from slowapi import Limiter
+# from slowapi.util import get_remote_address
+# from slowapi.errors import RateLimitExceeded
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,6 @@ except ImportError:
     _security_logger = None
     _metrics_logger = None
     logger.warning("Enhanced security logging not available")
-
-# Create rate limiter instance for API-005
-limiter = Limiter(key_func=get_remote_address)
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -266,82 +264,3 @@ def get_trace_id(request: Request) -> str:
         Trace ID string for the current request
     """
     return getattr(request.state, "trace_id", "unknown")
-
-
-# Rate limiting exception handler for API-005
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    """
-    Custom rate limit exceeded handler that returns proper error format.
-
-    Args:
-        request: The rate-limited request
-        exc: Rate limit exception
-
-    Returns:
-        JSONResponse with RFC 7807 error format
-    """
-    from fastapi.responses import JSONResponse
-    from .schemas import ProblemDetail
-
-    trace_id = get_trace_id(request)
-    client_ip = request.client.host if request.client else "unknown"
-    
-    # Log rate limiting violation with security context
-    if _security_logger:
-        # Extract rate limit details from exception
-        rate_limit_detail = str(exc.detail) if exc.detail else "Rate limit exceeded"
-        current_rate = 0
-        limit = 0
-        window = "1 minute"  # Default window
-        
-        # Try to parse rate limit details from exception
-        try:
-            if hasattr(exc, 'detail') and isinstance(exc.detail, str):
-                # Parse details like "Rate limit exceeded: 5 per 1 minute"
-                import re
-                match = re.search(r'(\d+)\s+per\s+(\d+\s+\w+)', exc.detail)
-                if match:
-                    limit = int(match.group(1))
-                    window = match.group(2)
-                    current_rate = limit + 1  # Estimate current rate as exceeded limit
-        except Exception:
-            pass  # Use defaults if parsing fails
-        
-        _security_logger.log_rate_limit_violation(
-            endpoint=request.url.path,
-            client_ip=client_ip,
-            current_rate=current_rate,
-            limit=limit,
-            window=window,
-            user_agent=request.headers.get("user-agent", "unknown"),
-            method=request.method,
-            trace_id=trace_id,
-            retry_after=getattr(exc, 'retry_after', 60)
-        )
-    
-    # Log with enhanced metrics if available
-    if _metrics_logger:
-        _metrics_logger.log_error(
-            error_type="RATE_LIMIT_EXCEEDED",
-            error_message=str(exc.detail),
-            request_id=trace_id,
-            client_ip=client_ip,
-            endpoint=request.url.path,
-            status_code=429
-        )
-
-    problem_detail = ProblemDetail(
-        type="https://docs.example.com/errors/rate-limit-exceeded",
-        title="Rate Limit Exceeded",
-        status=429,
-        detail=f"Rate limit exceeded: {exc.detail}",
-        instance=str(request.url.path),
-        error_code="RATE_LIMIT_EXCEEDED",
-        trace_id=trace_id,
-    )
-
-    return JSONResponse(
-        status_code=429,
-        content=problem_detail.model_dump(),
-        headers={"Retry-After": str(getattr(exc, 'retry_after', 60))},
-    )

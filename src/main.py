@@ -12,9 +12,10 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
+# Rate limiter imports disabled per admin-ui requirements
+# from slowapi import Limiter, _rate_limit_exceeded_handler
+# from slowapi.errors import RateLimitExceeded
+# from slowapi.util import get_remote_address
 
 from src.api.v1.api import api_router, setup_exception_handlers
 from src.core.middleware.correlation_middleware import CorrelationIDMiddleware, setup_correlation_logging
@@ -26,8 +27,8 @@ setup_structured_logging()
 logger = logging.getLogger(__name__)
 metrics = MetricsLogger(logger)
 
-# Rate limiter setup
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiter disabled per admin-ui requirements
+# limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -122,12 +123,6 @@ def create_app() -> FastAPI:
         Authorization: Bearer your_api_key_here
         ```
 
-        ### Rate Limiting
-        All endpoints implement rate limiting for fair usage. Limits vary by endpoint type:
-        - Standard endpoints: 60 requests/minute
-        - AI Logs queries: 60 requests/minute
-        - WebSocket connections: 10 concurrent connections
-        - Export operations: 10 requests/minute
         """,
         version="2.1.0",
         docs_url="/docs",
@@ -202,9 +197,9 @@ def create_app() -> FastAPI:
     # Setup correlation logging
     setup_correlation_logging()
 
-    # Rate limiting
-    app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    # Rate limiting disabled per admin-ui requirements
+    # app.state.limiter = limiter
+    # app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     # Exception handlers
     setup_exception_handlers(app)

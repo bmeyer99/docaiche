@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/init-workspace", tags=["admin"])
-@limiter.limit("5/minute")
 async def initialize_workspace(
     request: Request,
     config_manager: ConfigurationManager = Depends(get_configuration_manager)

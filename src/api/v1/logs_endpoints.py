@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 import asyncio
 
 from .dependencies import get_current_user_optional, require_role
-from .middleware import limiter
+# Rate limiter import removed per admin-ui requirements
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,6 @@ AVAILABLE_SERVICES = {
 
 
 @router.get("/services")
-@limiter.limit("30/minute")
 async def list_services(
     request: Request,
     current_user: Optional[dict] = Depends(get_current_user_optional)
@@ -104,7 +103,6 @@ async def list_services(
 
 
 @router.get("/{service_id}")
-@limiter.limit("20/minute")
 async def get_service_logs(
     request: Request,
     service_id: str,
@@ -441,7 +439,6 @@ async def websocket_logs(
 
 
 @router.get("/{service_id}/export")
-@limiter.limit("5/minute")
 async def export_logs(
     request: Request,
     service_id: str,
