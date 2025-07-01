@@ -60,6 +60,28 @@ class SystemConfig(Base):
     __table_args__ = ()
 
 
+class ConfigurationAuditLog(Base):
+    """Configuration change audit log table"""
+    
+    __tablename__ = "configuration_audit_log"
+    
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=func.current_timestamp()
+    )
+    user: Mapped[str] = mapped_column(String, nullable=False)
+    section: Mapped[str] = mapped_column(String, nullable=False)
+    changes: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    previous_values: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    comment: Mapped[Optional[str]] = mapped_column(Text)
+    
+    __table_args__ = (
+        Index("idx_config_audit_timestamp", "timestamp"),
+        Index("idx_config_audit_user", "user"),
+        Index("idx_config_audit_section", "section"),
+    )
+
+
 class SearchCache(Base):
     """Search cache table - PRD-002 lines 43-56"""
 

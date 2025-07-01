@@ -21,8 +21,6 @@ from fastapi import (
     status,
     Header,
 )
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from .schemas import (
     # Search schemas
@@ -56,8 +54,6 @@ from .dependencies import (
 # Create router
 api_router = APIRouter()
 
-# Rate limiter
-limiter = Limiter(key_func=get_remote_address)
 
 
 # ============================================================================
@@ -66,7 +62,6 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @api_router.post("/search", response_model=SearchResponse)
-@limiter.limit("30/minute")
 async def search_documents(
     request: Request,
     search_request: SearchRequest,
@@ -89,7 +84,6 @@ async def search_documents(
 
 
 @api_router.get("/search", response_model=SearchResponse)
-@limiter.limit("30/minute")
 async def search_documents_simple(
     request: Request,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
@@ -110,7 +104,6 @@ async def search_documents_simple(
 @api_router.post(
     "/upload", response_model=UploadResponse, status_code=status.HTTP_202_ACCEPTED
 )
-@limiter.limit("10/minute")
 async def upload_document(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -181,7 +174,6 @@ async def upload_document(
 
 
 @api_router.delete("/content/{content_id}", status_code=status.HTTP_202_ACCEPTED)
-@limiter.limit("10/minute")
 async def remove_content(
     request: Request,
     content_id: str = Path(..., description="Unique content identifier"),
@@ -211,7 +203,6 @@ async def remove_content(
 
 
 @api_router.post("/feedback", status_code=status.HTTP_202_ACCEPTED)
-@limiter.limit("20/minute")
 async def submit_feedback(
     request: Request,
     feedback_request: FeedbackRequest,
@@ -235,7 +226,6 @@ async def submit_feedback(
 
 
 @api_router.post("/signals", status_code=status.HTTP_202_ACCEPTED)
-@limiter.limit("50/minute")
 async def submit_signals(
     request: Request,
     signal_request: SignalRequest,

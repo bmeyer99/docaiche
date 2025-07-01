@@ -107,7 +107,6 @@ def get_registry() -> Optional[ProviderRegistry]:
 
 
 @router.get("/provider-registry-status", tags=["providers"])
-# @limiter.limit("30/minute")  # Temporarily disabled for testing
 async def get_provider_registry_stats(
     request: Request,
     registry: Optional[ProviderRegistry] = Depends(get_registry)
@@ -194,7 +193,6 @@ async def get_provider_registry_stats(
 
 
 @router.get("/providers", response_model=List[ProviderResponse], tags=["providers"])
-# @limiter.limit("20/minute")  # Temporarily disabled for testing
 async def list_providers(
     request: Request,
     config_manager: ConfigurationManager = Depends(get_configuration_manager),
@@ -511,7 +509,6 @@ async def update_provider_test_results(
     response_model=ProviderTestResponse,
     tags=["providers"],
 )
-# @limiter.limit("10/minute")  # Temporarily disabled for testing
 async def test_provider_connection(
     request: Request, 
     provider_id: str, 
@@ -992,7 +989,6 @@ async def test_provider_connection(
 
 
 @router.post("/providers/{provider_id}/config", tags=["providers"])
-# @limiter.limit("10/minute")  # Temporarily disabled for testing
 async def update_provider_config(
     request: Request,
     provider_id: str,
@@ -1147,7 +1143,6 @@ async def update_provider_config(
 
 
 @router.get("/providers/{provider_id}/models", tags=["providers"])
-# @limiter.limit("30/minute")  # Temporarily disabled for testing
 async def get_provider_models(
     request: Request,
     provider_id: str,
@@ -1224,7 +1219,6 @@ async def get_provider_models(
 
 
 @router.post("/providers/{provider_id}/models", tags=["providers"])
-# @limiter.limit("20/minute")  # Temporarily disabled for testing
 async def add_custom_model(
     request: Request,
     provider_id: str,
@@ -1273,7 +1267,6 @@ async def add_custom_model(
 
 
 @router.delete("/providers/{provider_id}/models/{model_name}", tags=["providers"])
-# @limiter.limit("20/minute")  # Temporarily disabled for testing
 async def remove_custom_model(
     request: Request,
     provider_id: str,

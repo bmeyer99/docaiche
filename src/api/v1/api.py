@@ -9,8 +9,6 @@ with comprehensive middleware, error handling, and rate limiting.
 import logging
 from fastapi import APIRouter
 from fastapi.exceptions import RequestValidationError
-# Rate limiter error import disabled per admin-ui requirements
-# from slowapi.errors import RateLimitExceeded
 
 from .search_endpoints import router as search_router
 from .admin_endpoints import router as admin_router
@@ -61,8 +59,6 @@ api_router.include_router(mcp_router)
 api_router.include_router(mcp_management_router)
 api_router.include_router(service_router)
 
-# Rate limiter disabled per admin-ui requirements
-# api_router.state = type("State", (), {"limiter": limiter})()
 
 
 def setup_exception_handlers(app):

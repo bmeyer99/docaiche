@@ -206,20 +206,6 @@ class SecurityLogger:
         })
 ```
 
-#### B. Enhanced Rate Limiting Logging
-```python
-# Update src/api/v1/middleware.py rate_limit_handler
-logger.warning("RATE_LIMIT_VIOLATION", extra={
-    "client_ip": request.client.host,
-    "endpoint": str(request.url.path),
-    "current_rate": exc.detail.get("current"),
-    "rate_limit": exc.detail.get("limit"),  
-    "time_window": exc.detail.get("window"),
-    "retry_after": calculate_retry_delay(),
-    "violation_severity": determine_severity(current_rate, limit)
-})
-```
-
 ### **Phase 2: Database Monitoring (Week 2)**
 
 #### A. Database Operation Logging

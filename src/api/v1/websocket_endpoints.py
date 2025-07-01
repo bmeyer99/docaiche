@@ -495,7 +495,7 @@ async def check_system_health():
         # Try the Next.js health endpoint first
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
-                async with session.get("http://admin-ui:4080") as response:
+                async with session.get("http://admin-ui:3000") as response:
                     if response.status == 200:
                         admin_ui_healthy = True
                         admin_ui_message = "Admin interface available"
@@ -506,7 +506,7 @@ async def check_system_health():
         if not admin_ui_healthy:
             try:
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
-                    async with session.get("http://admin-ui:4080/api/health") as response:
+                    async with session.get("http://admin-ui:3000/api/health") as response:
                         if response.status == 200:
                             admin_ui_healthy = True
                             admin_ui_message = "Admin interface available"

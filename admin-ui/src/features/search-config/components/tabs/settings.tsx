@@ -46,12 +46,6 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
         priority_levels: 3,
         stale_timeout_seconds: 300
       },
-      rate_limiting: {
-        per_user_rate_limit: 60,
-        global_rate_limit: 1000,
-        burst_size: 10,
-        rate_limit_window_seconds: 60
-      },
       timeouts: {
         search_timeout_seconds: 30,
         ai_timeout_seconds: 30,
@@ -130,61 +124,6 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
 
         {/* Global Settings Tab */}
         <TabsContent value="global" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Rate Limiting</CardTitle>
-              <CardDescription>
-                Configure request rate limits to prevent abuse
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="per_user_rate_limit">Per User Rate Limit</Label>
-                  <Input
-                    id="per_user_rate_limit"
-                    type="number"
-                    {...register('rate_limiting.per_user_rate_limit', { valueAsNumber: true })}
-                    onChange={() => onChangeDetected?.()}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Requests per minute</p>
-                </div>
-                
-                <div>
-                  <Label htmlFor="global_rate_limit">Global Rate Limit</Label>
-                  <Input
-                    id="global_rate_limit"
-                    type="number"
-                    {...register('rate_limiting.global_rate_limit', { valueAsNumber: true })}
-                    onChange={() => onChangeDetected?.()}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Total requests per minute</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="burst_size">Burst Size</Label>
-                  <Input
-                    id="burst_size"
-                    type="number"
-                    {...register('rate_limiting.burst_size', { valueAsNumber: true })}
-                    onChange={() => onChangeDetected?.()}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="rate_limit_window">Window (seconds)</Label>
-                  <Input
-                    id="rate_limit_window"
-                    type="number"
-                    {...register('rate_limiting.rate_limit_window_seconds', { valueAsNumber: true })}
-                    onChange={() => onChangeDetected?.()}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader>

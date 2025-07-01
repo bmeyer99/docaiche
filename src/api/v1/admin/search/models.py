@@ -45,7 +45,6 @@ class ConfigChangeLog(BaseModel):
 class SearchConfigRequest(BaseModel):
     """Request to update search configuration."""
     queue_management: Optional[Dict[str, Any]] = None
-    rate_limiting: Optional[Dict[str, Any]] = None
     timeouts: Optional[Dict[str, Any]] = None
     performance_thresholds: Optional[Dict[str, Any]] = None
     resource_limits: Optional[Dict[str, Any]] = None
@@ -57,7 +56,6 @@ class SearchConfigRequest(BaseModel):
 class SearchConfigResponse(BaseModel):
     """Complete search configuration response."""
     queue_management: Dict[str, Any]
-    rate_limiting: Dict[str, Any]
     timeouts: Dict[str, Any]
     performance_thresholds: Dict[str, Any]
     resource_limits: Dict[str, Any]

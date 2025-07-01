@@ -12,10 +12,6 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-# Rate limiter imports disabled per admin-ui requirements
-# from slowapi import Limiter, _rate_limit_exceeded_handler
-# from slowapi.errors import RateLimitExceeded
-# from slowapi.util import get_remote_address
 
 from src.api.v1.api import api_router, setup_exception_handlers
 from src.core.middleware.correlation_middleware import CorrelationIDMiddleware, setup_correlation_logging
@@ -27,8 +23,6 @@ setup_structured_logging()
 logger = logging.getLogger(__name__)
 metrics = MetricsLogger(logger)
 
-# Rate limiter disabled per admin-ui requirements
-# limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -197,9 +191,6 @@ def create_app() -> FastAPI:
     # Setup correlation logging
     setup_correlation_logging()
 
-    # Rate limiting disabled per admin-ui requirements
-    # app.state.limiter = limiter
-    # app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     # Exception handlers
     setup_exception_handlers(app)

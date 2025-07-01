@@ -14,10 +14,6 @@ import uuid
 from typing import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-# Rate limiter imports disabled per admin-ui requirements
-# from slowapi import Limiter
-# from slowapi.util import get_remote_address
-# from slowapi.errors import RateLimitExceeded
 
 logger = logging.getLogger(__name__)
 

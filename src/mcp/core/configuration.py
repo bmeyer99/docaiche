@@ -215,10 +215,6 @@ class SearchConfiguration(BaseModel):
         description="Queue management and overflow settings"
     )
     
-    rate_limiting: RateLimitingConfig = Field(
-        default_factory=RateLimitingConfig,
-        description="Rate limiting configuration"
-    )
     
     timeouts: TimeoutConfig = Field(
         default_factory=TimeoutConfig,

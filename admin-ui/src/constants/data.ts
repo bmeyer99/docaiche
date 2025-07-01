@@ -27,6 +27,14 @@ export const navItems: NavItem[] = [
     items: []
   },
   {
+    title: 'Search Config',
+    url: '/dashboard/search-config',
+    icon: 'settings',
+    isActive: false,
+    shortcut: ['s', 'c'],
+    items: []
+  },
+  {
     title: 'Documents',
     url: '/dashboard/documents',
     icon: 'fileText',

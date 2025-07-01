@@ -21,9 +21,6 @@ redis:
 
 security:
   require_authentication: true
-  rate_limit_enabled: true
-  rate_limit_requests: 60
-  rate_limit_window: 60
   max_auth_failures: 5
   auth_failure_lockout_time: 300
   require_explicit_consent: true

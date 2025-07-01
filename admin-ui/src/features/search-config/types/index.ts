@@ -16,12 +16,6 @@ export interface QueueManagementConfig {
   stale_timeout_seconds: number;
 }
 
-export interface RateLimitingConfig {
-  per_user_rate_limit: number;
-  global_rate_limit: number;
-  burst_size: number;
-  rate_limit_window_seconds: number;
-}
 
 export interface TimeoutConfig {
   search_timeout_seconds: number;
@@ -60,7 +54,6 @@ export interface AdvancedSettings {
 
 export interface SearchConfiguration {
   queue_management: QueueManagementConfig;
-  rate_limiting: RateLimitingConfig;
   timeouts: TimeoutConfig;
   performance_thresholds: PerformanceThresholds;
   resource_limits: ResourceLimits;

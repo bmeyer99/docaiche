@@ -352,40 +352,6 @@ class TestAPI004RequestValidationErrorHandler:
         assert "detail" in data
         assert len(data["detail"]) > 0
 
-
-class TestAPI005RateLimiting:
-    """API-005: Validate rate limiting is properly implemented using slowapi"""
-    
-    def test_rate_limiting_headers_present(self, client):
-        """Verify rate limiting headers are included in responses"""
-        response = client.get("/api/v1/health")
-        
-        # Rate limiting should not affect health endpoint
-        assert response.status_code == 200
-    
-    def test_search_endpoint_rate_limiting(self, client):
-        """Test search endpoint has rate limiting configured"""
-        # Make multiple rapid requests to test rate limiting
-        responses = []
-        for i in range(5):
-            response = client.post("/api/v1/search", json={
-                "query": f"test query {i}",
-                "limit": 10
-            })
-            responses.append(response)
-        
-        # At least some requests should succeed
-        success_count = sum(1 for r in responses if r.status_code < 400)
-        assert success_count > 0
-    
-    def test_rate_limit_exceeded_returns_proper_error(self, client):
-        """Test rate limit exceeded returns proper RFC 7807 error"""
-        # This test would require actually hitting rate limits
-        # For now, verify the error format structure exists
-        from src.api.v1.middleware import rate_limit_handler
-        assert callable(rate_limit_handler)
-
-
 class TestAPI006OpenAPIDocumentation:
     """API-006: Validate auto-generated OpenAPI documentation"""
     

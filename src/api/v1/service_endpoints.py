@@ -31,7 +31,6 @@ router = APIRouter()
 
 
 @router.post("/services/{service_name}/restart", tags=["services"])
-# @limiter.limit("5/minute")  # Limit service restarts
 async def restart_service(
     request: Request,
     service_name: str,
@@ -139,7 +138,6 @@ async def restart_service(
 
 
 @router.get("/services/restart-history", tags=["services"])
-# @limiter.limit("30/minute")
 async def get_restart_history(
     request: Request,
     limit: int = 100,
@@ -170,7 +168,6 @@ async def get_restart_history(
 
 
 @router.post("/services/health-check", tags=["services"])
-# @limiter.limit("10/minute")
 async def trigger_health_check(
     request: Request,
     service_names: Optional[list[str]] = None,

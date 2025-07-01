@@ -29,8 +29,6 @@ security:
     - "https://api.docaiche.example.com"
   
   # Stricter security settings
-  rate_limit_requests: 100
-  rate_limit_window: 60
   max_auth_failures: 3
   auth_failure_lockout_time: 600
 

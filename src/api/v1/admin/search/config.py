@@ -7,9 +7,10 @@ Core search configuration management endpoints.
 
 from typing import List, Dict, Any
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Depends, Body
+from fastapi import APIRouter, HTTPException, Depends, Body, Query
 from fastapi.responses import JSONResponse
 import logging
+import json
 
 from .models import (
     SearchConfigRequest,
@@ -23,6 +24,8 @@ from .models import (
     ErrorResponse
 )
 from src.mcp.core import SearchConfiguration
+from ..dependencies import get_database_manager
+from src.database.connection import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +46,6 @@ async def get_search_configuration():
     
     Returns the complete search system configuration including:
     - Queue management settings
-    - Rate limiting configuration
     - Timeout values
     - Performance thresholds
     - Resource limits
@@ -56,7 +58,6 @@ async def get_search_configuration():
         
         return SearchConfigResponse(
             queue_management=config.queue_management.dict(),
-            rate_limiting=config.rate_limiting.dict(),
             timeouts=config.timeouts.dict(),
             performance_thresholds=config.performance_thresholds.dict(),
             resource_limits=config.resource_limits.dict(),
@@ -120,9 +121,10 @@ async def update_search_configuration(
 
 @router.get("/history", response_model=List[ConfigChangeLog])
 async def get_configuration_history(
-    limit: int = 50,
-    offset: int = 0,
-    section: str = None
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    section: str = Query(None),
+    db_manager: DatabaseManager = Depends(get_database_manager)
 ):
     """
     Get configuration change history.
@@ -137,20 +139,43 @@ async def get_configuration_history(
     Supports filtering by configuration section and pagination.
     """
     try:
-        # TODO: Phase 2 - Load from audit log storage
-        # Mock response for now
-        return [
-            ConfigChangeLog(
-                id="change_001",
-                timestamp=datetime.utcnow(),
-                user="admin@example.com",
-                section="rate_limiting",
-                changes={"per_user_rate_limit": 120},
-                previous_values={"per_user_rate_limit": 60},
-                comment="Increased rate limit for premium users"
-            )
-        ]
-    except Exception as e:
+        # Build query with optional section filter
+        if section:
+            query = """
+                SELECT id, timestamp, user, section, changes, previous_values, comment
+                FROM configuration_audit_log 
+                WHERE section = ?
+                ORDER BY timestamp DESC 
+                LIMIT ? OFFSET ?
+            """
+            params = (section, limit, offset)
+        else:
+            query = """
+                SELECT id, timestamp, user, section, changes, previous_values, comment
+                FROM configuration_audit_log 
+                ORDER BY timestamp DESC 
+                LIMIT ? OFFSET ?
+            """
+            params = (limit, offset)
+        
+        results = await db_manager.fetch_all(query, params)
+        
+        # Convert results to ConfigChangeLog models
+        audit_logs = []
+        for row in results:
+            audit_logs.append(ConfigChangeLog(
+                id=row["id"],
+                timestamp=datetime.fromisoformat(row["timestamp"]) if isinstance(row["timestamp"], str) else row["timestamp"],
+                user=row["user"],
+                section=row["section"],
+                changes=json.loads(row["changes"]) if isinstance(row["changes"], str) else row["changes"],
+                previous_values=json.loads(row["previous_values"]) if isinstance(row["previous_values"], str) else row["previous_values"],
+                comment=row["comment"]
+            ))
+        
+        return audit_logs
+        
+w    except Exception as e:
         logger.error(f"Failed to get configuration history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
