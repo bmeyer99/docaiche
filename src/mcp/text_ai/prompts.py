@@ -6,7 +6,7 @@ Manages all 10 decision prompt templates with version control
 and variable validation.
 """
 
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional, Set, Tuple
 from datetime import datetime
 from enum import Enum
 from abc import ABC, abstractmethod

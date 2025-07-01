@@ -9,6 +9,7 @@ the MCP search workflow.
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, Tuple
 import logging
+import re
 
 from ..core.models import NormalizedQuery, VectorSearchResults, EvaluationResult
 from .models import (
