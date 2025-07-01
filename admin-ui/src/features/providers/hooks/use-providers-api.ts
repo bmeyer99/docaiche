@@ -124,8 +124,17 @@ export function useProvidersApi() {
   // Get available models for a provider
   const getProviderModels = useCallback(async (providerId: string): Promise<Model[]> => {
     try {
-      const response = await apiClient.get<string[]>(`/providers/${providerId}/models`)
-      return response.map(name => ({
+      const response = await apiClient.get<{
+        provider: string
+        models: string[]
+        queryable: boolean
+        default_count?: number
+        custom_count?: number
+      }>(`/providers/${providerId}/models`)
+      
+      // Extract models array from response object
+      const models = response.models || []
+      return models.map(name => ({
         id: name,
         name: name,
         displayName: name

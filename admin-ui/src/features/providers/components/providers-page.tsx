@@ -39,8 +39,8 @@ export function ProvidersPage() {
   
   // Local UI state only
   const [activeStep, setActiveStep] = useState<ProvidersPageState['activeStep']>('select')
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<ProviderCategory>('cloud')
+  const [selectedProvider, setSelectedProvider] = useState<string | null>('ollama')
+  const [selectedCategory, setSelectedCategory] = useState<ProviderCategory>('local')
   const [isTestingConnection, setIsTestingConnection] = useState(false)
   const [testResults, setTestResults] = useState<Map<string, any>>(new Map())
   const [availableModels, setAvailableModels] = useState<Map<string, Model[]>>(new Map())
@@ -176,8 +176,14 @@ export function ProvidersPage() {
       const result = await testProviderConnection(selectedProvider)
       
       setTestResults(prev => new Map(prev).set(selectedProvider, result))
-      setIsTestingConnection(false)
-      setActiveStep(result.success ? 'models' : 'test')
+      
+      // Backend automatically saves configuration and models on successful test
+      if (result.success) {
+        setActiveStep('models')
+        console.log('✅ Test successful - backend auto-saved configuration and models')
+      } else {
+        setActiveStep('test')
+      }
       
       // Load models if test was successful and provider is queryable
       if (result.success && result.availableModels) {
@@ -186,6 +192,8 @@ export function ProvidersPage() {
           result.availableModels!
         ))
       }
+      
+      setIsTestingConnection(false)
       
       // Update provider status in global state
       updateProvider(selectedProvider, {

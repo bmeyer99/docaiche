@@ -1,3 +1,4 @@
+```mermaid
 sequenceDiagram
     autonumber
     participant User
@@ -65,3 +66,4 @@ sequenceDiagram
     Backend-->>Browser: Send configurations
     Browser->>Browser: Update state & render UI
     Browser-->>User: Display providers & current settings
+```

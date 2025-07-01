@@ -38,20 +38,61 @@ interface CircuitBreakerState {
   nextAttemptTime: number;
 }
 
+// Retry state for tracking ongoing retries with user feedback
+interface RetryState {
+  isRetrying: boolean;
+  nextRetryTime: number;
+  retryCount: number;
+  toastId?: string;
+}
+
 // API Client Class
 export class DocaicheApiClient {
   private baseUrl: string;
   private defaultHeaders: Record<string, string>;
   private circuitBreaker: Map<string, CircuitBreakerState> = new Map();
-  private readonly CIRCUIT_BREAKER_THRESHOLD = 5;
+  private retryStates: Map<string, RetryState> = new Map();
+  private toastCallbacks: {
+    showToast?: (message: string, type: 'info' | 'error' | 'warning', options?: { id?: string; duration?: number }) => void;
+    updateToast?: (id: string, message: string, type: 'info' | 'error' | 'warning') => void;
+    dismissToast?: (id: string) => void;
+  } = {};
+  private readonly CIRCUIT_BREAKER_THRESHOLD = 3; // Reduced threshold
   private readonly CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds
   private readonly CIRCUIT_BREAKER_RESET_TIMEOUT = 60000; // 1 minute
+  private readonly RETRY_DELAY = 30000; // 30 seconds between retries
+  private readonly MAX_RETRIES = 3;
 
   constructor() {
     this.baseUrl = '/api/v1';
     this.defaultHeaders = {
       'Content-Type': 'application/json',
     };
+  }
+
+  /**
+   * Register toast callbacks for user feedback during retries
+   */
+  setToastCallbacks(callbacks: {
+    showToast?: (message: string, type: 'info' | 'error' | 'warning', options?: { id?: string; duration?: number }) => void;
+    updateToast?: (id: string, message: string, type: 'info' | 'error' | 'warning') => void;
+    dismissToast?: (id: string) => void;
+  }): void {
+    this.toastCallbacks = callbacks;
+  }
+
+  /**
+   * Format time remaining until next retry in HH:MM:SS format
+   */
+  private formatTimeRemaining(timestamp: number): string {
+    const now = Date.now();
+    const remaining = Math.max(0, timestamp - now);
+    const seconds = Math.floor(remaining / 1000);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
   /**
@@ -112,7 +153,7 @@ export class DocaicheApiClient {
   }
 
   /**
-   * Generic HTTP request method with retry logic and error handling
+   * Generic HTTP request method with controlled retry logic and user feedback
    */
   private async request<T>(
     endpoint: string,
@@ -121,12 +162,22 @@ export class DocaicheApiClient {
     // Check circuit breaker
     if (this.checkCircuitBreaker(endpoint)) {
       throw this.createApiError(
-        'Circuit Breaker Open',
-        `Circuit breaker is open for endpoint: ${endpoint}. Too many recent failures.`
+        'Service Unavailable',
+        `Backend service is temporarily unavailable. Please try again later.`
       );
     }
 
-    const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = Math.min(API_CONFIG.RETRY.MAX_ATTEMPTS, 3), signal: externalSignal, ...fetchOptions } = options;
+    // Check if this endpoint is already in a retry state
+    const retryState = this.retryStates.get(endpoint);
+    if (retryState?.isRetrying && Date.now() < retryState.nextRetryTime) {
+      const timeRemaining = this.formatTimeRemaining(retryState.nextRetryTime);
+      throw this.createApiError(
+        'Retry In Progress',
+        `Connection lost. Retrying in ${timeRemaining}. Please wait.`
+      );
+    }
+
+    const { timeout = API_CONFIG.TIMEOUTS.DEFAULT, retries = 1, signal: externalSignal, ...fetchOptions } = options;
     let lastError: Error = new Error('Unknown error');
     
     const url = `${this.baseUrl}${endpoint}`;
@@ -135,80 +186,248 @@ export class DocaicheApiClient {
       ...options.headers
     };
     
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      let timeoutId: NodeJS.Timeout | undefined;
-      let signalAbortHandler: (() => void) | undefined;
-      
-      try {
-        const controller = new AbortController();
-        timeoutId = setTimeout(() => controller.abort(), timeout);
+    // Single attempt first
+    let timeoutId: NodeJS.Timeout | undefined;
+    let signalAbortHandler: (() => void) | undefined;
+    
+    try {
+      const controller = new AbortController();
+      timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        // Handle external abort signal
-        if (externalSignal) {
-          // Check if already aborted
-          if (externalSignal.aborted) {
-            controller.abort(externalSignal.reason);
-          } else {
-            // Forward external signal to internal controller
-            signalAbortHandler = () => controller.abort(externalSignal.reason);
-            externalSignal.addEventListener('abort', signalAbortHandler);
-          }
-        }
-
-        const response = await fetch(url, {
-          ...fetchOptions,
-          headers,
-          signal: controller.signal
-        });
-
-        if (timeoutId) clearTimeout(timeoutId);
-        if (signalAbortHandler && externalSignal) {
-          externalSignal.removeEventListener('abort', signalAbortHandler);
-        }
-
-        // Handle response based on content type and status
-        const result = await this.handleResponse<T>(response);
-        this.recordSuccess(endpoint);
-        return result;
-
-      } catch (error) {
-        lastError = error as Error;
-        
-        // Cleanup timeout and signal handler
-        if (timeoutId) clearTimeout(timeoutId);
-        if (signalAbortHandler && externalSignal) {
-          externalSignal.removeEventListener('abort', signalAbortHandler);
-        }
-        
-        // Don't retry on certain errors
-        if (error instanceof TypeError || (error as Error).name === 'AbortError') {
-          this.recordFailure(endpoint);
-          throw this.createApiError('Network Error', (error as Error).message);
-        }
-
-        // For server errors (5xx), record failure and limit retries more aggressively
-        if (lastError.message.includes('500') || lastError.message.includes('502') || lastError.message.includes('503')) {
-          this.recordFailure(endpoint);
-          
-          // Break early for server errors to prevent overwhelming the server
-          if (attempt >= 2) {
-            break;
-          }
-        }
-
-        // Wait before retry (exponential backoff)
-        if (attempt < retries) {
-          const delay = Math.min(
-            API_CONFIG.RETRY.DELAY_MS * Math.pow(API_CONFIG.RETRY.BACKOFF_MULTIPLIER, attempt - 1),
-            10000 // Cap at 10 seconds
-          );
-          await new Promise(resolve => setTimeout(resolve, delay));
+      // Handle external abort signal
+      if (externalSignal) {
+        if (externalSignal.aborted) {
+          controller.abort(externalSignal.reason);
+        } else {
+          signalAbortHandler = () => controller.abort(externalSignal.reason);
+          externalSignal.addEventListener('abort', signalAbortHandler);
         }
       }
+
+      const response = await fetch(url, {
+        ...fetchOptions,
+        headers,
+        signal: controller.signal
+      });
+
+      if (timeoutId) clearTimeout(timeoutId);
+      if (signalAbortHandler && externalSignal) {
+        externalSignal.removeEventListener('abort', signalAbortHandler);
+      }
+
+      // Success - clear any retry state and circuit breaker
+      this.recordSuccess(endpoint);
+      this.clearRetryState(endpoint);
+      
+      return await this.handleResponse<T>(response);
+
+    } catch (error) {
+      lastError = error as Error;
+      
+      // Cleanup
+      if (timeoutId) clearTimeout(timeoutId);
+      if (signalAbortHandler && externalSignal) {
+        externalSignal.removeEventListener('abort', signalAbortHandler);
+      }
+      
+      // Don't retry on certain errors (user cancellation, etc.)
+      if (error instanceof TypeError && error.message.includes('aborted') || 
+          (error as Error).name === 'AbortError') {
+        throw this.createApiError('Request Cancelled', 'Request was cancelled');
+      }
+
+      // For network errors or server errors, initiate controlled retry with user feedback
+      if (this.shouldRetry(lastError, endpoint)) {
+        this.initializeRetryState(endpoint);
+        throw this.createApiError(
+          'Connection Lost',
+          'Lost connection to backend. Automatic retry scheduled.'
+        );
+      }
+
+      // Record failure and throw
+      this.recordFailure(endpoint);
+      throw this.createApiError('Request Failed', lastError.message);
+    }
+  }
+
+  /**
+   * Determine if an error should trigger the retry mechanism
+   */
+  private shouldRetry(error: Error, endpoint: string): boolean {
+    const retryState = this.retryStates.get(endpoint);
+    
+    // Don't retry if we've already exceeded max retries
+    if (retryState && retryState.retryCount >= this.MAX_RETRIES) {
+      return false;
     }
 
-    this.recordFailure(endpoint);
-    throw this.createApiError('Request Failed', `Failed after ${retries} attempts: ${lastError.message}`);
+    // Retry on network errors, timeouts, and server errors
+    return error.message.includes('fetch') || 
+           error.message.includes('network') ||
+           error.message.includes('timeout') ||
+           error.message.includes('500') ||
+           error.message.includes('502') ||
+           error.message.includes('503') ||
+           error.message.includes('504');
+  }
+
+  /**
+   * Initialize or update retry state for an endpoint
+   */
+  private initializeRetryState(endpoint: string): void {
+    const existing = this.retryStates.get(endpoint);
+    const retryCount = (existing?.retryCount || 0) + 1;
+    const nextRetryTime = Date.now() + this.RETRY_DELAY;
+    
+    const retryState: RetryState = {
+      isRetrying: true,
+      nextRetryTime,
+      retryCount,
+      toastId: existing?.toastId
+    };
+
+    this.retryStates.set(endpoint, retryState);
+    
+    // Show user feedback
+    this.showRetryToast(endpoint, retryState);
+    
+    // Schedule the actual retry
+    this.scheduleRetry(endpoint);
+  }
+
+  /**
+   * Clear retry state for an endpoint
+   */
+  private clearRetryState(endpoint: string): void {
+    const retryState = this.retryStates.get(endpoint);
+    if (retryState?.toastId && this.toastCallbacks.dismissToast) {
+      this.toastCallbacks.dismissToast(retryState.toastId);
+    }
+    this.retryStates.delete(endpoint);
+  }
+
+  /**
+   * Show toast notification about retry status
+   */
+  private showRetryToast(endpoint: string, retryState: RetryState): void {
+    if (!this.toastCallbacks.showToast) return;
+
+    const timeRemaining = this.formatTimeRemaining(retryState.nextRetryTime);
+    const message = `Backend disconnected. Retry ${retryState.retryCount}/${this.MAX_RETRIES} in ${timeRemaining}`;
+    
+    if (retryState.toastId && this.toastCallbacks.updateToast) {
+      this.toastCallbacks.updateToast(retryState.toastId, message, 'warning');
+    } else {
+      const toastId = `retry-${endpoint}-${Date.now()}`;
+      retryState.toastId = toastId;
+      this.toastCallbacks.showToast(message, 'warning', { 
+        id: toastId, 
+        duration: this.RETRY_DELAY + 5000 // Keep toast visible until after retry
+      });
+    }
+
+    // Update countdown every second
+    this.startCountdownUpdate(endpoint, retryState);
+  }
+
+  /**
+   * Update toast countdown every second
+   */
+  private startCountdownUpdate(endpoint: string, retryState: RetryState): void {
+    if (!retryState.toastId || !this.toastCallbacks.updateToast) return;
+
+    const updateInterval = setInterval(() => {
+      const currentState = this.retryStates.get(endpoint);
+      if (!currentState || !currentState.isRetrying) {
+        clearInterval(updateInterval);
+        return;
+      }
+
+      const timeRemaining = this.formatTimeRemaining(currentState.nextRetryTime);
+      const now = Date.now();
+      
+      if (now >= currentState.nextRetryTime) {
+        clearInterval(updateInterval);
+        if (this.toastCallbacks.updateToast && currentState.toastId) {
+          this.toastCallbacks.updateToast(
+            currentState.toastId,
+            `Retrying connection... (${currentState.retryCount}/${this.MAX_RETRIES})`,
+            'info'
+          );
+        }
+        return;
+      }
+
+      if (this.toastCallbacks.updateToast && currentState.toastId) {
+        const message = `Backend disconnected. Retry ${currentState.retryCount}/${this.MAX_RETRIES} in ${timeRemaining}`;
+        this.toastCallbacks.updateToast(currentState.toastId, message, 'warning');
+      }
+    }, 1000);
+  }
+
+  /**
+   * Schedule a retry for an endpoint
+   */
+  private scheduleRetry(endpoint: string): void {
+    const retryState = this.retryStates.get(endpoint);
+    if (!retryState) return;
+
+    const delay = retryState.nextRetryTime - Date.now();
+    
+    setTimeout(async () => {
+      const currentState = this.retryStates.get(endpoint);
+      if (!currentState || !currentState.isRetrying) return;
+
+      // Update toast to show retry is happening
+      if (currentState.toastId && this.toastCallbacks.updateToast) {
+        this.toastCallbacks.updateToast(
+          currentState.toastId,
+          `Retrying connection... (${currentState.retryCount}/${this.MAX_RETRIES})`,
+          'info'
+        );
+      }
+
+      try {
+        // Attempt the retry with minimal options to avoid recursion
+        const url = `${this.baseUrl}${endpoint}`;
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: this.defaultHeaders,
+          signal: AbortSignal.timeout(10000) // 10 second timeout for retry
+        });
+
+        if (response.ok) {
+          // Success - clear retry state
+          this.recordSuccess(endpoint);
+          this.clearRetryState(endpoint);
+          
+          if (this.toastCallbacks.showToast) {
+            this.toastCallbacks.showToast('Connection restored!', 'info', { duration: 3000 });
+          }
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        // Retry failed
+        if (currentState.retryCount >= this.MAX_RETRIES) {
+          // Max retries reached
+          this.recordFailure(endpoint);
+          this.clearRetryState(endpoint);
+          
+          if (this.toastCallbacks.showToast) {
+            this.toastCallbacks.showToast(
+              `Connection failed after ${this.MAX_RETRIES} attempts. Please check your connection.`,
+              'error',
+              { duration: 10000 }
+            );
+          }
+        } else {
+          // Schedule next retry
+          this.initializeRetryState(endpoint);
+        }
+      }
+    }, Math.max(0, delay));
   }
 
   /**

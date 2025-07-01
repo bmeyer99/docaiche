@@ -16,7 +16,7 @@ const baseConfigSchema = z.object({
 const providerSchemas = {
   // Local providers
   ollama: z.object({
-    baseUrl: httpUrlSchema.default('http://localhost:11434')
+    baseUrl: httpUrlSchema.default('http://localhost:11434/api')
   }).merge(baseConfigSchema),
   
   lmstudio: z.object({
@@ -96,7 +96,7 @@ export function getProviderDefaults(providerId: string): Record<string, any> {
   // Provider-specific defaults
   switch (providerId) {
     case 'ollama':
-      defaults.baseUrl = 'http://localhost:11434'
+      defaults.baseUrl = 'http://localhost:11434/api'
       break
     case 'lmstudio':
       defaults.baseUrl = 'http://localhost:1234'
@@ -141,7 +141,7 @@ export function getProviderFields(providerId: string) {
         name: 'baseUrl',
         label: 'Base URL',
         type: 'text',
-        placeholder: 'http://localhost:11434',
+        placeholder: 'http://localhost:11434/api',
         description: 'Ollama server URL'
       }
     ],

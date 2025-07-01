@@ -34,18 +34,29 @@ export function ConfigurationPanel({
   // Initialize form with provider-specific schema and defaults
   const form = useForm<ProviderFormData>({
     resolver: provider ? zodResolver(getProviderSchema(provider.id)) : undefined,
-    defaultValues: configuration || (provider ? getProviderDefaults(provider.id) : {})
+    defaultValues: provider ? {
+      ...getProviderDefaults(provider.id),
+      ...configuration
+    } : {}
   })
   
-  // Update form when provider changes (not configuration to avoid loops)
+  // Update form when provider changes or configuration changes
   useEffect(() => {
     if (provider) {
       const defaults = getProviderDefaults(provider.id)
-      const values = configuration || defaults
+      const values = {
+        ...defaults,
+        ...configuration
+      }
       form.reset(values)
       setSaveError(null) // Clear errors on provider change
+      
+      // Force validation to clear any stale errors
+      setTimeout(() => {
+        form.trigger()
+      }, 100)
     }
-  }, [provider?.id]) // Removed configuration dependency to prevent loops
+  }, [provider?.id, configuration, form]) // Include configuration and form to ensure proper updates
   
   // Handle form submission with error handling
   const handleSubmit = async (data: ProviderFormData) => {
@@ -156,13 +167,24 @@ export function ConfigurationPanel({
             
             {/* Test result display */}
             {testResult && (
-              <Alert variant={testResult.success ? 'default' : 'destructive'}>
+              <Alert variant={testResult.success ? 'default' : 'destructive'} className={testResult.success ? 'border-green-200 bg-green-50' : ''}>
                 {testResult.success ? (
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
                 ) : (
                   <XCircle className="h-4 w-4" />
                 )}
-                <AlertDescription>{testResult.message}</AlertDescription>
+                <AlertDescription className={testResult.success ? 'text-green-800' : ''}>
+                  {testResult.success ? (
+                    <>
+                      <strong>✅ Connection Successful!</strong><br />
+                      {testResult.message}
+                      <br />
+                      <em>Configuration and available models have been saved automatically.</em>
+                    </>
+                  ) : (
+                    testResult.message
+                  )}
+                </AlertDescription>
               </Alert>
             )}
             
@@ -191,19 +213,7 @@ export function ConfigurationPanel({
                   'Test Connection'
                 )}
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isTestingConnection || isSaving || !form.formState.isDirty}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Configuration'
-                )}
-              </Button>
+              {/* Save Configuration button removed - auto-saves on successful test */}
             </div>
           </form>
         </Form>
