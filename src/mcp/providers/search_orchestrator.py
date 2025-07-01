@@ -283,10 +283,18 @@ class ExternalSearchOrchestrator:
         Returns:
             List of selected providers
         """
-        available_providers = await self.provider_registry.get_healthy_providers()
+        # Get healthy provider IDs
+        available_provider_ids = self.provider_registry.list_providers(active_only=True, healthy_only=True)
         
-        if not available_providers:
+        if not available_provider_ids:
             return []
+        
+        # Get actual provider objects
+        available_providers = []
+        for provider_id in available_provider_ids:
+            provider = self.provider_registry.get_provider(provider_id)
+            if provider:
+                available_providers.append(provider)
         
         # Filter by specified provider IDs
         if provider_ids:

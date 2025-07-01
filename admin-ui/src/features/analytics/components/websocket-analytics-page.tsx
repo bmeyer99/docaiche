@@ -69,7 +69,7 @@ export default function WebSocketAnalyticsPage() {
       {/* Header with WebSocket Status */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">TEST CHANGES WORKING - DocAIche Dashboard</h1>
+          <h1 className="text-3xl font-bold">DocAIche Dashboard</h1>
           <p className="text-muted-foreground">
             Real-time system monitoring and analytics
           </p>
@@ -145,17 +145,10 @@ export default function WebSocketAnalyticsPage() {
                 }
               });
               
-              // TEST - Add visible test marker
-              console.log('FRONTEND CHANGES ACTIVE - TEST MARKER');
-              console.log('API Endpoints found:', apiEndpoints.length);
-              console.log('API Core services:', serviceGroups.infrastructure.services.map(s => s.component));
-              
               // Add API endpoints data to the API Core service if it exists
               const apiCoreIndex = serviceGroups.infrastructure.services.findIndex(s => s.component === 'api_core');
-              console.log('API Core index:', apiCoreIndex);
               if (apiCoreIndex !== -1) {
                 serviceGroups.infrastructure.services[apiCoreIndex].endpoints = apiEndpoints;
-                console.log('Added endpoints to API Core:', apiEndpoints.length);
               }
 
               // Helper function to get status color
@@ -239,7 +232,7 @@ export default function WebSocketAnalyticsPage() {
                                   
                                   {/* Show API endpoints as small badges if this is API Core */}
                                   {component === 'api_core' && endpoints && endpoints.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
+                                    <div className="flex flex-wrap gap-3 mt-2 text-xs">
                                       {endpoints.map(({ component: endpointComponent, health: endpointHealth }: any) => {
                                         const endpointName = endpointComponent
                                           .replace('api_endpoint_', '')
@@ -247,19 +240,25 @@ export default function WebSocketAnalyticsPage() {
                                           .split('/')
                                           .pop() || 'unknown';
                                         
+                                        const isHealthy = endpointHealth.status === 'healthy';
+                                        const hasTimeout = endpointHealth.message && endpointHealth.message.toLowerCase().includes('timeout');
+                                        const hasConnectionError = endpointHealth.message && endpointHealth.message.toLowerCase().includes('connection');
+                                        const hasError = hasTimeout || hasConnectionError;
+                                        
                                         return (
-                                          <Badge 
+                                          <span 
                                             key={endpointComponent}
-                                            variant="outline" 
-                                            className={`text-xs px-1.5 py-0.5 ${
-                                              endpointHealth.status === 'healthy' ? 'border-green-300 text-green-700' :
-                                              endpointHealth.status === 'degraded' ? 'border-yellow-300 text-yellow-700' :
-                                              'border-red-300 text-red-700'
-                                            }`}
-                                            title={`${endpointName}: ${endpointHealth.message} (${endpointHealth.response_time || 0}ms)`}
+                                            title={`${endpointName}: ${endpointHealth.message}`}
                                           >
-                                            {endpointName}
-                                          </Badge>
+                                            {isHealthy && !hasError ? (
+                                              <>
+                                                <span className="text-muted-foreground">{endpointName}</span>
+                                                <span className="text-green-600 font-medium ml-1">{endpointHealth.response_time || 0}ms</span>
+                                              </>
+                                            ) : (
+                                              <span className="text-red-600">{endpointName}</span>
+                                            )}
+                                          </span>
                                         );
                                       })}
                                     </div>

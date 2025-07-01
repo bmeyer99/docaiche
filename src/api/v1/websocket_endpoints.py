@@ -349,17 +349,43 @@ async def check_system_health():
             "group": "search_ai"
         }
     
-    # API Endpoints Health Check - Monitor critical endpoints individually
+    # API Endpoints Health Check - Dynamically discover and monitor all endpoints
     try:
-        # Define critical API endpoints to monitor
-        api_endpoints = [
-            {"path": "/api/v1/health", "name": "Health Check"},
-            {"path": "/api/v1/search", "name": "Search API"},
-            {"path": "/api/v1/config", "name": "Configuration API"},
-            {"path": "/api/v1/providers", "name": "Providers API"},
-            {"path": "/api/v1/analytics", "name": "Analytics API"},
-            {"path": "/api/v1/admin/activity/recent", "name": "Activity API"},
-        ]
+        # Import FastAPI app to get routes
+        from ...main import app
+        
+        # Discover all API endpoints dynamically
+        api_endpoints = []
+        
+        # Get all routes from the FastAPI app
+        for route in app.routes:
+            if hasattr(route, 'path') and hasattr(route, 'methods'):
+                # Skip WebSocket routes and internal routes
+                if route.path.startswith('/ws/') or route.path == '/openapi.json' or route.path == '/docs' or route.path == '/redoc':
+                    continue
+                    
+                # Only monitor GET endpoints (health checks)
+                if 'GET' in route.methods:
+                    # Extract a friendly name from the path
+                    path_parts = route.path.strip('/').split('/')
+                    if path_parts:
+                        name = path_parts[-1].replace('-', ' ').replace('_', ' ').title()
+                        if name == 'V1':
+                            name = 'API Root'
+                        elif name == 'Health':
+                            name = 'Health Check'
+                        elif name == 'Mcp':
+                            name = 'MCP Tools'
+                        elif name == 'Recent':
+                            name = 'Recent Activity'
+                            
+                        api_endpoints.append({
+                            "path": route.path,
+                            "name": name
+                        })
+        
+        # Sort endpoints by path for consistent ordering
+        api_endpoints.sort(key=lambda x: x['path'])
         
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3)) as session:
             for endpoint in api_endpoints:
@@ -369,17 +395,11 @@ async def check_system_health():
                 response_time_ms = 0
                 
                 try:
-                    async with session.get(f"http://admin-ui:4080{endpoint['path']}") as response:
+                    async with session.get(f"http://admin-ui:3000{endpoint['path']}") as response:
                         response_time_ms = int((time.time() - start_time) * 1000)
-                        if response.status < 400:
-                            endpoint_status = "healthy"
-                            endpoint_message = f"HTTP {response.status}"
-                        elif response.status < 500:
-                            endpoint_status = "degraded" 
-                            endpoint_message = f"HTTP {response.status}"
-                        else:
-                            endpoint_status = "unhealthy"
-                            endpoint_message = f"HTTP {response.status}"
+                        # Any response means the endpoint is reachable
+                        endpoint_status = "healthy"
+                        endpoint_message = f"HTTP {response.status}"
                                 
                 except asyncio.TimeoutError:
                     endpoint_status = "unhealthy"

@@ -234,6 +234,7 @@ class ConfigurationManager:
                 AIConfig,
                 OllamaConfig,
                 OpenAIConfig,
+                MCPConfig,
             )
 
             # Build configuration sections with defaults
@@ -270,6 +271,12 @@ class ConfigurationManager:
                 openai=openai_config,
             )
 
+            # Build MCP configuration
+            mcp_config = None
+            if "mcp" in config_dict:
+                logger.info(f"Building MCP config from: {config_dict['mcp']}")
+                mcp_config = MCPConfig(**config_dict.get("mcp", {}))
+
             # Create complete system configuration
             system_config = SystemConfiguration(
                 app=app_config,
@@ -279,6 +286,7 @@ class ConfigurationManager:
                 scraping=scraping_config,
                 redis=redis_config,
                 ai=ai_config,
+                mcp=mcp_config,
             )
 
             return system_config

@@ -69,6 +69,9 @@ class ConfigurationLoader:
             # Step 2: Load and merge YAML configuration (medium priority)
             yaml_config = await self._load_yaml_configuration()
             if yaml_config:
+                # Debug: Log if MCP config exists in YAML
+                if 'mcp' in yaml_config:
+                    logger.info(f"MCP configuration found in YAML: {yaml_config['mcp']}")
                 self._deep_merge_dictionaries(config_dict, yaml_config)
 
             # Step 3: Load and merge environment variables (highest priority)
@@ -78,6 +81,9 @@ class ConfigurationLoader:
                     apply_nested_override(config_dict, key, value)
 
             # Validate and build final configuration
+            logger.info(f"Final config_dict keys before building: {list(config_dict.keys())}")
+            if 'mcp' in config_dict:
+                logger.info(f"MCP in final config_dict: {config_dict['mcp']}")
             system_config = self._build_system_configuration(config_dict)
 
             logger.info("Hierarchical configuration loading completed successfully")
@@ -228,6 +234,7 @@ class ConfigurationLoader:
                 AIConfig,
                 OllamaConfig,
                 OpenAIConfig,
+                MCPConfig,
             )
 
             # Build individual configuration sections with fallback defaults
@@ -262,6 +269,14 @@ class ConfigurationLoader:
                 openai=openai_config,
             )
 
+            # Build MCP configuration
+            from .models import MCPConfig
+            mcp_config = None
+            if "mcp" in config_dict:
+                mcp_data = config_dict.get("mcp", {})
+                logger.info(f"MCP data from YAML: {mcp_data}")
+                mcp_config = MCPConfig(**mcp_data)
+            
             # Create complete system configuration
             return SystemConfiguration(
                 app=app_config,
@@ -271,6 +286,7 @@ class ConfigurationLoader:
                 scraping=scraping_config,
                 redis=redis_config,
                 ai=ai_config,
+                mcp=mcp_config if mcp_config else MCPConfig(),
             )
 
         except ValidationError as e:

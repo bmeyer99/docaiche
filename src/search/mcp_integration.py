@@ -143,8 +143,8 @@ class MCPSearchEnhancer:
             await self._init_external_orchestrator()
         
         if not self._external_orchestrator:
-            logger.warning("External search orchestrator not available")
-            return []
+            logger.warning("External search orchestrator not available, falling back to simple search")
+            return await self._execute_simple_external_search(query, provider_ids)
         
         try:
             # Execute optimized search
@@ -205,8 +205,13 @@ class MCPSearchEnhancer:
                 enable_stats=True
             )
             
-            # Create provider registry
+            # Create provider registry and register our providers
             provider_registry = ProviderRegistry()
+            
+            # Register all external providers to the registry
+            for provider_id, provider in self.external_providers.items():
+                provider_registry.register_provider(provider_id, provider)
+                logger.info(f"Registered {provider_id} to external orchestrator registry")
             
             # Initialize orchestrator
             self._external_orchestrator = ExternalSearchOrchestrator(
@@ -238,15 +243,18 @@ class MCPSearchEnhancer:
         Returns:
             Simple search results
         """
+        logger.info(f"Executing simple external search for: {query}, providers: {provider_ids}")
         results = []
         
         # Get providers to use
         providers_to_use = self.external_providers
+        logger.info(f"Available providers: {list(self.external_providers.keys())}")
         if provider_ids:
             providers_to_use = {
                 pid: p for pid, p in self.external_providers.items()
                 if pid in provider_ids
             }
+            logger.info(f"Using filtered providers: {list(providers_to_use.keys())}")
         
         # Execute searches
         for provider_id, provider in providers_to_use.items():
@@ -306,29 +314,64 @@ def create_mcp_enhancer(
     Returns:
         Configured MCPSearchEnhancer instance
     """
+    print(f"MCP DEBUG: create_mcp_enhancer called with enable_external_providers={enable_external_providers}")
+    logger.info(f"MCP DEBUG: create_mcp_enhancer called with enable_external_providers={enable_external_providers}")
     enhancer = MCPSearchEnhancer(llm_client, query_analyzer)
     
     if enable_external_providers:
+        print("MCP DEBUG: enable_external_providers is True, starting provider registration")
+        logger.info("MCP DEBUG: enable_external_providers is True, starting provider registration")
         # Import and register MCP providers with real configuration
         try:
+            print("MCP DEBUG: Starting imports...")
             from src.mcp.providers.implementations.brave import BraveSearchProvider
+            print("MCP DEBUG: Imported BraveSearchProvider")
             from src.mcp.providers.implementations.duckduckgo import DuckDuckGoSearchProvider
+            print("MCP DEBUG: Imported DuckDuckGoSearchProvider")
             from src.mcp.providers.models import ProviderConfig, ProviderType
+            print("MCP DEBUG: Imported models")
             from src.core.config import get_system_configuration
             import os
+            print("MCP DEBUG: All imports successful")
             
             # Get configuration
             config = get_system_configuration()
+            print(f"MCP DEBUG: Full config type: {type(config)}")
+            print(f"MCP DEBUG: Config attributes: {dir(config) if config else 'None'}")
+            
+            # Try to access MCP config directly from the raw dict
+            if config and hasattr(config, '__dict__'):
+                print(f"MCP DEBUG: Config dict keys: {list(config.__dict__.keys())}")
+                print(f"MCP DEBUG: mcp value: {config.__dict__.get('mcp', 'NOT FOUND')}")
+            
             mcp_config = getattr(config, 'mcp', None) if config else None
-            providers_config = getattr(mcp_config, 'external_search', {}).get('providers', {}) if mcp_config else {}
+            print(f"MCP DEBUG: mcp_config value: {mcp_config}")
+            
+            # Handle the case where mcp_config might be None
+            if mcp_config and hasattr(mcp_config, 'external_search'):
+                external_search = mcp_config.external_search
+                providers_config = external_search.providers if hasattr(external_search, 'providers') else {}
+            else:
+                providers_config = {}
+            
+            print(f"MCP DEBUG: Config loaded - mcp_config exists: {mcp_config is not None}")
+            print(f"MCP DEBUG: providers_config: {providers_config}")
             
             registered_count = 0
             
             # Register Brave Search if enabled and API key available
             brave_config = providers_config.get('brave_search', {})
             if brave_config.get('enabled', False):
-                brave_api_key = os.getenv('BRAVE_API_KEY') or brave_config.get('api_key', '').replace('${BRAVE_API_KEY}', '')
-                if brave_api_key and brave_api_key != '${BRAVE_API_KEY}':
+                brave_api_key = os.getenv('BRAVE_API_KEY')
+                if not brave_api_key:
+                    config_key = brave_config.get('api_key', '')
+                    # Only use config key if it's not an environment variable placeholder
+                    if config_key and config_key != '${BRAVE_API_KEY}':
+                        brave_api_key = config_key
+                    else:
+                        brave_api_key = None
+                
+                if brave_api_key:
                     provider_config = ProviderConfig(
                         provider_id="brave_search",
                         provider_type=ProviderType.BRAVE,
@@ -353,7 +396,7 @@ def create_mcp_enhancer(
                     provider_id="duckduckgo",
                     provider_type=ProviderType.DUCKDUCKGO,
                     enabled=True,
-                    api_key="",  # Not required
+                    api_key=None,  # DuckDuckGo doesn't need API key
                     priority=ddg_config.get('priority', 3),
                     max_requests_per_minute=ddg_config.get('max_requests_per_minute', 30),
                     timeout_seconds=ddg_config.get('timeout_seconds', 4),

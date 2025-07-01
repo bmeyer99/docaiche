@@ -71,6 +71,7 @@ class DuckDuckGoSearchProvider(SearchProvider):
     
     async def search(self, options: SearchOptions) -> SearchResults:
         """Execute search using DuckDuckGo."""
+        logger.info(f"DuckDuckGo search called with query: {options.query}")
         if not self.session:
             self.session = aiohttp.ClientSession()
         
@@ -104,6 +105,7 @@ class DuckDuckGoSearchProvider(SearchProvider):
             # Note: HTML parsing would be needed here
             # This is a placeholder implementation
             logger.warning("DuckDuckGo provider returns mock results - HTML parsing not implemented")
+            logger.info("Returning mock result for testing")
             
             return SearchResults(
                 results=[
@@ -112,6 +114,7 @@ class DuckDuckGoSearchProvider(SearchProvider):
                         url="https://example.com",
                         snippet="This is a placeholder result. Implement HTML parsing for real results.",
                         content_type=SearchResultType.WEB_PAGE,
+                        source_domain="example.com",
                         provider_rank=1
                     )
                 ],

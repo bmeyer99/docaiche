@@ -545,6 +545,7 @@ async def external_search(
     start_time = time.time()
     
     try:
+        logger.info(f"[{trace_id}] MCP external search endpoint called")
         logger.info(f"[{trace_id}] Executing external search: {search_request.query[:50]}...")
         
         # Get MCP enhancer from orchestrator

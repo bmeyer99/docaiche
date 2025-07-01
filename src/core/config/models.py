@@ -331,6 +331,36 @@ class EnrichmentConfig(BaseModel):
     )
 
 
+class MCPProviderConfig(BaseModel):
+    """MCP external search provider configuration"""
+    
+    enabled: bool = Field(True, description="Whether provider is enabled")
+    api_key: Optional[str] = Field(None, description="API key if required")
+    priority: int = Field(100, description="Provider priority (lower = higher priority)")
+    max_requests_per_minute: int = Field(60, description="Rate limit")
+    timeout_seconds: float = Field(5.0, description="Request timeout")
+    search_engine_id: Optional[str] = Field(None, description="Google search engine ID")
+
+
+class MCPExternalSearchConfig(BaseModel):
+    """MCP external search configuration"""
+    
+    enabled: bool = Field(True, description="Enable external search providers")
+    providers: Dict[str, MCPProviderConfig] = Field(
+        default_factory=dict,
+        description="External search provider configurations"
+    )
+
+
+class MCPConfig(BaseModel):
+    """MCP (Model Context Protocol) configuration"""
+    
+    external_search: MCPExternalSearchConfig = Field(
+        default_factory=MCPExternalSearchConfig,
+        description="External search provider configuration"
+    )
+
+
 class SystemConfiguration(BaseModel):
     """Top-level configuration object combining all config sections"""
 
@@ -342,6 +372,7 @@ class SystemConfiguration(BaseModel):
     redis: RedisConfig
     ai: AIConfig
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
+    mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP configuration")
 
     model_config = {
         # Allow population by field name or alias
