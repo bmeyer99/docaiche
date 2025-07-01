@@ -5,7 +5,6 @@
 import React from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { ProviderSettingsProvider } from '../context';
-import { ProviderTestProvider } from '../../use-provider-test-cache';
 import { ApiClientProvider } from '@/components/providers/api-client-provider';
 
 interface TestWrapperProps {
@@ -15,11 +14,9 @@ interface TestWrapperProps {
 export function TestWrapper({ children }: TestWrapperProps) {
   return (
     <ApiClientProvider>
-      <ProviderTestProvider>
-        <ProviderSettingsProvider>
-          {children}
-        </ProviderSettingsProvider>
-      </ProviderTestProvider>
+      <ProviderSettingsProvider>
+        {children}
+      </ProviderSettingsProvider>
     </ApiClientProvider>
   );
 }

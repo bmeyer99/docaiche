@@ -1,6 +1,17 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 
+// Polyfill fetch for tests
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    json: async () => ({}),
+    text: async () => '',
+    headers: new Headers(),
+  })
+)
+
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter() {

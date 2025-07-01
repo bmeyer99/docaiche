@@ -82,7 +82,7 @@ export function ProvidersPage() {
       provider: globalModelSelection.embeddings?.provider || null,
       model: globalModelSelection.embeddings?.model || null
     },
-    useSharedProvider: globalModelSelection.useSharedProvider || false
+    useSharedProvider: globalModelSelection.sharedProvider || false
   }), [globalModelSelection])
   
   // Computed values
@@ -106,7 +106,7 @@ export function ProvidersPage() {
 
   // Load models for configured providers
   useEffect(() => {
-    let mounted = true
+    const abortController = new AbortController()
     
     const loadModels = async () => {
       const configuredProviders = providers.filter(p => p.configured && p.status === 'configured')
@@ -115,19 +115,27 @@ export function ProvidersPage() {
       // Batch load models to improve performance
       const modelPromises = configuredProviders.map(async (provider) => {
         try {
+          // Check if aborted before making the call
+          if (abortController.signal.aborted) return null
+          
           const models = await getProviderModels(provider.id)
           return { providerId: provider.id, models }
-        } catch {
+        } catch (error) {
+          // Ignore abort errors
+          if (error instanceof Error && error.name === 'AbortError') return null
           return { providerId: provider.id, models: [] }
         }
       })
       
       const modelResults = await Promise.all(modelPromises)
       
-      if (!mounted) return
+      // Check if aborted before updating state
+      if (abortController.signal.aborted) return
       
       for (const result of modelResults) {
-        newAvailableModels.set(result.providerId, result.models)
+        if (result) {
+          newAvailableModels.set(result.providerId, result.models)
+        }
       }
       
       setAvailableModels(newAvailableModels)
@@ -136,7 +144,7 @@ export function ProvidersPage() {
     loadModels()
     
     return () => {
-      mounted = false
+      abortController.abort()
     }
   }, [providers, getProviderModels])
 
@@ -210,9 +218,15 @@ export function ProvidersPage() {
   const handleModelSelectionChange = (selection: LocalModelSelection) => {
     // Update global model selection
     updateModelSelection({
-      textGeneration: selection.textGeneration,
-      embeddings: selection.embeddings,
-      useSharedProvider: selection.useSharedProvider
+      textGeneration: {
+        provider: selection.textGeneration.provider || '',
+        model: selection.textGeneration.model || ''
+      },
+      embeddings: {
+        provider: selection.embeddings.provider || '',
+        model: selection.embeddings.model || ''
+      },
+      sharedProvider: selection.useSharedProvider
     })
   }
 
