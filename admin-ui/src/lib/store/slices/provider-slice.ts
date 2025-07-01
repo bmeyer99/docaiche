@@ -69,12 +69,9 @@ const defaultProviderState: ProviderState['providers'] = {
   error: null,
 };
 
-export const createProviderSlice: StateCreator<
-  ProviderSlice,
-  [["zustand/immer", never]],
-  [],
-  ProviderSlice
-> = (set, get) => ({
+import type { ImmerStateCreator } from '../store-types';
+
+export const createProviderSlice: ImmerStateCreator<ProviderSlice> = (set, get) => ({
   providers: defaultProviderState,
 
   // Provider configuration actions

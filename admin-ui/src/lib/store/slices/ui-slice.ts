@@ -68,12 +68,9 @@ const generateNotificationId = () => {
   return `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-export const createUISlice: StateCreator<
-  UISlice,
-  [["zustand/immer", never]],
-  [],
-  UISlice
-> = (set, get) => ({
+import type { ImmerStateCreator } from '../store-types';
+
+export const createUISlice: ImmerStateCreator<UISlice> = (set, get) => ({
   ui: defaultUIState,
 
   // Sidebar actions

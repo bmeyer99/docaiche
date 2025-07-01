@@ -55,12 +55,9 @@ const defaultRealtimeState: RealtimeState['realtime'] = {
   wsInstance: null,
 };
 
-export const createRealtimeSlice: StateCreator<
-  RealtimeSlice,
-  [["zustand/immer", never]],
-  [],
-  RealtimeSlice
-> = (set, get) => ({
+import type { ImmerStateCreator } from '../store-types';
+
+export const createRealtimeSlice: ImmerStateCreator<RealtimeSlice> = (set, get) => ({
   realtime: defaultRealtimeState,
 
   // Connection actions

@@ -6,6 +6,7 @@ import SearchInput from '../search-input';
 import { ThemeSelector } from '../theme-selector';
 import { ModeToggle } from './ThemeToggle/theme-toggle';
 import { Badge } from '../ui/badge';
+import { ConnectionStatusIndicator } from '@/components/providers/api-health-provider';
 
 export default function Header() {
   return (
@@ -20,6 +21,8 @@ export default function Header() {
         <div className='hidden md:flex'>
           <SearchInput />
         </div>
+        <ConnectionStatusIndicator />
+        <Separator orientation='vertical' className='h-4' />
         <Badge variant="secondary" className="text-xs">
           Lab Environment
         </Badge>

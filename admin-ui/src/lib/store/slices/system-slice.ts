@@ -87,12 +87,9 @@ const defaultSystemState: SystemState['system'] = {
 // Configuration
 const MAX_LOG_ENTRIES = 1000; // Keep last 1000 log entries
 
-export const createSystemSlice: StateCreator<
-  SystemSlice,
-  [["zustand/immer", never]],
-  [],
-  SystemSlice
-> = (set, get) => ({
+import type { ImmerStateCreator } from '../store-types';
+
+export const createSystemSlice: ImmerStateCreator<SystemSlice> = (set, get) => ({
   system: defaultSystemState,
 
   // Health actions

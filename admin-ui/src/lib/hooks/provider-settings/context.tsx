@@ -6,8 +6,8 @@
 
 import React, { createContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
 import { ProviderConfiguration } from '@/lib/config/providers';
-import { useProviderLoader } from './hooks/use-provider-loader';
-import { useProviderSaver } from './hooks/use-provider-saver';
+import { useProviderLoader } from './hooks/use-provider-loader-simplified';
+import { useProviderSaver } from './hooks/use-provider-saver-simplified';
 import { 
   deepClone, 
   markFieldsAsDirty, 
@@ -34,7 +34,7 @@ import { useIsMounted, CleanupManager } from './utils/cleanup-helpers';
 export const ProviderSettingsContext = createContext<ProviderSettingsContextValue | null>(null);
 
 export function ProviderSettingsProvider({ children }: { children: ReactNode }) {
-  const { isLoading, loadError, loadSettings: loadSettingsCore } = useProviderLoader();
+  const { isLoading, loadError, loadSettings: loadSettingsCore, clearError } = useProviderLoader();
   const { isSaving, saveError, saveAllChanges: saveAllChangesCore, clearSaveError } = useProviderSaver();
   const isMounted = useIsMounted();
   const cleanupManagerRef = useRef(new CleanupManager());
@@ -203,7 +203,8 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
     setModelSelection(deepClone(savedState.modelSelection));
     setDirtyFields(new Set());
     clearSaveError();
-  }, [savedState, clearSaveError, isMounted]);
+    clearError();
+  }, [savedState, clearSaveError, clearError, isMounted]);
 
   /**
    * Check if there are unsaved changes

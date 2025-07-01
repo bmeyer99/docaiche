@@ -61,7 +61,7 @@ export class DocaicheApiClient {
   private readonly CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds
   private readonly CIRCUIT_BREAKER_RESET_TIMEOUT = 60000; // 1 minute
   private readonly RETRY_DELAY = 30000; // 30 seconds between retries
-  private readonly MAX_RETRIES = 3;
+  private readonly MAX_RETRIES = Infinity; // Continuous retries
 
   constructor() {
     this.baseUrl = '/api/v1';
@@ -254,15 +254,9 @@ export class DocaicheApiClient {
   /**
    * Determine if an error should trigger the retry mechanism
    */
-  private shouldRetry(error: Error, endpoint: string): boolean {
-    const retryState = this.retryStates.get(endpoint);
-    
-    // Don't retry if we've already exceeded max retries
-    if (retryState && retryState.retryCount >= this.MAX_RETRIES) {
-      return false;
-    }
-
-    // Retry on network errors, timeouts, and server errors
+  private shouldRetry(error: Error, _endpoint: string): boolean {
+    // Always retry on network errors, timeouts, and server errors
+    // No retry limit - will continue trying every 30 seconds
     return error.message.includes('fetch') || 
            error.message.includes('network') ||
            error.message.includes('timeout') ||
@@ -314,7 +308,7 @@ export class DocaicheApiClient {
     if (!this.toastCallbacks.showToast) return;
 
     const timeRemaining = this.formatTimeRemaining(retryState.nextRetryTime);
-    const message = `Backend disconnected. Retry ${retryState.retryCount}/${this.MAX_RETRIES} in ${timeRemaining}`;
+    const message = `Backend disconnected. Retrying in ${timeRemaining}`;
     
     if (retryState.toastId && this.toastCallbacks.updateToast) {
       this.toastCallbacks.updateToast(retryState.toastId, message, 'warning');
@@ -360,7 +354,7 @@ export class DocaicheApiClient {
       }
 
       if (this.toastCallbacks.updateToast && currentState.toastId) {
-        const message = `Backend disconnected. Retry ${currentState.retryCount}/${this.MAX_RETRIES} in ${timeRemaining}`;
+        const message = `Backend disconnected. Retrying in ${timeRemaining}`;
         this.toastCallbacks.updateToast(currentState.toastId, message, 'warning');
       }
     }, 1000);
@@ -383,7 +377,7 @@ export class DocaicheApiClient {
       if (currentState.toastId && this.toastCallbacks.updateToast) {
         this.toastCallbacks.updateToast(
           currentState.toastId,
-          `Retrying connection... (${currentState.retryCount}/${this.MAX_RETRIES})`,
+          `Retrying connection...`,
           'info'
         );
       }
@@ -409,23 +403,9 @@ export class DocaicheApiClient {
           throw new Error(`HTTP ${response.status}`);
         }
       } catch (error) {
-        // Retry failed
-        if (currentState.retryCount >= this.MAX_RETRIES) {
-          // Max retries reached
-          this.recordFailure(endpoint);
-          this.clearRetryState(endpoint);
-          
-          if (this.toastCallbacks.showToast) {
-            this.toastCallbacks.showToast(
-              `Connection failed after ${this.MAX_RETRIES} attempts. Please check your connection.`,
-              'error',
-              { duration: 10000 }
-            );
-          }
-        } else {
-          // Schedule next retry
-          this.initializeRetryState(endpoint);
-        }
+        // Retry failed - always schedule next retry
+        // Will continue retrying every 30 seconds indefinitely
+        this.initializeRetryState(endpoint);
       }
     }, Math.max(0, delay));
   }

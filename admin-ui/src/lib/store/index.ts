@@ -15,20 +15,15 @@ import { createUserSlice, UserSlice } from './slices/user-slice';
 import { createUISlice, UISlice } from './slices/ui-slice';
 import { createRealtimeSlice, RealtimeSlice } from './slices/realtime-slice';
 
-// Combined store type
-export interface AppStore 
-  extends ProviderSlice,
-          SystemSlice,
-          UserSlice,
-          UISlice,
-          RealtimeSlice {}
+// Import AppStore type from shared types
+import type { AppStore } from './store-types';
 
-// Create the main store
+// Create the main store with proper typing
 export const useAppStore = create<AppStore>()(
   devtools(
     persist(
       subscribeWithSelector(
-        immer((set, get, api) => ({
+        immer<AppStore>((set, get, api) => ({
           // Combine all slices
           ...createProviderSlice(set, get, api),
           ...createSystemSlice(set, get, api),

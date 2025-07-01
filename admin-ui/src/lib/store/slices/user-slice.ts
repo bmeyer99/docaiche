@@ -64,12 +64,9 @@ const defaultUserState: UserState['user'] = {
   error: null,
 };
 
-export const createUserSlice: StateCreator<
-  UserSlice,
-  [["zustand/immer", never]],
-  [],
-  UserSlice
-> = (set, get) => ({
+import type { ImmerStateCreator } from '../store-types';
+
+export const createUserSlice: ImmerStateCreator<UserSlice> = (set, get) => ({
   user: defaultUserState,
 
   // Preference actions
