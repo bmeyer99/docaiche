@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from .schemas import ActivityItem
-from .middleware import limiter, get_trace_id
+from .middleware import get_trace_id
 from .dependencies import get_database_manager, get_configuration_manager
 from src.database.connection import DatabaseManager
 from src.core.config.manager import ConfigurationManager

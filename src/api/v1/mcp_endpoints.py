@@ -29,7 +29,7 @@ from .mcp_schemas import (
     ProviderHealth,
     ProviderStats
 )
-from .middleware import limiter, get_trace_id
+from .middleware import get_trace_id
 from .dependencies import get_search_orchestrator, get_configuration_manager
 from src.search.orchestrator import SearchOrchestrator
 from src.core.config.manager import ConfigurationManager

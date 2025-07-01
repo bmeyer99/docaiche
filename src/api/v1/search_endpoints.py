@@ -16,7 +16,7 @@ from .schemas import (
     FeedbackRequest,
     SignalRequest,
 )
-from .middleware import limiter, get_trace_id
+from .middleware import get_trace_id
 from .dependencies import get_database_manager, get_search_orchestrator, get_configuration_manager
 from src.database.connection import DatabaseManager
 from src.search.orchestrator import SearchOrchestrator

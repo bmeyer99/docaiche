@@ -13,7 +13,6 @@ from fastapi.responses import StreamingResponse
 import asyncio
 
 from .dependencies import get_current_user_optional, require_role
-# Rate limiter import removed per admin-ui requirements
 
 logger = logging.getLogger(__name__)
 

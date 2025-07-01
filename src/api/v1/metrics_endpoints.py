@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from .dependencies import get_current_user_optional, require_role, get_search_orchestrator, get_cache_manager
-from .middleware import limiter
+from .middleware import get_trace_id
 from src.search.orchestrator import SearchOrchestrator
 from src.database.connection import CacheManager
 

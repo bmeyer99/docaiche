@@ -16,7 +16,7 @@ import subprocess
 import shlex
 
 from .dependencies import get_current_user_optional, require_role
-from .middleware import limiter
+from .middleware import get_trace_id
 
 logger = logging.getLogger(__name__)
 

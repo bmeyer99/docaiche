@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from src.clients.anythingllm import AnythingLLMClient
 from src.core.config.manager import ConfigurationManager
 from .dependencies import get_configuration_manager
-from .middleware import limiter
+from .middleware import get_trace_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
