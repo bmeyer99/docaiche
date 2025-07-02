@@ -73,14 +73,13 @@ export function useProvidersApi() {
   const testProviderConnection = useCallback(async (providerId: string, config?: Record<string, any>): Promise<TestResult> => {
     try {
       // Filter config to only include fields expected by backend
-      // The backend expects: base_url, api_key, and model
+      // The backend expects: base_url, api_key, and provider-specific fields
       const filteredConfig: Record<string, any> = {}
       
       if (config) {
         // Always include these if present
         if (config.base_url !== undefined) filteredConfig.base_url = config.base_url
         if (config.api_key !== undefined) filteredConfig.api_key = config.api_key
-        if (config.model !== undefined) filteredConfig.model = config.model
         
         // Provider-specific fields
         switch (providerId) {
