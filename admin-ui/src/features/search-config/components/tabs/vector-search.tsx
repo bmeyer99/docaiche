@@ -321,7 +321,11 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
                     <div className="flex items-center space-x-2">
                       <Switch
                         id="verify_ssl"
-                        {...registerVector('verify_ssl')}
+                        checked={vectorConfig.verify_ssl}
+                        onCheckedChange={(checked) => {
+                          setVectorValue('verify_ssl', checked);
+                          onChangeDetected?.();
+                        }}
                       />
                       <Label htmlFor="verify_ssl">Verify SSL Certificate</Label>
                     </div>
