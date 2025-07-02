@@ -44,7 +44,7 @@ export interface SystemHealth {
     api: ServiceStatus;
     database: ServiceStatus;
     redis: ServiceStatus;
-    anythingllm: ServiceStatus;
+    weaviate: ServiceStatus;
     monitoring: ServiceStatus;
   };
   lastCheck: Date;

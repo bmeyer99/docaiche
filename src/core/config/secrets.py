@@ -45,9 +45,9 @@ class SecretsManager:
         if config.app.environment == "production":
             required_secrets = []
 
-            # Check AnythingLLM API key
-            if not config.anythingllm.api_key:
-                required_secrets.append("ANYTHINGLLM_API_KEY")
+            # Check Weaviate API key
+            if not config.weaviate.api_key:
+                required_secrets.append("WEAVIATE_API_KEY")
 
             # Check GitHub API token
             if not config.github.api_token:

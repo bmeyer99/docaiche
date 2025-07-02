@@ -53,19 +53,14 @@ class ContentConfig(BaseModel):
     )
 
 
-class AnythingLLMConfig(BaseModel):
-    """AnythingLLM service configuration"""
+class WeaviateConfig(BaseModel):
+    """Weaviate vector database configuration"""
 
     endpoint: str = Field(
-        "http://anythingllm:3001", description="AnythingLLM API endpoint"
+        "http://weaviate:8080", description="Weaviate API endpoint"
     )
     api_key: str = Field("development-key", description="API key for authentication")
-    embedding_model: Optional[str] = Field(
-        None, description="Embedding model for vector operations"
-    )
-    embedding_provider: Optional[str] = Field(
-        "ollama", description="Embedding model provider (ollama, openai, etc)"
-    )
+    grpc_port: int = Field(50051, description="gRPC port for Weaviate")
     circuit_breaker: CircuitBreakerConfig = Field(
         default_factory=lambda: CircuitBreakerConfig(
             failure_threshold=3, recovery_timeout=60, timeout_seconds=30
@@ -366,7 +361,7 @@ class SystemConfiguration(BaseModel):
 
     app: AppConfig
     content: ContentConfig
-    anythingllm: AnythingLLMConfig
+    weaviate: WeaviateConfig
     github: GitHubConfig
     scraping: ScrapingConfig
     redis: RedisConfig

@@ -588,37 +588,37 @@ export default function WebSocketAnalyticsPage() {
               </Card>
             )}
             
-            {/* AnythingLLM Metrics */}
-            {stats?.anythingllm_metrics && (
+            {/* Weaviate Metrics */}
+            {stats?.weaviate_metrics && (
               <Card>
                 <CardHeader>
-                  <CardTitle>AnythingLLM Service</CardTitle>
-                  <CardDescription>Vector database and LLM service status</CardDescription>
+                  <CardTitle>Weaviate Service</CardTitle>
+                  <CardDescription>Vector database service status</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Status</p>
-                      <Badge variant={stats.anythingllm_metrics.status === 'healthy' ? 'default' : 'destructive'}>
-                        {stats.anythingllm_metrics.status || 'unknown'}
+                      <Badge variant={stats.weaviate_metrics.status === 'healthy' ? 'default' : 'destructive'}>
+                        {stats.weaviate_metrics.status || 'unknown'}
                       </Badge>
                     </div>
-                    {stats.anythingllm_metrics.version && (
+                    {stats.weaviate_metrics.version && (
                       <div>
                         <p className="text-sm text-muted-foreground">Version</p>
-                        <p className="font-medium">{stats.anythingllm_metrics.version}</p>
+                        <p className="font-medium">{stats.weaviate_metrics.version}</p>
                       </div>
                     )}
-                    {stats.anythingllm_metrics.vectorDB && (
+                    {stats.weaviate_metrics.nodes && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Vector DB</p>
-                        <p className="font-medium">{stats.anythingllm_metrics.vectorDB}</p>
+                        <p className="text-sm text-muted-foreground">Nodes</p>
+                        <p className="font-medium">{stats.weaviate_metrics.nodes}</p>
                       </div>
                     )}
-                    {stats.anythingllm_metrics.LLMProvider && (
+                    {stats.weaviate_metrics.tenants && (
                       <div>
-                        <p className="text-sm text-muted-foreground">LLM Provider</p>
-                        <p className="font-medium">{stats.anythingllm_metrics.LLMProvider}</p>
+                        <p className="text-sm text-muted-foreground">Tenants</p>
+                        <p className="font-medium">{stats.weaviate_metrics.tenants}</p>
                       </div>
                     )}
                   </div>

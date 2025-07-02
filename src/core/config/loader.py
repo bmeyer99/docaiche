@@ -227,7 +227,7 @@ class ConfigurationLoader:
             from .models import (
                 AppConfig,
                 ContentConfig,
-                AnythingLLMConfig,
+                WeaviateConfig,
                 GitHubConfig,
                 ScrapingConfig,
                 RedisConfig,
@@ -240,7 +240,7 @@ class ConfigurationLoader:
             # Build individual configuration sections with fallback defaults
             app_config = AppConfig(**config_dict.get("app", {}))
             content_config = ContentConfig(**config_dict.get("content", {}))
-            anythingllm_config = AnythingLLMConfig(**config_dict.get("anythingllm", {}))
+            weaviate_config = WeaviateConfig(**config_dict.get("weaviate", {}))
             github_config = GitHubConfig(**config_dict.get("github", {}))
             scraping_config = ScrapingConfig(**config_dict.get("scraping", {}))
             redis_config = RedisConfig(**config_dict.get("redis", {}))
@@ -281,7 +281,7 @@ class ConfigurationLoader:
             return SystemConfiguration(
                 app=app_config,
                 content=content_config,
-                anythingllm=anythingllm_config,
+                weaviate=weaviate_config,
                 github=github_config,
                 scraping=scraping_config,
                 redis=redis_config,

@@ -22,7 +22,7 @@ from .cache import SearchCacheManager
 from .mcp_integration import MCPSearchEnhancer, create_mcp_enhancer
 from .exceptions import SearchOrchestrationError, SearchTimeoutError
 from src.database.connection import DatabaseManager, CacheManager
-from src.clients.anythingllm import AnythingLLMClient
+from src.clients.weaviate_client import WeaviateVectorClient
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class SearchOrchestrator:
         self,
         db_manager: DatabaseManager,
         cache_manager: CacheManager,
-        anythingllm_client: AnythingLLMClient,
+        weaviate_client: WeaviateVectorClient,
         llm_client: Optional[Any] = None,  # LLM client for evaluation (PRD-005)
         knowledge_enricher: Optional[Any] = None,  # Knowledge enricher (PRD-010)
     ):
@@ -60,19 +60,19 @@ class SearchOrchestrator:
         Args:
             db_manager: Database manager for metadata queries
             cache_manager: Redis cache manager
-            anythingllm_client: AnythingLLM client for vector search
+            weaviate_client: Weaviate client for vector search
             llm_client: LLM provider client for evaluation (optional)
             knowledge_enricher: Knowledge enricher for background tasks (optional)
         """
         self.db_manager = db_manager
         self.cache_manager = cache_manager
-        self.anythingllm_client = anythingllm_client
+        self.weaviate_client = weaviate_client
         self.llm_client = llm_client
         self.knowledge_enricher = knowledge_enricher
 
         # Initialize sub-components
         self.workspace_strategy = WorkspaceSearchStrategy(
-            db_manager, anythingllm_client
+            db_manager, weaviate_client
         )
         self.result_ranker = ResultRanker()
         self.search_cache = SearchCacheManager(cache_manager)
@@ -721,26 +721,26 @@ class SearchOrchestrator:
         llm_error = None
         llm_details = {}
         try:
-            if self.anythingllm_client:
-                llm_health = await self.anythingllm_client.health_check()
+            if self.weaviate_client:
+                llm_health = await self.weaviate_client.health_check()
                 llm_status = llm_health.get("status", "unknown")
                 llm_details = llm_health
                 if llm_status != "healthy":
                     overall_status = "degraded"
             else:
                 llm_status = "unavailable"
-                llm_details = {"error": "AnythingLLM client not configured"}
+                llm_details = {"error": "Weaviate client not configured"}
                 overall_status = "degraded"
         except Exception as e:
             llm_status = "unhealthy"
             llm_error = str(e)
             llm_details = {"error": llm_error}
             overall_status = "degraded"
-            logger.error(f"AnythingLLM health check failed: {e}", exc_info=True)
+            logger.error(f"Weaviate health check failed: {e}", exc_info=True)
         llm_time = int((time.time() - llm_start) * 1000)
         health_statuses.append(
             {
-                "service": "anythingllm",
+                "service": "weaviate",
                 "status": llm_status,
                 "response_time_ms": llm_time,
                 "last_check": datetime.utcnow().isoformat(),

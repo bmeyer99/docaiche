@@ -14,7 +14,7 @@ from typing import List, Optional, Dict, Any, Set
 from .models import WorkspaceInfo, SearchResult
 from .exceptions import WorkspaceSelectionError, VectorSearchError, SearchTimeoutError
 from src.database.connection import DatabaseManager
-from src.clients.anythingllm import AnythingLLMClient
+from src.clients.weaviate_client import WeaviateVectorClient
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +28,17 @@ class WorkspaceSearchStrategy:
     """
 
     def __init__(
-        self, db_manager: DatabaseManager, anythingllm_client: AnythingLLMClient
+        self, db_manager: DatabaseManager, weaviate_client: WeaviateVectorClient
     ):
         """
         Initialize workspace search strategy.
 
         Args:
             db_manager: Database manager for workspace metadata queries
-            anythingllm_client: AnythingLLM client for vector search operations
+            weaviate_client: Weaviate client for vector search operations
         """
         self.db_manager = db_manager
-        self.anythingllm_client = anythingllm_client
+        self.weaviate_client = weaviate_client
 
         # Technology keyword patterns for workspace matching
         self.technology_patterns = {
@@ -324,7 +324,7 @@ class WorkspaceSearchStrategy:
                 logger.debug(f"Starting search in workspace: {workspace.slug}")
 
                 # Execute search with timeout
-                search_coro = self.anythingllm_client.search_workspace(
+                search_coro = self.weaviate_client.search_workspace(
                     workspace.slug, query, limit=10
                 )
 
@@ -372,14 +372,14 @@ class WorkspaceSearchStrategy:
             # Query content_metadata table for available workspaces
             query = """
                 SELECT DISTINCT 
-                    anythingllm_workspace as slug,
+                    weaviate_workspace as slug,
                     technology,
                     MAX(updated_at) as last_updated,
                     COUNT(*) as document_count
                 FROM content_metadata 
-                WHERE anythingllm_workspace IS NOT NULL 
+                WHERE weaviate_workspace IS NOT NULL 
                     AND processing_status = 'completed'
-                GROUP BY anythingllm_workspace, technology
+                GROUP BY weaviate_workspace, technology
                 ORDER BY document_count DESC
             """
 

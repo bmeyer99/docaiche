@@ -14,7 +14,7 @@ from src.database.connection import (
     create_database_manager,
     create_cache_manager,
 )
-from src.clients.anythingllm import AnythingLLMClient
+from src.clients.weaviate_client import WeaviateVectorClient
 from src.search.orchestrator import SearchOrchestrator
 from src.core.config.manager import ConfigurationManager
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Global instances (will be initialized on first use)
 _db_manager: Optional[DatabaseManager] = None
 _cache_manager: Optional[CacheManager] = None
-_anythingllm_client: Optional[AnythingLLMClient] = None
+_weaviate_client: Optional[WeaviateVectorClient] = None
 _search_orchestrator: Optional[SearchOrchestrator] = None
 _configuration_manager: Optional[ConfigurationManager] = None
 _knowledge_enricher = None  # Type: Optional[KnowledgeEnricher]
@@ -39,17 +39,17 @@ def _reset_dependent_instances():
 
 async def reset_service_instances():
     """Reset all service instances when configuration changes"""
-    global _anythingllm_client, _search_orchestrator, _knowledge_enricher, _configuration_manager
+    global _weaviate_client, _search_orchestrator, _knowledge_enricher, _configuration_manager
     
     # Disconnect existing clients gracefully
-    if _anythingllm_client is not None:
+    if _weaviate_client is not None:
         try:
-            await _anythingllm_client.disconnect()
+            await _weaviate_client.disconnect()
         except Exception as e:
-            logger.warning(f"Error disconnecting AnythingLLM client: {e}")
+            logger.warning(f"Error disconnecting Weaviate client: {e}")
     
     # Reset all service instances
-    _anythingllm_client = None
+    _weaviate_client = None
     _search_orchestrator = None
     _knowledge_enricher = None
     _configuration_manager = None
@@ -97,8 +97,8 @@ class StubDatabaseManager:
         return []
 
 
-class StubAnythingLLMClient:
-    """Stub AnythingLLM client for degraded operation"""
+class StubWeaviateClient:
+    """Stub Weaviate client for degraded operation"""
 
     def __init__(self, config=None):
         self.config = config
@@ -112,7 +112,7 @@ class StubAnythingLLMClient:
     async def health_check(self) -> dict:
         return {
             "status": "unavailable",
-            "message": "AnythingLLM service not configured or unavailable",
+            "message": "Weaviate service not configured or unavailable",
         }
 
     async def list_workspaces(self):
@@ -219,36 +219,36 @@ async def get_cache_manager() -> CacheManager:
     return _cache_manager
 
 
-async def get_anythingllm_client() -> AnythingLLMClient:
+async def get_weaviate_client() -> WeaviateVectorClient:
     """
-    Dependency to get AnythingLLM client instance with graceful degradation
+    Dependency to get Weaviate client instance with graceful degradation
     """
-    global _anythingllm_client
+    global _weaviate_client
 
-    if _anythingllm_client is None:
+    if _weaviate_client is None:
         try:
             config = get_system_configuration()
-            _anythingllm_client = AnythingLLMClient(config.anythingllm)
-            await _anythingllm_client.connect()
+            _weaviate_client = WeaviateVectorClient(config.weaviate)
+            await _weaviate_client.connect()
             # Test connection but don't fail hard
-            await _anythingllm_client.health_check()
-            logger.info("AnythingLLM client initialized successfully")
+            await _weaviate_client.health_check()
+            logger.info("Weaviate client initialized successfully")
         except Exception as e:
-            logger.warning(f"Failed to initialize AnythingLLM client: {e}")
-            logger.info("Using stub AnythingLLM client for degraded operation")
+            logger.warning(f"Failed to initialize Weaviate client: {e}")
+            logger.info("Using stub Weaviate client for degraded operation")
             try:
                 config = get_system_configuration()
-                _anythingllm_client = StubAnythingLLMClient(config.anythingllm)
+                _weaviate_client = StubWeaviateClient(config.weaviate)
             except Exception:
-                _anythingllm_client = StubAnythingLLMClient()
+                _weaviate_client = StubWeaviateClient()
 
-    return _anythingllm_client
+    return _weaviate_client
 
 
 async def get_search_orchestrator(
     db_manager: DatabaseManager = Depends(get_database_manager),
     cache_manager: CacheManager = Depends(get_cache_manager),
-    anythingllm_client: AnythingLLMClient = Depends(get_anythingllm_client),
+    weaviate_client: WeaviateVectorClient = Depends(get_weaviate_client),
 ) -> SearchOrchestrator:
     """
     Dependency to get Enhanced SearchOrchestrator instance with LLM intelligence
@@ -278,7 +278,7 @@ async def get_search_orchestrator(
             _search_orchestrator = SearchOrchestrator(
                 db_manager=db_manager,
                 cache_manager=cache_manager,
-                anythingllm_client=anythingllm_client,
+                weaviate_client=weaviate_client,
                 llm_client=llm_client,
                 knowledge_enricher=None,
             )
@@ -290,7 +290,7 @@ async def get_search_orchestrator(
             _search_orchestrator = SearchOrchestrator(
                 db_manager=db_manager,
                 cache_manager=cache_manager,
-                anythingllm_client=anythingllm_client,
+                weaviate_client=weaviate_client,
                 llm_client=None,
                 knowledge_enricher=None,
             )
@@ -360,7 +360,7 @@ async def get_knowledge_enricher():
             content_processor = ContentProcessingPipeline(
                 db_manager=db_manager,
                 cache_manager=await get_cache_manager(),
-                anythingllm_client=await get_anythingllm_client()
+                weaviate_client=await get_weaviate_client()
             )
             
             # Create enricher with all dependencies (not async)
@@ -399,9 +399,9 @@ async def cleanup_dependencies():
             await _cache_manager.disconnect()
             logger.info("Cache manager disconnected")
 
-        if _anythingllm_client and hasattr(_anythingllm_client, "disconnect"):
-            await _anythingllm_client.disconnect()
-            logger.info("AnythingLLM client disconnected")
+        if _weaviate_client and hasattr(_weaviate_client, "disconnect"):
+            await _weaviate_client.disconnect()
+            logger.info("Weaviate client disconnected")
 
         # Cleanup knowledge enricher
         if _knowledge_enricher and hasattr(_knowledge_enricher, "shutdown"):
@@ -411,7 +411,7 @@ async def cleanup_dependencies():
         # Reset global instances
         _db_manager = None
         _cache_manager = None
-        _anythingllm_client = None
+        _weaviate_client = None
         _search_orchestrator = None
         _configuration_manager = None
         _knowledge_enricher = None

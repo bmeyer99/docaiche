@@ -4,7 +4,7 @@ Workspace initialization endpoints
 
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
-from src.clients.anythingllm import AnythingLLMClient
+from src.clients.weaviate_client import WeaviateVectorClient
 from src.core.config.manager import ConfigurationManager
 from .dependencies import get_configuration_manager
 from .middleware import get_trace_id
@@ -17,11 +17,11 @@ async def initialize_workspace(
     request: Request,
     config_manager: ConfigurationManager = Depends(get_configuration_manager)
 ):
-    """Initialize default AnythingLLM workspace"""
+    """Initialize default Weaviate workspace (tenant)"""
     try:
         config = config_manager.get_configuration()
         
-        async with AnythingLLMClient(config.anythingllm) as client:
+        async with WeaviateVectorClient(config.weaviate) as client:
             # Get existing workspaces
             workspaces = await client.list_workspaces()
             

@@ -9,13 +9,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      anythingllm:
+      weaviate:
         condition: service_healthy
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - ANYTHINGLLM_URL=http://anythingllm:3001
-      - ANYTHINGLLM_API_KEY=docaiche-lab-default-key-2025
+      - WEAVIATE_URL=http://weaviate:8080
+      - WEAVIATE_API_KEY=${WEAVIATE_API_KEY:-docaiche-weaviate-key-2025}
       - DATABASE_URL=sqlite+aiosqlite:///data/docaiche.db
       - DB_PATH=/data/docaiche.db
       - ENVIRONMENT=development
@@ -37,7 +37,7 @@ services:
         mkdir -p /var/log/docaiche &&
         alembic upgrade head &&
         python src/database/init_db.py --db-path /data/docaiche.db &&
-        (python /app/init-anythingllm-workspace.py > /var/log/docaiche/workspace-init.log 2>&1 &) &&
+        (python /app/init-weaviate-workspace.py > /var/log/docaiche/workspace-init.log 2>&1 &) &&
         uvicorn src.main:app --host 0.0.0.0 --port 4000
       "
     networks:
@@ -121,27 +121,33 @@ services:
     labels:
       - "docaiche.service=database"
 
-  anythingllm:
-    image: mintplexlabs/anythingllm:latest
+  weaviate:
+    image: semitechnologies/weaviate:latest
+    # Ports not exposed - access through admin-ui proxy on port 4080
     environment:
-      STORAGE_DIR: /app/server/storage
-      SERVER_PORT: 3001
-      JWT_SECRET: docaiche-lab-jwt-secret-2025
-      AUTH_TOKEN: docaiche-lab-default-key-2025
-      DISABLE_TELEMETRY: "true"
+      AUTHENTICATION_APIKEY_ENABLED: 'true'
+      AUTHENTICATION_APIKEY_ALLOWED_KEYS: '${WEAVIATE_API_KEY:-docaiche-weaviate-key-2025}'
+      AUTHENTICATION_APIKEY_USERS: 'docaiche-service'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      QUERY_DEFAULTS_LIMIT: 25
+      ENABLE_MODULES: ''
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ASYNC_INDEXING: 'true'
+      CLUSTER_HOSTNAME: 'node1'
+      BACKUP_FILESYSTEM_PATH: '/var/lib/weaviate/backups'
     volumes:
-      - anythingllm_data:/app/server/storage
-      - anythingllm_exports:/app/server/exports
+      - weaviate_data:/var/lib/weaviate
+      - weaviate_backups:/var/lib/weaviate/backups
     networks:
       - docaiche
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/health"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/v1/.well-known/ready || exit 1"]
       interval: 5s
       timeout: 4s
       retries: 10
     restart: unless-stopped
     labels:
-      - "docaiche.service=anythingllm"
+      - "docaiche.service=weaviate"
 
   loki:
     image: grafana/loki:3.5.0
@@ -274,8 +280,8 @@ networks:
 volumes:
   redis_data:
   db_data:
-  anythingllm_data:
-  anythingllm_exports:
+  weaviate_data:
+  weaviate_backups:
   loki_data:
   grafana_data:
   prometheus_data:

@@ -28,6 +28,7 @@ from .ai_logs_endpoints import router as ai_logs_router
 from .mcp import router as mcp_router
 from .mcp_endpoints import router as mcp_management_router
 from .service_endpoints import router as service_router
+from .admin.search import router as admin_search_router
 from .exceptions import (
     validation_exception_handler,
     http_exception_handler,
@@ -58,6 +59,7 @@ api_router.include_router(ai_logs_router)
 api_router.include_router(mcp_router)
 api_router.include_router(mcp_management_router)
 api_router.include_router(service_router)
+api_router.include_router(admin_search_router)
 
 
 

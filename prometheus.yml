@@ -36,3 +36,9 @@ scrape_configs:
     static_configs:
       - targets: ['grafana:3000']
     metrics_path: /metrics
+    
+  # Weaviate metrics
+  - job_name: 'weaviate'
+    static_configs:
+      - targets: ['weaviate:2112']
+    metrics_path: /metrics

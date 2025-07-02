@@ -1,8 +1,8 @@
 """
-Custom Exceptions for AnythingLLM Client - PRD-004 ALM-001
+Custom Exceptions for Vector Database Client
 Exception hierarchy for comprehensive error handling and proper HTTP status mapping
 
-These exceptions provide structured error handling for the AnythingLLM client
+These exceptions provide structured error handling for the vector database client
 with proper categorization for different failure modes and circuit breaker integration.
 """
 
@@ -12,11 +12,11 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
-class AnythingLLMError(Exception):
+class WeaviateError(Exception):
     """
-    Base exception for AnythingLLM client errors.
+    Base exception for vector database client errors.
 
-    Provides common structure for all AnythingLLM-related exceptions
+    Provides common structure for all vector database-related exceptions
     with optional HTTP status code mapping and detailed error context.
     """
 
@@ -33,16 +33,16 @@ class AnythingLLMError(Exception):
 
     def __str__(self) -> str:
         if self.status_code:
-            return f"AnythingLLM Error ({self.status_code}): {self.message}"
-        return f"AnythingLLM Error: {self.message}"
+            return f"Vector DB Error ({self.status_code}): {self.message}"
+        return f"Vector DB Error: {self.message}"
 
 
-class AnythingLLMConnectionError(AnythingLLMError):
+class WeaviateConnectionError(WeaviateError):
     """
-    Connection-related errors for AnythingLLM service.
+    Connection-related errors for vector database service.
 
     Raised when the client cannot establish or maintain a connection
-    to the AnythingLLM service, including network timeouts and connection failures.
+    to the vector database service, including network timeouts and connection failures.
     """
 
     def __init__(self, message: str, error_context: Optional[dict] = None):
@@ -53,9 +53,9 @@ class AnythingLLMConnectionError(AnythingLLMError):
         )
 
 
-class AnythingLLMAuthenticationError(AnythingLLMError):
+class WeaviateAuthenticationError(WeaviateError):
     """
-    Authentication failures for AnythingLLM API.
+    Authentication failures for vector database API.
 
     Raised when API key authentication fails or when the client
     receives authentication-related HTTP error responses.
@@ -69,12 +69,12 @@ class AnythingLLMAuthenticationError(AnythingLLMError):
         )
 
 
-class AnythingLLMRateLimitError(AnythingLLMError):
+class WeaviateRateLimitError(WeaviateError):
     """
-    Rate limiting errors from AnythingLLM API.
+    Rate limiting errors from vector database API.
 
     Raised when the client exceeds the API rate limits imposed
-    by the AnythingLLM service, including retry-after information.
+    by the vector database service, including retry-after information.
     """
 
     def __init__(
@@ -91,9 +91,9 @@ class AnythingLLMRateLimitError(AnythingLLMError):
         self.retry_after = retry_after
 
 
-class AnythingLLMWorkspaceError(AnythingLLMError):
+class WeaviateWorkspaceError(WeaviateError):
     """
-    Workspace-related errors for AnythingLLM operations.
+    Workspace-related errors for vector database operations.
 
     Raised when workspace operations fail, including workspace
     not found, creation failures, or access permission issues.
@@ -110,7 +110,7 @@ class AnythingLLMWorkspaceError(AnythingLLMError):
         self.workspace_slug = workspace_slug
 
 
-class AnythingLLMDocumentError(AnythingLLMError):
+class WeaviateDocumentError(WeaviateError):
     """
     Document upload and management errors.
 
@@ -137,12 +137,12 @@ class AnythingLLMDocumentError(AnythingLLMError):
         self.chunk_id = chunk_id
 
 
-class AnythingLLMCircuitBreakerError(AnythingLLMError):
+class WeaviateCircuitBreakerError(WeaviateError):
     """
     Circuit breaker state errors.
 
     Raised when the circuit breaker is open and requests are being
-    rejected to prevent cascading failures to the AnythingLLM service.
+    rejected to prevent cascading failures to the vector database service.
     """
 
     def __init__(self, message: str = "Circuit breaker is open"):

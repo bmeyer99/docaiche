@@ -1,6 +1,6 @@
 """
 Smart Ingestion Pipeline with LLM-powered processing
-Intelligently processes and stores documentation in AnythingLLM
+Intelligently processes and stores documentation in Weaviate
 """
 
 import json
@@ -10,7 +10,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from src.llm.client import LLMProviderClient
-from src.clients.anythingllm import AnythingLLMClient
+from src.clients.weaviate_client import WeaviateVectorClient
 from src.database.manager import DatabaseManager
 from src.search.llm_query_analyzer import QueryIntent
 from src.document_processing.models import DocumentContent
@@ -39,11 +39,11 @@ class SmartIngestionPipeline:
     def __init__(
         self,
         llm_client: LLMProviderClient,
-        anythingllm_client: AnythingLLMClient,
+        weaviate_client: WeaviateVectorClient,
         db_manager: DatabaseManager
     ):
         self.llm = llm_client
-        self.anythingllm = anythingllm_client
+        self.weaviate = weaviate_client
         self.db = db_manager
     
     async def process_documentation(
@@ -78,11 +78,11 @@ class SmartIngestionPipeline:
             workspace_slug = workspace_name.lower().replace(" ", "-")
             
             # Check if workspace exists
-            workspaces = await self.anythingllm.list_workspaces()
+            workspaces = await self.weaviate.list_workspaces()
             workspace_exists = any(w.get("slug") == workspace_slug for w in workspaces)
             
             if not workspace_exists:
-                workspace = await self.anythingllm.create_workspace(workspace_name)
+                workspace = await self.weaviate.get_or_create_workspace(workspace_slug, workspace_name)
                 if not workspace:
                     return ProcessingResult(
                         success=False,
@@ -91,37 +91,46 @@ class SmartIngestionPipeline:
                         error_message="Failed to create workspace"
                     )
             
-            # 3. Upload chunks to AnythingLLM
-            uploaded_count = 0
+            # 3. Upload all chunks to Weaviate as a single document
+            from src.database.connection import ProcessedDocument, DocumentChunk
+            
+            # Convert all chunks to DocumentChunk objects
+            doc_chunks = []
             for chunk in chunks:
-                try:
-                    # Prepare metadata
-                    metadata = {
-                        "source": content.source_url,
-                        "technology": intent.technology,
-                        "topics": intent.topics,
-                        "doc_type": intent.doc_type,
-                        "chunk_index": chunk.index,
-                        "total_chunks": len(chunks),
-                        "processed_at": datetime.utcnow().isoformat()
-                    }
-                    
-                    # Merge with chunk metadata
-                    metadata.update(chunk.metadata)
-                    
-                    # Upload to AnythingLLM
-                    success = await self.anythingllm.upload_document(
-                        workspace_slug=workspace_slug,
-                        content=chunk.text,
-                        metadata=metadata
-                    )
-                    
-                    if success:
-                        uploaded_count += 1
-                        
-                except Exception as e:
-                    logger.error(f"Failed to upload chunk {chunk.index}: {e}")
-                    continue
+                metadata = {
+                    "source": content.source_url,
+                    "technology": intent.technology,
+                    "topics": intent.topics,
+                    "doc_type": intent.doc_type,
+                    "processed_at": datetime.utcnow().isoformat()
+                }
+                metadata.update(chunk.metadata)
+                
+                doc_chunk = DocumentChunk(
+                    id=f"{content.source_url}_{chunk.index}",
+                    content=chunk.text,
+                    chunk_index=chunk.index,
+                    total_chunks=len(chunks),
+                    metadata=metadata
+                )
+                doc_chunks.append(doc_chunk)
+            
+            # Create ProcessedDocument with all chunks
+            processed_doc = ProcessedDocument(
+                id=content.source_url,
+                title=content.title or content.source_url.split('/')[-1],
+                source_url=content.source_url,
+                technology=intent.technology,
+                chunks=doc_chunks
+            )
+            
+            # Upload entire document to Weaviate
+            try:
+                result = await self.weaviate.upload_document(workspace_slug, processed_doc)
+                uploaded_count = result.successful_uploads
+            except Exception as e:
+                logger.error(f"Failed to upload document: {e}")
+                uploaded_count = 0
             
             # 4. Store metadata in database
             await self._store_content_metadata(
@@ -341,7 +350,7 @@ class SmartIngestionPipeline:
         Args:
             content: Original document content
             chunks: Processed chunks
-            workspace_slug: AnythingLLM workspace
+            workspace_slug: Weaviate workspace
             intent: Query intent
             uploaded_count: Number of successfully uploaded chunks
         """
@@ -373,7 +382,7 @@ class SmartIngestionPipeline:
                 technology,
                 quality_score,
                 enrichment_metadata,
-                anythingllm_workspace,
+                weaviate_workspace,
                 chunk_count,
                 created_at,
                 updated_at

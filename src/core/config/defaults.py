@@ -47,9 +47,9 @@ def get_environment_overrides() -> Dict[str, Any]:
         "REDIS_APPENDONLY": ("redis.appendonly", lambda x: x.lower() == "true"),
         "REDIS_SSL": ("redis.ssl", lambda x: x.lower() == "true"),
         "REDIS_SSL_CERT_REQS": "redis.ssl_cert_reqs",
-        # AnythingLLM configuration
-        "ANYTHINGLLM_ENDPOINT": "anythingllm.endpoint",
-        "ANYTHINGLLM_API_KEY": "anythingllm.api_key",
+        # Weaviate configuration
+        "WEAVIATE_ENDPOINT": "weaviate.endpoint",
+        "WEAVIATE_API_KEY": "weaviate.api_key",
         # GitHub configuration
         "GITHUB_API_TOKEN": "github.api_token",
         # AI configuration

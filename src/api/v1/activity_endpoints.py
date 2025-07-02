@@ -172,7 +172,7 @@ async def get_recent_activity(
                     'content' as type,
                     'Document: ' || title as message,
                     created_at as timestamp,
-                    'Workspace: ' || COALESCE(anythingllm_workspace, 'None') as details
+                    'Workspace: ' || COALESCE(weaviate_workspace, 'None') as details
                 FROM content_metadata
             )
             SELECT * FROM all_activities
@@ -341,7 +341,7 @@ async def get_dashboard_data(
         content_stats_query = """
         SELECT 
             COUNT(DISTINCT content_id) as total_documents,
-            COUNT(DISTINCT anythingllm_workspace) as collections,
+            COUNT(DISTINCT weaviate_workspace) as collections,
             MAX(updated_at) as last_update
         FROM content_metadata
         """

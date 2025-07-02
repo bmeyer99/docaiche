@@ -32,7 +32,7 @@ The AI Documentation Cache System is a production-ready, microservices-based pla
 - **Core API Foundation**: FastAPI with secure, versioned REST endpoints, CORS, and health checks
 - **Database & Caching**: Persistent SQLite for metadata, Redis for high-speed caching
 - **Configuration Management**: Hierarchical config (env, YAML, DB) with runtime validation and hot-reload
-- **AnythingLLM Integration**: Vector database for semantic search and document storage
+- **Weaviate Integration**: Vector database for semantic search with multi-tenant document storage
 - **LLM Providers**: Ollama and OpenAI integration with automatic failover and prompt templating
 - **GitHub Client**: Authenticated, rate-limited repo ingestion and file discovery
 - **Web Scraping**: Intelligent, robots.txt-compliant content extraction from documentation sites
@@ -50,14 +50,14 @@ The AI Documentation Cache System is a production-ready, microservices-based pla
 **Microservices Overview:**
 - **API Service**: FastAPI, exposes all REST endpoints
 - **Web UI**: FastAPI + Jinja2, admin/configuration dashboard
-- **AnythingLLM**: Vector DB for semantic search
+- **Weaviate**: Vector DB for semantic search with multi-tenancy
 - **Ollama**: Local LLM provider (optional, can use OpenAI)
 - **Redis**: High-speed cache for queries, sessions
 - **SQLite**: Persistent metadata and content storage
 
 **Component Diagram:**
 ```
-[User/Web UI] <--REST--> [API Service] <--gRPC/HTTP--> [AnythingLLM] [Ollama/OpenAI]
+[User/Web UI] <--REST--> [API Service] <--gRPC/HTTP--> [Weaviate] [Ollama/OpenAI]
          |                        |                        |
          |                        |                        |
          |                        |                        |
@@ -84,7 +84,7 @@ cd ai-docs-cache
 # Set environment variables in your shell or use a docker-compose.override.yml file
 docker-compose up --build -d
 ```
-- All services (API, Web UI, AnythingLLM, Ollama, Redis, SQLite) are started and networked automatically.
+- All services (API, Web UI, Weaviate, Ollama, Redis, SQLite) are started and networked automatically.
 - **Note:** `.env` files are not used for containerized deployment. Set environment variables in your shell or via Portainer.
 
 ### 3. Local Development
@@ -120,12 +120,12 @@ All configuration is managed via environment variables, `.env` (local developmen
 | LOG_LEVEL                      | Logging level                               | info                   |
 | DATABASE_URL                   | SQLite DB URL                               | sqlite:////data/app.db |
 | REDIS_URL                      | Redis connection URL                        | redis://redis:6379/0   |
-| ANYTHINGLLM_URL                | AnythingLLM API endpoint                    | http://anythingllm:3001|
+| WEAVIATE_URL                   | Weaviate API endpoint                       | http://weaviate:8080   |
 | OLLAMA_URL                     | Ollama API endpoint                         | http://ollama:11434    |
 | API_AUTH_SECRET                | API authentication secret                   | changeme               |
 | API_JWT_SECRET                 | JWT signing secret                          | changeme               |
 | WEBUI_SESSION_SECRET           | Web UI session secret                       | changeme               |
-| ANYTHINGLLM_API_KEY            | AnythingLLM API key                         | changeme               |
+| WEAVIATE_API_KEY               | Weaviate API key                            | changeme               |
 | OLLAMA_MODEL                   | Ollama model name                           | llama3                 |
 | OLLAMA_API_KEY                 | Ollama API key                              | changeme               |
 | OPENAI_ENABLED                 | Enable OpenAI provider                      | false                  |
@@ -161,7 +161,7 @@ All configuration is managed via environment variables, `.env` (local developmen
 
 ## Monitoring & Operations
 
-- **Health Checks**: `/health` endpoint for all services (API, Web UI, AnythingLLM, Ollama, Redis)
+- **Health Checks**: `/health` endpoint for all services (API, Web UI, Weaviate, Ollama, Redis)
 - **Structured Logging**: JSON logs with correlation IDs for all requests
 - **Metrics**: Usage, performance, and error metrics exposed via `/stats`
 - **Backup/Restore**: Use `backup.sh` and `restore.sh` scripts for full system backup and recovery (see [PRD-013](PRDs/PRD-013_operations_and_deployment.md))
@@ -200,7 +200,7 @@ All configuration is managed via environment variables, `.env` (local developmen
 
 - **CPU**: 4+ cores recommended
 - **RAM**: 8GB+ (16GB+ for large LLMs)
-- **Disk**: 10GB+ free (persistent volumes for DB, Redis, AnythingLLM, Ollama)
+- **Disk**: 10GB+ free (persistent volumes for DB, Redis, Weaviate, Ollama)
 - **OS**: Linux (x86_64), Docker Engine 20.10+, Portainer (optional)
 - **Network**: Outbound HTTPS for GitHub, OpenAI (if enabled)
 

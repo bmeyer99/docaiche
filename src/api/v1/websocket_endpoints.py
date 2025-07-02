@@ -21,7 +21,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from fastapi.responses import HTMLResponse
 
 from ...database.models import SearchCache, ContentMetadata, FeedbackEvents, UsageSignals
-from .dependencies import get_database_manager, get_cache_manager, get_anythingllm_client, get_search_orchestrator
+from .dependencies import get_database_manager, get_cache_manager, get_weaviate_client, get_search_orchestrator
 
 
 logger = logging.getLogger(__name__)
@@ -293,21 +293,21 @@ async def check_system_health():
     # SEARCH & AI SERVICES - Document search and AI enhancement capabilities  
     # ==============================================================================
     
-    # Vector Store (AnythingLLM) Health Check
+    # Vector Store (Weaviate) Health Check
     try:
-        anythingllm_client = await get_anythingllm_client()
-        llm_health = await anythingllm_client.health_check()
+        weaviate_client = await get_weaviate_client()
+        weaviate_health = await weaviate_client.health_check()
         health_status["vector_store"] = {
-            "status": "healthy" if llm_health.get("status") == "healthy" else "degraded",
-            "message": llm_health.get("message", "Vector store operational"),
-            "response_time": llm_health.get("response_time_ms"),
+            "status": "healthy" if weaviate_health.get("status") == "healthy" else "degraded",
+            "message": weaviate_health.get("message", "Vector store operational"),
+            "response_time": weaviate_health.get("response_time_ms"),
             "group": "search_ai"
         }
     except Exception as e:
         health_status["vector_store"] = {
             "status": "degraded",
             "message": "Vector store not configured or unreachable",
-            "action": {"label": "Configure AnythingLLM", "url": "/dashboard/settings"},
+            "action": {"label": "Configure Weaviate", "url": "/dashboard/search-config?tab=vector"},
             "group": "search_ai"
         }
     
@@ -595,7 +595,7 @@ async def get_health_status_internal():
         "components": {
             "database": {"status": "healthy", "message": "Connected"},
             "redis": {"status": "healthy", "message": "Connected"},
-            "anythingllm": {"status": "healthy", "message": "Connected"},
+            "weaviate": {"status": "healthy", "message": "Connected"},
             "search": {"status": "healthy", "message": "All search services operational"},
         },
         "features": {
@@ -695,41 +695,45 @@ async def get_redis_metrics():
         return {}
 
 
-async def get_anythingllm_metrics():
-    """Get AnythingLLM service metrics"""
+async def get_weaviate_metrics():
+    """Get Weaviate service metrics"""
     try:
         import aiohttp
         timeout = aiohttp.ClientTimeout(total=2)  # 2 second timeout
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            # Try to get system info from AnythingLLM
-            async with session.get('http://anythingllm:3001/api/system') as resp:
+            # Try to get health info from Weaviate
+            async with session.get('http://weaviate:8080/v1/.well-known/ready') as resp:
                 if resp.status == 200:
-                    data = await resp.json()
-                    return {
-                        "status": "healthy",
-                        "version": data.get('version', 'unknown'),
-                        "multiUserMode": data.get('multiUserMode', False),
-                        "vectorDB": data.get('vectorDB', 'LanceDB'),
-                        "LLMProvider": data.get('LLMProvider', 'Generic OpenAI')
-                    }
+                    # Get additional metrics
+                    meta_resp = await session.get('http://weaviate:8080/v1/meta')
+                    if meta_resp.status == 200:
+                        meta_data = await meta_resp.json()
+                        return {
+                            "status": "healthy",
+                            "version": meta_data.get('version', 'unknown'),
+                            "nodes": meta_data.get('nodes', 1),
+                            "tenants": len(meta_data.get('tenants', [])) if 'tenants' in meta_data else 'unknown'
+                        }
+                    else:
+                        return {
+                            "status": "healthy",
+                            "version": "running",
+                            "note": "Limited metrics available"
+                        }
                 else:
-                    # Service responded but not with expected data
+                    # Service responded but not ready
                     return {
-                        "status": "healthy",
-                        "version": "running",
-                        "vectorDB": "LanceDB", 
-                        "LLMProvider": "Generic OpenAI",
-                        "note": "Limited metrics available"
+                        "status": "unhealthy",
+                        "version": "unknown",
+                        "note": "Service not ready"
                     }
     except Exception as e:
-        logger.error(f"Error getting AnythingLLM metrics: {e}")
-        # Return reasonable defaults instead of "unknown"
+        logger.error(f"Error getting Weaviate metrics: {e}")
+        # Return reasonable defaults
         return {
-            "status": "healthy",
-            "version": "running",
-            "vectorDB": "LanceDB",
-            "LLMProvider": "Generic OpenAI",
-            "note": "Service running, limited metrics"
+            "status": "unknown",
+            "version": "unknown",
+            "note": "Service status unknown"
         }
 
 
@@ -770,7 +774,7 @@ async def get_stats_data_internal():
     # Get per-service metrics
     service_metrics = await get_service_metrics()
     redis_metrics = await get_redis_metrics()
-    anythingllm_metrics = await get_anythingllm_metrics()
+    weaviate_metrics = await get_weaviate_metrics()
     
     return {
         "search_stats": {
@@ -785,7 +789,7 @@ async def get_stats_data_internal():
         },
         "service_metrics": service_metrics,
         "redis_metrics": redis_metrics,
-        "anythingllm_metrics": anythingllm_metrics,
+        "weaviate_metrics": weaviate_metrics,
         "cache_stats": {
             "hit_rate": cache_hit_rate,
             "miss_rate": 1 - cache_hit_rate,

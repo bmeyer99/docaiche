@@ -55,7 +55,7 @@ const defaultSystemHealth: SystemHealth = {
     api: { status: 'healthy' },
     database: { status: 'healthy' },
     redis: { status: 'healthy' },
-    anythingllm: { status: 'healthy' },
+    weaviate: { status: 'healthy' },
     monitoring: { status: 'healthy' },
   },
   lastCheck: new Date(),
