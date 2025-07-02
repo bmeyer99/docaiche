@@ -200,7 +200,7 @@ export class DocaicheApiClient {
     
     try {
       const controller = new AbortController();
-      timeoutId = setTimeout(() => controller.abort(), timeout);
+      timeoutId = setTimeout(() => controller.abort('Request timeout'), timeout);
 
       // Handle external abort signal
       if (externalSignal) {
@@ -396,7 +396,7 @@ export class DocaicheApiClient {
         const response = await fetch(url, {
           method: 'GET',
           headers: this.defaultHeaders,
-          signal: AbortSignal.timeout(10000) // 10 second timeout for retry
+          signal: AbortSignal.timeout(30000) // 30 second timeout for retry
         });
 
         if (response.ok) {
