@@ -79,6 +79,7 @@ class AnthropicProvider(BaseLLMProvider):
                         "claude-4-sonnet-20250515",
                         "claude-4-opus-20250515",
                         "claude-3-5-sonnet-20241022",
+                        "claude-3-5-haiku-20241022",
                         "claude-3-sonnet-20240229",
                         "claude-3-opus-20240229",
                         "claude-3-haiku-20240307"
@@ -243,6 +244,15 @@ class AnthropicProvider(BaseLLMProvider):
                 context_window=200000,
                 max_tokens=4096,
                 cost_per_token=0.000003,
+                capabilities=["text_generation", "chat", "function_calling", "reasoning"]
+            ),
+            ModelInfo(
+                id="claude-3-5-haiku-20241022",
+                name="Claude 3.5 Haiku",
+                description="Fast performance model with improved capabilities",
+                context_window=200000,
+                max_tokens=8192,
+                cost_per_token=0.00000025,
                 capabilities=["text_generation", "chat", "function_calling", "reasoning"]
             ),
             ModelInfo(

@@ -89,6 +89,16 @@ DEFAULT_PROVIDERS = {
         "models": [
             "gpt-4o",
             "gpt-4o-mini",
+            "gpt-4o-audio-preview",
+            "gpt-4o-realtime-preview",
+            "o1",
+            "o1-mini",
+            "o3",
+            "o3-mini",
+            "o4-mini",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4.1-nano",
             "gpt-4-turbo",
             "gpt-4",
             "gpt-3.5-turbo",
@@ -116,6 +126,8 @@ DEFAULT_PROVIDERS = {
             "apiKey": ""
         },
         "models": [
+            "claude-4-sonnet-20250515",
+            "claude-4-opus-20250515",
             "claude-3-5-sonnet-20241022",
             "claude-3-5-haiku-20241022", 
             "claude-3-opus-20240229",
@@ -170,10 +182,19 @@ DEFAULT_PROVIDERS = {
             "apiKey": ""
         },
         "models": [
-            "llama-3.1-70b-versatile",
+            "llama-3.3-70b-versatile",
+            "llama-3.3-70b-specdec",
             "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768",
-            "gemma2-9b-it"
+            "llama-3.2-11b-vision-preview",
+            "llama-3.2-90b-vision-preview",
+            "llama-3-groq-70b-tool-use",
+            "llama-3-groq-8b-tool-use",
+            "gemma2-9b-it",
+            "whisper-large-v3",
+            "whisper-large-v3-turbo",
+            "distil-whisper-large-v3-en",
+            "compound-beta",
+            "compound-beta-mini"
         ],
         "queryable": False,
         "defaultModel": "llama-3.1-8b-instant"
@@ -195,14 +216,22 @@ DEFAULT_PROVIDERS = {
             "apiKey": ""
         },
         "models": [
-            "mistral-large-latest",
-            "mistral-medium-latest", 
-            "mistral-small-latest",
-            "codestral-latest",
-            "mistral-embed"
+            "mistral-large-2411",
+            "mistral-medium-2505",
+            "mistral-small-2506",
+            "codestral-2501",
+            "pixtral-large-2411",
+            "magistral-medium-2506",
+            "magistral-small-2506",
+            "mistral-saba-2502",
+            "devstral-small-2505",
+            "mistral-ocr-2505",
+            "open-mixtral-8x22b-2404",
+            "mistral-embed",
+            "codestral-embed"
         ],
         "queryable": False,
-        "defaultModel": "mistral-small-latest"
+        "defaultModel": "mistral-small-2506"
     },
     "deepseek": {
         "name": "DeepSeek",
@@ -222,8 +251,9 @@ DEFAULT_PROVIDERS = {
         },
         "models": [
             "deepseek-chat",
+            "deepseek-reasoner",
             "deepseek-coder",
-            "deepseek-reasoner"
+            "deepseek-coder-v2"
         ],
         "queryable": False,
         "defaultModel": "deepseek-chat"
@@ -246,6 +276,11 @@ DEFAULT_PROVIDERS = {
             "maxRetries": 3
         },
         "models": [
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
             "gemini-1.5-pro",
             "gemini-1.5-flash",
             "gemini-1.0-pro",
@@ -272,6 +307,11 @@ DEFAULT_PROVIDERS = {
             "apiKey": ""
         },
         "models": [
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
             "gemini-1.5-pro",
             "gemini-1.5-flash",
             "gemini-1.0-pro",
@@ -299,11 +339,23 @@ DEFAULT_PROVIDERS = {
             "maxRetries": 3
         },
         "models": [
+            "anthropic.claude-4-sonnet:0",
+            "anthropic.claude-4-opus:0",
+            "anthropic.claude-3-7-sonnet:0",
             "anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "anthropic.claude-3-5-haiku-20241022:0",
             "anthropic.claude-3-opus-20240229:0",
             "anthropic.claude-3-haiku-20240307:0",
+            "meta.llama3-3-70b-instruct-v1:0",
+            "meta.llama3-1-405b-instruct-v1:0",
+            "meta.llama3-1-70b-instruct-v1:0",
+            "meta.llama3-1-8b-instruct-v1:0",
+            "mistral.pixtral-large-2411:0",
+            "mistral.mistral-large-2411:0",
             "amazon.titan-text-premier-v1:0",
-            "amazon.titan-embed-text-v2:0"
+            "amazon.titan-embed-text-v2:0",
+            "amazon.nova-pro-v1:0",
+            "amazon.nova-lite-v1:0"
         ],
         "queryable": False,
         "defaultModel": "anthropic.claude-3-5-sonnet-20241022-v2:0"
