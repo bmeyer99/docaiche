@@ -10,9 +10,6 @@ import {
 } from '../types'
 import { ProviderCards } from './provider-cards'
 import { ConfigurationPanel } from './configuration-panel'
-import { ModelSelectionPanel } from './model-selection-panel'
-import { CurrentConfiguration } from './current-configuration'
-import { ProgressTracker } from './progress-tracker'
 import { useProvidersApi } from '../hooks/use-providers-api'
 import { useProviderSettings } from '@/lib/hooks/use-provider-settings'
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton'
@@ -277,20 +274,6 @@ export function ProvidersPage() {
         <p className="text-muted-foreground">Configure and test AI providers for your system</p>
       </div>
       
-      {/* Progress Tracker */}
-      <ProgressTracker
-        activeStep={activeStep}
-        completedSteps={completedSteps}
-        onStepClick={handleStepClick}
-      />
-      
-      {/* Current Configuration Summary */}
-      <CurrentConfiguration
-        modelSelection={modelSelection}
-        providers={providers}
-        onEditConfiguration={handleEditConfiguration}
-      />
-      
       {/* Main Content Area */}
       <div className="flex gap-6">
         {/* Test Button - Remove this in production */}
@@ -316,20 +299,6 @@ export function ProvidersPage() {
           isSaving={isGlobalSaving}
         />
       </div>
-      
-      {/* Model Selection */}
-      {(activeStep === 'models' || completedSteps.has('test')) && (
-        <ModelSelectionPanel
-          providers={providers}
-          availableModels={availableModels}
-          modelSelection={modelSelection}
-          onModelSelectionChange={handleModelSelectionChange}
-          onAddCustomModel={handleAddCustomModel}
-          onRemoveCustomModel={handleRemoveCustomModel}
-          onSaveModelSelection={handleSaveModelSelection}
-          isSaving={isGlobalSaving}
-        />
-      )}
     </div>
   )
 }

@@ -104,8 +104,8 @@ export interface ConfigurationPanelProps {
   isTestingConnection: boolean
   testResult: TestResult | undefined
   onConfigurationChange: (config: ProviderConfig) => void
-  onTestConnection: () => Promise<void>
-  onSaveConfiguration: () => Promise<void>
+  onTestConnection: (config?: ProviderFormData) => Promise<void>
+  onSaveConfiguration: (config?: ProviderConfig) => Promise<void>
   isSaving?: boolean
 }
 

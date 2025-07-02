@@ -70,14 +70,14 @@ export function useProvidersApi() {
   }, [apiClient, toast])
 
   // Test provider connection
-  const testProviderConnection = useCallback(async (providerId: string): Promise<TestResult> => {
+  const testProviderConnection = useCallback(async (providerId: string, config?: Record<string, any>): Promise<TestResult> => {
     try {
       const response = await apiClient.post<{
         success: boolean
         message: string
         models?: string[]
         error?: string
-      }>(`/providers/${providerId}/test`, {})
+      }>(`/providers/${providerId}/test`, config || {})
       
       const result: TestResult = {
         success: response.success,

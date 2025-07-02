@@ -28,12 +28,12 @@ import { useToast } from '@/hooks/use-toast';
 import { AI_PROVIDERS } from '@/lib/config/providers';
 import { ProviderCards } from '@/features/providers/components/provider-cards';
 import { ConfigurationPanel } from '@/features/providers/components/configuration-panel';
-import { CurrentConfiguration } from '@/features/providers/components/current-configuration';
 import type { 
   ProviderCategory,
   Model,
   ModelSelection as LocalModelSelection,
-  ProviderConfig
+  ProviderConfig,
+  ProviderFormData
 } from '@/features/providers/types';
 
 interface ProvidersConfigProps {
@@ -136,33 +136,8 @@ export function ProvidersConfig({ onChangeDetected }: ProvidersConfigProps) {
     ? testResults.get(selectedProvider) 
     : undefined
 
-  // Load models only for the selected provider when it changes
-  useEffect(() => {
-    if (!selectedProvider || !selectedProviderInfo?.isQueryable) {
-      return
-    }
-    
-    const abortController = new AbortController()
-    
-    const loadModels = async () => {
-      try {
-        const models = await getProviderModels(selectedProvider)
-        if (!abortController.signal.aborted) {
-          setAvailableModels(prev => new Map(prev).set(selectedProvider, models))
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name !== 'AbortError') {
-          console.error(`Failed to load models for provider ${selectedProvider}:`, error)
-        }
-      }
-    }
-    
-    loadModels()
-    
-    return () => {
-      abortController.abort()
-    }
-  }, [selectedProvider, selectedProviderInfo?.isQueryable, getProviderModels])
+  // Remove automatic model loading - models should only be loaded after successful test
+  // Models are now loaded in handleTestConnection when the test is successful
 
   // Handlers
   const handleProviderSelect = (providerId: string) => {
@@ -174,24 +149,17 @@ export function ProvidersConfig({ onChangeDetected }: ProvidersConfigProps) {
   }
 
   const handleConfigurationChange = (config: ProviderConfig) => {
-    // Update global provider configuration
-    updateProvider(config.id, {
-      config: {
-        api_key: config.api_key,
-        base_url: config.base_url,
-        ...config
-      }
-    })
-    onChangeDetected?.()
+    // Don't update on every change - wait for save
+    // This prevents the form from re-rendering on every keystroke
   }
 
-  const handleTestConnection = async () => {
+  const handleTestConnection = async (config?: ProviderFormData) => {
     if (!selectedProvider) return
     
     setIsTestingConnection(true)
     
     try {
-      const result = await testProviderConnection(selectedProvider)
+      const result = await testProviderConnection(selectedProvider, config || {})
       
       setTestResults(prev => new Map(prev).set(selectedProvider, result))
       
@@ -235,19 +203,25 @@ export function ProvidersConfig({ onChangeDetected }: ProvidersConfigProps) {
     }
   }
 
-  const handleSaveConfiguration = async () => {
-    if (!selectedProvider || !selectedProviderConfig) return
+  const handleSaveConfiguration = async (config?: ProviderConfig) => {
+    if (!selectedProvider) return
     
     try {
+      // Update global provider configuration with the form data
+      if (config) {
+        updateProvider(config.id, {
+          config: {
+            api_key: config.api_key,
+            base_url: config.base_url,
+            ...config
+          },
+          configured: true
+        })
+        onChangeDetected?.()
+      }
+      
       // Save all changes through global provider
       await saveAllChanges()
-      
-      // Update provider status
-      updateProvider(selectedProvider, {
-        configured: true
-      })
-
-      onChangeDetected?.()
       
       toast({
         title: "Configuration Saved",
@@ -269,13 +243,6 @@ export function ProvidersConfig({ onChangeDetected }: ProvidersConfigProps) {
         <h2 className="text-2xl font-bold">AI Provider Configuration</h2>
         <p className="text-muted-foreground">Configure and test AI providers for your system</p>
       </div>
-      
-      {/* Current Configuration Summary */}
-      <CurrentConfiguration
-        modelSelection={modelSelection}
-        providers={providers}
-        onEditConfiguration={() => {}}
-      />
       
       {/* Main Content Area */}
       <div className="flex gap-6">

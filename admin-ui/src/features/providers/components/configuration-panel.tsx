@@ -40,7 +40,7 @@ export function ConfigurationPanel({
     } : {}
   })
   
-  // Update form when provider changes or configuration changes
+  // Update form when provider changes
   useEffect(() => {
     if (provider) {
       const defaults = getProviderDefaults(provider.id)
@@ -56,7 +56,7 @@ export function ConfigurationPanel({
         form.trigger()
       }, 100)
     }
-  }, [provider?.id, configuration, form]) // Include configuration and form to ensure proper updates
+  }, [provider?.id]) // Only reset when provider changes, not on every configuration update
   
   // Handle form submission with error handling
   const handleSubmit = async (data: ProviderFormData) => {
@@ -69,8 +69,8 @@ export function ConfigurationPanel({
         id: provider.id,
         ...data
       }
-      onConfigurationChange(config)
-      await onSaveConfiguration()
+      // Pass the config data to save handler
+      await onSaveConfiguration(config)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save configuration'
       setSaveError(message)
@@ -201,7 +201,10 @@ export function ConfigurationPanel({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onTestConnection}
+                onClick={() => {
+                  const formData = form.getValues()
+                  onTestConnection(formData)
+                }}
                 disabled={isTestingConnection || isSaving}
               >
                 {isTestingConnection ? (
