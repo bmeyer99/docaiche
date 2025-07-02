@@ -15,7 +15,7 @@ export const API_CONFIG = {
     DEFAULT: 10000,      // 10 seconds
     UPLOAD: 60000,       // 1 minute for file uploads
     HEALTH_CHECK: 5000,  // 5 seconds for health checks
-    CONNECTION_TEST: 8000 // 8 seconds for provider connection tests
+    CONNECTION_TEST: 30000 // 30 seconds for provider connection tests
   },
   
   // Retry configuration
