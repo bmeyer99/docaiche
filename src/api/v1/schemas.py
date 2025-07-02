@@ -45,6 +45,12 @@ class SearchRequest(BaseModel):
     session_id: Optional[str] = Field(
         None, description="User session identifier for tracking"
     )
+    external_providers: Optional[List[str]] = Field(
+        None, description="Specific external search providers to use (None = use defaults)"
+    )
+    use_external_search: Optional[bool] = Field(
+        None, description="Force external search usage (None = auto-decide based on results)"
+    )
 
 
 class SearchResult(BaseModel):

@@ -549,11 +549,31 @@ async def delete_provider(
                 details={}
             )
         
-        if provider_id not in ["brave_search", "duckduckgo_search"]:
+        # Get configuration manager
+        config_manager = await get_configuration_manager()
+        current_config = config_manager.get_configuration()
+        
+        # Check if provider exists
+        if (not hasattr(current_config, 'mcp') or 
+            not current_config.mcp or 
+            not current_config.mcp.external_search or
+            provider_id not in current_config.mcp.external_search.providers):
             raise HTTPException(
                 status_code=404,
                 detail=f"Provider not found: {provider_id}"
             )
+        
+        # Remove provider from configuration
+        del current_config.mcp.external_search.providers[provider_id]
+        
+        # Save updated configuration
+        config_dict = current_config.model_dump()
+        await config_manager.update_in_db("mcp", config_dict["mcp"])
+        
+        # Unregister from MCP enhancer if available
+        if hasattr(search_orchestrator, 'mcp_enhancer') and search_orchestrator.mcp_enhancer:
+            search_orchestrator.mcp_enhancer.unregister_external_provider(provider_id)
+            logger.info(f"[{trace_id}] Dynamically unregistered provider: {provider_id}")
         
         return {"message": f"Provider {provider_id} deleted successfully"}
         
@@ -649,7 +669,8 @@ async def external_search(
             query=search_request.query,
             provider_ids=search_request.provider_ids,
             technology_hint=search_request.technology_hint,
-            max_results=search_request.max_results
+            max_results=search_request.max_results,
+            trace_id=trace_id
         )
         logger.info(f"[{trace_id}] External search returned: {len(external_results)} results")
         

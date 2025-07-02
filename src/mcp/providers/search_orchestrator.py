@@ -422,30 +422,41 @@ class ExternalSearchOrchestrator:
         options: SearchOptions
     ) -> SearchResults:
         """Execute search with single provider."""
+        provider_id = provider.config.provider_id
+        logger.info(f"Starting search with provider {provider_id} for query: '{options.query}'")
+        
         try:
             start_time = time.time()
             results = await provider.search(options)
             execution_time = int((time.time() - start_time) * 1000)
             
+            # Log results
+            logger.info(
+                f"Provider {provider_id} search completed: "
+                f"{len(results.results)} results in {execution_time}ms"
+            )
+            
             # Record performance
-            self.timeout_manager.record_latency(provider.config.provider_id, execution_time)
-            self.metrics['provider_calls'][provider.config.provider_id] += 1
+            self.timeout_manager.record_latency(provider_id, execution_time)
+            self.metrics['provider_calls'][provider_id] += 1
             
             # Reset circuit breaker on success
             if not results.error:
-                self._reset_circuit_breaker(provider.config.provider_id)
+                self._reset_circuit_breaker(provider_id)
+                logger.debug(f"Circuit breaker reset for provider {provider_id}")
             else:
-                self._record_failure(provider.config.provider_id)
+                self._record_failure(provider_id)
+                logger.warning(f"Provider {provider_id} returned error: {results.error}")
             
             return results
             
         except Exception as e:
-            self._record_failure(provider.config.provider_id)
-            logger.error(f"Provider {provider.config.provider_id} failed: {e}")
+            self._record_failure(provider_id)
+            logger.error(f"Provider {provider_id} failed with exception: {e}", exc_info=True)
             return SearchResults(
                 results=[],
                 execution_time_ms=0,
-                provider=provider.config.provider_id,
+                provider=provider_id,
                 query=options.query,
                 error=str(e)
             )

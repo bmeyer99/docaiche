@@ -81,8 +81,15 @@ class BraveSearchProvider(SearchProvider):
         Returns:
             Standardized search results
         """
+        # Generate trace ID for this search
+        import uuid
+        trace_id = f"brave-{uuid.uuid4().hex[:8]}"
+        
+        logger.info(f"[{trace_id}] Starting Brave search for query: '{options.query}', max_results: {options.max_results}")
+        
         if not self.session:
             self.session = aiohttp.ClientSession()
+            logger.debug(f"[{trace_id}] Created new aiohttp session")
         
         # Build query parameters
         params = self._build_search_params(options)
@@ -93,6 +100,9 @@ class BraveSearchProvider(SearchProvider):
             "Accept": "application/json"
         }
         headers.update(self.config.custom_headers)
+        
+        logger.debug(f"[{trace_id}] Request params: {params}")
+        logger.debug(f"[{trace_id}] Request URL: {self.BASE_URL}/web/search")
         
         try:
             start_time = asyncio.get_event_loop().time()
@@ -105,14 +115,21 @@ class BraveSearchProvider(SearchProvider):
             ) as response:
                 response.raise_for_status()
                 data = await response.json()
-            
+                
             execution_time = int((asyncio.get_event_loop().time() - start_time) * 1000)
             
+            logger.info(f"[{trace_id}] Brave API response received in {execution_time}ms, status: {response.status}")
+            logger.debug(f"[{trace_id}] Response contains {len(data.get('web', {}).get('results', []))} web results")
+            
             # Parse and standardize results
-            return self._parse_results(data, options.query, execution_time)
+            results = self._parse_results(data, options.query, execution_time)
+            
+            logger.info(f"[{trace_id}] Search completed: {len(results.results)} results parsed, execution_time: {results.execution_time_ms}ms")
+            
+            return results
             
         except aiohttp.ClientError as e:
-            logger.error(f"Brave Search API error: {e}")
+            logger.error(f"[{trace_id}] Brave Search API error: {e}")
             return SearchResults(
                 results=[],
                 execution_time_ms=0,
@@ -255,10 +272,16 @@ class BraveSearchProvider(SearchProvider):
             # Determine content type
             content_type = self._detect_content_type(item)
             
+            # Extract domain from URL
+            from urllib.parse import urlparse
+            parsed_url = urlparse(item.get("url", ""))
+            source_domain = parsed_url.netloc if parsed_url.netloc else ""
+            
             result = SearchResult(
                 title=item.get("title", ""),
                 url=item.get("url", ""),
                 snippet=item.get("description", ""),
+                source_domain=source_domain,
                 content_type=content_type,
                 provider_rank=i + 1,
                 published_date=self._parse_date(item.get("published_date")),

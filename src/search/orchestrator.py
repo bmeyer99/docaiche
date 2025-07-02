@@ -232,9 +232,26 @@ class SearchOrchestrator:
 
             # Step 4.5: External Search Enhancement (if needed)
             external_results_added = False
-            if (self.mcp_enhancer and 
-                (not search_results.results or 
-                 (evaluation_result and evaluation_result.quality_score < 0.6))):
+            # Check if external search should be used
+            should_use_external = False
+            logger.info(f"External search check - use_external_search: {normalized_query.use_external_search}, has results: {bool(search_results.results)}")
+            
+            if normalized_query.use_external_search is True:
+                # Explicitly requested
+                should_use_external = True
+                logger.info("External search explicitly requested")
+            elif normalized_query.use_external_search is False:
+                # Explicitly disabled
+                should_use_external = False
+                logger.info("External search explicitly disabled")
+            else:
+                # Auto-decide based on results quality
+                should_use_external = (not search_results.results or 
+                                     (evaluation_result and evaluation_result.quality_score < 0.6))
+                logger.info(f"External search auto-decide: {should_use_external}")
+            
+            logger.info(f"MCP enhancer available: {self.mcp_enhancer is not None}, should use external: {should_use_external}")
+            if self.mcp_enhancer and should_use_external:
                 try:
                     external_results = await self._enhance_with_external_search(
                         normalized_query, search_results
@@ -486,7 +503,8 @@ class SearchOrchestrator:
             external_results = await self.mcp_enhancer.execute_external_search(
                 query=external_query,
                 technology_hint=query.technology_hint,
-                max_results=10
+                max_results=10,
+                provider_ids=query.external_providers
             )
             
             if not external_results:
@@ -605,6 +623,8 @@ class SearchOrchestrator:
             offset=query.offset,
             technology_hint=tech_hint,
             workspace_slugs=query.workspace_slugs,
+            external_providers=query.external_providers,
+            use_external_search=query.use_external_search,
         )
 
     def _create_evaluation_prompt(
@@ -808,7 +828,9 @@ class SearchOrchestrator:
         limit: int = 10,
         offset: int = 0,
         session_id: Optional[str] = None,
-        background_tasks: Optional[BackgroundTasks] = None
+        background_tasks: Optional[BackgroundTasks] = None,
+        external_providers: Optional[List[str]] = None,
+        use_external_search: Optional[bool] = None
     ) -> "SearchResponse":
         """
         Main search method for API compatibility.
@@ -835,7 +857,9 @@ class SearchOrchestrator:
                 "technology": technology_hint
             } if technology_hint else {},
             limit=limit,
-            offset=offset
+            offset=offset,
+            external_providers=external_providers,
+            use_external_search=use_external_search
         )
         
         # Execute search

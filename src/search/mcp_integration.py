@@ -15,6 +15,7 @@ from src.llm.client import LLMProviderClient
 from src.search.llm_query_analyzer import LLMQueryAnalyzer
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class MCPSearchEnhancer:
@@ -140,7 +141,8 @@ class MCPSearchEnhancer:
         query: str,
         provider_ids: Optional[List[str]] = None,
         technology_hint: Optional[str] = None,
-        max_results: int = 10
+        max_results: int = 10,
+        trace_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Execute high-performance external search using optimized orchestrator.
@@ -150,22 +152,32 @@ class MCPSearchEnhancer:
             provider_ids: Specific providers to use (None = auto-select)
             technology_hint: Technology context for provider selection
             max_results: Maximum results to return
+            trace_id: Optional trace ID for request tracking
             
         Returns:
             Optimized results from external providers
         """
-        logger.info(f"execute_external_search called with query: {query}")
-        logger.info(f"Available providers: {list(self.external_providers.keys())}")
+        # Generate trace ID if not provided
+        if not trace_id:
+            import uuid
+            trace_id = f"mcp-{uuid.uuid4().hex[:8]}"
+            
+        logger.info(f"[{trace_id}] execute_external_search called with query: {query}")
+        logger.info(f"[{trace_id}] Available providers: {list(self.external_providers.keys())}")
+        logger.info(f"[{trace_id}] Requested provider_ids: {provider_ids}")
+        logger.info(f"[{trace_id}] Max results: {max_results}")
         
         if not hasattr(self, '_external_orchestrator'):
             # Initialize orchestrator lazily
+            logger.info(f"[{trace_id}] Initializing external orchestrator")
             await self._init_external_orchestrator()
         
         if not self._external_orchestrator:
-            logger.warning("External search orchestrator not available, falling back to simple search")
-            return await self._execute_simple_external_search(query, provider_ids)
+            logger.warning(f"[{trace_id}] External search orchestrator not available, falling back to simple search")
+            return await self._execute_simple_external_search(query, provider_ids, trace_id)
         
         try:
+            logger.info(f"[{trace_id}] Calling orchestrator search method")
             # Execute optimized search
             search_results = await self._external_orchestrator.search(
                 query=query,
@@ -173,6 +185,9 @@ class MCPSearchEnhancer:
                 max_results=max_results,
                 provider_ids=provider_ids
             )
+            
+            logger.info(f"[{trace_id}] Orchestrator returned search_results type: {type(search_results)}")
+            logger.info(f"[{trace_id}] Results count: {len(search_results.results) if hasattr(search_results, 'results') else 'N/A'}")
             
             # Convert to dict format for compatibility
             results = []
@@ -191,15 +206,15 @@ class MCPSearchEnhancer:
                 results.append(result_dict)
             
             logger.info(
-                f"External search completed: {len(results)} results in {search_results.execution_time_ms}ms"
+                f"[{trace_id}] External search completed: {len(results)} results in {search_results.execution_time_ms}ms"
             )
             
             return results
             
         except Exception as e:
-            logger.error(f"Optimized external search failed: {e}")
+            logger.error(f"[{trace_id}] Optimized external search failed: {e}", exc_info=True)
             # Fallback to simple search
-            return await self._execute_simple_external_search(query, provider_ids)
+            return await self._execute_simple_external_search(query, provider_ids, trace_id)
     
     async def _init_external_orchestrator(self) -> None:
         """Initialize the high-performance external search orchestrator."""
@@ -229,7 +244,7 @@ class MCPSearchEnhancer:
             
             # Register all external providers to the registry
             for provider_id, provider in self.external_providers.items():
-                provider_registry.register_provider(provider_id, provider)
+                await provider_registry.add_provider(provider_id, provider, validate=False)
                 logger.info(f"Registered {provider_id} to external orchestrator registry")
             
             # Initialize orchestrator
@@ -250,7 +265,8 @@ class MCPSearchEnhancer:
     async def _execute_simple_external_search(
         self,
         query: str,
-        provider_ids: Optional[List[str]] = None
+        provider_ids: Optional[List[str]] = None,
+        trace_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Fallback to simple external search without orchestrator.
@@ -258,33 +274,48 @@ class MCPSearchEnhancer:
         Args:
             query: Search query
             provider_ids: Specific providers to use
+            trace_id: Trace ID for request tracking
             
         Returns:
             Simple search results
         """
-        logger.info(f"Executing simple external search for: {query}, providers: {provider_ids}")
+        if not trace_id:
+            import uuid
+            trace_id = f"simple-{uuid.uuid4().hex[:8]}"
+            
+        logger.info(f"[{trace_id}] Executing simple external search for: {query}, providers: {provider_ids}")
         results = []
         
         # Get providers to use
         providers_to_use = self.external_providers
-        logger.info(f"Available providers: {list(self.external_providers.keys())}")
+        logger.info(f"[{trace_id}] Available providers: {list(self.external_providers.keys())}")
         if provider_ids:
             providers_to_use = {
                 pid: p for pid, p in self.external_providers.items()
                 if pid in provider_ids
             }
-            logger.info(f"Using filtered providers: {list(providers_to_use.keys())}")
+            logger.info(f"[{trace_id}] Using filtered providers: {list(providers_to_use.keys())}")
         
         # Execute searches
         for provider_id, provider in providers_to_use.items():
             try:
+                logger.info(f"[{trace_id}] Executing search with provider: {provider_id}")
+                
                 # Create SearchOptions for the provider
                 from src.mcp.providers.models import SearchOptions
-                search_options = SearchOptions(query=query, max_results=10)
+                search_options = SearchOptions(query=query, max_results=max_results or 10)
                 
                 # Assume simple search interface
                 if hasattr(provider, 'search'):
+                    logger.debug(f"[{trace_id}] Calling {provider_id}.search() with query: {query}")
                     search_results = await provider.search(search_options)
+                    
+                    # Log results info
+                    if hasattr(search_results, 'error') and search_results.error:
+                        logger.error(f"[{trace_id}] Provider {provider_id} returned error: {search_results.error}")
+                    else:
+                        logger.info(f"[{trace_id}] Provider {provider_id} returned {len(search_results.results) if hasattr(search_results, 'results') else 0} results")
+                    
                     # Extract results from SearchResults object
                     provider_results = []
                     if hasattr(search_results, 'results'):
@@ -293,11 +324,15 @@ class MCPSearchEnhancer:
                                 'title': result.title,
                                 'url': result.url,
                                 'snippet': result.snippet,
-                                'content_type': getattr(result, 'content_type', 'unknown')
+                                'content_type': str(getattr(result, 'content_type', 'unknown')),
+                                'source_domain': getattr(result, 'source_domain', '')
                             })
                 else:
                     # Legacy interface
+                    logger.debug(f"[{trace_id}] Using legacy execute_search for {provider_id}")
                     provider_results = await provider.execute_search(query, limit=10)
+                
+                logger.info(f"[{trace_id}] Provider {provider_id} processing {len(provider_results)} results")
                 
                 # Add provider info to results
                 for result in provider_results:
@@ -315,7 +350,7 @@ class MCPSearchEnhancer:
                         results.append(result_dict)
                         
             except Exception as e:
-                logger.error(f"Simple external search failed for {provider_id}: {e}")
+                logger.error(f"[{trace_id}] Simple external search failed for {provider_id}: {e}", exc_info=True)
         
         return results
     
@@ -415,12 +450,16 @@ def create_mcp_enhancer(
                 # Get API key
                 api_key = None
                 if provider_type == ProviderType.BRAVE:
-                    api_key = os.getenv('BRAVE_API_KEY')
+                    env_key = os.getenv('BRAVE_API_KEY')
+                    config_key = provider_config_data.api_key
+                    logger.debug(f"Provider {provider_id}: env_key={env_key}, config_key={config_key}")
+                    
+                    api_key = env_key
                     if not api_key:
-                        config_key = provider_config_data.api_key
                         # Only use config key if it's not an environment variable placeholder
                         if config_key and config_key != '${BRAVE_API_KEY}':
                             api_key = config_key
+                            logger.debug(f"Using config key for {provider_id}: {api_key[:10]}...")
                     
                     if not api_key:
                         logger.warning(f"Brave provider {provider_id} enabled but no API key found")
@@ -460,7 +499,7 @@ def create_mcp_enhancer(
                     registered_count += 1
                     logger.info(f"Registered {provider_id} provider (type: {provider_type})")
                 except Exception as e:
-                    logger.error(f"Failed to create provider {provider_id}: {e}")
+                    logger.error(f"Failed to create provider {provider_id}: {e}", exc_info=True)
             
             print(f"MCP SUCCESS: Registered {registered_count} external providers")
             logger.info(f"MCP external providers registered: {registered_count} providers")

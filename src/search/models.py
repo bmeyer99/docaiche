@@ -40,6 +40,8 @@ class SearchQuery(BaseModel):
     offset: int = Field(0, ge=0, description="Result offset for pagination")
     technology_hint: Optional[str] = Field(None, description="Technology filter hint")
     workspace_slugs: Optional[List[str]] = Field(None, description="Workspace filters")
+    external_providers: Optional[List[str]] = Field(None, description="Specific external providers to use")
+    use_external_search: Optional[bool] = Field(None, description="Force external search usage")
 
 
 class SearchResult(BaseModel):

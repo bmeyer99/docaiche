@@ -501,6 +501,14 @@ class ProviderConfig(BaseModel):
     Common configuration fields across all providers.
     """
     
+    provider_id: str = Field(
+        description="Unique identifier for this provider instance"
+    )
+    
+    provider_type: ProviderType = Field(
+        description="Type of provider (brave, google, etc.)"
+    )
+    
     enabled: bool = Field(
         default=True,
         description="Whether provider is enabled"

@@ -5,7 +5,7 @@ Search, feedback, and signals endpoints
 
 import logging
 import time
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Request
 
@@ -37,6 +37,42 @@ except ImportError:
 
 # Create router for search endpoints
 router = APIRouter()
+
+
+@router.get("/search/providers", tags=["search"])
+async def get_available_providers(
+    search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator)
+) -> Dict[str, Any]:
+    """
+    GET /api/v1/search/providers - Get available external search providers
+    
+    Returns list of available external search providers for search operations.
+    """
+    if not hasattr(search_orchestrator, 'mcp_enhancer') or not search_orchestrator.mcp_enhancer:
+        return {"providers": [], "message": "External search not configured"}
+    
+    providers = []
+    if hasattr(search_orchestrator.mcp_enhancer, 'external_providers'):
+        for provider_id, provider in search_orchestrator.mcp_enhancer.external_providers.items():
+            provider_type = getattr(provider.config, 'provider_type', 'unknown')
+            if hasattr(provider_type, 'value'):
+                provider_type = provider_type.value
+            
+            providers.append({
+                "id": provider_id,
+                "type": provider_type,
+                "enabled": getattr(provider.config, 'enabled', False),
+                "priority": getattr(provider.config, 'priority', 99)
+            })
+    
+    # Sort by priority
+    providers.sort(key=lambda x: x['priority'])
+    
+    return {
+        "providers": providers,
+        "count": len(providers),
+        "external_search_available": search_orchestrator.mcp_enhancer.is_external_search_available()
+    }
 
 
 @router.post("/search", response_model=SearchResponse, tags=["search"])
@@ -78,7 +114,9 @@ async def search_documents_post(
             technology_hint=search_request.technology_hint,
             limit=search_request.limit,
             offset=0,  # Default offset as it's not in SearchRequest
-            session_id=search_request.session_id
+            session_id=search_request.session_id,
+            external_providers=search_request.external_providers,
+            use_external_search=search_request.use_external_search
         )
         
         # Convert orchestrator results to API schema
