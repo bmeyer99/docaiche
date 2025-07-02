@@ -89,12 +89,106 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-async def get_analytics_data_internal(time_range: str = "24h"):
-    """Get real analytics data from the database"""
-    # Check system health dynamically
-    system_health = await check_system_health()
+async def get_system_health_quick():
+    """Get basic system health quickly - only essential checks."""
+    import redis
+    import aiohttp
+    import time
+    from src.core.config import get_system_configuration
     
-    # Calculate time filter
+    health_status = {}
+    
+    # Quick database check
+    try:
+        db_manager = await get_database_manager()
+        start = time.time()
+        db_health = await db_manager.health_check()
+        response_time = int((time.time() - start) * 1000)
+        
+        health_status["database"] = {
+            "status": "healthy" if db_health.get("status") == "healthy" else "unhealthy",
+            "message": db_health.get("message", "Database operational"),
+            "response_time": response_time,
+            "group": "infrastructure"
+        }
+    except Exception as e:
+        health_status["database"] = {
+            "status": "unhealthy",
+            "message": f"Connection failed",
+            "group": "infrastructure"
+        }
+    
+    # Quick Redis check
+    try:
+        cache_manager = await get_cache_manager()
+        start = time.time()
+        cache_health = await cache_manager.health_check()
+        response_time = int((time.time() - start) * 1000)
+        
+        health_status["cache"] = {
+            "status": "healthy" if cache_health.get("status") == "healthy" else "unhealthy",
+            "message": cache_health.get("message", "Cache operational"),
+            "response_time": response_time,
+            "group": "infrastructure"
+        }
+    except Exception as e:
+        health_status["cache"] = {
+            "status": "unhealthy",
+            "message": f"Cache unavailable",
+            "group": "infrastructure"
+        }
+    
+    # Quick API status based on db and cache
+    db_status = health_status.get("database", {}).get("status")
+    cache_status = health_status.get("cache", {}).get("status")
+    
+    if db_status == "healthy" and cache_status == "healthy":
+        health_status["api_core"] = {
+            "status": "healthy",
+            "message": "API core services operational",
+            "group": "infrastructure"
+        }
+    else:
+        health_status["api_core"] = {
+            "status": "degraded",
+            "message": "API running with limited functionality",
+            "group": "infrastructure"
+        }
+    
+    return health_status
+
+
+async def get_basic_analytics_stats():
+    """Get basic statistics quickly."""
+    db_manager = await get_database_manager()
+    
+    async with db_manager.session_factory() as session:
+        # Get basic counts in parallel
+        results = await asyncio.gather(
+            session.scalar(select(func.count()).select_from(SearchCache)),
+            session.scalar(select(func.avg(SearchCache.execution_time_ms)).select_from(SearchCache)),
+            session.scalar(select(func.count()).select_from(ContentMetadata)),
+            return_exceptions=True
+        )
+        
+        total_searches = results[0] if not isinstance(results[0], Exception) else 0
+        avg_response_time = results[1] if not isinstance(results[1], Exception) else 0
+        total_documents = results[2] if not isinstance(results[2], Exception) else 0
+        
+        return {
+            "search_stats": {
+                "total_searches": total_searches or 0,
+                "avg_response_time_ms": float(avg_response_time) if avg_response_time else 0,
+            },
+            "content_stats": {
+                "total_documents": total_documents or 0,
+                "total_chunks": (total_documents or 0) * 10,  # Estimate
+            }
+        }
+
+
+async def get_detailed_analytics_data(time_range: str = "24h"):
+    """Get detailed analytics data - may take longer."""
     now = datetime.utcnow()
     if time_range == "30d":
         start_time = now - timedelta(days=30)
@@ -108,11 +202,6 @@ async def get_analytics_data_internal(time_range: str = "24h"):
         # Get search metrics
         search_count = await session.scalar(
             select(func.count()).select_from(SearchCache)
-            .where(SearchCache.created_at >= start_time)
-        )
-        
-        avg_response_time = await session.scalar(
-            select(func.avg(SearchCache.execution_time_ms)).select_from(SearchCache)
             .where(SearchCache.created_at >= start_time)
         ) or 0
         
@@ -132,7 +221,7 @@ async def get_analytics_data_internal(time_range: str = "24h"):
             for row in top_queries_result
         ]
         
-        # Get queries by hour (last 24 hours)
+        # Get queries by hour (last 24 hours) - this is expensive
         hourly_stats = []
         for i in range(24):
             hour_start = now - timedelta(hours=i+1)
@@ -155,17 +244,7 @@ async def get_analytics_data_internal(time_range: str = "24h"):
                 "responseTime": float(row.avg_time) if row and row.avg_time else 0
             })
         
-        # Get content metrics
-        total_docs = await session.scalar(
-            select(func.count()).select_from(ContentMetadata)
-        ) or 0
-        
-        avg_quality = await session.scalar(
-            select(func.avg(ContentMetadata.quality_score))
-            .select_from(ContentMetadata)
-        ) or 0
-        
-        # Get documents by technology
+        # Get document distribution by technology
         tech_distribution = await session.execute(
             select(
                 ContentMetadata.technology,
@@ -180,7 +259,7 @@ async def get_analytics_data_internal(time_range: str = "24h"):
             for row in tech_distribution
         ]
         
-        # Calculate success rate (searches with results)
+        # Calculate success rate
         searches_with_results = await session.scalar(
             select(func.count()).select_from(SearchCache)
             .where(and_(
@@ -190,24 +269,256 @@ async def get_analytics_data_internal(time_range: str = "24h"):
         ) or 0
         
         success_rate = (searches_with_results / search_count) if search_count > 0 else 0
+        
+        return {
+            "timeRange": time_range,
+            "searchMetrics": {
+                "totalSearches": search_count,
+                "successRate": success_rate,
+                "topQueries": top_queries,
+                "queriesByHour": list(reversed(hourly_stats)),
+            },
+            "contentMetrics": {
+                "documentsByTechnology": docs_by_tech,
+            }
+        }
+
+
+
+
+async def get_core_infrastructure_health():
+    """Get core infrastructure health - database, cache, API core."""
+    import redis
+    import time
     
-    return {
-        "timeRange": time_range,
-        "systemHealth": system_health,
-        "searchMetrics": {
-            "totalSearches": search_count or 0,
-            "avgResponseTime": float(avg_response_time) if avg_response_time else 0,
-            "successRate": success_rate,
-            "topQueries": top_queries,
-            "queriesByHour": list(reversed(hourly_stats)),  # Reverse to show oldest to newest
-        },
-        "contentMetrics": {
-            "totalDocuments": total_docs,
-            "totalChunks": total_docs * 10,  # Estimate chunks
-            "avgQualityScore": float(avg_quality) if avg_quality else 0,
-            "documentsByTechnology": docs_by_tech,
-        },
-    }
+    health_status = {}
+    
+    # Database Health Check
+    try:
+        db_manager = await get_database_manager()
+        start = time.time()
+        db_health = await db_manager.health_check()
+        response_time = int((time.time() - start) * 1000)
+        
+        health_status["database"] = {
+            "status": "healthy" if db_health.get("status") == "healthy" else "unhealthy",
+            "message": db_health.get("message", "Database operational"),
+            "response_time": response_time,
+            "group": "infrastructure"
+        }
+    except Exception as e:
+        health_status["database"] = {
+            "status": "unhealthy",
+            "message": f"Connection failed: {str(e)[:100]}",
+            "group": "infrastructure"
+        }
+    
+    # Redis/Cache Health Check
+    try:
+        cache_manager = await get_cache_manager()
+        start = time.time()
+        cache_health = await cache_manager.health_check()
+        response_time = int((time.time() - start) * 1000)
+        
+        health_status["cache"] = {
+            "status": "healthy" if cache_health.get("status") == "healthy" else "unhealthy",
+            "message": cache_health.get("message", "Cache operational"),
+            "response_time": response_time,
+            "group": "infrastructure"
+        }
+    except Exception as e:
+        health_status["cache"] = {
+            "status": "unhealthy",
+            "message": f"Cache unavailable: {str(e)[:50]}",
+            "group": "infrastructure"
+        }
+    
+    # API Core Health Check
+    try:
+        start_time = time.time()
+        db_status = health_status.get("database", {}).get("status")
+        cache_status = health_status.get("cache", {}).get("status") 
+        response_time = int((time.time() - start_time) * 1000)
+        
+        if db_status == "healthy" and cache_status == "healthy":
+            health_status["api_core"] = {
+                "status": "healthy",
+                "message": "All API endpoints responsive",
+                "response_time": response_time,
+                "group": "infrastructure"
+            }
+        else:
+            health_status["api_core"] = {
+                "status": "degraded",
+                "message": "API running with limited functionality",
+                "response_time": response_time,
+                "group": "infrastructure"
+            }
+    except Exception as e:
+        health_status["api_core"] = {
+            "status": "unhealthy",
+            "message": "API core services unavailable",
+            "group": "infrastructure"
+        }
+    
+    return health_status
+
+
+async def get_search_ai_health():
+    """Get search and AI services health - vector store, AI providers, search service."""
+    import aiohttp
+    import time
+    from src.core.config import get_system_configuration
+    
+    health_status = {}
+    
+    # Vector Store (Weaviate) Health Check
+    try:
+        weaviate_client = await get_weaviate_client()
+        weaviate_health = await weaviate_client.health_check()
+        health_status["vector_store"] = {
+            "status": "healthy" if weaviate_health.get("status") == "healthy" else "degraded",
+            "message": weaviate_health.get("message", "Vector store operational"),
+            "response_time": weaviate_health.get("response_time_ms"),
+            "group": "search_ai"
+        }
+    except Exception as e:
+        health_status["vector_store"] = {
+            "status": "degraded",
+            "message": "Vector store not configured or unreachable",
+            "group": "search_ai"
+        }
+    
+    # AI Text Providers Health Check
+    try:
+        config = get_system_configuration()
+        ai_config = getattr(config, "ai", None)
+        
+        # Check if any AI providers are configured
+        ollama_enabled = bool(ai_config and getattr(ai_config, "ollama", None))
+        openai_enabled = bool(ai_config and getattr(ai_config, "openai", None))
+        anthropic_enabled = bool(ai_config and getattr(ai_config, "anthropic", None))
+        
+        provider_count = sum([ollama_enabled, openai_enabled, anthropic_enabled])
+        
+        if provider_count > 0:
+            health_status["text_ai_providers"] = {
+                "status": "healthy",
+                "message": f"{provider_count} AI provider(s) configured and available",
+                "details": {
+                    "ollama": "enabled" if ollama_enabled else "disabled",
+                    "openai": "enabled" if openai_enabled else "disabled", 
+                    "anthropic": "enabled" if anthropic_enabled else "disabled"
+                },
+                "group": "search_ai"
+            }
+        else:
+            health_status["text_ai_providers"] = {
+                "status": "degraded",
+                "message": "No AI providers configured",
+                "group": "search_ai"
+            }
+    except Exception as e:
+        health_status["text_ai_providers"] = {
+            "status": "degraded",
+            "message": "Unable to check AI provider configuration",
+            "group": "search_ai"
+        }
+    
+    # Search Orchestrator Health Check
+    try:
+        search_orchestrator = await get_search_orchestrator()
+        search_health = await search_orchestrator.health_check()
+        
+        # Determine overall search capability
+        vector_status = health_status.get("vector_store", {}).get("status")
+        ai_status = health_status.get("text_ai_providers", {}).get("status")
+        
+        if search_health.get("overall_status") == "healthy" and vector_status == "healthy" and ai_status == "healthy":
+            health_status["search_service"] = {
+                "status": "healthy",
+                "message": "Full search capabilities available",
+                "response_time": search_health.get("response_time_ms"),
+                "group": "search_ai"
+            }
+        elif search_health.get("overall_status") == "healthy":
+            health_status["search_service"] = {
+                "status": "degraded", 
+                "message": "Basic search available, limited AI enhancement",
+                "group": "search_ai"
+            }
+        else:
+            health_status["search_service"] = {
+                "status": "unhealthy",
+                "message": "Search service unavailable",
+                "group": "search_ai"
+            }
+    except Exception as e:
+        health_status["search_service"] = {
+            "status": "unhealthy",
+            "message": "Search orchestrator error",
+            "group": "search_ai"
+        }
+    
+    return health_status
+
+
+async def get_monitoring_stack_health():
+    """Get monitoring stack health - Grafana, Prometheus, Loki."""
+    import aiohttp
+    
+    monitoring_services = []
+    health_status = {}
+    
+    # Check Grafana
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+            async with session.get("http://grafana:3000/api/health") as response:
+                if response.status == 200:
+                    monitoring_services.append("Grafana")
+    except Exception:
+        pass
+    
+    # Check Prometheus  
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+            async with session.get("http://prometheus:9090/-/healthy") as response:
+                if response.status == 200:
+                    monitoring_services.append("Prometheus")
+    except Exception:
+        pass
+    
+    # Check Loki
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+            async with session.get("http://loki:3100/ready") as response:
+                if response.status == 200:
+                    monitoring_services.append("Loki")
+    except Exception:
+        pass
+    
+    if len(monitoring_services) >= 2:
+        health_status["monitoring_stack"] = {
+            "status": "healthy",
+            "message": f"Monitoring active: {', '.join(monitoring_services)}",
+            "details": {"active_services": monitoring_services},
+            "group": "monitoring"
+        }
+    elif len(monitoring_services) == 1:
+        health_status["monitoring_stack"] = {
+            "status": "degraded",
+            "message": f"Partial monitoring: {monitoring_services[0]} only",
+            "details": {"active_services": monitoring_services},
+            "group": "monitoring"
+        }
+    else:
+        health_status["monitoring_stack"] = {
+            "status": "degraded",
+            "message": "Monitoring services not responding",
+            "group": "monitoring"
+        }
+    
+    return health_status
 
 
 async def check_system_health():
@@ -588,24 +899,6 @@ async def check_system_health():
     return health_status
 
 
-async def get_health_status_internal():
-    """Get health status for WebSocket (simplified version)"""
-    return {
-        "status": "healthy",
-        "components": {
-            "database": {"status": "healthy", "message": "Connected"},
-            "redis": {"status": "healthy", "message": "Connected"},
-            "weaviate": {"status": "healthy", "message": "Connected"},
-            "search": {"status": "healthy", "message": "All search services operational"},
-        },
-        "features": {
-            "document_processing": "available",
-            "search": "available",
-            "llm_enhancement": "available",
-        },
-        "version": "1.0.0",
-        "timestamp": datetime.utcnow().isoformat(),
-    }
 
 
 async def get_service_metrics():
@@ -737,66 +1030,6 @@ async def get_weaviate_metrics():
         }
 
 
-async def get_stats_data_internal():
-    """Get comprehensive stats with per-service breakdown"""
-    db_manager = await get_database_manager()
-    
-    async with db_manager.session_factory() as session:
-        # Get search statistics
-        total_searches = await session.scalar(
-            select(func.count()).select_from(SearchCache)
-        ) or 0
-        
-        avg_response_time = await session.scalar(
-            select(func.avg(SearchCache.execution_time_ms)).select_from(SearchCache)
-        ) or 0
-        
-        # Calculate cache hit rate
-        cache_hits = await session.scalar(
-            select(func.count()).select_from(SearchCache)
-            .where(SearchCache.cache_hit == True)
-        ) or 0
-        
-        cache_hit_rate = (cache_hits / total_searches) if total_searches > 0 else 0
-        
-        # Get content statistics
-        total_documents = await session.scalar(
-            select(func.count()).select_from(ContentMetadata)
-        ) or 0
-        
-        # Count unique workspaces from SearchCache
-        workspace_count = await session.scalar(
-            select(func.count(func.distinct(SearchCache.workspace_slugs)))
-            .select_from(SearchCache)
-            .where(SearchCache.workspace_slugs.isnot(None))
-        ) or 0
-    
-    # Get per-service metrics
-    service_metrics = await get_service_metrics()
-    redis_metrics = await get_redis_metrics()
-    weaviate_metrics = await get_weaviate_metrics()
-    
-    return {
-        "search_stats": {
-            "total_searches": total_searches,
-            "avg_response_time_ms": float(avg_response_time) if avg_response_time else 0,
-            "cache_hit_rate": cache_hit_rate,
-        },
-        "content_stats": {
-            "total_documents": total_documents,
-            "total_chunks": total_documents * 10,  # Estimate
-            "workspaces": workspace_count,
-        },
-        "service_metrics": service_metrics,
-        "redis_metrics": redis_metrics,
-        "weaviate_metrics": weaviate_metrics,
-        "cache_stats": {
-            "hit_rate": cache_hit_rate,
-            "miss_rate": 1 - cache_hit_rate,
-            "redis_ops_per_sec": redis_metrics.get('instantaneous_ops_per_sec', 0),
-            "redis_memory_mb": redis_metrics.get('used_memory_mb', 0),
-        }
-    }
 
 
 @router.websocket("/ws/analytics")
@@ -804,67 +1037,148 @@ async def analytics_websocket(
     websocket: WebSocket
 ):
     """
-    WebSocket endpoint for real-time analytics updates.
+    Progressive WebSocket endpoint for real-time analytics updates.
     
-    Sends analytics data every 5 seconds or on-demand when requested.
+    Sends data progressively as it becomes available instead of waiting
+    for all data to be gathered first. Data is sent in logical sections:
+    1. Connection acknowledgment
+    2. System health (quick)
+    3. Basic statistics (moderate)
+    4. Detailed analytics (slower)
+    5. Service metrics (optional)
     """
     await manager.connect(websocket, "analytics")
     update_task = None
     
     try:
-        # Send initial data with error handling
-        try:
-            initial_data = {
-                "type": "analytics_update", 
-                "timestamp": datetime.utcnow().isoformat(),
-                "data": {
-                    "analytics": await get_analytics_data_internal("24h"),
-                    "stats": await get_stats_data_internal()
-                }
-            }
-            await manager.send_json(initial_data, websocket)
-        except Exception as e:
-            logger.error(f"Error sending initial analytics data: {e}")
-            # Send simplified fallback data
-            fallback_data = {
+        # Send immediate connection acknowledgment
+        await manager.send_json({
+            "type": "analytics_update",
+            "section": "connection",
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": {"status": "connected", "message": "Loading analytics data..."}
+        }, websocket)
+        
+        # Progressive data loading function
+        async def load_analytics_progressive(time_range: str = "24h"):
+            """Load analytics data progressively, sending each section as it becomes available."""
+            
+            # 1. Send system health first (quickest to gather)
+            try:
+                health_data = await get_system_health_quick()
+                await manager.send_json({
+                    "type": "analytics_update",
+                    "section": "health",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"systemHealth": health_data}
+                }, websocket)
+            except Exception as e:
+                logger.error(f"Error getting health data: {e}")
+                await manager.send_json({
+                    "type": "analytics_update",
+                    "section": "health",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"systemHealth": {"error": "Health data unavailable"}}
+                }, websocket)
+            
+            # 2. Send basic stats (moderate speed)
+            try:
+                basic_stats = await get_basic_analytics_stats()
+                await manager.send_json({
+                    "type": "analytics_update",
+                    "section": "basic_stats",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"stats": basic_stats}
+                }, websocket)
+            except Exception as e:
+                logger.error(f"Error getting basic stats: {e}")
+                await manager.send_json({
+                    "type": "analytics_update",
+                    "section": "basic_stats",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"stats": {"error": "Basic stats unavailable"}}
+                }, websocket)
+            
+            # 3. Send detailed analytics (slower)
+            try:
+                detailed_analytics = await get_detailed_analytics_data(time_range)
+                await manager.send_json({
+                    "type": "analytics_update",
+                    "section": "detailed_analytics",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"analytics": detailed_analytics}
+                }, websocket)
+            except Exception as e:
+                logger.error(f"Error getting detailed analytics: {e}")
+                await manager.send_json({
+                    "type": "analytics_update",
+                    "section": "detailed_analytics",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"analytics": {"error": "Detailed analytics unavailable"}}
+                }, websocket)
+            
+            # 4. Send service metrics (optional, may be slow)
+            try:
+                service_metrics = await get_service_metrics()
+                await manager.send_json({
+                    "type": "analytics_update",
+                    "section": "service_metrics",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"service_metrics": service_metrics}
+                }, websocket)
+            except Exception as e:
+                logger.error(f"Error getting service metrics: {e}")
+                # Service metrics are optional, don't send error for this
+            
+            # 5. Signal load complete
+            await manager.send_json({
                 "type": "analytics_update",
-                "timestamp": datetime.utcnow().isoformat(), 
-                "data": {
-                    "analytics": {"timeRange": "24h", "systemHealth": {}, "searchMetrics": {"totalSearches": 0}},
-                    "stats": {"search_stats": {}, "cache_stats": {}, "content_stats": {}, "system_stats": {}}
-                }
-            }
-            await manager.send_json(fallback_data, websocket)
+                "section": "complete",
+                "timestamp": datetime.utcnow().isoformat(),
+                "data": {"loadComplete": True}
+            }, websocket)
+        
+        # Load initial data progressively
+        await load_analytics_progressive("24h")
         
         # Start background task for periodic updates
-        async def send_updates():
+        async def send_progressive_updates():
             while True:
                 try:
                     await asyncio.sleep(5)  # Update every 5 seconds
                     
+                    # Send progressive updates - only essential data for performance
                     try:
-                        update_data = {
+                        # Health update (quick)
+                        health_data = await get_system_health_quick()
+                        await manager.send_json({
                             "type": "analytics_update",
+                            "section": "health_update",
                             "timestamp": datetime.utcnow().isoformat(),
-                            "data": {
-                                "analytics": await get_analytics_data_internal("24h"),
-                                "stats": await get_stats_data_internal()
-                            }
-                        }
-                        await manager.send_json(update_data, websocket)
+                            "data": {"systemHealth": health_data}
+                        }, websocket)
+                        
+                        # Basic stats update (moderate)
+                        basic_stats = await get_basic_analytics_stats()
+                        await manager.send_json({
+                            "type": "analytics_update",
+                            "section": "stats_update",
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "data": {"stats": basic_stats}
+                        }, websocket)
+                        
                     except Exception as data_error:
-                        logger.error(f"Error generating update data: {data_error}")
-                        # Continue the loop, don't break on data errors
+                        logger.error(f"Error generating progressive update data: {data_error}")
                         
                 except asyncio.CancelledError:
-                    logger.info("Analytics update task cancelled")
+                    logger.info("Progressive analytics update task cancelled")
                     break
                 except Exception as e:
-                    logger.error(f"Error in analytics update loop: {e}")
+                    logger.error(f"Error in progressive analytics update loop: {e}")
                     break
         
         # Create background task
-        update_task = asyncio.create_task(send_updates())
+        update_task = asyncio.create_task(send_progressive_updates())
         
         # Listen for client messages
         while True:
@@ -876,15 +1190,17 @@ async def analytics_websocket(
                 if data.get("type") == "change_timerange":
                     time_range = data.get("timeRange", "24h")
                     try:
-                        response_data = {
+                        # Send loading indicator
+                        await manager.send_json({
                             "type": "analytics_update",
+                            "section": "loading",
                             "timestamp": datetime.utcnow().isoformat(),
-                            "data": {
-                                "analytics": await get_analytics_data_internal(time_range),
-                                "stats": await get_stats_data_internal()
-                            }
-                        }
-                        await manager.send_json(response_data, websocket)
+                            "data": {"loading": True, "timeRange": time_range}
+                        }, websocket)
+                        
+                        # Load new time range data progressively
+                        await load_analytics_progressive(time_range)
+                        
                     except Exception as e:
                         logger.error(f"Error handling timerange change: {e}")
                     
@@ -892,7 +1208,7 @@ async def analytics_websocket(
                     await manager.send_json({"type": "pong"}, websocket)
                     
             except WebSocketDisconnect:
-                logger.info("Analytics WebSocket client disconnected")
+                logger.info("Progressive analytics WebSocket client disconnected")
                 break
             except json.JSONDecodeError as e:
                 logger.error(f"Invalid JSON from client: {e}")
@@ -902,7 +1218,7 @@ async def analytics_websocket(
                 break
                 
     except Exception as e:
-        logger.error(f"Analytics WebSocket error: {e}")
+        logger.error(f"Progressive analytics WebSocket error: {e}")
     finally:
         if update_task:
             update_task.cancel()
@@ -918,42 +1234,142 @@ async def health_websocket(
     websocket: WebSocket
 ):
     """
-    WebSocket endpoint for real-time health monitoring.
+    Progressive WebSocket endpoint for real-time health monitoring.
     
-    Sends health status updates every 2 seconds.
+    Sends health data progressively in logical sections:
+    1. Connection acknowledgment
+    2. Core infrastructure (database, cache, API)
+    3. Search & AI services (vector store, AI providers)
+    4. Service metrics (container stats)
+    5. Monitoring stack (Grafana, Prometheus)
     """
     await manager.connect(websocket, "health")
+    update_task = None
     
     try:
-        # Send initial health data
-        initial_health = await get_health_status_internal()
-        
-        initial_data = {
+        # Send immediate connection acknowledgment
+        await manager.send_json({
             "type": "health_update",
+            "section": "connection",
             "timestamp": datetime.utcnow().isoformat(),
-            "data": initial_health
-        }
-        await manager.send_json(initial_data, websocket)
+            "data": {"status": "connected", "message": "Loading health data..."}
+        }, websocket)
         
-        # Start background task for periodic health checks
-        async def send_health_updates():
+        # Progressive health data loading function
+        async def load_health_progressive():
+            """Load health data progressively, sending each section as it becomes available."""
+            
+            # 1. Core infrastructure health (essential services)
+            try:
+                core_health = await get_core_infrastructure_health()
+                await manager.send_json({
+                    "type": "health_update",
+                    "section": "core_infrastructure",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"core_infrastructure": core_health}
+                }, websocket)
+            except Exception as e:
+                logger.error(f"Error getting core infrastructure health: {e}")
+                await manager.send_json({
+                    "type": "health_update",
+                    "section": "core_infrastructure",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"core_infrastructure": {"error": "Core infrastructure status unavailable"}}
+                }, websocket)
+            
+            # 2. Search & AI services health
+            try:
+                search_ai_health = await get_search_ai_health()
+                await manager.send_json({
+                    "type": "health_update",
+                    "section": "search_ai",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"search_ai": search_ai_health}
+                }, websocket)
+            except Exception as e:
+                logger.error(f"Error getting search & AI health: {e}")
+                await manager.send_json({
+                    "type": "health_update",
+                    "section": "search_ai",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"search_ai": {"error": "Search & AI services status unavailable"}}
+                }, websocket)
+            
+            # 3. Service metrics (may be slow)
+            try:
+                service_metrics = await get_service_metrics()
+                await manager.send_json({
+                    "type": "health_update",
+                    "section": "service_metrics",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"service_metrics": service_metrics}
+                }, websocket)
+            except Exception as e:
+                logger.error(f"Error getting service metrics: {e}")
+                # Service metrics are optional, don't send error
+            
+            # 4. Monitoring stack health (optional)
+            try:
+                monitoring_health = await get_monitoring_stack_health()
+                await manager.send_json({
+                    "type": "health_update",
+                    "section": "monitoring",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "data": {"monitoring": monitoring_health}
+                }, websocket)
+            except Exception as e:
+                logger.error(f"Error getting monitoring stack health: {e}")
+                # Monitoring is optional, don't send error
+            
+            # 5. Signal load complete
+            await manager.send_json({
+                "type": "health_update",
+                "section": "complete",
+                "timestamp": datetime.utcnow().isoformat(),
+                "data": {"loadComplete": True}
+            }, websocket)
+        
+        # Load initial health data progressively
+        await load_health_progressive()
+        
+        # Start background task for periodic health updates
+        async def send_progressive_health_updates():
             while True:
                 try:
-                    await asyncio.sleep(2)  # Check every 2 seconds
+                    await asyncio.sleep(5)  # Update every 5 seconds
                     
-                    health_data = await get_health_status_internal()
-                    update_data = {
-                        "type": "health_update",
-                        "timestamp": datetime.utcnow().isoformat(),
-                        "data": health_data
-                    }
-                    await manager.send_json(update_data, websocket)
+                    # Send progressive health updates - focus on essential data
+                    try:
+                        # Core infrastructure update (quick and essential)
+                        core_health = await get_core_infrastructure_health()
+                        await manager.send_json({
+                            "type": "health_update",
+                            "section": "core_update",
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "data": {"core_infrastructure": core_health}
+                        }, websocket)
+                        
+                        # Search & AI services update (moderate priority)
+                        search_ai_health = await get_search_ai_health()
+                        await manager.send_json({
+                            "type": "health_update",
+                            "section": "search_ai_update",
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "data": {"search_ai": search_ai_health}
+                        }, websocket)
+                        
+                    except Exception as data_error:
+                        logger.error(f"Error generating progressive health update: {data_error}")
+                        
+                except asyncio.CancelledError:
+                    logger.info("Progressive health update task cancelled")
+                    break
                 except Exception as e:
-                    logger.error(f"Error sending health update: {e}")
+                    logger.error(f"Error in progressive health update loop: {e}")
                     break
         
         # Create background task
-        update_task = asyncio.create_task(send_health_updates())
+        update_task = asyncio.create_task(send_progressive_health_updates())
         
         # Listen for client messages
         while True:
@@ -963,17 +1379,29 @@ async def health_websocket(
                 
                 if data.get("type") == "ping":
                     await manager.send_json({"type": "pong"}, websocket)
+                elif data.get("type") == "refresh":
+                    # Client requested a full health refresh
+                    await load_health_progressive()
                     
             except WebSocketDisconnect:
+                logger.info("Progressive health WebSocket client disconnected")
                 break
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON from client: {e}")
+                # Don't break connection for invalid JSON
             except Exception as e:
                 logger.error(f"Error processing websocket message: {e}")
                 break
                 
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        logger.error(f"Progressive health WebSocket error: {e}")
     finally:
-        update_task.cancel()
+        if update_task:
+            update_task.cancel()
+            try:
+                await update_task
+            except asyncio.CancelledError:
+                pass
         manager.disconnect(websocket)
 
 

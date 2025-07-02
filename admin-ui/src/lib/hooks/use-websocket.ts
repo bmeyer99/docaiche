@@ -175,15 +175,33 @@ export function useAnalyticsWebSocket(timeRange: string = '24h', enabled: boolea
     // Import dynamically to avoid SSR issues
     import('../websocket-manager').then(({ default: WebSocketManager }) => {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const url = `${wsProtocol}//${window.location.host}/ws/analytics`;
+      // Use the new progressive endpoint
+      const url = `${wsProtocol}//${window.location.host}/ws/analytics/progressive`;
       
       const manager = WebSocketManager.getInstance(url);
 
       // Set up event handlers
       const unsubscribeMessage = manager.onMessage((data) => {
         if (data.type === 'analytics_update') {
-          setAnalytics(data.data.analytics);
-          setStats(data.data.stats);
+          // Handle progressive data based on section
+          if (data.section === 'health' && data.data.systemHealth) {
+            setAnalytics((prev: any) => ({ ...prev, systemHealth: data.data.systemHealth }));
+          } else if (data.section === 'basic_stats' && data.data.stats) {
+            setStats(data.data.stats);
+          } else if (data.section === 'detailed_analytics' && data.data.analytics) {
+            setAnalytics((prev: any) => ({ ...prev, ...data.data.analytics }));
+          } else if (data.section === 'service_metrics' && data.data.service_metrics) {
+            setStats((prev: any) => ({ ...prev, service_metrics: data.data.service_metrics }));
+          } else if (data.section === 'stats_update' && data.data.stats) {
+            setStats((prev: any) => ({ ...prev, ...data.data.stats }));
+          } else if (data.section === 'health_update' && data.data.systemHealth) {
+            setAnalytics((prev: any) => ({ ...prev, systemHealth: data.data.systemHealth }));
+          }
+          // Legacy support for non-progressive endpoints
+          else if (!data.section) {
+            setAnalytics(data.data.analytics);
+            setStats(data.data.stats);
+          }
         }
       });
 
@@ -192,11 +210,13 @@ export function useAnalyticsWebSocket(timeRange: string = '24h', enabled: boolea
         setIsConnected(true);
         setError(null);
         
-        // Send initial time range
-        manager.send({
-          type: 'change_timerange',
-          timeRange,
-        });
+        // Send initial time range with a small delay to ensure connection is ready
+        setTimeout(() => {
+          manager.send({
+            type: 'change_timerange',
+            timeRange,
+          });
+        }, 100);
       });
 
       const unsubscribeError = manager.onError((event) => {
@@ -223,7 +243,7 @@ export function useAnalyticsWebSocket(timeRange: string = '24h', enabled: boolea
     if (isConnected && typeof window !== 'undefined') {
       import('../websocket-manager').then(({ default: WebSocketManager }) => {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const url = `${wsProtocol}//${window.location.host}/ws/analytics`;
+        const url = `${wsProtocol}//${window.location.host}/ws/analytics/progressive`;
         const manager = WebSocketManager.getInstance(url);
         
         manager.send({

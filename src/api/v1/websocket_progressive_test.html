@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Progressive Analytics WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #d32f2f;
+        }
+        .success {
+            color: #388e3c;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .timeline {
+            border-left: 3px solid #1976d2;
+            padding-left: 20px;
+            margin-top: 20px;
+        }
+        .timeline-item {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -27px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1976d2;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Progressive Analytics WebSocket Test</h1>
+        
+        <div class="section">
+            <h3>Connection Controls</h3>
+            <button onclick="connectProgressive()">Connect Progressive</button>
+            <button onclick="connectRegular()">Connect Regular (for comparison)</button>
+            <button onclick="disconnect()">Disconnect</button>
+            <button onclick="changeTimeRange()">Change Time Range to 7d</button>
+            <button onclick="clearTimeline()">Clear Timeline</button>
+            
+            <p>Status: <span id="status" class="loading">Not connected</span></p>
+        </div>
+        
+        <div class="section">
+            <h3>Progressive Loading Timeline</h3>
+            <div id="timeline" class="timeline"></div>
+        </div>
+        
+        <div class="section">
+            <h3>Current Data</h3>
+            <div id="data-sections">
+                <div class="section">
+                    <h4>System Health <span id="health-status" class="loading">(waiting...)</span></h4>
+                    <pre id="health-data">No data yet</pre>
+                </div>
+                
+                <div class="section">
+                    <h4>Basic Stats <span id="stats-status" class="loading">(waiting...)</span></h4>
+                    <pre id="stats-data">No data yet</pre>
+                </div>
+                
+                <div class="section">
+                    <h4>Detailed Analytics <span id="analytics-status" class="loading">(waiting...)</span></h4>
+                    <pre id="analytics-data">No data yet</pre>
+                </div>
+                
+                <div class="section">
+                    <h4>Service Metrics <span id="service-status" class="loading">(waiting...)</span></h4>
+                    <pre id="service-data">No data yet</pre>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Raw Messages</h3>
+            <pre id="raw-messages" style="max-height: 300px; overflow-y: auto;">No messages yet</pre>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        let startTime = null;
+        let messageCount = 0;
+        
+        function addTimelineItem(message, type = 'info') {
+            const timeline = document.getElementById('timeline');
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            
+            const elapsed = startTime ? ((Date.now() - startTime) / 1000).toFixed(2) : '0.00';
+            
+            item.innerHTML = `
+                <div class="timestamp">+${elapsed}s</div>
+                <div class="${type}">${message}</div>
+            `;
+            
+            timeline.appendChild(item);
+        }
+        
+        function updateStatus(message, type = '') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+        }
+        
+        function clearTimeline() {
+            document.getElementById('timeline').innerHTML = '';
+            document.getElementById('raw-messages').textContent = 'No messages yet';
+            messageCount = 0;
+        }
+        
+        function connectProgressive() {
+            if (ws) {
+                ws.close();
+            }
+            
+            clearTimeline();
+            startTime = Date.now();
+            
+            updateStatus('Connecting to progressive endpoint...', 'loading');
+            addTimelineItem('Initiating connection to progressive WebSocket');
+            
+            // Reset all section statuses
+            ['health', 'stats', 'analytics', 'service'].forEach(section => {
+                document.getElementById(`${section}-status`).textContent = '(waiting...)';
+                document.getElementById(`${section}-status`).className = 'loading';
+                document.getElementById(`${section}-data`).textContent = 'No data yet';
+            });
+            
+            ws = new WebSocket('ws://localhost:4080/api/v1/ws/analytics/progressive');
+            
+            ws.onopen = function(event) {
+                updateStatus('Connected to progressive endpoint', 'success');
+                addTimelineItem('WebSocket connection established', 'success');
+            };
+            
+            ws.onmessage = function(event) {
+                messageCount++;
+                const data = JSON.parse(event.data);
+                
+                // Log raw message
+                const rawMessages = document.getElementById('raw-messages');
+                rawMessages.textContent = `Message #${messageCount}:\n${JSON.stringify(data, null, 2)}\n\n` + rawMessages.textContent;
+                
+                // Handle different sections
+                if (data.section === 'init') {
+                    addTimelineItem('Received connection acknowledgment');
+                } else if (data.section === 'health') {
+                    addTimelineItem('Received system health data', 'success');
+                    document.getElementById('health-status').textContent = '(loaded)';
+                    document.getElementById('health-status').className = 'success';
+                    document.getElementById('health-data').textContent = JSON.stringify(data.data.systemHealth, null, 2);
+                } else if (data.section === 'basic_stats') {
+                    addTimelineItem('Received basic statistics', 'success');
+                    document.getElementById('stats-status').textContent = '(loaded)';
+                    document.getElementById('stats-status').className = 'success';
+                    document.getElementById('stats-data').textContent = JSON.stringify(data.data.stats, null, 2);
+                } else if (data.section === 'detailed_analytics') {
+                    addTimelineItem('Received detailed analytics', 'success');
+                    document.getElementById('analytics-status').textContent = '(loaded)';
+                    document.getElementById('analytics-status').className = 'success';
+                    document.getElementById('analytics-data').textContent = JSON.stringify(data.data.analytics, null, 2);
+                } else if (data.section === 'service_metrics') {
+                    addTimelineItem('Received service metrics', 'success');
+                    document.getElementById('service-status').textContent = '(loaded)';
+                    document.getElementById('service-status').className = 'success';
+                    document.getElementById('service-data').textContent = JSON.stringify(data.data.service_metrics, null, 2);
+                } else if (data.section === 'complete') {
+                    addTimelineItem('Initial data load complete!', 'success');
+                    updateStatus('Connected - All data loaded', 'success');
+                } else if (data.section === 'health_update' || data.section === 'stats_update') {
+                    addTimelineItem(`Received periodic ${data.section.replace('_update', '')} update`);
+                    // Update the relevant section
+                    if (data.section === 'health_update' && data.data.systemHealth) {
+                        document.getElementById('health-data').textContent = JSON.stringify(data.data.systemHealth, null, 2);
+                    } else if (data.section === 'stats_update' && data.data.stats) {
+                        document.getElementById('stats-data').textContent = JSON.stringify(data.data.stats, null, 2);
+                    }
+                }
+            };
+            
+            ws.onerror = function(error) {
+                updateStatus('WebSocket error', 'error');
+                addTimelineItem('WebSocket error occurred', 'error');
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = function(event) {
+                updateStatus('Disconnected', 'error');
+                addTimelineItem('WebSocket connection closed', 'error');
+            };
+        }
+        
+        function connectRegular() {
+            if (ws) {
+                ws.close();
+            }
+            
+            clearTimeline();
+            startTime = Date.now();
+            
+            updateStatus('Connecting to regular endpoint...', 'loading');
+            addTimelineItem('Initiating connection to regular WebSocket');
+            
+            ws = new WebSocket('ws://localhost:4080/api/v1/ws/analytics');
+            
+            ws.onopen = function(event) {
+                updateStatus('Connected to regular endpoint', 'success');
+                addTimelineItem('WebSocket connection established', 'success');
+            };
+            
+            ws.onmessage = function(event) {
+                messageCount++;
+                const data = JSON.parse(event.data);
+                
+                // Log raw message
+                const rawMessages = document.getElementById('raw-messages');
+                rawMessages.textContent = `Message #${messageCount}:\n${JSON.stringify(data, null, 2)}\n\n` + rawMessages.textContent;
+                
+                if (data.type === 'analytics_update') {
+                    addTimelineItem('Received complete analytics update (all data at once)', 'success');
+                    updateStatus('Connected - Data received', 'success');
+                    
+                    // Update all sections at once
+                    if (data.data.analytics && data.data.analytics.systemHealth) {
+                        document.getElementById('health-status').textContent = '(loaded)';
+                        document.getElementById('health-status').className = 'success';
+                        document.getElementById('health-data').textContent = JSON.stringify(data.data.analytics.systemHealth, null, 2);
+                    }
+                    
+                    if (data.data.stats) {
+                        document.getElementById('stats-status').textContent = '(loaded)';
+                        document.getElementById('stats-status').className = 'success';
+                        document.getElementById('stats-data').textContent = JSON.stringify(data.data.stats, null, 2);
+                    }
+                    
+                    if (data.data.analytics) {
+                        document.getElementById('analytics-status').textContent = '(loaded)';
+                        document.getElementById('analytics-status').className = 'success';
+                        document.getElementById('analytics-data').textContent = JSON.stringify(data.data.analytics, null, 2);
+                    }
+                }
+            };
+            
+            ws.onerror = function(error) {
+                updateStatus('WebSocket error', 'error');
+                addTimelineItem('WebSocket error occurred', 'error');
+            };
+            
+            ws.onclose = function(event) {
+                updateStatus('Disconnected', 'error');
+                addTimelineItem('WebSocket connection closed', 'error');
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                updateStatus('Disconnected', '');
+                addTimelineItem('Manually disconnected');
+            }
+        }
+        
+        function changeTimeRange() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'change_timerange',
+                    timeRange: '7d'
+                }));
+                addTimelineItem('Sent time range change request (7d)');
+            } else {
+                alert('WebSocket is not connected');
+            }
+        }
+    </script>
+</body>
+</html>
