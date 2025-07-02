@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
+import { useSearchConfig } from '../../contexts/config-context';
 
 interface IngestionConfigProps {
   onChangeDetected?: () => void;
@@ -54,54 +55,52 @@ interface IngestionSettings {
 }
 
 export function IngestionConfig({ onChangeDetected }: IngestionConfigProps) {
-  const [rules, setRules] = useState<IngestionRule[]>([]);
-  const [settings, setSettings] = useState<IngestionSettings>({
-    quality_threshold: 0.7,
-    batch_size: 100,
-    max_concurrent_jobs: 5,
-    auto_retry_enabled: true,
-    deduplication_enabled: true
-  });
-  const [recentJobs, setRecentJobs] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const apiClient = useApiClient();
   const { toast } = useToast();
+  const { 
+    ingestionRules: loadedRules, 
+    ingestionSettings: loadedSettings, 
+    updateIngestionRules, 
+    updateIngestionSettings 
+  } = useSearchConfig();
+  
+  // Use pre-loaded configuration
+  const [rules, setRules] = useState<IngestionRule[]>(loadedRules || []);
+  const [settings, setSettings] = useState<IngestionSettings>(
+    loadedSettings || {
+      quality_threshold: 0.7,
+      batch_size: 100,
+      max_concurrent_jobs: 5,
+      auto_retry_enabled: true,
+      deduplication_enabled: true
+    }
+  );
+  const [recentJobs, setRecentJobs] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Update local state when context changes
   useEffect(() => {
-    loadIngestionConfig();
+    if (loadedRules) {
+      setRules(loadedRules);
+    }
+    if (loadedSettings) {
+      setSettings(loadedSettings);
+    }
+  }, [loadedRules, loadedSettings]);
+  
+  // Load recent jobs (not pre-loaded)
+  useEffect(() => {
+    loadRecentJobs();
   }, []);
 
-  const loadIngestionConfig = async () => {
+  const loadRecentJobs = async () => {
     try {
-      setIsLoading(true);
-      
-      // Load ingestion rules
-      const rulesResponse = await apiClient.getIngestionRules();
-      if (rulesResponse) {
-        setRules(rulesResponse);
-      }
-      
-      // Load ingestion settings
-      const settingsResponse = await apiClient.getIngestionSettings();
-      if (settingsResponse) {
-        setSettings(settingsResponse);
-      }
-      
-      // Load recent ingestion jobs
       const jobsResponse = await apiClient.getIngestionJobs({ limit: 10 });
       if (jobsResponse) {
         setRecentJobs(jobsResponse);
       }
     } catch (error) {
-      console.error('Failed to load ingestion configuration:', error);
-      toast({
-        title: "Failed to load configuration",
-        description: "Unable to load ingestion settings",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to load recent jobs:', error);
     }
   };
 
@@ -132,12 +131,13 @@ export function IngestionConfig({ onChangeDetected }: IngestionConfigProps) {
     
     try {
       await apiClient.deleteIngestionRule(ruleId);
-      setRules(prev => prev.filter(rule => rule.id !== ruleId));
+      const updatedRules = rules.filter(rule => rule.id !== ruleId);
+      setRules(updatedRules);
+      updateIngestionRules(updatedRules);
       toast({
         title: "Rule deleted",
         description: "Ingestion rule deleted successfully"
       });
-      onChangeDetected?.();
     } catch (error) {
       toast({
         title: "Failed to delete rule",
@@ -150,12 +150,12 @@ export function IngestionConfig({ onChangeDetected }: IngestionConfigProps) {
   const saveSettings = async () => {
     try {
       setIsSaving(true);
-      await apiClient.updateIngestionSettings(settings);
+      const updated = await apiClient.updateIngestionSettings(settings);
+      updateIngestionSettings(updated);
       toast({
         title: "Settings saved",
         description: "Ingestion settings updated successfully"
       });
-      onChangeDetected?.();
     } catch (error) {
       toast({
         title: "Failed to save settings",
@@ -167,13 +167,6 @@ export function IngestionConfig({ onChangeDetected }: IngestionConfigProps) {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6">

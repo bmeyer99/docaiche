@@ -29,6 +29,7 @@ import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { useProviderSettings } from '@/lib/hooks/use-provider-settings';
 import { AI_PROVIDERS } from '@/lib/config/providers';
+import { useSearchConfig } from '../../contexts/config-context';
 
 interface VectorSearchConfigProps {
   onChangeDetected?: () => void;
@@ -55,13 +56,19 @@ interface EmbeddingConfig {
 export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps) {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
   const { providers } = useProviderSettings();
   const apiClient = useApiClient();
   const { toast } = useToast();
+  const { 
+    vectorConfig: loadedVectorConfig, 
+    workspaces,
+    embeddingConfig: loadedEmbeddingConfig,
+    updateVectorConfig,
+    updateEmbeddingConfig 
+  } = useSearchConfig();
 
   const { register: registerVector, handleSubmit: handleSubmitVector, watch: watchVector, reset, setValue: setVectorValue } = useForm<VectorConfig>({
-    defaultValues: {
+    defaultValues: loadedVectorConfig || {
       enabled: true,
       base_url: 'http://weaviate:8080',
       api_key: '',
@@ -74,7 +81,7 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
   const vectorConfig = watchVector();
 
   const { register: registerEmbedding, handleSubmit: handleSubmitEmbedding, watch: watchEmbedding, setValue: setEmbeddingValue } = useForm<EmbeddingConfig>({
-    defaultValues: {
+    defaultValues: loadedEmbeddingConfig || {
       useDefaultEmbedding: true,
       provider: '',
       model: '',
@@ -87,56 +94,26 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
   const embeddingConfig = watchEmbedding();
   const selectedProvider = embeddingConfig.provider;
 
+  // Set connection status from loaded config
   useEffect(() => {
-    loadVectorConfig();
-    loadWorkspaces();
-  }, [reset]);
-
-  const loadVectorConfig = async () => {
-    try {
-      const config = await apiClient.getWeaviateConfig();
-      if (config) {
-        // Reset form with actual config values
-        reset({
-          enabled: config.enabled !== false,
-          base_url: config.base_url || 'http://weaviate:8080',
-          api_key: config.api_key || '',
-          timeout_seconds: config.timeout_seconds || 30,
-          max_retries: config.max_retries || 3,
-          verify_ssl: config.verify_ssl || false
-        });
-        
-        // Set connection status
-        setConnectionStatus({
-          connected: config.connected || false,
-          version: config.version,
-          workspaces_count: config.workspaces_count || 0,
-          message: config.message
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load vector config:', error);
-      toast({
-        title: "Failed to load configuration",
-        description: "Unable to load Weaviate settings",
-        variant: "destructive"
+    if (loadedVectorConfig) {
+      setConnectionStatus({
+        connected: loadedVectorConfig.connected || false,
+        version: loadedVectorConfig.version,
+        workspaces_count: loadedVectorConfig.workspaces_count || 0,
+        message: loadedVectorConfig.message
       });
     }
-  };
+  }, [loadedVectorConfig]);
 
-  const loadWorkspaces = async () => {
-    try {
-      const workspacesData = await apiClient.getWeaviateWorkspaces();
-      setWorkspaces(workspacesData || []);
-    } catch (error) {
-      console.error('Failed to load workspaces:', error);
-      toast({
-        title: "Failed to load workspaces",
-        description: "Unable to retrieve workspace information",
-        variant: "destructive"
-      });
+  // Track changes to embedding config
+  useEffect(() => {
+    // Skip on initial load
+    if (embeddingConfig.provider || embeddingConfig.model) {
+      onChangeDetected?.();
     }
-  };
+  }, [embeddingConfig.provider, embeddingConfig.model, embeddingConfig.useDefaultEmbedding]);
+
 
   const handleConnectionTest = async () => {
     setIsTestingConnection(true);
@@ -178,12 +155,12 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
 
   const handleSaveVectorConfig = async (data: VectorConfig) => {
     try {
-      await apiClient.updateWeaviateConfig(data);
+      const updated = await apiClient.updateWeaviateConfig(data);
+      updateVectorConfig(updated);
       toast({
         title: "Configuration Saved",
         description: "Weaviate configuration updated successfully"
       });
-      onChangeDetected?.();
     } catch (error: any) {
       toast({
         title: "Save Failed",
@@ -195,12 +172,12 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
 
   const handleSaveEmbeddingConfig = async (data: EmbeddingConfig) => {
     try {
-      await apiClient.updateEmbeddingConfig(data);
+      const updated = await apiClient.updateEmbeddingConfig(data);
+      updateEmbeddingConfig(updated);
       toast({
         title: "Configuration Saved",
         description: "Embedding configuration updated successfully"
       });
-      onChangeDetected?.();
     } catch (error: any) {
       toast({
         title: "Save Failed",

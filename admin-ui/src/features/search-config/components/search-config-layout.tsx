@@ -19,27 +19,27 @@ import {
   BarChart3, 
   Settings,
   Save,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { TabConfig } from '../types';
+import { ConfigProvider, useSearchConfig } from '../contexts/config-context';
 
 // Import tab components
 import { ProvidersConfig } from './tabs/providers';
 import { VectorSearchConfig } from './tabs/vector-search';
 import { TextAIConfig } from './tabs/text-ai';
-import { SearchProvidersConfig } from './tabs/search-providers';
 import { IngestionConfig } from './tabs/ingestion';
 import { MonitoringConfig } from './tabs/monitoring';
 import { SystemSettings } from './tabs/settings';
 
 const TABS: TabConfig[] = [
-  { id: 'providers', label: 'Providers', icon: 'Users', shortcut: 'Cmd+1' },
+  { id: 'providers', label: 'AI Providers', icon: 'Users', shortcut: 'Cmd+1' },
   { id: 'vector', label: 'Vector Search', icon: 'Database', shortcut: 'Cmd+2' },
   { id: 'text-ai', label: 'Text AI', icon: 'Bot', shortcut: 'Cmd+3' },
-  { id: 'search-providers', label: 'Search Providers', icon: 'Globe', shortcut: 'Cmd+4' },
-  { id: 'ingestion', label: 'Ingestion', icon: 'HardDrive', shortcut: 'Cmd+5' },
-  { id: 'monitoring', label: 'Monitoring', icon: 'BarChart3', shortcut: 'Cmd+6' },
-  { id: 'settings', label: 'Settings', icon: 'Settings', shortcut: 'Cmd+7' }
+  { id: 'ingestion', label: 'Ingestion', icon: 'HardDrive', shortcut: 'Cmd+4' },
+  { id: 'monitoring', label: 'Monitoring', icon: 'BarChart3', shortcut: 'Cmd+5' },
+  { id: 'settings', label: 'Settings', icon: 'Settings', shortcut: 'Cmd+6' }
 ];
 
 const ICON_MAP = {
@@ -52,7 +52,8 @@ const ICON_MAP = {
   Settings
 };
 
-export function SearchConfigLayout() {
+function SearchConfigContent() {
+  const { isLoading, loadError } = useSearchConfig();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'providers');
@@ -75,7 +76,7 @@ export function SearchConfigLayout() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '7') {
+      if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '6') {
         e.preventDefault();
         const tabIndex = parseInt(e.key) - 1;
         if (TABS[tabIndex]) {
@@ -114,6 +115,28 @@ export function SearchConfigLayout() {
       // TODO: Reset form values
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading configurations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">{loadError}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -194,10 +217,6 @@ export function SearchConfigLayout() {
               <TextAIConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
             </TabsContent>
             
-            <TabsContent value="search-providers" className="h-full m-0">
-              <SearchProvidersConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
-            </TabsContent>
-            
             <TabsContent value="ingestion" className="h-full m-0">
               <IngestionConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
             </TabsContent>
@@ -217,11 +236,19 @@ export function SearchConfigLayout() {
       <div className="border-t px-6 py-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-4">
           <span>Keyboard shortcuts:</span>
-          <span>⌘1-7 to switch tabs</span>
+          <span>⌘1-6 to switch tabs</span>
           <span>⌘S to save</span>
           <span>ESC to cancel</span>
         </div>
       </div>
     </div>
+  );
+}
+
+export function SearchConfigLayout() {
+  return (
+    <ConfigProvider>
+      <SearchConfigContent />
+    </ConfigProvider>
   );
 }

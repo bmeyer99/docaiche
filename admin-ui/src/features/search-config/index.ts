@@ -11,7 +11,6 @@ export { SearchConfigLayout } from './components/search-config-layout';
 export { SearchConfigDashboard } from './components/tabs/dashboard';
 export { VectorSearchConfig } from './components/tabs/vector-search';
 export { TextAIConfig } from './components/tabs/text-ai';
-export { SearchProvidersConfig } from './components/tabs/search-providers';
 export { IngestionConfig } from './components/tabs/ingestion';
 export { MonitoringConfig } from './components/tabs/monitoring';
 export { SystemSettings } from './components/tabs/settings';

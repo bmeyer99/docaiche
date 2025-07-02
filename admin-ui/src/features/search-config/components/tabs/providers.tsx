@@ -188,10 +188,12 @@ export function ProvidersConfig({ onChangeDetected }: ProvidersConfigProps) {
       
       setIsTestingConnection(false)
       
-      // Update provider status in global state
+      // Update provider status and models in global state
       updateProvider(selectedProvider, {
-        status: result.success ? 'configured' : 'failed',
-        lastTested: new Date().toISOString()
+        status: result.success ? 'tested' : 'failed',
+        lastTested: new Date().toISOString(),
+        models: result.success && result.availableModels ? result.availableModels : [],
+        enabled: result.success
       })
     } catch (error) {
       setIsTestingConnection(false)

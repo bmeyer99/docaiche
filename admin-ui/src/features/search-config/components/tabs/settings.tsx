@@ -31,6 +31,7 @@ import {
 import { SearchConfiguration } from '../../types';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
+import { useSearchConfig } from '../../contexts/config-context';
 
 interface SystemSettingsProps {
   onChangeDetected?: () => void;
@@ -40,84 +41,70 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const apiClient = useApiClient();
   const { toast } = useToast();
+  const { systemSettings: loadedSettings, updateSystemSettings } = useSearchConfig();
 
-  const { register, handleSubmit, watch, setValue, reset } = useForm<SearchConfiguration>({
-    defaultValues: {
-      queue_management: {
-        max_queue_depth: 100,
-        overflow_strategy: 'reject',
-        priority_levels: 3,
-        stale_timeout_seconds: 300
-      },
-      timeouts: {
-        search_timeout_seconds: 30,
-        ai_timeout_seconds: 30,
-        provider_timeout_seconds: 10,
-        cache_ttl_seconds: 3600
-      },
-      performance_thresholds: {
-        max_search_latency_ms: 1000,
-        max_ai_latency_ms: 2000,
-        min_cache_hit_rate: 0.6,
-        max_error_rate: 0.05
-      },
-      resource_limits: {
-        max_concurrent_searches: 50,
-        max_ai_calls_per_minute: 100,
-        max_provider_calls_per_minute: 500,
-        max_cache_size_mb: 1024
-      },
-      feature_toggles: {
-        enable_external_search: true,
-        enable_ai_evaluation: true,
-        enable_query_refinement: true,
-        enable_knowledge_ingestion: true,
-        enable_result_caching: true
-      },
-      advanced_settings: {
-        workspace_selection_strategy: 'ai_guided',
-        result_ranking_algorithm: 'hybrid',
-        external_provider_priority: ['brave', 'google', 'bing']
-      }
-    }
-  });
-
-  useEffect(() => {
-    loadConfiguration();
-  }, []);
-
-  const loadConfiguration = async () => {
-    try {
-      setIsLoading(true);
-      const config = await apiClient.getSystemSettings();
-      if (config) {
-        reset(config);
-      }
-    } catch (error) {
-      console.error('Failed to load system settings:', error);
-      toast({
-        title: "Failed to load settings",
-        description: "Using default configuration",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+  const defaultSettings = {
+    queue_management: {
+      max_queue_depth: 100,
+      overflow_strategy: 'reject',
+      priority_levels: 3,
+      stale_timeout_seconds: 300
+    },
+    timeouts: {
+      search_timeout_seconds: 30,
+      ai_timeout_seconds: 30,
+      provider_timeout_seconds: 10,
+      cache_ttl_seconds: 3600
+    },
+    performance_thresholds: {
+      max_search_latency_ms: 1000,
+      max_ai_latency_ms: 2000,
+      min_cache_hit_rate: 0.6,
+      max_error_rate: 0.05
+    },
+    resource_limits: {
+      max_concurrent_searches: 50,
+      max_ai_calls_per_minute: 100,
+      max_provider_calls_per_minute: 500,
+      max_cache_size_mb: 1024
+    },
+    feature_toggles: {
+      enable_external_search: true,
+      enable_ai_evaluation: true,
+      enable_query_refinement: true,
+      enable_knowledge_ingestion: true,
+      enable_result_caching: true
+    },
+    advanced_settings: {
+      workspace_selection_strategy: 'ai_guided',
+      result_ranking_algorithm: 'hybrid',
+      external_provider_priority: ['brave', 'google', 'bing']
     }
   };
+
+  const { register, handleSubmit, watch, setValue, reset } = useForm<SearchConfiguration>({
+    defaultValues: loadedSettings || defaultSettings
+  });
+
+  // Update form when context changes
+  useEffect(() => {
+    if (loadedSettings) {
+      reset(loadedSettings);
+    }
+  }, [loadedSettings, reset]);
 
   const saveConfiguration = async (data: SearchConfiguration) => {
     try {
       setIsSaving(true);
-      await apiClient.updateSystemSettings(data);
+      const updated = await apiClient.updateSystemSettings(data);
+      updateSystemSettings(updated);
       toast({
         title: "Settings saved",
         description: "System configuration updated successfully"
       });
-      onChangeDetected?.();
     } catch (error) {
       toast({
         title: "Failed to save settings",
@@ -186,13 +173,13 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
     }
     
     try {
-      await apiClient.resetSystemSettings();
-      await loadConfiguration();
+      const resetSettings = await apiClient.resetSystemSettings();
+      updateSystemSettings(resetSettings);
+      reset(resetSettings);
       toast({
         title: "Settings reset",
         description: "All settings have been reset to defaults"
       });
-      onChangeDetected?.();
     } catch (error) {
       toast({
         title: "Reset failed",
@@ -234,13 +221,6 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6">

@@ -28,6 +28,7 @@ import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
 import { useProviderSettings, useModelSelection } from '@/lib/hooks/use-provider-settings';
 import { AI_PROVIDERS } from '@/lib/config/providers';
+import { useSearchConfig } from '../../contexts/config-context';
 
 interface TextAIConfigProps {
   onChangeDetected?: () => void;
@@ -49,9 +50,16 @@ export function TextAIConfig({ onChangeDetected }: TextAIConfigProps) {
   const { modelSelection, updateModelSelection } = useModelSelection();
   const apiClient = useApiClient();
   const { toast } = useToast();
+  const { modelParameters, updateModelParameters } = useSearchConfig();
+
+  const selectedProvider = modelSelection.textGeneration.provider;
+  const selectedModel = modelSelection.textGeneration.model;
+  
+  // Get pre-loaded parameters for selected model
+  const loadedParams = modelParameters[selectedProvider]?.[selectedModel];
 
   const { register, handleSubmit, watch, setValue } = useForm<ModelParameters>({
-    defaultValues: {
+    defaultValues: loadedParams || {
       temperature: 0.7,
       topP: 0.9,
       topK: 40,
@@ -62,13 +70,21 @@ export function TextAIConfig({ onChangeDetected }: TextAIConfigProps) {
     }
   });
 
-  const selectedProvider = modelSelection.textGeneration.provider;
-  const selectedModel = modelSelection.textGeneration.model;
-
   useEffect(() => {
-    // Load saved model parameters
-    loadModelParameters();
-  }, [selectedProvider, selectedModel]);
+    // When model changes, load parameters if not already loaded
+    if (selectedProvider && selectedModel && !loadedParams) {
+      loadModelParameters();
+    } else if (loadedParams) {
+      // Use pre-loaded parameters
+      setValue('temperature', loadedParams.temperature || 0.7);
+      setValue('topP', loadedParams.topP || 0.9);
+      setValue('topK', loadedParams.topK || 40);
+      setValue('maxTokens', loadedParams.maxTokens || 2048);
+      setValue('presencePenalty', loadedParams.presencePenalty || 0);
+      setValue('frequencyPenalty', loadedParams.frequencyPenalty || 0);
+      setValue('systemPrompt', loadedParams.systemPrompt || '');
+    }
+  }, [selectedProvider, selectedModel, loadedParams]);
 
   const loadModelParameters = async () => {
     if (!selectedProvider || !selectedModel) return;
@@ -76,6 +92,7 @@ export function TextAIConfig({ onChangeDetected }: TextAIConfigProps) {
     try {
       const params = await apiClient.getModelParameters(selectedProvider, selectedModel);
       if (params) {
+        updateModelParameters(selectedProvider, selectedModel, params);
         setValue('temperature', params.temperature || 0.7);
         setValue('topP', params.topP || 0.9);
         setValue('topK', params.topK || 40);
@@ -102,11 +119,11 @@ export function TextAIConfig({ onChangeDetected }: TextAIConfigProps) {
     setIsSaving(true);
     try {
       await apiClient.updateModelParameters(selectedProvider, selectedModel, data);
+      updateModelParameters(selectedProvider, selectedModel, data);
       toast({
         title: "Configuration Saved",
         description: "Text AI model parameters updated successfully"
       });
-      onChangeDetected?.();
     } catch (error: any) {
       toast({
         title: "Save Failed",

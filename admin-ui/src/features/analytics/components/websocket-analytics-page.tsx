@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Icons } from '@/components/icons';
+import { AnimatedGradientSkeleton, AnimatedGradientSkeletonCard, AnimatedGradientSkeletonChart, AnimatedGradientSkeletonHealth } from '@/components/ui/animated-gradient-skeleton';
 import { 
   AreaChart, 
   Area, 
@@ -108,7 +109,9 @@ export default function WebSocketAnalyticsPage() {
       )}
 
       {/* System Health Overview */}
-      {analytics?.systemHealth && (
+      {!analytics?.systemHealth ? (
+        <AnimatedGradientSkeletonHealth />
+      ) : (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -261,7 +264,13 @@ export default function WebSocketAnalyticsPage() {
       )}
 
       {/* Key Metrics */}
-      {stats && (
+      {!stats ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <AnimatedGradientSkeletonCard key={i} />
+          ))}
+        </div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
@@ -344,7 +353,12 @@ export default function WebSocketAnalyticsPage() {
       )}
 
       {/* Charts */}
-      {analytics && (
+      {!analytics ? (
+        <div className="space-y-4">
+          <AnimatedGradientSkeleton variant="text" className="w-64 h-8" />
+          <AnimatedGradientSkeletonChart />
+        </div>
+      ) : (
         <Tabs defaultValue="search" className="space-y-4">
           <TabsList>
             <TabsTrigger value="search">Search Analytics</TabsTrigger>
@@ -376,6 +390,9 @@ export default function WebSocketAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
+                  {!analytics?.searchMetrics?.queriesByHour ? (
+                    <AnimatedGradientSkeleton variant="chart" className="h-full" />
+                  ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     {chartType === 'area' ? (
                       <AreaChart data={getSearchTrendData()}>
@@ -414,6 +431,7 @@ export default function WebSocketAnalyticsPage() {
                       </LineChart>
                     )}
                   </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -426,7 +444,16 @@ export default function WebSocketAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {analytics.searchMetrics?.topQueries?.slice(0, 10).map((query: any, index: number) => (
+                  {!analytics.searchMetrics?.topQueries ? (
+                    <>
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <AnimatedGradientSkeleton variant="text" className="w-1/2 h-4" />
+                          <AnimatedGradientSkeleton variant="text" className="w-20 h-4" />
+                        </div>
+                      ))}
+                    </>
+                  ) : analytics.searchMetrics.topQueries.slice(0, 10).map((query: any, index: number) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">{index + 1}.</span>
@@ -448,6 +475,9 @@ export default function WebSocketAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
+                  {!analytics?.contentMetrics?.documentsByTechnology ? (
+                    <AnimatedGradientSkeleton variant="chart" className="h-full" />
+                  ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -467,6 +497,7 @@ export default function WebSocketAnalyticsPage() {
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -475,7 +506,13 @@ export default function WebSocketAnalyticsPage() {
           <TabsContent value="system" className="space-y-4">
             {/* Service Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {stats?.service_metrics && Object.entries(stats.service_metrics).map(([serviceName, metrics]: [string, any]) => (
+              {!stats?.service_metrics ? (
+                <>
+                  {[...Array(6)].map((_, i) => (
+                    <AnimatedGradientSkeletonCard key={i} />
+                  ))}
+                </>
+              ) : Object.entries(stats.service_metrics).map(([serviceName, metrics]: [string, any]) => (
                 <Card key={serviceName}>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm capitalize flex items-center gap-2">
@@ -536,7 +573,9 @@ export default function WebSocketAnalyticsPage() {
             </div>
             
             {/* Redis Detailed Metrics */}
-            {stats?.redis_metrics && (
+            {!stats?.redis_metrics ? (
+              <AnimatedGradientSkeletonCard className="h-64" />
+            ) : (
               <Card>
                 <CardHeader>
                   <CardTitle>Redis Cache Metrics</CardTitle>
@@ -589,7 +628,9 @@ export default function WebSocketAnalyticsPage() {
             )}
             
             {/* Weaviate Metrics */}
-            {stats?.weaviate_metrics && (
+            {!stats?.weaviate_metrics ? (
+              <AnimatedGradientSkeletonCard className="h-32" />
+            ) : (
               <Card>
                 <CardHeader>
                   <CardTitle>Weaviate Service</CardTitle>

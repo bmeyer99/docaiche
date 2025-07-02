@@ -968,6 +968,10 @@ export class DocaicheApiClient {
     return this.get<any[]>('/weaviate/workspaces');
   }
 
+  async getEmbeddingConfig(): Promise<any> {
+    return this.get<any>('/weaviate/embeddings');
+  }
+
   async updateEmbeddingConfig(config: any): Promise<any> {
     return this.put<any>('/weaviate/embeddings', config);
   }
