@@ -24,7 +24,7 @@ from .models import (
     ErrorResponse
 )
 from src.mcp.core import SearchConfiguration
-from ..dependencies import get_database_manager
+from ...dependencies import get_database_manager
 from src.database.connection import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -175,7 +175,7 @@ async def get_configuration_history(
         
         return audit_logs
         
-w    except Exception as e:
+    except Exception as e:
         logger.error(f"Failed to get configuration history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

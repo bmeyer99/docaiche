@@ -227,6 +227,86 @@ DEFAULT_PROVIDERS = {
         ],
         "queryable": False,
         "defaultModel": "deepseek-chat"
+    },
+    "vertex": {
+        "name": "Google Vertex AI",
+        "type": "text_generation",
+        "category": "enterprise",
+        "description": "Google Cloud Vertex AI with enterprise security",
+        "requiresApiKey": False,
+        "supportsEmbedding": True,
+        "supportsChat": True,
+        "status": "untested",
+        "enabled": True,
+        "config": {
+            "vertexProjectId": "",
+            "vertexRegion": "us-central1",
+            "vertexJsonCredentials": "",
+            "timeout": 30,
+            "maxRetries": 3
+        },
+        "models": [
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+            "gemini-1.0-pro",
+            "text-bison",
+            "textembedding-gecko"
+        ],
+        "queryable": False,
+        "defaultModel": "gemini-1.5-flash"
+    },
+    "gemini": {
+        "name": "Google Gemini",
+        "type": "text_generation",
+        "category": "enterprise",
+        "description": "Google Gemini models for multimodal AI",
+        "requiresApiKey": True,
+        "supportsEmbedding": True,
+        "supportsChat": True,
+        "status": "untested",
+        "enabled": True,
+        "config": {
+            "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+            "timeout": 30,
+            "maxRetries": 3,
+            "apiKey": ""
+        },
+        "models": [
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+            "gemini-1.0-pro",
+            "text-embedding-004"
+        ],
+        "queryable": False,
+        "defaultModel": "gemini-1.5-flash"
+    },
+    "bedrock": {
+        "name": "AWS Bedrock",
+        "type": "text_generation",
+        "category": "enterprise",
+        "description": "AWS Bedrock with enterprise-grade AI models",
+        "requiresApiKey": False,
+        "supportsEmbedding": True,
+        "supportsChat": True,
+        "status": "untested",
+        "enabled": True,
+        "config": {
+            "awsRegion": "us-east-1",
+            "awsAccessKey": "",
+            "awsSecretKey": "",
+            "awsSessionToken": "",
+            "timeout": 30,
+            "maxRetries": 3
+        },
+        "models": [
+            "anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "anthropic.claude-3-opus-20240229:0",
+            "anthropic.claude-3-haiku-20240307:0",
+            "amazon.titan-text-premier-v1:0",
+            "amazon.titan-embed-text-v2:0"
+        ],
+        "queryable": False,
+        "defaultModel": "anthropic.claude-3-5-sonnet-20241022-v2:0"
     }
 }
 

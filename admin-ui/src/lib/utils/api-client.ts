@@ -840,6 +840,146 @@ export class DocaicheApiClient {
       error_message?: string;
     }>(`${API_ENDPOINTS.MCP.PROVIDER(providerId)}/test`, { test_query: testQuery });
   }
+
+  /**
+   * Ingestion Management Methods
+   */
+  
+  // Ingestion Rules
+  async getIngestionRules(): Promise<any[]> {
+    return this.get<any[]>('/ingestion/rules');
+  }
+
+  async createIngestionRule(rule: any): Promise<any> {
+    return this.post<any>('/ingestion/rules', rule);
+  }
+
+  async updateIngestionRule(ruleId: string, updates: any): Promise<any> {
+    return this.put<any>(`/ingestion/rules/${ruleId}`, updates);
+  }
+
+  async deleteIngestionRule(ruleId: string): Promise<void> {
+    return this.delete<void>(`/ingestion/rules/${ruleId}`);
+  }
+
+  // Ingestion Settings
+  async getIngestionSettings(): Promise<any> {
+    return this.get<any>('/ingestion/settings');
+  }
+
+  async updateIngestionSettings(settings: any): Promise<any> {
+    return this.put<any>('/ingestion/settings', settings);
+  }
+
+  // Ingestion Jobs
+  async getIngestionJobs(params?: { limit?: number; status?: string }): Promise<any[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.status) searchParams.set('status', params.status);
+    
+    const query = searchParams.toString();
+    return this.get<any[]>(`/ingestion/jobs${query ? `?${query}` : ''}`);
+  }
+
+  async triggerIngestionJob(ruleId: string): Promise<any> {
+    return this.post<any>(`/ingestion/rules/${ruleId}/trigger`, {});
+  }
+
+  /**
+   * Monitoring and Alerts Methods
+   */
+  
+  // Alert Rules
+  async getAlertRules(): Promise<any[]> {
+    return this.get<any[]>('/monitoring/alerts');
+  }
+
+  async updateAlertRule(alertId: string, updates: any): Promise<any> {
+    return this.put<any>(`/monitoring/alerts/${alertId}`, updates);
+  }
+
+  // Logs
+  async getLogs(params?: { limit?: number; level?: string; component?: string }): Promise<any[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.level) searchParams.set('level', params.level);
+    if (params?.component) searchParams.set('component', params.component);
+    
+    const query = searchParams.toString();
+    return this.get<any[]>(`/monitoring/logs${query ? `?${query}` : ''}`);
+  }
+
+  // Dashboard URLs
+  async getDashboardUrls(): Promise<any> {
+    return this.get<any>('/monitoring/dashboards');
+  }
+
+  /**
+   * System Settings Methods
+   */
+  
+  async getSystemSettings(): Promise<any> {
+    return this.get<any>('/system/settings');
+  }
+
+  async updateSystemSettings(settings: any): Promise<any> {
+    return this.put<any>('/system/settings', settings);
+  }
+
+  async resetSystemSettings(): Promise<any> {
+    return this.post<any>('/system/settings/reset', {});
+  }
+
+  async clearCache(): Promise<any> {
+    return this.post<any>('/system/cache/clear', {});
+  }
+
+  async rebuildIndexes(): Promise<any> {
+    return this.post<any>('/system/indexes/rebuild', {});
+  }
+
+  /**
+   * Weaviate Vector Database Methods
+   */
+  
+  async getWeaviateConfig(): Promise<any> {
+    return this.get<any>('/weaviate/config');
+  }
+
+  async updateWeaviateConfig(config: any): Promise<any> {
+    return this.put<any>('/weaviate/config', config);
+  }
+
+  async testWeaviateConnection(config: any): Promise<{
+    success: boolean;
+    message: string;
+    version?: string;
+    workspaces_count?: number;
+  }> {
+    return this.post<{
+      success: boolean;
+      message: string;
+      version?: string;
+      workspaces_count?: number;
+    }>('/weaviate/test', config);
+  }
+
+  async getWeaviateWorkspaces(): Promise<any[]> {
+    return this.get<any[]>('/weaviate/workspaces');
+  }
+
+  async updateEmbeddingConfig(config: any): Promise<any> {
+    return this.put<any>('/weaviate/embeddings', config);
+  }
+
+  // Model Parameters
+  async getModelParameters(provider: string, model: string): Promise<any> {
+    return this.get<any>(`/providers/${provider}/models/${model}/parameters`);
+  }
+
+  async updateModelParameters(provider: string, model: string, parameters: any): Promise<any> {
+    return this.put<any>(`/providers/${provider}/models/${model}/parameters`, parameters);
+  }
 }
 
 // Export singleton instance

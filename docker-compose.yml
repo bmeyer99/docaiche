@@ -35,7 +35,6 @@ services:
     command: >
       sh -c "
         mkdir -p /var/log/docaiche &&
-        alembic upgrade head &&
         python src/database/init_db.py --db-path /data/docaiche.db &&
         (python /app/init-weaviate-workspace.py > /var/log/docaiche/workspace-init.log 2>&1 &) &&
         uvicorn src.main:app --host 0.0.0.0 --port 4000

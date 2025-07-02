@@ -4,13 +4,14 @@
  * Monitoring configuration tab
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,51 +24,84 @@ import {
   Info,
   CheckCircle,
   Search,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { HealthIndicator } from '../shared/health-indicator';
+import { useApiClient } from '@/lib/hooks/use-api-client';
+import { useToast } from '@/hooks/use-toast';
 
 interface MonitoringConfigProps {
   // No onChangeDetected since this is read-only monitoring
 }
 
+interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: string;
+  component: string;
+  message: string;
+  metadata?: any;
+}
+
+interface AlertRule {
+  id: string;
+  name: string;
+  condition: string;
+  severity: 'low' | 'medium' | 'high';
+  enabled: boolean;
+  triggered: boolean;
+  last_triggered?: string;
+}
+
 export function MonitoringConfig({}: MonitoringConfigProps) {
   const [logFilter, setLogFilter] = useState('');
   const [logLevel, setLogLevel] = useState('all');
-  const [alerts, setAlerts] = useState([
-    {
-      id: '1',
-      name: 'High Error Rate',
-      condition: 'error_rate > 3%',
-      severity: 'medium',
-      enabled: true,
-      triggered: false
-    },
-    {
-      id: '2',
-      name: 'Queue Overflow',
-      condition: 'queue_depth > 80',
-      severity: 'high',
-      enabled: true,
-      triggered: true
-    },
-    {
-      id: '3',
-      name: 'Slow Response Time',
-      condition: 'avg_latency > 1000ms',
-      severity: 'low',
-      enabled: false,
-      triggered: false
-    }
-  ]);
+  const [alerts, setAlerts] = useState<AlertRule[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardUrls, setDashboardUrls] = useState<any>({});
+  const apiClient = useApiClient();
+  const { toast } = useToast();
 
-  const logs = [
-    { time: '10:45:23', level: 'INFO', component: 'search.orchestrator', message: 'Search completed in 485ms' },
-    { time: '10:45:20', level: 'ERROR', component: 'provider.brave', message: 'Rate limit exceeded, circuit breaker opened' },
-    { time: '10:45:18', level: 'WARN', component: 'queue.manager', message: 'Queue depth approaching limit: 75/100' },
-    { time: '10:45:15', level: 'INFO', component: 'cache.manager', message: 'Cache hit for query hash: abc123...' },
-    { time: '10:45:12', level: 'DEBUG', component: 'vector.search', message: 'Querying workspace: python-docs' }
-  ];
+  useEffect(() => {
+    loadMonitoringData();
+  }, []);
+
+  const loadMonitoringData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Load alert rules
+      const alertsResponse = await apiClient.getAlertRules();
+      if (alertsResponse) {
+        setAlerts(alertsResponse);
+      }
+      
+      // Load recent logs
+      const logsResponse = await apiClient.getLogs({ limit: 50 });
+      if (logsResponse) {
+        setLogs(logsResponse);
+      }
+      
+      // Load dashboard configuration
+      const dashboardsResponse = await apiClient.getDashboardUrls();
+      if (dashboardsResponse) {
+        setDashboardUrls(dashboardsResponse);
+      }
+    } catch (error) {
+      console.error('Failed to load monitoring data:', error);
+      toast({
+        title: "Failed to load monitoring data",
+        description: "Some monitoring features may not work correctly",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -108,75 +142,93 @@ export function MonitoringConfig({}: MonitoringConfigProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-medium flex items-center gap-2">
-                          Search Performance
-                          <ExternalLink className="h-3 w-3" />
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Latency, throughput, and error rates
-                        </p>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => dashboardUrls.search_performance && window.open(dashboardUrls.search_performance, '_blank')}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium flex items-center gap-2">
+                            Search Performance
+                            <ExternalLink className="h-3 w-3" />
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Latency, throughput, and error rates
+                          </p>
+                        </div>
+                        <BarChart3 className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-medium flex items-center gap-2">
-                          Provider Health
-                          <ExternalLink className="h-3 w-3" />
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Provider status and performance metrics
-                        </p>
+                  <Card 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => dashboardUrls.provider_health && window.open(dashboardUrls.provider_health, '_blank')}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium flex items-center gap-2">
+                            Provider Health
+                            <ExternalLink className="h-3 w-3" />
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Provider status and performance metrics
+                          </p>
+                        </div>
+                        <HealthIndicator status="healthy" showLabel={false} size="sm" />
                       </div>
-                      <HealthIndicator status="healthy" showLabel={false} size="sm" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-medium flex items-center gap-2">
-                          System Resources
-                          <ExternalLink className="h-3 w-3" />
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          CPU, memory, and queue utilization
-                        </p>
+                  <Card 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => dashboardUrls.system_resources && window.open(dashboardUrls.system_resources, '_blank')}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium flex items-center gap-2">
+                            System Resources
+                            <ExternalLink className="h-3 w-3" />
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            CPU, memory, and queue utilization
+                          </p>
+                        </div>
+                        <BarChart3 className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-medium flex items-center gap-2">
-                          Cost Analysis
-                          <ExternalLink className="h-3 w-3" />
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Provider costs and budget tracking
-                        </p>
+                  <Card 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => dashboardUrls.cost_analysis && window.open(dashboardUrls.cost_analysis, '_blank')}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium flex items-center gap-2">
+                            Cost Analysis
+                            <ExternalLink className="h-3 w-3" />
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Provider costs and budget tracking
+                          </p>
+                        </div>
+                        <BarChart3 className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
               <div className="mt-6 p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">
@@ -237,23 +289,43 @@ export function MonitoringConfig({}: MonitoringConfigProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody className="font-mono text-sm">
-                      {logs.map((log, i) => (
-                        <TableRow key={i}>
-                          <TableCell className="text-muted-foreground">
-                            {log.time}
+                      {logs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            {isLoading ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Loading logs...
+                              </div>
+                            ) : (
+                              'No logs found'
+                            )}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              {getLogLevelIcon(log.level)}
-                              <span>{log.level}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {log.component}
-                          </TableCell>
-                          <TableCell>{log.message}</TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        logs.filter(log => 
+                          (logLevel === 'all' || log.level.toLowerCase() === logLevel) &&
+                          (logFilter === '' || 
+                           log.message.toLowerCase().includes(logFilter.toLowerCase()) ||
+                           log.component.toLowerCase().includes(logFilter.toLowerCase()))
+                        ).map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(log.timestamp).toLocaleTimeString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {getLogLevelIcon(log.level)}
+                                <span>{log.level}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {log.component}
+                            </TableCell>
+                            <TableCell>{log.message}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -273,40 +345,73 @@ export function MonitoringConfig({}: MonitoringConfigProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {alerts.map((alert) => (
-                  <Card key={alert.id} className={alert.triggered ? 'border-red-500' : ''}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium">{alert.name}</h4>
-                            <Badge variant={getSeverityColor(alert.severity)}>
-                              {alert.severity}
-                            </Badge>
-                            {alert.triggered && (
-                              <Badge variant="destructive">
-                                <Bell className="h-3 w-3 mr-1" />
-                                Triggered
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : alerts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No alert rules configured</p>
+                    <p className="text-sm mt-2">Click "Add Alert Rule" to create your first alert</p>
+                  </div>
+                ) : (
+                  alerts.map((alert) => (
+                    <Card key={alert.id} className={alert.triggered ? 'border-red-500' : ''}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium">{alert.name}</h4>
+                              <Badge variant={getSeverityColor(alert.severity)}>
+                                {alert.severity}
                               </Badge>
+                              {alert.triggered && (
+                                <Badge variant="destructive">
+                                  <Bell className="h-3 w-3 mr-1" />
+                                  Triggered
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Condition: <code className="bg-muted px-1 rounded">{alert.condition}</code>
+                            </p>
+                            {alert.last_triggered && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Last triggered: {new Date(alert.last_triggered).toLocaleString()}
+                              </p>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            Condition: <code className="bg-muted px-1 rounded">{alert.condition}</code>
-                          </p>
+                          
+                          <div className="flex items-center gap-2">
+                            <Switch 
+                              checked={alert.enabled}
+                              onCheckedChange={(checked) => toggleAlert(alert.id, checked)}
+                            />
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => configureAlert(alert.id)}
+                            >
+                              Configure
+                            </Button>
+                          </div>
                         </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Switch checked={alert.enabled} />
-                          <Button size="sm" variant="ghost">
-                            Configure
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
                 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => {
+                    toast({
+                      title: "Coming soon",
+                      description: "Alert rule creation will be implemented"
+                    });
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Alert Rule
                 </Button>
@@ -378,8 +483,30 @@ export function MonitoringConfig({}: MonitoringConfigProps) {
       </Tabs>
     </div>
   );
-}
 
-// Add missing imports
-import { Textarea } from '@/components/ui/textarea';
-import { Plus, RefreshCw } from 'lucide-react';
+  const toggleAlert = async (alertId: string, enabled: boolean) => {
+    try {
+      await apiClient.updateAlertRule(alertId, { enabled });
+      setAlerts(prev => prev.map(alert => 
+        alert.id === alertId ? { ...alert, enabled } : alert
+      ));
+      toast({
+        title: "Alert updated",
+        description: `Alert rule ${enabled ? 'enabled' : 'disabled'}`
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to update alert",
+        description: "Unable to update alert rule",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const configureAlert = (alertId: string) => {
+    toast({
+      title: "Coming soon",
+      description: "Alert configuration dialog will be implemented"
+    });
+  };
+}

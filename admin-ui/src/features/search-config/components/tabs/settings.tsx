@@ -4,7 +4,7 @@
  * System Settings tab
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,9 +25,12 @@ import {
   Zap,
   Database,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
 import { SearchConfiguration } from '../../types';
+import { useApiClient } from '@/lib/hooks/use-api-client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SystemSettingsProps {
   onChangeDetected?: () => void;
@@ -37,8 +40,12 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const apiClient = useApiClient();
+  const { toast } = useToast();
 
-  const { register, handleSubmit, watch, setValue } = useForm<SearchConfiguration>({
+  const { register, handleSubmit, watch, setValue, reset } = useForm<SearchConfiguration>({
     defaultValues: {
       queue_management: {
         max_queue_depth: 100,
@@ -79,40 +86,182 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
     }
   });
 
+  useEffect(() => {
+    loadConfiguration();
+  }, []);
+
+  const loadConfiguration = async () => {
+    try {
+      setIsLoading(true);
+      const config = await apiClient.getSystemSettings();
+      if (config) {
+        reset(config);
+      }
+    } catch (error) {
+      console.error('Failed to load system settings:', error);
+      toast({
+        title: "Failed to load settings",
+        description: "Using default configuration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveConfiguration = async (data: SearchConfiguration) => {
+    try {
+      setIsSaving(true);
+      await apiClient.updateSystemSettings(data);
+      toast({
+        title: "Settings saved",
+        description: "System configuration updated successfully"
+      });
+      onChangeDetected?.();
+    } catch (error) {
+      toast({
+        title: "Failed to save settings",
+        description: "Unable to update system configuration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleExport = async () => {
-    // TODO: Export configuration
-    const config = watch();
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `search-config-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setIsExportDialogOpen(false);
+    try {
+      const config = await apiClient.getSystemSettings();
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `docaiche-config-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setIsExportDialogOpen(false);
+      toast({
+        title: "Configuration exported",
+        description: "Settings have been downloaded"
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Unable to export configuration",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleImport = async () => {
     if (!importFile) return;
     
-    // TODO: Import and validate configuration
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const config = JSON.parse(e.target?.result as string);
-        // Validate and apply config
-        console.log('Importing config:', config);
+        await apiClient.updateSystemSettings(config);
+        reset(config);
         setIsImportDialogOpen(false);
+        toast({
+          title: "Configuration imported",
+          description: "Settings have been updated successfully"
+        });
         onChangeDetected?.();
       } catch (error) {
-        console.error('Invalid configuration file:', error);
+        console.error('Failed to import configuration:', error);
+        toast({
+          title: "Import failed",
+          description: "Invalid configuration file or server error",
+          variant: "destructive"
+        });
       }
     };
     reader.readAsText(importFile);
   };
 
+  const handleReset = async () => {
+    if (!confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await apiClient.resetSystemSettings();
+      await loadConfiguration();
+      toast({
+        title: "Settings reset",
+        description: "All settings have been reset to defaults"
+      });
+      onChangeDetected?.();
+    } catch (error) {
+      toast({
+        title: "Reset failed",
+        description: "Unable to reset settings",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const clearCache = async () => {
+    try {
+      await apiClient.clearCache();
+      toast({
+        title: "Cache cleared",
+        description: "All cached data has been removed"
+      });
+    } catch (error) {
+      toast({
+        title: "Clear cache failed",
+        description: "Unable to clear cache",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const rebuildIndexes = async () => {
+    try {
+      await apiClient.rebuildIndexes();
+      toast({
+        title: "Rebuild started",
+        description: "Vector indexes are being rebuilt in the background"
+      });
+    } catch (error) {
+      toast({
+        title: "Rebuild failed",
+        description: "Unable to start index rebuild",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
+      <form onSubmit={handleSubmit(saveConfiguration)}>
+        <div className="flex justify-end mb-4">
+          <Button 
+            type="submit" 
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save All Settings'
+            )}
+          </Button>
+        </div>
+      </form>
+      
       <Tabs defaultValue="global" className="space-y-4">
         <TabsList>
           <TabsTrigger value="global">Global Settings</TabsTrigger>
@@ -471,7 +620,11 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
                   Import Config
                 </Button>
                 
-                <Button variant="outline" className="text-red-600">
+                <Button 
+                  variant="outline" 
+                  className="text-red-600"
+                  onClick={handleReset}
+                >
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Reset to Defaults
                 </Button>
@@ -505,7 +658,11 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
                           Remove all cached search results
                         </p>
                       </div>
-                      <Button size="sm" variant="destructive">
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={clearCache}
+                      >
                         Clear
                       </Button>
                     </div>
@@ -521,7 +678,11 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
                           Rebuild vector search indexes
                         </p>
                       </div>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={rebuildIndexes}
+                      >
                         Rebuild
                       </Button>
                     </div>

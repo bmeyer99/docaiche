@@ -77,17 +77,39 @@ async def wait_for_weaviate(client: WeaviateVectorClient, max_retries: int = 30)
 
 async def initialize_workspaces(client: WeaviateVectorClient, workspaces: List[Dict[str, str]]) -> None:
     """Initialize default workspaces in Weaviate"""
-    logger.info(f"Initializing {len(workspaces)} workspaces...")
+    logger.info(f"Checking {len(workspaces)} default workspaces...")
+    
+    # First, check which workspaces already exist
+    try:
+        existing_workspaces = await client.list_workspaces()
+        existing_slugs = {ws.get("slug") for ws in existing_workspaces}
+        logger.info(f"Found {len(existing_slugs)} existing workspaces: {sorted(existing_slugs)}")
+    except Exception as e:
+        logger.warning(f"Could not check existing workspaces: {e}")
+        existing_slugs = set()
+    
+    # Only create workspaces that don't exist
+    created_count = 0
+    skipped_count = 0
     
     for workspace in workspaces:
+        workspace_slug = workspace["slug"]
         try:
+            if workspace_slug in existing_slugs:
+                logger.info(f"⚪ Workspace already exists, skipping: {workspace_slug}")
+                skipped_count += 1
+                continue
+                
             result = await client.get_or_create_workspace(
-                workspace_slug=workspace["slug"],
+                workspace_slug=workspace_slug,
                 name=workspace["name"]
             )
-            logger.info(f"✓ Workspace initialized: {workspace['slug']} - {workspace['name']}")
+            logger.info(f"✓ Workspace created: {workspace_slug} - {workspace['name']}")
+            created_count += 1
         except Exception as e:
-            logger.error(f"✗ Failed to initialize workspace {workspace['slug']}: {e}")
+            logger.error(f"✗ Failed to initialize workspace {workspace_slug}: {e}")
+    
+    logger.info(f"Workspace initialization complete: {created_count} created, {skipped_count} already existed")
 
 
 async def main():

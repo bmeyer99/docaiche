@@ -2,458 +2,353 @@
 
 /**
  * Search Providers configuration tab
+ * Configure external search providers (MCP)
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, 
-  DollarSign, 
-  Zap, 
-  BarChart3,
+  Globe,
+  PlayCircle,
+  Save,
+  Loader2,
   AlertCircle,
   CheckCircle,
-  PlayCircle
+  Info,
+  Search
 } from 'lucide-react';
-import { ProviderCard } from '../shared/provider-card';
-import { HealthIndicator } from '../shared/health-indicator';
-import { ProviderStatus, ProviderConfig } from '../../types';
+import { useApiClient } from '@/lib/hooks/use-api-client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SearchProvidersConfigProps {
   onChangeDetected?: () => void;
 }
 
+interface MCPProvider {
+  id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  api_key?: string;
+  search_engine_id?: string;
+  max_requests_per_minute: number;
+  timeout_seconds: number;
+  status?: 'healthy' | 'unhealthy' | 'untested';
+  last_error?: string;
+}
+
 export function SearchProvidersConfig({ onChangeDetected }: SearchProvidersConfigProps) {
-  const [providers, setProviders] = useState<ProviderStatus[]>([]);
-  const [providerConfigs, setProviderConfigs] = useState<Record<string, ProviderConfig>>({});
+  const [providers, setProviders] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const apiClient = useApiClient();
+  const { toast } = useToast();
 
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [testResults, setTestResults] = useState<Record<string, any>>({});
-
-  // Fetch providers data on component mount
   useEffect(() => {
-    fetchProviders();
+    loadProviders();
   }, []);
 
-  const fetchProviders = async () => {
+  const loadProviders = async () => {
+    setIsLoading(true);
     try {
-      const response = await fetch('/api/v1/mcp/providers');
-      if (response.ok) {
-        const data = await response.json();
-        setProviders(data.providers || []);
-        setProviderConfigs(data.configs || {});
+      const mcpProviders = await apiClient.getMCPProviders();
+      if (mcpProviders?.providers) {
+        const providerList = mcpProviders.providers.map((provider) => ({
+          id: provider.provider_id,
+          name: provider.provider_id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          ...provider.config,
+          status: provider.health.status,
+          stats: provider.stats
+        }));
+        setProviders(providerList);
       }
     } catch (error) {
-      console.error('Failed to fetch providers:', error);
-      // Keep empty arrays/objects on error
+      console.error('Failed to load MCP providers:', error);
+      toast({
+        title: "Failed to Load Providers",
+        description: "Unable to load search provider configuration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Cost tracking
-  const totalMonthlyCost = Object.values(providerConfigs).reduce(
-    (sum, config) => sum + (config.cost_limits?.monthly_budget_usd || 0), 0
-  );
-  const totalDailyRequests = Object.values(providerConfigs).reduce(
-    (sum, config) => sum + (config.rate_limits?.requests_per_day || 0), 0
-  );
-
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
-
-    const items = Array.from(providers);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    // Update priorities based on new order
-    const updatedProviders = items.map((provider, index) => ({
-      ...provider,
-      priority: 100 - (index * 10)
-    }));
-
-    setProviders(updatedProviders);
+  const handleProviderToggle = (providerId: string, enabled: boolean) => {
+    setProviders(prev => prev.map(p => 
+      p.id === providerId ? { ...p, enabled } : p
+    ));
     onChangeDetected?.();
   };
 
-  const handleProviderToggle = (providerId: string, enabled: boolean) => {
-    setProviders(prev =>
-      prev.map(p => p.id === providerId ? { ...p, enabled } : p)
-    );
-    setProviderConfigs(prev => ({
-      ...prev,
-      [providerId]: { ...prev[providerId], enabled }
-    }));
+  const handleProviderUpdate = (providerId: string, updates: Partial<MCPProvider>) => {
+    setProviders(prev => prev.map(p => 
+      p.id === providerId ? { ...p, ...updates } : p
+    ));
     onChangeDetected?.();
   };
 
   const handleTestProvider = async (providerId: string) => {
-    setTestResults(prev => ({ ...prev, [providerId]: { loading: true } }));
-    
+    setTestingProvider(providerId);
     try {
-      const response = await fetch(`/api/v1/mcp/providers/${providerId}/test`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: 'test search query' }),
+      const result = await apiClient.testMCPProvider(providerId);
+      
+      if (result.success) {
+        handleProviderUpdate(providerId, {
+          status: 'healthy',
+          last_error: undefined
+        });
+        
+        toast({
+          title: "Test Successful",
+          description: `${providerId} is working correctly`
+        });
+      } else {
+        handleProviderUpdate(providerId, {
+          status: 'unhealthy',
+          last_error: result.error_message
+        });
+        
+        toast({
+          title: "Test Failed",
+          description: result.error_message || "Provider test failed",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      handleProviderUpdate(providerId, {
+        status: 'unhealthy',
+        last_error: error.message
       });
       
-      if (response.ok) {
-        const result = await response.json();
-        setTestResults(prev => ({
-          ...prev,
-          [providerId]: {
-            success: true,
-            execution_time_ms: result.execution_time_ms,
-            results_count: result.results_count,
-            sample_results: result.sample_results
-          }
-        }));
-      } else {
-        const error = await response.json();
-        setTestResults(prev => ({
-          ...prev,
-          [providerId]: { success: false, error: error.detail || 'Test failed' }
-        }));
-      }
-    } catch (error) {
-      setTestResults(prev => ({
-        ...prev,
-        [providerId]: { success: false, error: 'Network error' }
-      }));
+      toast({
+        title: "Test Failed",
+        description: error.message || "Failed to test provider",
+        variant: "destructive"
+      });
+    } finally {
+      setTestingProvider(null);
     }
   };
 
+  const handleSaveConfiguration = async () => {
+    setIsSaving(true);
+    try {
+      const mcpConfig = {
+        providers: providers.reduce((acc, provider) => {
+          const { id, name, status, last_error, ...config } = provider;
+          acc[id] = config;
+          return acc;
+        }, {} as Record<string, any>)
+      };
+      
+      await apiClient.updateMCPConfig(mcpConfig as any);
+      
+      toast({
+        title: "Configuration Saved",
+        description: "Search provider configuration updated successfully"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save configuration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const getStatusBadge = (provider: MCPProvider) => {
+    if (provider.status === 'healthy') {
+      return <Badge className="bg-green-500">Healthy</Badge>;
+    } else if (provider.status === 'unhealthy') {
+      return <Badge className="bg-red-500">Error</Badge>;
+    } else {
+      return <Badge variant="secondary">Not Tested</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Active Providers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {providers.filter(p => p.enabled).length} / {providers.length}
-            </div>
-            <Progress 
-              value={(providers.filter(p => p.enabled).length / providers.length) * 100}
-              className="mt-2"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Total Monthly Cost</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalMonthlyCost.toFixed(2)}</div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Across all providers
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Daily Request Capacity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalDailyRequests.toLocaleString()}</div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Combined limit
-            </p>
-          </CardContent>
-        </Card>
+      <div>
+        <h2 className="text-2xl font-bold">External Search Providers</h2>
+        <p className="text-muted-foreground mt-1">
+          Configure MCP (Model Context Protocol) search providers for enhanced search capabilities
+        </p>
       </div>
 
-      <Tabs defaultValue="providers" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="providers">Providers</TabsTrigger>
-          <TabsTrigger value="costs">Cost Management</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-        </TabsList>
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Search providers extend DocAIche's capabilities by searching external sources like Google, 
+          Brave Search, and DuckDuckGo when local documentation doesn't have the answer.
+        </AlertDescription>
+      </Alert>
 
-        {/* Providers Tab */}
-        <TabsContent value="providers" className="space-y-4">
-          <Card>
+      <div className="space-y-4">
+        {providers.map((provider) => (
+          <Card key={provider.id}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Search Providers</CardTitle>
-                  <CardDescription>
-                    Drag to reorder provider priority. Higher priority providers are tried first.
-                  </CardDescription>
+                <div className="flex items-center gap-3">
+                  <Globe className="h-5 w-5" />
+                  <div>
+                    <CardTitle className="text-lg">{provider.name}</CardTitle>
+                    <CardDescription>Priority: {provider.priority}</CardDescription>
+                  </div>
                 </div>
-                <Button onClick={() => setIsAddDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Provider
-                </Button>
+                <div className="flex items-center gap-4">
+                  {getStatusBadge(provider)}
+                  <Switch
+                    checked={provider.enabled}
+                    onCheckedChange={(checked) => handleProviderToggle(provider.id, checked)}
+                  />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="providers">
-                  {(provided) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="space-y-3"
-                    >
-                      {providers.map((provider, index) => (
-                        <Draggable key={provider.id} draggableId={provider.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              style={provided.draggableProps.style}
-                              className={snapshot.isDragging ? 'opacity-50' : ''}
-                            >
-                              <ProviderCard
-                                provider={provider}
-                                config={providerConfigs[provider.id]}
-                                onConfigure={() => {
-                                  setSelectedProvider(provider.id);
-                                  setIsConfigDialogOpen(true);
-                                }}
-                                onTest={() => handleTestProvider(provider.id)}
-                                onToggle={(enabled) => handleProviderToggle(provider.id, enabled)}
-                                draggable
-                              />
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
-
-              {/* Test Results */}
-              {Object.entries(testResults).map(([providerId, result]) => (
-                <Alert key={providerId} className="mt-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {result.loading ? (
-                      'Testing provider...'
-                    ) : result.success ? (
-                      <div>
-                        <CheckCircle className="h-4 w-4 inline mr-2 text-green-600" />
-                        Test successful: {result.results_count} results in {result.execution_time_ms}ms
-                      </div>
-                    ) : (
-                      <div>
-                        <AlertCircle className="h-4 w-4 inline mr-2 text-red-600" />
-                        Test failed: {result.error}
-                      </div>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Cost Management Tab */}
-        <TabsContent value="costs" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Cost Tracking & Limits</CardTitle>
-              <CardDescription>
-                Monitor and control search provider costs
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.values(providerConfigs).map((config) => (
-                <div key={config.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium">{config.name}</h4>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm">Monthly Budget</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-2xl font-bold">
-                          ${config.cost_limits?.monthly_budget_usd || 0}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          / month
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm">Cost per Request</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-2xl font-bold">
-                          ${config.cost_limits?.cost_per_request || 0}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          / request
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              {provider.last_error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{provider.last_error}</AlertDescription>
+                </Alert>
+              )}
 
-                  <div className="mt-3">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Current Month Usage</span>
-                      <span>${(config as any).current_month_cost || 0} / ${config.cost_limits?.monthly_budget_usd || 0}</span>
-                    </div>
-                    <Progress value={((config as any).current_month_cost || 0) / (config.cost_limits?.monthly_budget_usd || 100) * 100} />
+              <div className="grid grid-cols-2 gap-4">
+                {provider.id !== 'duckduckgo' && (
+                  <div>
+                    <Label htmlFor={`${provider.id}-api-key`}>API Key</Label>
+                    <Input
+                      id={`${provider.id}-api-key`}
+                      type="password"
+                      placeholder="Enter API key"
+                      value={provider.api_key || ''}
+                      onChange={(e) => {
+                        handleProviderUpdate(provider.id, { api_key: e.target.value });
+                      }}
+                    />
                   </div>
+                )}
+
+                {provider.id === 'google_search' && (
+                  <div>
+                    <Label htmlFor={`${provider.id}-engine-id`}>Search Engine ID</Label>
+                    <Input
+                      id={`${provider.id}-engine-id`}
+                      placeholder="Enter search engine ID"
+                      value={provider.search_engine_id || ''}
+                      onChange={(e) => {
+                        handleProviderUpdate(provider.id, { search_engine_id: e.target.value });
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor={`${provider.id}-rate-limit`}>Rate Limit (req/min)</Label>
+                  <Input
+                    id={`${provider.id}-rate-limit`}
+                    type="number"
+                    value={provider.max_requests_per_minute}
+                    onChange={(e) => {
+                      handleProviderUpdate(provider.id, { 
+                        max_requests_per_minute: parseInt(e.target.value) || 60 
+                      });
+                    }}
+                  />
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* Performance Tab */}
-        <TabsContent value="performance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Provider Performance</CardTitle>
-              <CardDescription>
-                Real-time performance metrics and comparisons
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {providers.map((provider) => (
-                  <div key={provider.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium">{provider.name}</h4>
-                      <HealthIndicator status={provider.health} size="sm" />
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Avg Latency</span>
-                        <p className="font-medium">
-                          {provider.latency_ms ? `${provider.latency_ms}ms` : 'N/A'}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Error Rate</span>
-                        <p className="font-medium">
-                          {(provider.error_rate * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Rate Limit</span>
-                        <p className="font-medium">
-                          {provider.rate_limit_remaining ?? 'N/A'} remaining
-                        </p>
-                      </div>
-                    </div>
+                <div>
+                  <Label htmlFor={`${provider.id}-timeout`}>Timeout (seconds)</Label>
+                  <Input
+                    id={`${provider.id}-timeout`}
+                    type="number"
+                    value={provider.timeout_seconds}
+                    onChange={(e) => {
+                      handleProviderUpdate(provider.id, { 
+                        timeout_seconds: parseFloat(e.target.value) || 3 
+                      });
+                    }}
+                  />
+                </div>
 
-                    {provider.health === 'healthy' && (
-                      <div className="mt-3">
-                        <Progress 
-                          value={100 - (provider.error_rate * 100)} 
-                          className="h-2"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Reliability Score
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                <div>
+                  <Label htmlFor={`${provider.id}-priority`}>Priority</Label>
+                  <Input
+                    id={`${provider.id}-priority`}
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={provider.priority}
+                    onChange={(e) => {
+                      handleProviderUpdate(provider.id, { 
+                        priority: parseInt(e.target.value) || 1 
+                      });
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Lower number = higher priority
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleTestProvider(provider.id)}
+                  disabled={!provider.enabled || testingProvider === provider.id}
+                >
+                  {testingProvider === provider.id ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="h-4 w-4 mr-2" />
+                      Test Provider
+                    </>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        ))}
+      </div>
 
-      {/* Configuration Dialog */}
-      <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              Configure {selectedProvider && providerConfigs[selectedProvider]?.name}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Provider-specific configuration form would go here */}
-            <Alert>
-              <AlertDescription>
-                Provider configuration form to be implemented based on provider type
-              </AlertDescription>
-            </Alert>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfigDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              // TODO: Save configuration
-              setIsConfigDialogOpen(false);
-              onChangeDetected?.();
-            }}>
+      <div className="flex justify-end">
+        <Button onClick={handleSaveConfiguration} disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
               Save Configuration
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Provider Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Search Provider</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Provider Type</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a provider type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="brave">Brave Search</SelectItem>
-                  <SelectItem value="google">Google Custom Search</SelectItem>
-                  <SelectItem value="bing">Bing Web Search</SelectItem>
-                  <SelectItem value="duckduckgo">DuckDuckGo</SelectItem>
-                  <SelectItem value="searxng">SearXNG</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label>Provider Name</Label>
-              <Input placeholder="My Search Provider" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              // TODO: Add provider
-              setIsAddDialogOpen(false);
-              onChangeDetected?.();
-            }}>
-              Add Provider
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

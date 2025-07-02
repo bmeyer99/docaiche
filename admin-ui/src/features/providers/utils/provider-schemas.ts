@@ -16,68 +16,68 @@ const baseConfigSchema = z.object({
 const providerSchemas = {
   // Local providers
   ollama: z.object({
-    baseUrl: httpUrlSchema.default('http://localhost:11434/api')
+    base_url: httpUrlSchema.default('http://localhost:11434/api')
   }).merge(baseConfigSchema),
   
   lmstudio: z.object({
-    baseUrl: httpUrlSchema.default('http://localhost:1234')
+    base_url: httpUrlSchema.default('http://localhost:1234')
   }).merge(baseConfigSchema),
   
   // Cloud providers
   openai: z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    organizationId: z.string().optional(),
-    baseUrl: httpUrlSchema.optional()
+    api_key: z.string().min(1, 'API key is required'),
+    organization: z.string().optional(),
+    base_url: httpUrlSchema.optional()
   }).merge(baseConfigSchema),
   
   anthropic: z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    baseUrl: httpUrlSchema.optional()
+    api_key: z.string().min(1, 'API key is required'),
+    base_url: httpUrlSchema.optional()
   }).merge(baseConfigSchema),
   
   groq: z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    baseUrl: httpUrlSchema.optional()
+    api_key: z.string().min(1, 'API key is required'),
+    base_url: httpUrlSchema.optional()
   }).merge(baseConfigSchema),
   
   mistral: z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    baseUrl: httpUrlSchema.optional()
+    api_key: z.string().min(1, 'API key is required'),
+    base_url: httpUrlSchema.optional()
   }).merge(baseConfigSchema),
   
   deepseek: z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    baseUrl: httpUrlSchema.optional()
+    api_key: z.string().min(1, 'API key is required'),
+    base_url: httpUrlSchema.optional()
   }).merge(baseConfigSchema),
   
   openrouter: z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    baseUrl: httpUrlSchema.optional(),
-    siteUrl: z.string().url().optional(),
-    siteName: z.string().optional()
+    api_key: z.string().min(1, 'API key is required'),
+    base_url: httpUrlSchema.optional(),
+    site_url: z.string().url().optional(),
+    app_name: z.string().optional()
   }).merge(baseConfigSchema),
   
   xai: z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    baseUrl: httpUrlSchema.optional()
+    api_key: z.string().min(1, 'API key is required'),
+    base_url: httpUrlSchema.optional()
   }).merge(baseConfigSchema),
   
   // Enterprise providers
   vertex: z.object({
-    projectId: z.string().min(1, 'Project ID is required'),
-    region: z.string().min(1, 'Region is required'),
-    serviceAccountKey: z.string().optional()
+    vertex_project_id: z.string().min(1, 'Project ID is required'),
+    vertex_region: z.string().min(1, 'Region is required'),
+    vertex_json_credentials: z.string().optional()
   }).merge(baseConfigSchema),
   
   bedrock: z.object({
-    region: z.string().min(1, 'Region is required'),
-    accessKeyId: z.string().optional(),
-    secretAccessKey: z.string().optional()
+    aws_region: z.string().min(1, 'Region is required'),
+    aws_access_key: z.string().optional(),
+    aws_secret_key: z.string().optional()
   }).merge(baseConfigSchema),
   
   gemini: z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    baseUrl: httpUrlSchema.optional()
+    api_key: z.string().min(1, 'API key is required'),
+    base_url: httpUrlSchema.optional()
   }).merge(baseConfigSchema)
 } as const
 
@@ -96,19 +96,19 @@ export function getProviderDefaults(providerId: string): Record<string, any> {
   // Provider-specific defaults
   switch (providerId) {
     case 'ollama':
-      defaults.baseUrl = 'http://localhost:11434/api'
+      defaults.base_url = 'http://localhost:11434/api'
       break
     case 'lmstudio':
-      defaults.baseUrl = 'http://localhost:1234'
+      defaults.base_url = 'http://localhost:1234'
       break
     case 'openrouter':
-      defaults.baseUrl = 'https://openrouter.ai/api/v1'
+      defaults.base_url = 'https://openrouter.ai/api/v1'
       break
     case 'vertex':
-      defaults.region = 'us-central1'
+      defaults.vertex_region = 'us-central1'
       break
     case 'bedrock':
-      defaults.region = 'us-east-1'
+      defaults.aws_region = 'us-east-1'
       break
   }
   
@@ -138,7 +138,7 @@ export function getProviderFields(providerId: string) {
     // Local providers
     ollama: [
       {
-        name: 'baseUrl',
+        name: 'base_url',
         label: 'Base URL',
         type: 'text',
         placeholder: 'http://localhost:11434/api',
@@ -147,7 +147,7 @@ export function getProviderFields(providerId: string) {
     ],
     lmstudio: [
       {
-        name: 'baseUrl',
+        name: 'base_url',
         label: 'Base URL',
         type: 'text',
         placeholder: 'http://localhost:1234',
@@ -158,7 +158,7 @@ export function getProviderFields(providerId: string) {
     // Cloud providers
     openai: [
       {
-        name: 'apiKey',
+        name: 'api_key',
         label: 'API Key',
         type: 'password',
         placeholder: 'sk-...',
@@ -166,14 +166,14 @@ export function getProviderFields(providerId: string) {
         required: true
       },
       {
-        name: 'organizationId',
+        name: 'organization',
         label: 'Organization ID',
         type: 'text',
         placeholder: 'org-...',
         description: 'Optional organization ID'
       },
       {
-        name: 'baseUrl',
+        name: 'base_url',
         label: 'Base URL (Optional)',
         type: 'text',
         placeholder: 'https://api.openai.com/v1',
@@ -183,7 +183,7 @@ export function getProviderFields(providerId: string) {
     
     anthropic: [
       {
-        name: 'apiKey',
+        name: 'api_key',
         label: 'API Key',
         type: 'password',
         placeholder: 'sk-ant-...',
@@ -191,7 +191,7 @@ export function getProviderFields(providerId: string) {
         required: true
       },
       {
-        name: 'baseUrl',
+        name: 'base_url',
         label: 'Base URL (Optional)',
         type: 'text',
         placeholder: 'https://api.anthropic.com',
@@ -201,7 +201,7 @@ export function getProviderFields(providerId: string) {
     
     groq: [
       {
-        name: 'apiKey',
+        name: 'api_key',
         label: 'API Key',
         type: 'password',
         placeholder: 'gsk_...',
@@ -212,7 +212,7 @@ export function getProviderFields(providerId: string) {
     
     mistral: [
       {
-        name: 'apiKey',
+        name: 'api_key',
         label: 'API Key',
         type: 'password',
         placeholder: 'API key',
@@ -223,7 +223,7 @@ export function getProviderFields(providerId: string) {
     
     deepseek: [
       {
-        name: 'apiKey',
+        name: 'api_key',
         label: 'API Key',
         type: 'password',
         placeholder: 'API key',
@@ -234,7 +234,7 @@ export function getProviderFields(providerId: string) {
     
     openrouter: [
       {
-        name: 'apiKey',
+        name: 'api_key',
         label: 'API Key',
         type: 'password',
         placeholder: 'sk-or-...',
@@ -242,15 +242,15 @@ export function getProviderFields(providerId: string) {
         required: true
       },
       {
-        name: 'siteUrl',
+        name: 'site_url',
         label: 'Site URL',
         type: 'text',
         placeholder: 'https://myapp.com',
         description: 'Your application URL for OpenRouter'
       },
       {
-        name: 'siteName',
-        label: 'Site Name',
+        name: 'app_name',
+        label: 'App Name',
         type: 'text',
         placeholder: 'My App',
         description: 'Your application name for OpenRouter'
@@ -259,7 +259,7 @@ export function getProviderFields(providerId: string) {
     
     xai: [
       {
-        name: 'apiKey',
+        name: 'api_key',
         label: 'API Key',
         type: 'password',
         placeholder: 'API key',
@@ -271,7 +271,7 @@ export function getProviderFields(providerId: string) {
     // Enterprise providers
     vertex: [
       {
-        name: 'projectId',
+        name: 'vertex_project_id',
         label: 'Project ID',
         type: 'text',
         placeholder: 'my-project-id',
@@ -279,7 +279,7 @@ export function getProviderFields(providerId: string) {
         required: true
       },
       {
-        name: 'region',
+        name: 'vertex_region',
         label: 'Region',
         type: 'text',
         placeholder: 'us-central1',
@@ -287,8 +287,8 @@ export function getProviderFields(providerId: string) {
         required: true
       },
       {
-        name: 'serviceAccountKey',
-        label: 'Service Account Key (Optional)',
+        name: 'vertex_json_credentials',
+        label: 'JSON Credentials (Optional)',
         type: 'textarea',
         placeholder: 'Paste JSON key here',
         description: 'Service account JSON key for authentication'
@@ -297,7 +297,7 @@ export function getProviderFields(providerId: string) {
     
     bedrock: [
       {
-        name: 'region',
+        name: 'aws_region',
         label: 'AWS Region',
         type: 'text',
         placeholder: 'us-east-1',
@@ -305,14 +305,14 @@ export function getProviderFields(providerId: string) {
         required: true
       },
       {
-        name: 'accessKeyId',
+        name: 'aws_access_key',
         label: 'Access Key ID (Optional)',
         type: 'text',
         placeholder: 'AKIA...',
         description: 'AWS access key ID'
       },
       {
-        name: 'secretAccessKey',
+        name: 'aws_secret_key',
         label: 'Secret Access Key (Optional)',
         type: 'password',
         placeholder: 'Secret key',
@@ -322,7 +322,7 @@ export function getProviderFields(providerId: string) {
     
     gemini: [
       {
-        name: 'apiKey',
+        name: 'api_key',
         label: 'API Key',
         type: 'password',
         placeholder: 'API key',
