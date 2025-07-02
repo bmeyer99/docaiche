@@ -101,7 +101,6 @@ Your Services → OpenTelemetry → API Server → WebSocket → Browser
 ## Security (Basic)
 - Use existing auth from admin-ui
 - Validate WebSocket messages
-- Basic rate limiting
 - Log access for audit
 
 ## Testing Approach

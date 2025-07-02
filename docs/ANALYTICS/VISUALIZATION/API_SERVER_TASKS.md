@@ -267,7 +267,6 @@ class PipelineWebSocketManager:
 - Implement JWT validation
 - Handle token refresh
 - Add connection authorization
-- Implement rate limiting
 - Monitor auth failures
 
 #### 11.2 Message Validation

@@ -325,10 +325,10 @@ All services MUST propagate trace context using W3C Trace Context standard:
 
 ## Rate Limiting
 - Max connections per client: 5
-- Max messages per second: 100
+- No rate limiting on messages - all events delivered in real-time
 - Metrics update frequency: 1 update per second per service
 - Trace updates: Real-time (no throttling)
-- Batch requests: Max 1 per 10 seconds
+- No artificial limits to ensure no events are missed during bursts
 
 ## Data Retention
 - Real-time metrics: Last 1 hour

@@ -35,9 +35,9 @@ class ProviderType(str, Enum):
     """Supported search provider types."""
     BRAVE = "brave"
     GOOGLE = "google"
-    BING = "bing"
-    DUCKDUCKGO = "duckduckgo"
     SEARXNG = "searxng"
+    PERPLEXITY = "perplexity"
+    KAGI = "kagi"
     CUSTOM = "custom"
 
 

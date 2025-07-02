@@ -67,10 +67,10 @@ interface MCPProviderFormProps {
 
 const PROVIDER_TYPES = [
   { value: 'brave', label: 'Brave Search' },
-  { value: 'google', label: 'Google Search' },
-  { value: 'duckduckgo', label: 'DuckDuckGo' },
-  { value: 'bing', label: 'Bing Search' },
-  { value: 'searxng', label: 'SearXNG' },
+  { value: 'google', label: 'Google Custom Search' },
+  { value: 'searxng', label: 'SearXNG (Self-hosted)' },
+  { value: 'perplexity', label: 'Perplexity Sonar' },
+  { value: 'kagi', label: 'Kagi Search' },
 ];
 
 export function MCPProviderForm({ isOpen, provider, onClose, onSuccess }: MCPProviderFormProps) {

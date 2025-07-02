@@ -303,8 +303,65 @@ async def create_provider(
         # Add provider to configuration
         current_config.mcp.external_search.providers[create_request.config.provider_id] = mcp_provider_config
         
-        # Save configuration
-        await config_manager.update_configuration(current_config)
+        # Save configuration - serialize the entire config to update
+        config_dict = current_config.model_dump()
+        await config_manager.update_in_db("mcp", config_dict["mcp"])
+        
+        # Dynamically register the provider with MCP enhancer
+        if hasattr(search_orchestrator, 'mcp_enhancer') and search_orchestrator.mcp_enhancer:
+            try:
+                # Create provider instance based on type
+                from src.mcp.providers.models import ProviderConfig, ProviderType
+                
+                # Determine provider type
+                provider_type = None
+                if create_request.config.provider_type.lower() == 'brave':
+                    provider_type = ProviderType.BRAVE
+                elif create_request.config.provider_type.lower() == 'google':
+                    provider_type = ProviderType.GOOGLE
+                elif create_request.config.provider_type.lower() == 'searxng':
+                    provider_type = ProviderType.SEARXNG
+                elif create_request.config.provider_type.lower() == 'perplexity':
+                    provider_type = ProviderType.PERPLEXITY
+                elif create_request.config.provider_type.lower() == 'kagi':
+                    provider_type = ProviderType.KAGI
+                else:
+                    logger.warning(f"Unknown provider type: {create_request.config.provider_type}")
+                
+                if provider_type and create_request.config.api_key:
+                    # Create provider config
+                    provider_config = ProviderConfig(
+                        provider_id=create_request.config.provider_id,
+                        provider_type=provider_type,
+                        enabled=create_request.config.enabled,
+                        api_key=create_request.config.api_key,
+                        priority=create_request.config.priority,
+                        max_requests_per_minute=create_request.config.rate_limit_per_minute,
+                        timeout_seconds=create_request.config.timeout_seconds,
+                        custom_headers=create_request.config.custom_headers or {}
+                    )
+                    
+                    # Create provider instance
+                    provider_instance = None
+                    if provider_type == ProviderType.BRAVE:
+                        from src.mcp.providers.implementations.brave import BraveSearchProvider
+                        provider_instance = BraveSearchProvider(provider_config)
+                    elif provider_type == ProviderType.GOOGLE:
+                        # Google provider would need to be implemented
+                        logger.info(f"Google provider not yet implemented")
+                    # Add other provider types as they are implemented
+                    
+                    if provider_instance:
+                        # Register with MCP enhancer
+                        search_orchestrator.mcp_enhancer.register_external_provider(
+                            create_request.config.provider_id,
+                            provider_instance
+                        )
+                        logger.info(f"[{trace_id}] Dynamically registered provider: {create_request.config.provider_id}")
+                    
+            except Exception as e:
+                logger.warning(f"[{trace_id}] Failed to dynamically register provider: {e}")
+                # Continue - provider will be loaded on next restart
         
         # Create response
         provider_response = ProviderResponse(

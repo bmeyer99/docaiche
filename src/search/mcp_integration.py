@@ -52,6 +52,22 @@ class MCPSearchEnhancer:
         self.external_providers[provider_id] = provider
         logger.info(f"Registered external provider: {provider_id}")
     
+    def unregister_external_provider(self, provider_id: str) -> bool:
+        """
+        Unregister an external search provider from MCP.
+        
+        Args:
+            provider_id: Unique provider identifier
+            
+        Returns:
+            True if provider was removed, False if not found
+        """
+        if provider_id in self.external_providers:
+            del self.external_providers[provider_id]
+            logger.info(f"Unregistered external provider: {provider_id}")
+            return True
+        return False
+    
     async def enhance_workspace_selection(
         self,
         query: str,
@@ -343,8 +359,7 @@ def create_mcp_enhancer(
             print("MCP DEBUG: Starting imports...")
             from src.mcp.providers.implementations.brave import BraveSearchProvider
             print("MCP DEBUG: Imported BraveSearchProvider")
-            from src.mcp.providers.implementations.duckduckgo import DuckDuckGoSearchProvider
-            print("MCP DEBUG: Imported DuckDuckGoSearchProvider")
+            # DuckDuckGo removed - no official API available
             from src.mcp.providers.models import ProviderConfig, ProviderType
             print("MCP DEBUG: Imported models")
             from src.core.config import get_system_configuration
@@ -376,53 +391,76 @@ def create_mcp_enhancer(
             
             registered_count = 0
             
-            # Register Brave Search if enabled and API key available
-            brave_config = providers_config.get('brave_search')
-            if brave_config and brave_config.enabled:
-                brave_api_key = os.getenv('BRAVE_API_KEY')
-                if not brave_api_key:
-                    config_key = brave_config.api_key
-                    # Only use config key if it's not an environment variable placeholder
-                    if config_key and config_key != '${BRAVE_API_KEY}':
-                        brave_api_key = config_key
-                    else:
-                        brave_api_key = None
-                
-                if brave_api_key:
-                    provider_config = ProviderConfig(
-                        provider_id="brave_search",
-                        provider_type=ProviderType.BRAVE,
-                        enabled=True,
-                        api_key=brave_api_key,
-                        priority=brave_config.priority,
-                        max_requests_per_minute=brave_config.max_requests_per_minute,
-                        timeout_seconds=brave_config.timeout_seconds,
-                        custom_headers={}
-                    )
-                    brave_provider = BraveSearchProvider(provider_config)
-                    enhancer.register_external_provider('brave_search', brave_provider)
-                    registered_count += 1
-                    logger.info("Registered Brave Search provider")
+            # Register all providers from configuration
+            for provider_id, provider_config_data in providers_config.items():
+                if not provider_config_data or not provider_config_data.enabled:
+                    continue
+                    
+                # Determine provider type
+                provider_type = None
+                if 'brave' in provider_id.lower():
+                    provider_type = ProviderType.BRAVE
+                elif 'google' in provider_id.lower():
+                    provider_type = ProviderType.GOOGLE
+                elif 'searxng' in provider_id.lower():
+                    provider_type = ProviderType.SEARXNG
+                elif 'perplexity' in provider_id.lower():
+                    provider_type = ProviderType.PERPLEXITY
+                elif 'kagi' in provider_id.lower():
+                    provider_type = ProviderType.KAGI
                 else:
-                    logger.warning("Brave Search enabled but no API key found (set BRAVE_API_KEY)")
-            
-            # Register DuckDuckGo (no API key required)
-            ddg_config = providers_config.get('duckduckgo')
-            if ddg_config and ddg_config.enabled:  # Default enabled since no API key needed
+                    logger.warning(f"Unknown provider type for {provider_id}, skipping")
+                    continue
+                
+                # Get API key
+                api_key = None
+                if provider_type == ProviderType.BRAVE:
+                    api_key = os.getenv('BRAVE_API_KEY')
+                    if not api_key:
+                        config_key = provider_config_data.api_key
+                        # Only use config key if it's not an environment variable placeholder
+                        if config_key and config_key != '${BRAVE_API_KEY}':
+                            api_key = config_key
+                    
+                    if not api_key:
+                        logger.warning(f"Brave provider {provider_id} enabled but no API key found")
+                        continue
+                # DuckDuckGo removed - no official API
+                else:
+                    # For other providers, get API key from config
+                    api_key = provider_config_data.api_key
+                    if not api_key:
+                        logger.warning(f"Provider {provider_id} enabled but no API key found")
+                        continue
+                
+                # Create provider config
                 provider_config = ProviderConfig(
-                    provider_id="duckduckgo",
-                    provider_type=ProviderType.DUCKDUCKGO,
+                    provider_id=provider_id,
+                    provider_type=provider_type,
                     enabled=True,
-                    api_key=None,  # DuckDuckGo doesn't need API key
-                    priority=ddg_config.priority,
-                    max_requests_per_minute=ddg_config.max_requests_per_minute,
-                    timeout_seconds=ddg_config.timeout_seconds,
+                    api_key=api_key,
+                    priority=provider_config_data.priority,
+                    max_requests_per_minute=provider_config_data.max_requests_per_minute,
+                    timeout_seconds=provider_config_data.timeout_seconds,
                     custom_headers={}
                 )
-                ddg_provider = DuckDuckGoSearchProvider(provider_config)
-                enhancer.register_external_provider('duckduckgo', ddg_provider)
-                registered_count += 1
-                logger.info("Registered DuckDuckGo provider")
+                
+                # Create and register provider
+                try:
+                    if provider_type == ProviderType.BRAVE:
+                        provider = BraveSearchProvider(provider_config)
+                    # DuckDuckGo removed - no official API
+                    # elif provider_type == ProviderType.DUCKDUCKGO:
+                    #     provider = DuckDuckGoSearchProvider(provider_config)
+                    else:
+                        logger.warning(f"No implementation for provider type {provider_type}")
+                        continue
+                    
+                    enhancer.register_external_provider(provider_id, provider)
+                    registered_count += 1
+                    logger.info(f"Registered {provider_id} provider (type: {provider_type})")
+                except Exception as e:
+                    logger.error(f"Failed to create provider {provider_id}: {e}")
             
             print(f"MCP SUCCESS: Registered {registered_count} external providers")
             logger.info(f"MCP external providers registered: {registered_count} providers")
