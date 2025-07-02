@@ -272,7 +272,6 @@ backups/
 # ============================================================================
 *.prof
 profile_stats/
-monitoring/
 metrics/
 .profiler/
 

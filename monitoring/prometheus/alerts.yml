@@ -1,0 +1,163 @@
+groups:
+  - name: mcp_alerts
+    interval: 30s
+    rules:
+      # High error rate alert
+      - alert: MCPHighErrorRate
+        expr: |
+          (
+            sum(rate(mcp_requests_total{status="error"}[5m]))
+            /
+            sum(rate(mcp_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "High error rate in MCP system"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+      
+      # Very high error rate alert
+      - alert: MCPVeryHighErrorRate
+        expr: |
+          (
+            sum(rate(mcp_requests_total{status="error"}[5m]))
+            /
+            sum(rate(mcp_requests_total[5m]))
+          ) > 0.10
+        for: 2m
+        labels:
+          severity: critical
+          service: mcp
+        annotations:
+          summary: "Critical error rate in MCP system"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+      
+      # High request latency
+      - alert: MCPHighRequestLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(mcp_request_duration_seconds_bucket[5m])) by (le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "High request latency in MCP"
+          description: "95th percentile latency is {{ $value }}s"
+      
+      # Too many active connections
+      - alert: MCPTooManyConnections
+        expr: sum(mcp_active_connections) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "Too many active connections"
+          description: "{{ $value }} active connections (threshold: 1000)"
+      
+      # Rate limit violations
+      - alert: MCPHighRateLimitViolations
+        expr: sum(rate(mcp_rate_limit_hits_total[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "High rate of rate limit violations"
+          description: "{{ $value }} rate limit hits per second"
+      
+      # Security violations
+      - alert: MCPSecurityViolations
+        expr: sum(rate(mcp_security_violations_total[5m])) > 1
+        for: 2m
+        labels:
+          severity: critical
+          service: mcp
+        annotations:
+          summary: "Security violations detected"
+          description: "{{ $value }} security violations per second"
+      
+      # Authentication failures
+      - alert: MCPHighAuthFailureRate
+        expr: |
+          (
+            sum(rate(mcp_auth_attempts_total{result="failure"}[5m]))
+            /
+            sum(rate(mcp_auth_attempts_total[5m]))
+          ) > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Auth failure rate is {{ $value | humanizePercentage }}"
+      
+      # Memory usage
+      - alert: MCPHighMemoryUsage
+        expr: mcp_memory_usage_bytes / (1024 * 1024 * 1024) > 4
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "High memory usage in MCP"
+          description: "Memory usage is {{ $value }}GB"
+      
+      # CPU usage
+      - alert: MCPHighCPUUsage
+        expr: mcp_cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "High CPU usage in MCP"
+          description: "CPU usage is {{ $value }}%"
+      
+      # Cache performance
+      - alert: MCPLowCacheHitRate
+        expr: |
+          (
+            sum(rate(mcp_cache_hits_total[5m]))
+            /
+            (sum(rate(mcp_cache_hits_total[5m])) + sum(rate(mcp_cache_misses_total[5m])))
+          ) < 0.50
+        for: 10m
+        labels:
+          severity: info
+          service: mcp
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+      
+      # Connection errors
+      - alert: MCPHighConnectionErrors
+        expr: sum(rate(mcp_connection_errors_total[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "High rate of connection errors"
+          description: "{{ $value }} connection errors per second"
+      
+      # Tool execution failures
+      - alert: MCPToolExecutionFailures
+        expr: |
+          (
+            sum(rate(mcp_tool_executions_total{status="error"}[5m]))
+            /
+            sum(rate(mcp_tool_executions_total[5m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          service: mcp
+        annotations:
+          summary: "High tool execution failure rate"
+          description: "Tool failure rate is {{ $value | humanizePercentage }}"

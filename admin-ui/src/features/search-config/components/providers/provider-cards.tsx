@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ProviderCardsProps, ProviderInfo, ProviderCategory } from '../types'
+import { ProviderCardsProps, ProviderInfo, ProviderCategory } from '../../types/providers'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'

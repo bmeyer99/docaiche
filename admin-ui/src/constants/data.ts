@@ -11,11 +11,11 @@ export const navItems: NavItem[] = [
     items: []
   },
   {
-    title: 'AI Providers',
-    url: '/dashboard/providers',
-    icon: 'bot',
+    title: 'Search Config',
+    url: '/dashboard/search-config',
+    icon: 'settings',
     isActive: false,
-    shortcut: ['p', 'r'],
+    shortcut: ['s', 'c'],
     items: []
   },
   {
@@ -24,14 +24,6 @@ export const navItems: NavItem[] = [
     icon: 'search',
     isActive: false,
     shortcut: ['e', 's'],
-    items: []
-  },
-  {
-    title: 'Search Config',
-    url: '/dashboard/search-config',
-    icon: 'settings',
-    isActive: false,
-    shortcut: ['s', 'c'],
     items: []
   },
   {

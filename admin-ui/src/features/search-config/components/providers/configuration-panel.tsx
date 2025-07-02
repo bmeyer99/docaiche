@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import { ConfigurationPanelProps, ProviderFormData } from '../types'
+import { ConfigurationPanelProps, ProviderFormData } from '../../types/providers'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { getProviderSchema, getProviderDefaults, getProviderFields } from '../utils/provider-schemas'
+import { getProviderSchema, getProviderDefaults, getProviderFields } from '../../utils/provider-schemas'
 
 /**
  * ConfigurationPanel - Dynamic form for provider-specific configuration

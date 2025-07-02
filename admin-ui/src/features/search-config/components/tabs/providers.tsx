@@ -23,18 +23,18 @@ import {
   Save
 } from 'lucide-react';
 import { useProviderSettings } from '@/lib/hooks/use-provider-settings';
-import { useProvidersApi } from '@/features/providers/hooks/use-providers-api';
+import { useProvidersApi } from '../../hooks/providers/use-providers-api';
 import { useToast } from '@/hooks/use-toast';
 import { AI_PROVIDERS } from '@/lib/config/providers';
-import { ProviderCards } from '@/features/providers/components/provider-cards';
-import { ConfigurationPanel } from '@/features/providers/components/configuration-panel';
+import { ProviderCards } from '../providers/provider-cards';
+import { ConfigurationPanel } from '../providers/configuration-panel';
 import type { 
   ProviderCategory,
   Model,
   ModelSelection as LocalModelSelection,
   ProviderConfig,
   ProviderFormData
-} from '@/features/providers/types';
+} from '../../types/providers';
 
 interface ProvidersConfigProps {
   onChangeDetected?: () => void;

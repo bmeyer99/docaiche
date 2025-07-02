@@ -8,7 +8,7 @@ import {
   Model,
   ProviderResponse,
   ModelSelectionConfig 
-} from '../types'
+} from '../../types/providers'
 
 // Transform API response to frontend format
 function transformProviderResponse(response: ProviderResponse): ProviderInfo {
