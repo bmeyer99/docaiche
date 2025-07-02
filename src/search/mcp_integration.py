@@ -262,9 +262,23 @@ class MCPSearchEnhancer:
         # Execute searches
         for provider_id, provider in providers_to_use.items():
             try:
+                # Create SearchOptions for the provider
+                from src.mcp.providers.models import SearchOptions
+                search_options = SearchOptions(query=query, max_results=10)
+                
                 # Assume simple search interface
                 if hasattr(provider, 'search'):
-                    provider_results = await provider.search(query, limit=10)
+                    search_results = await provider.search(search_options)
+                    # Extract results from SearchResults object
+                    provider_results = []
+                    if hasattr(search_results, 'results'):
+                        for result in search_results.results:
+                            provider_results.append({
+                                'title': result.title,
+                                'url': result.url,
+                                'snippet': result.snippet,
+                                'content_type': getattr(result, 'content_type', 'unknown')
+                            })
                 else:
                     # Legacy interface
                     provider_results = await provider.execute_search(query, limit=10)
@@ -363,11 +377,11 @@ def create_mcp_enhancer(
             registered_count = 0
             
             # Register Brave Search if enabled and API key available
-            brave_config = providers_config.get('brave_search', {})
-            if brave_config.get('enabled', False):
+            brave_config = providers_config.get('brave_search')
+            if brave_config and brave_config.enabled:
                 brave_api_key = os.getenv('BRAVE_API_KEY')
                 if not brave_api_key:
-                    config_key = brave_config.get('api_key', '')
+                    config_key = brave_config.api_key
                     # Only use config key if it's not an environment variable placeholder
                     if config_key and config_key != '${BRAVE_API_KEY}':
                         brave_api_key = config_key
@@ -380,9 +394,9 @@ def create_mcp_enhancer(
                         provider_type=ProviderType.BRAVE,
                         enabled=True,
                         api_key=brave_api_key,
-                        priority=brave_config.get('priority', 1),
-                        max_requests_per_minute=brave_config.get('max_requests_per_minute', 60),
-                        timeout_seconds=brave_config.get('timeout_seconds', 3),
+                        priority=brave_config.priority,
+                        max_requests_per_minute=brave_config.max_requests_per_minute,
+                        timeout_seconds=brave_config.timeout_seconds,
                         custom_headers={}
                     )
                     brave_provider = BraveSearchProvider(provider_config)
@@ -393,16 +407,16 @@ def create_mcp_enhancer(
                     logger.warning("Brave Search enabled but no API key found (set BRAVE_API_KEY)")
             
             # Register DuckDuckGo (no API key required)
-            ddg_config = providers_config.get('duckduckgo', {})
-            if ddg_config.get('enabled', True):  # Default enabled since no API key needed
+            ddg_config = providers_config.get('duckduckgo')
+            if ddg_config and ddg_config.enabled:  # Default enabled since no API key needed
                 provider_config = ProviderConfig(
                     provider_id="duckduckgo",
                     provider_type=ProviderType.DUCKDUCKGO,
                     enabled=True,
                     api_key=None,  # DuckDuckGo doesn't need API key
-                    priority=ddg_config.get('priority', 3),
-                    max_requests_per_minute=ddg_config.get('max_requests_per_minute', 30),
-                    timeout_seconds=ddg_config.get('timeout_seconds', 4),
+                    priority=ddg_config.priority,
+                    max_requests_per_minute=ddg_config.max_requests_per_minute,
+                    timeout_seconds=ddg_config.timeout_seconds,
                     custom_headers={}
                 )
                 ddg_provider = DuckDuckGoSearchProvider(provider_config)

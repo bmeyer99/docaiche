@@ -147,7 +147,9 @@ async def get_service_logs(
             label_conditions.append(f'{key}="{value}"')
         query_parts.append(f'{{{",".join(label_conditions)}}}')
     else:
-        query_parts.append(f'{{service_name=~"{service_info["container_pattern"]}.*"}}')
+        # Query by job=dockerlogs and use regex on the log line to match container
+        container_pattern = service_info["container_pattern"]
+        query_parts.append(f'{{job="dockerlogs"}} |~ "{container_pattern}"')
     
     if level:
         query_parts.append(f'|= "{level}"')
@@ -158,6 +160,9 @@ async def get_service_logs(
         query_parts.append(f'|~ "{escaped_search}"')
     
     loki_query = " ".join(query_parts)
+    
+    # Debug logging
+    logger.info(f"Querying Loki for service {service_id} with query: {loki_query}")
     
     # Query Loki
     try:
@@ -282,7 +287,9 @@ async def websocket_logs(
             label_conditions.append(f'{key}="{value}"')
         query_parts.append(f'{{{",".join(label_conditions)}}}')
     else:
-        query_parts.append(f'{{service_name=~"{service_info["container_pattern"]}.*"}}')
+        # Query by job=dockerlogs and use regex on the log line to match container
+        container_pattern = service_info["container_pattern"]
+        query_parts.append(f'{{job="dockerlogs"}} |~ "{container_pattern}"')
     
     if level:
         query_parts.append(f'|= "{level}"')

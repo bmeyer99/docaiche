@@ -257,7 +257,8 @@ async def create_provider(
         if _security_logger:
             _security_logger.log_admin_action(
                 action="create_provider",
-                resource=create_request.config.provider_id,
+                target=create_request.config.provider_id,
+                impact_level="low",
                 details={"provider_type": create_request.config.provider_type}
             )
         
@@ -274,7 +275,38 @@ async def create_provider(
                 detail="Provider type is required"
             )
         
-        # For now, return a mock response - real implementation would integrate with provider registry
+        # Get configuration manager to save the provider
+        config_manager = await get_configuration_manager()
+        current_config = config_manager.get_configuration()
+        
+        # Update MCP configuration with new provider
+        if not hasattr(current_config, 'mcp') or not current_config.mcp:
+            from src.core.config.models import MCPConfig, MCPExternalSearchConfig
+            current_config.mcp = MCPConfig(
+                external_search=MCPExternalSearchConfig(
+                    enabled=True,
+                    providers={}
+                )
+            )
+        
+        # Convert provider config to MCPProviderConfig
+        from src.core.config.models import MCPProviderConfig
+        mcp_provider_config = MCPProviderConfig(
+            enabled=create_request.config.enabled,
+            api_key=create_request.config.api_key,
+            priority=create_request.config.priority,
+            max_requests_per_minute=create_request.config.rate_limit_per_minute,
+            timeout_seconds=create_request.config.timeout_seconds,
+            search_engine_id=None
+        )
+        
+        # Add provider to configuration
+        current_config.mcp.external_search.providers[create_request.config.provider_id] = mcp_provider_config
+        
+        # Save configuration
+        await config_manager.update_configuration(current_config)
+        
+        # Create response
         provider_response = ProviderResponse(
             provider_id=create_request.config.provider_id,
             config=create_request.config,
@@ -411,7 +443,8 @@ async def update_provider(
         if _security_logger:
             _security_logger.log_admin_action(
                 action="update_provider",
-                resource=provider_id,
+                target=provider_id,
+                impact_level="low",
                 details=update_request.dict(exclude_unset=True)
             )
         
@@ -454,7 +487,8 @@ async def delete_provider(
         if _security_logger:
             _security_logger.log_admin_action(
                 action="delete_provider",
-                resource=provider_id,
+                target=provider_id,
+                impact_level="medium",
                 details={}
             )
         

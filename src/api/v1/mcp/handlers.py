@@ -91,7 +91,9 @@ class MCPHandler:
         
         # Route to appropriate handler
         try:
-            if method == "tools/call":
+            if method == "initialize":
+                result = await self._handle_initialize(params)
+            elif method == "tools/call":
                 result = await self._handle_tool_call(params)
             elif method == "resources/read":
                 result = await self._handle_resource_read(params)
@@ -148,11 +150,15 @@ class MCPHandler:
         
         # Convert ToolResult to dict for JSON-RPC response
         if result.success:
+            # Convert data to string if it's an object
+            import json
+            text_content = json.dumps(result.data, indent=2) if isinstance(result.data, dict) else str(result.data)
+            
             return {
                 "content": [
                     {
                         "type": "text",
-                        "text": result.data
+                        "text": text_content
                     }
                 ]
             }
@@ -185,6 +191,28 @@ class MCPHandler:
         
         # Read resource
         return await resource.read(uri)
+    
+    async def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Handle initialize method.
+        
+        Args:
+            params: Initialize parameters
+            
+        Returns:
+            Server capabilities
+        """
+        return {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+                "tools": {},
+                "resources": {}
+            },
+            "serverInfo": {
+                "name": "docaiche-mcp",
+                "version": "1.0.0"
+            }
+        }
     
     async def _handle_tools_list(self) -> Dict[str, Any]:
         """List available tools."""

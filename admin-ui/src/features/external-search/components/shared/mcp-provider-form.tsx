@@ -90,8 +90,8 @@ export function MCPProviderForm({ isOpen, provider, onClose, onSuccess }: MCPPro
       max_results: 10,
       timeout_seconds: 3,
       rate_limit_per_minute: 60,
-      custom_headers: '',
-      custom_params: '',
+      custom_headers: '{}',
+      custom_params: '{}',
     },
   });
 
@@ -118,6 +118,9 @@ export function MCPProviderForm({ isOpen, provider, onClose, onSuccess }: MCPPro
     setIsSubmitting(true);
     
     try {
+      // Debug log to check what's being submitted
+      console.log('Form data being submitted:', data);
+      
       // Parse JSON fields
       let customHeaders = {};
       let customParams = {};
@@ -155,6 +158,8 @@ export function MCPProviderForm({ isOpen, provider, onClose, onSuccess }: MCPPro
         custom_headers: customHeaders,
         custom_params: customParams,
       };
+      
+      console.log('Config being sent to API:', config);
 
       if (isEditing) {
         await updateProvider(provider.provider_id, config);
@@ -274,6 +279,7 @@ export function MCPProviderForm({ isOpen, provider, onClose, onSuccess }: MCPPro
                       <Input 
                         type="password" 
                         placeholder="Enter API key" 
+                        autoComplete="off"
                         {...field} 
                       />
                     </FormControl>
