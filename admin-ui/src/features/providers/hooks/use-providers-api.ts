@@ -72,12 +72,44 @@ export function useProvidersApi() {
   // Test provider connection
   const testProviderConnection = useCallback(async (providerId: string, config?: Record<string, any>): Promise<TestResult> => {
     try {
+      // Filter config to only include fields expected by backend
+      // The backend expects: base_url, api_key, and model
+      const filteredConfig: Record<string, any> = {}
+      
+      if (config) {
+        // Always include these if present
+        if (config.base_url !== undefined) filteredConfig.base_url = config.base_url
+        if (config.api_key !== undefined) filteredConfig.api_key = config.api_key
+        if (config.model !== undefined) filteredConfig.model = config.model
+        
+        // Provider-specific fields
+        switch (providerId) {
+          case 'vertex':
+            if (config.vertex_project_id) filteredConfig.vertex_project_id = config.vertex_project_id
+            if (config.vertex_region) filteredConfig.vertex_region = config.vertex_region
+            if (config.vertex_json_credentials) filteredConfig.vertex_json_credentials = config.vertex_json_credentials
+            break
+          case 'bedrock':
+            if (config.aws_region) filteredConfig.aws_region = config.aws_region
+            if (config.aws_access_key) filteredConfig.aws_access_key = config.aws_access_key
+            if (config.aws_secret_key) filteredConfig.aws_secret_key = config.aws_secret_key
+            break
+          case 'openrouter':
+            if (config.site_url) filteredConfig.site_url = config.site_url
+            if (config.app_name) filteredConfig.app_name = config.app_name
+            break
+          case 'openai':
+            if (config.organization) filteredConfig.organization = config.organization
+            break
+        }
+      }
+      
       const response = await apiClient.post<{
         success: boolean
         message: string
         models?: string[]
         error?: string
-      }>(`/providers/${providerId}/test`, config || {})
+      }>(`/providers/${providerId}/test`, filteredConfig)
       
       const result: TestResult = {
         success: response.success,
