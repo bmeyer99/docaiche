@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ...database.models import SearchCache, ContentMetadata, FeedbackEvents, UsageSignals
 from .dependencies import get_database_manager, get_cache_manager, get_weaviate_client, get_search_orchestrator
+from .websocket_endpoints import check_system_health
 
 logger = logging.getLogger(__name__)
 
@@ -286,6 +287,121 @@ async def get_service_metrics_async():
     return services_metrics
 
 
+async def send_progressive_api_endpoints(websocket: WebSocket):
+    """Send API endpoint health checks progressively as each one completes."""
+    import aiohttp
+    import time
+    
+    try:
+        # Import FastAPI app to get routes
+        from ...main import app
+        
+        # Discover all API endpoints dynamically
+        api_endpoints = []
+        
+        # Get all routes from the FastAPI app
+        for route in app.routes:
+            if hasattr(route, 'path') and hasattr(route, 'methods'):
+                # Skip WebSocket routes and internal routes
+                if route.path.startswith('/ws/') or route.path == '/openapi.json' or route.path == '/docs' or route.path == '/redoc':
+                    continue
+                
+                # Skip parameterized routes (containing {})
+                if '{' in route.path or '}' in route.path:
+                    continue
+                    
+                # Only monitor GET endpoints (health checks)
+                if 'GET' in route.methods:
+                    # Only include top-level API routes
+                    if route.path.startswith('/api/v1/'):
+                        # Extract a friendly name from the path
+                        path_parts = route.path.strip('/').split('/')
+                        if path_parts:
+                            # Get the last meaningful part
+                            name = path_parts[-1].replace('-', ' ').replace('_', ' ').title()
+                            
+                            # Special cases for better names
+                            name_map = {
+                                'V1': 'API Root',
+                                'Health': 'Health Check',
+                                'Mcp': 'MCP Tools',
+                                'Recent': 'Recent Activity',
+                                'Config': 'Configuration',
+                                'Analytics': 'Analytics',
+                                'Providers': 'Providers',
+                                'Stats': 'Statistics',
+                                'Metrics': 'Metrics',
+                                'Search': 'Search',
+                                'Logs': 'Logs',
+                            }
+                            
+                            name = name_map.get(name, name)
+                            
+                            api_endpoints.append({
+                                "path": route.path,
+                                "name": name
+                            })
+        
+        # Sort endpoints by path for consistent ordering
+        api_endpoints.sort(key=lambda x: x['path'])
+        
+        # Check each endpoint and send results progressively
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3)) as session:
+            for endpoint in api_endpoints:
+                start_time = time.time()
+                endpoint_status = "healthy"
+                endpoint_message = "Responsive"
+                response_time_ms = 0
+                
+                try:
+                    async with session.get(f"http://admin-ui:3000{endpoint['path']}") as response:
+                        response_time_ms = int((time.time() - start_time) * 1000)
+                        endpoint_status = "healthy"
+                        endpoint_message = f"HTTP {response.status}"
+                                
+                except asyncio.TimeoutError:
+                    endpoint_status = "unhealthy"
+                    endpoint_message = "Timeout"
+                    response_time_ms = 3000
+                except Exception as e:
+                    endpoint_status = "unhealthy"
+                    endpoint_message = f"Error: {str(e)[:50]}"
+                    response_time_ms = int((time.time() - start_time) * 1000)
+                
+                # Send individual endpoint result immediately
+                endpoint_key = f"api_endpoint_{endpoint['path'].replace('/', '_').replace('-', '_')}"
+                endpoint_data = {
+                    endpoint_key: {
+                        "status": endpoint_status,
+                        "message": endpoint_message,
+                        "response_time": response_time_ms,
+                        "group": "infrastructure",
+                        "name": endpoint['name'],
+                        "path": endpoint['path']
+                    }
+                }
+                
+                await send_progressive_message(
+                    websocket,
+                    "analytics_update",
+                    {"systemHealth": endpoint_data},
+                    "api_endpoint"
+                )
+                
+    except Exception as e:
+        logger.error(f"Error in progressive API endpoint checking: {e}")
+        await send_progressive_message(
+            websocket,
+            "analytics_update",
+            {"systemHealth": {"api_endpoints_error": {
+                "status": "unhealthy",
+                "message": f"API endpoint monitoring failed: {str(e)[:100]}",
+                "group": "infrastructure"
+            }}},
+            "api_endpoint_error"
+        )
+
+
 @router.websocket("/ws/analytics/progressive")
 async def progressive_analytics_websocket(websocket: WebSocket):
     """
@@ -306,21 +422,21 @@ async def progressive_analytics_websocket(websocket: WebSocket):
             "init"
         )
         
-        # Send system health first (quick to gather)
+        # Send basic system health first (fast - just database, cache, API core)
         try:
-            health_data = await get_system_health_quick()
+            basic_health_data = await get_system_health_quick()
             await send_progressive_message(
                 websocket,
                 "analytics_update",
-                {"systemHealth": health_data},
+                {"systemHealth": basic_health_data},
                 "health"
             )
         except Exception as e:
-            logger.error(f"Error getting health data: {e}")
+            logger.error(f"Error getting basic health data: {e}")
             await send_progressive_message(
                 websocket,
                 "analytics_update",
-                {"systemHealth": {"error": "Health data unavailable"}},
+                {"systemHealth": {"error": "Basic health data unavailable"}},
                 "health"
             )
         
@@ -360,6 +476,12 @@ async def progressive_analytics_websocket(websocket: WebSocket):
                 "detailed_analytics"
             )
         
+        # Send detailed system health with progressive API endpoint checks
+        try:
+            await send_progressive_api_endpoints(websocket)
+        except Exception as e:
+            logger.error(f"Error getting progressive API endpoints: {e}")
+        
         # Send service metrics last (optional, may be slow)
         try:
             service_metrics = await get_service_metrics_async()
@@ -392,7 +514,7 @@ async def progressive_analytics_websocket(websocket: WebSocket):
                     # Health update
                     async def update_health():
                         try:
-                            health_data = await get_system_health_quick()
+                            health_data = await check_system_health()
                             await send_progressive_message(
                                 websocket,
                                 "analytics_update",

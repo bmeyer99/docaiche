@@ -186,6 +186,18 @@ export function useAnalyticsWebSocket(timeRange: string = '24h', enabled: boolea
           // Handle progressive data based on section
           if (data.section === 'health' && data.data.systemHealth) {
             setAnalytics((prev: any) => ({ ...prev, systemHealth: data.data.systemHealth }));
+          } else if (data.section === 'detailed_health' && data.data.systemHealth) {
+            // Update with detailed health data including API endpoints
+            setAnalytics((prev: any) => ({ ...prev, systemHealth: data.data.systemHealth }));
+          } else if (data.section === 'api_endpoint' && data.data.systemHealth) {
+            // Merge individual API endpoint results into existing system health
+            setAnalytics((prev: any) => ({
+              ...prev,
+              systemHealth: {
+                ...prev?.systemHealth,
+                ...data.data.systemHealth
+              }
+            }));
           } else if (data.section === 'basic_stats' && data.data.stats) {
             setStats(data.data.stats);
           } else if (data.section === 'detailed_analytics' && data.data.analytics) {

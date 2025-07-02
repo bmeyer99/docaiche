@@ -6,6 +6,12 @@ const httpUrlSchema = z.string().url().refine(
   { message: 'URL must start with http:// or https://' }
 )
 
+// Optional URL validator that allows empty strings
+const optionalHttpUrlSchema = z.union([
+  z.literal(''),
+  httpUrlSchema
+]).optional()
+
 // Base schema for common fields
 const baseConfigSchema = z.object({
   timeout: z.number().min(1).max(300).optional(),
@@ -26,58 +32,58 @@ const providerSchemas = {
   // Cloud providers
   openai: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    organization: z.string().optional(),
-    base_url: httpUrlSchema.optional()
+    organization: z.union([z.literal(''), z.string()]).optional(),
+    base_url: optionalHttpUrlSchema
   }).merge(baseConfigSchema),
   
   anthropic: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    base_url: httpUrlSchema.optional()
+    base_url: optionalHttpUrlSchema
   }).merge(baseConfigSchema),
   
   groq: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    base_url: httpUrlSchema.optional()
+    base_url: optionalHttpUrlSchema
   }).merge(baseConfigSchema),
   
   mistral: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    base_url: httpUrlSchema.optional()
+    base_url: optionalHttpUrlSchema
   }).merge(baseConfigSchema),
   
   deepseek: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    base_url: httpUrlSchema.optional()
+    base_url: optionalHttpUrlSchema
   }).merge(baseConfigSchema),
   
   openrouter: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    base_url: httpUrlSchema.optional(),
-    site_url: z.string().url().optional(),
-    app_name: z.string().optional()
+    base_url: optionalHttpUrlSchema,
+    site_url: z.union([z.literal(''), z.string().url()]).optional(),
+    app_name: z.union([z.literal(''), z.string()]).optional()
   }).merge(baseConfigSchema),
   
   xai: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    base_url: httpUrlSchema.optional()
+    base_url: optionalHttpUrlSchema
   }).merge(baseConfigSchema),
   
   // Enterprise providers
   vertex: z.object({
     vertex_project_id: z.string().min(1, 'Project ID is required'),
     vertex_region: z.string().min(1, 'Region is required'),
-    vertex_json_credentials: z.string().optional()
+    vertex_json_credentials: z.union([z.literal(''), z.string()]).optional()
   }).merge(baseConfigSchema),
   
   bedrock: z.object({
     aws_region: z.string().min(1, 'Region is required'),
-    aws_access_key: z.string().optional(),
-    aws_secret_key: z.string().optional()
+    aws_access_key: z.union([z.literal(''), z.string()]).optional(),
+    aws_secret_key: z.union([z.literal(''), z.string()]).optional()
   }).merge(baseConfigSchema),
   
   gemini: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    base_url: httpUrlSchema.optional()
+    base_url: optionalHttpUrlSchema
   }).merge(baseConfigSchema)
 } as const
 

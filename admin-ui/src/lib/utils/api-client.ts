@@ -911,7 +911,7 @@ export class DocaicheApiClient {
 
   // Dashboard URLs
   async getDashboardUrls(): Promise<any> {
-    return this.get<any>('/monitoring/dashboards');
+    return this.get<any>('/metrics/dashboards');
   }
 
   /**

@@ -44,9 +44,11 @@ export function ConfigurationPanel({
   useEffect(() => {
     if (provider) {
       const defaults = getProviderDefaults(provider.id)
+      // Only use configuration values if they exist and match the provider
+      const providerConfig = configuration?.id === provider.id ? configuration : {}
       const values = {
         ...defaults,
-        ...configuration
+        ...providerConfig
       }
       form.reset(values)
       setSaveError(null) // Clear errors on provider change
