@@ -432,6 +432,17 @@ class WeaviateVectorClient:
             return results
             
         except Exception as e:
+            error_str = str(e).lower()
+            logger.info(f"Weaviate search exception for workspace {workspace_slug}: {e} (type: {type(e).__name__})")
+            
+            # Handle workspace not found as empty results, not an error
+            if any(phrase in error_str for phrase in [
+                "tenant", "not found", "does not exist", "no such tenant", "no objects found", "empty"
+            ]):
+                logger.info(f"Workspace {workspace_slug} not found or empty, returning empty results")
+                return []
+            
+            # Handle other exceptions as actual errors
             logger.error(f"Search failed for workspace {workspace_slug}: {e}")
             raise WeaviateError(f"Search failed: {str(e)}")
     

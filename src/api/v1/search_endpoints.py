@@ -107,8 +107,10 @@ async def search_documents_post(
     try:
         
         logger.info(f"Search request: query={search_request.query!r}, tech_hint={search_request.technology_hint!r} (type: {type(search_request.technology_hint)}), limit={search_request.limit!r}")
+        logger.info(f"Search orchestrator type: {type(search_orchestrator)}")
         
         # Execute real search through the orchestrator - it returns API-compatible response
+        logger.info(f"[{trace_id}] Calling orchestrator.search method")
         search_response = await search_orchestrator.search(
             query=search_request.query,
             technology_hint=search_request.technology_hint,
@@ -131,7 +133,9 @@ async def search_documents_post(
                 session_id=search_request.session_id
             )
 
-        logger.info(f"Search completed with {len(search_response.results)} results")
+        logger.info(f"[{trace_id}] Search completed with {len(search_response.results)} results")
+        logger.info(f"[{trace_id}] Search response type: {type(search_response)}")
+        logger.info(f"[{trace_id}] First result type: {type(search_response.results[0]) if search_response.results else 'No results'}")
         
         # The orchestrator already returns API-compatible SearchResponse
         return search_response

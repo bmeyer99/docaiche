@@ -880,9 +880,11 @@ class SearchOrchestrator:
         Returns:
             SearchResponse compatible with API schema
         """
-        logger.debug(f"Search called with: query={query!r}, technology_hint={technology_hint!r} (type: {type(technology_hint)}), limit={limit!r}, offset={offset!r}")
+        import uuid
+        trace_id = f"orch-{uuid.uuid4().hex[:8]}"
+        logger.info(f"[{trace_id}] Search called with: query={query!r}, technology_hint={technology_hint!r} (type: {type(technology_hint)}), limit={limit!r}, offset={offset!r}")
         # Import here to avoid circular imports
-        from src.api.schemas import SearchResponse as APISearchResponse
+        from src.api.v1.schemas import SearchResponse as APISearchResponse
         
         # Create internal SearchQuery
         search_query = SearchQuery(
@@ -907,20 +909,25 @@ class SearchOrchestrator:
         else:
             tech_hint = technology_hint
         
-        # Convert SearchResult objects to API dictionaries
+        # Convert SearchResult objects to API SearchResult models
+        from src.api.v1.schemas import SearchResult as APISearchResult
+        logger.info(f"[{trace_id}] Converting {len(results.results[:limit])} search results to API format")
         api_results = []
-        for result in results.results[:limit]:
-            api_result = {
-                "content_id": result.content_id,
-                "title": result.title or "Untitled",
-                "snippet": result.content_snippet or "",
-                "source_url": result.source_url or "",
-                "technology": result.technology or "unknown",
-                "relevance_score": result.relevance_score,
-                "content_type": result.metadata.get("content_type", "document"),
-                "workspace": result.workspace_slug or "external_search",
-            }
+        for i, result in enumerate(results.results[:limit]):
+            logger.debug(f"Converting result {i}: type={type(result)}, content_id={result.content_id}")
+            api_result = APISearchResult(
+                content_id=result.content_id,
+                title=result.title or "Untitled",
+                snippet=result.content_snippet or "",
+                source_url=result.source_url or "",
+                technology=result.technology or "unknown",
+                relevance_score=result.relevance_score,
+                content_type=result.metadata.get("content_type", "document"),
+                workspace=result.workspace_slug or "external_search",
+            )
             api_results.append(api_result)
+        
+        logger.info(f"[{trace_id}] Converted to API results: {len(api_results)} items, types: {[type(r).__name__ for r in api_results[:2]]}")
         
         try:
             return APISearchResponse(
