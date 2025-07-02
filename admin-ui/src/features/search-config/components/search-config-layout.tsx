@@ -2,7 +2,7 @@
 
 /**
  * Main layout component for Search Configuration
- * Provides tabbed navigation and real-time status
+ * Provides tabbed navigation for system configuration
  */
 
 import React, { useState, useEffect } from 'react';
@@ -10,9 +10,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  Activity, 
+  Users, 
   Bot, 
   Database, 
   Globe, 
@@ -20,16 +19,12 @@ import {
   BarChart3, 
   Settings,
   Save,
-  X,
-  RefreshCw,
-  AlertCircle,
-  CheckCircle
+  X
 } from 'lucide-react';
-import { useSystemHealth, useConfigChangeNotifications } from '../hooks/use-search-config-websocket';
 import { TabConfig } from '../types';
 
-// Import tab components (to be created)
-import { SearchConfigDashboard } from './tabs/dashboard';
+// Import tab components
+import { ProvidersConfig } from './tabs/providers';
 import { VectorSearchConfig } from './tabs/vector-search';
 import { TextAIConfig } from './tabs/text-ai';
 import { SearchProvidersConfig } from './tabs/search-providers';
@@ -38,17 +33,17 @@ import { MonitoringConfig } from './tabs/monitoring';
 import { SystemSettings } from './tabs/settings';
 
 const TABS: TabConfig[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'Activity', shortcut: 'Cmd+1' },
+  { id: 'providers', label: 'Providers', icon: 'Users', shortcut: 'Cmd+1' },
   { id: 'vector', label: 'Vector Search', icon: 'Database', shortcut: 'Cmd+2' },
   { id: 'text-ai', label: 'Text AI', icon: 'Bot', shortcut: 'Cmd+3' },
-  { id: 'providers', label: 'Search Providers', icon: 'Globe', shortcut: 'Cmd+4' },
+  { id: 'search-providers', label: 'Search Providers', icon: 'Globe', shortcut: 'Cmd+4' },
   { id: 'ingestion', label: 'Ingestion', icon: 'HardDrive', shortcut: 'Cmd+5' },
   { id: 'monitoring', label: 'Monitoring', icon: 'BarChart3', shortcut: 'Cmd+6' },
   { id: 'settings', label: 'Settings', icon: 'Settings', shortcut: 'Cmd+7' }
 ];
 
 const ICON_MAP = {
-  Activity,
+  Users,
   Database,
   Bot,
   Globe,
@@ -60,12 +55,9 @@ const ICON_MAP = {
 export function SearchConfigLayout() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'dashboard');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'providers');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  const { overallHealth, isConnected } = useSystemHealth();
-  const { pendingChanges, acknowledgeChanges } = useConfigChangeNotifications();
 
   // Update URL when tab changes
   const handleTabChange = (value: string) => {
@@ -123,36 +115,12 @@ export function SearchConfigLayout() {
     }
   };
 
-  const getHealthBadge = () => {
-    if (!isConnected) return <Badge variant="outline">Disconnected</Badge>;
-    
-    switch (overallHealth) {
-      case 'healthy':
-        return <Badge className="bg-green-500">All Systems Operational</Badge>;
-      case 'degraded':
-        return <Badge className="bg-yellow-500">Degraded Performance</Badge>;
-      case 'unhealthy':
-        return <Badge className="bg-red-500">System Issues</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
-
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="border-b px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">Search Configuration</h1>
-            {getHealthBadge()}
-            {!isConnected && (
-              <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Reconnect
-              </Button>
-            )}
-          </div>
+          <h1 className="text-2xl font-bold">Search Configuration</h1>
           
           {hasUnsavedChanges && (
             <div className="flex items-center gap-2">
@@ -172,7 +140,7 @@ export function SearchConfigLayout() {
               >
                 {isSaving ? (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     Saving...
                   </>
                 ) : (
@@ -186,19 +154,6 @@ export function SearchConfigLayout() {
           )}
         </div>
       </div>
-
-      {/* Notifications */}
-      {pendingChanges && (
-        <Alert className="mx-6 mt-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            <span>Configuration has been updated by another user.</span>
-            <Button size="sm" variant="outline" onClick={acknowledgeChanges}>
-              Refresh
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Tabs */}
       <div className="flex-1 overflow-hidden">
@@ -227,8 +182,8 @@ export function SearchConfigLayout() {
           </div>
 
           <div className="flex-1 overflow-auto">
-            <TabsContent value="dashboard" className="h-full m-0">
-              <SearchConfigDashboard onChangeDetected={() => setHasUnsavedChanges(true)} />
+            <TabsContent value="providers" className="h-full m-0">
+              <ProvidersConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
             </TabsContent>
             
             <TabsContent value="vector" className="h-full m-0">
@@ -239,7 +194,7 @@ export function SearchConfigLayout() {
               <TextAIConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
             </TabsContent>
             
-            <TabsContent value="providers" className="h-full m-0">
+            <TabsContent value="search-providers" className="h-full m-0">
               <SearchProvidersConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
             </TabsContent>
             

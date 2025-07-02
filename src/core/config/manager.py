@@ -227,7 +227,7 @@ class ConfigurationManager:
             from .models import (
                 AppConfig,
                 ContentConfig,
-                AnythingLLMConfig,
+                WeaviateConfig,
                 GitHubConfig,
                 ScrapingConfig,
                 RedisConfig,
@@ -240,8 +240,8 @@ class ConfigurationManager:
             # Build configuration sections with defaults
             app_config = AppConfig(**(config_dict.get("app", {})))
             content_config = ContentConfig(**(config_dict.get("content", {})))
-            anythingllm_config = AnythingLLMConfig(
-                **(config_dict.get("anythingllm", {}))
+            weaviate_config = WeaviateConfig(
+                **(config_dict.get("weaviate", {}))
             )
             github_config = GitHubConfig(**(config_dict.get("github", {})))
             scraping_config = ScrapingConfig(**(config_dict.get("scraping", {})))
@@ -281,7 +281,7 @@ class ConfigurationManager:
             system_config = SystemConfiguration(
                 app=app_config,
                 content=content_config,
-                anythingllm=anythingllm_config,
+                weaviate=weaviate_config,
                 github=github_config,
                 scraping=scraping_config,
                 redis=redis_config,

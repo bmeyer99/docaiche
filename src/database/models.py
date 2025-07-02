@@ -130,8 +130,8 @@ class ContentMetadata(Base):
     processing_status: Mapped[str] = mapped_column(
         String, nullable=False, default="pending"
     )
-    anythingllm_workspace: Mapped[Optional[str]] = mapped_column(String)
-    anythingllm_document_id: Mapped[Optional[str]] = mapped_column(String)
+    weaviate_workspace: Mapped[Optional[str]] = mapped_column(String)
+    weaviate_document_id: Mapped[Optional[str]] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
     )

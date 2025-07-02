@@ -107,7 +107,7 @@ def validate_configuration_schema() -> bool:
     """
     try:
         from .models import (
-            AnythingLLMConfig,  # noqa: F401
+            WeaviateConfig,  # noqa: F401
             OllamaConfig,  # noqa: F401
             OpenAIConfig,  # noqa: F401
             ScrapingConfig,  # noqa: F401

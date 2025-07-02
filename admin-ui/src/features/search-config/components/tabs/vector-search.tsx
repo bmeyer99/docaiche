@@ -150,9 +150,9 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
         <TabsContent value="connection" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>AnythingLLM Connection</CardTitle>
+              <CardTitle>Weaviate Connection</CardTitle>
               <CardDescription>
-                Configure the connection to your AnythingLLM instance
+                Configure the connection to your Weaviate vector database
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -17,6 +17,7 @@ from .vector import router as vector_router
 from .text_ai import router as text_ai_router
 from .providers import router as providers_router
 from .monitoring import router as monitoring_router
+from .websocket import router as websocket_router
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,12 @@ router.include_router(
     responses={
         400: {"description": "Bad request - Invalid query parameters"}
     }
+)
+
+# Include WebSocket router (no prefix needed as it's already /ws)
+router.include_router(
+    websocket_router,
+    tags=["websocket"]
 )
 
 

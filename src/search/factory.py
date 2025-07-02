@@ -19,7 +19,7 @@ from src.database.connection import (
     create_database_manager,
     create_cache_manager,
 )
-from src.clients.anythingllm import AnythingLLMClient
+from src.clients.weaviate_client import WeaviateVectorClient
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 async def create_search_orchestrator(
     db_manager: Optional[DatabaseManager] = None,
     cache_manager: Optional[CacheManager] = None,
-    anythingllm_client: Optional[AnythingLLMClient] = None,
+    weaviate_client: Optional[WeaviateVectorClient] = None,
     llm_client: Optional[Any] = None,
     knowledge_enricher: Optional[Any] = None,
 ) -> SearchOrchestrator:
@@ -40,7 +40,7 @@ async def create_search_orchestrator(
     Args:
         db_manager: Database manager (created if None)
         cache_manager: Cache manager (created if None)
-        anythingllm_client: AnythingLLM client (optional)
+        weaviate_client: Weaviate client (optional)
         llm_client: LLM provider client (optional, for evaluation)
         knowledge_enricher: Knowledge enricher (optional, for background tasks)
 
@@ -68,7 +68,7 @@ async def create_search_orchestrator(
         # Log available dependencies
         logger.debug(
             f"Dependencies: db={db_manager is not None}, cache={cache_manager is not None}, "
-            f"anythingllm={anythingllm_client is not None}, llm={llm_client is not None}, "
+            f"weaviate={weaviate_client is not None}, llm={llm_client is not None}, "
             f"enricher={knowledge_enricher is not None}"
         )
 
@@ -76,7 +76,7 @@ async def create_search_orchestrator(
         orchestrator = SearchOrchestrator(
             db_manager=db_manager,
             cache_manager=cache_manager,
-            anythingllm_client=anythingllm_client,
+            weaviate_client=weaviate_client,
             llm_client=llm_client,
             knowledge_enricher=knowledge_enricher,
         )
@@ -90,14 +90,14 @@ async def create_search_orchestrator(
 
 
 def create_workspace_search_strategy(
-    db_manager: DatabaseManager, anythingllm_client: AnythingLLMClient
+    db_manager: DatabaseManager, weaviate_client: WeaviateVectorClient
 ) -> WorkspaceSearchStrategy:
     """
     Factory function to create WorkspaceSearchStrategy.
 
     Args:
         db_manager: Database manager for workspace metadata
-        anythingllm_client: AnythingLLM client for vector search
+        weaviate_client: Weaviate client for vector search
 
     Returns:
         Configured WorkspaceSearchStrategy instance
@@ -105,7 +105,7 @@ def create_workspace_search_strategy(
     try:
         logger.debug("Creating WorkspaceSearchStrategy")
 
-        strategy = WorkspaceSearchStrategy(db_manager, anythingllm_client)
+        strategy = WorkspaceSearchStrategy(db_manager, weaviate_client)
 
         logger.debug("WorkspaceSearchStrategy created successfully")
         return strategy

@@ -15,11 +15,11 @@ from .schemas import StatsResponse
 from .dependencies import (
     get_database_manager,
     get_cache_manager,
-    get_anythingllm_client,
+    get_weaviate_client,
     get_search_orchestrator,
 )
 from src.database.connection import DatabaseManager, CacheManager
-from src.clients.anythingllm import AnythingLLMClient
+from src.clients.weaviate_client import WeaviateVectorClient
 from src.search.orchestrator import SearchOrchestrator
 from src.core.config import get_system_configuration
 
@@ -43,7 +43,7 @@ router = APIRouter()
 async def health_check(
     db_manager: DatabaseManager = Depends(get_database_manager),
     cache_manager: CacheManager = Depends(get_cache_manager),
-    anythingllm_client: AnythingLLMClient = Depends(get_anythingllm_client),
+    weaviate_client: WeaviateVectorClient = Depends(get_weaviate_client),
     search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator),
 ):
     """
@@ -111,29 +111,29 @@ async def health_check(
         })
         overall_status = "degraded"
 
-    # AnythingLLM
+    # Weaviate
     try:
-        llm_health = await anythingllm_client.health_check()
-        llm_status = (
-            "healthy" if llm_health.get("status") == "healthy" else "unhealthy"
+        weaviate_health = await weaviate_client.health_check()
+        weaviate_status = (
+            "healthy" if weaviate_health.get("status") == "healthy" else "unhealthy"
         )
-        llm_msg = llm_health.get(
+        weaviate_msg = weaviate_health.get(
             "message",
-            "Connected" if llm_status == "healthy" else "Service not configured",
+            "Connected" if weaviate_status == "healthy" else "Service not configured",
         )
         services.append({
-            "service": "anythingllm",
-            "status": llm_status,
-            "response_time_ms": llm_health.get("response_time_ms"),
+            "service": "weaviate",
+            "status": weaviate_status,
+            "response_time_ms": weaviate_health.get("response_time_ms"),
             "last_check": now,
-            "details": {"message": llm_msg}
+            "details": {"message": weaviate_msg}
         })
-        if llm_status != "healthy":
+        if weaviate_status != "healthy":
             overall_status = "degraded"
     except Exception as e:
         error_msg = "Service not configured"
         services.append({
-            "service": "anythingllm",
+            "service": "weaviate",
             "status": "unhealthy",
             "last_check": now,
             "details": {"message": error_msg, "error": str(e)}
@@ -206,7 +206,7 @@ async def health_check(
     unavailable_count = sum(
         1
         for service in services
-        if service["service"] in ["database", "redis", "anythingllm"] and 
+        if service["service"] in ["database", "redis", "weaviate"] and 
            service["status"] in ["unavailable", "unhealthy"]
     )
     if unavailable_count == 3:
@@ -282,7 +282,7 @@ async def get_stats(
             COUNT(DISTINCT content_id) as total_documents,
             SUM(chunk_count) as total_chunks,
             AVG(quality_score) as avg_quality_score,
-            COUNT(DISTINCT anythingllm_workspace) as workspaces,
+            COUNT(DISTINCT weaviate_workspace) as workspaces,
             MAX(updated_at) as last_enrichment
         FROM content_metadata
         """

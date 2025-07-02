@@ -22,8 +22,8 @@ from .schemas import (
     CollectionsResponse,
 )
 from .middleware import get_trace_id
-from .dependencies import get_anythingllm_client, reset_service_instances
-from src.clients.anythingllm import AnythingLLMClient
+from .dependencies import get_weaviate_client, reset_service_instances
+from src.clients.weaviate_client import WeaviateVectorClient
 from src.core.config import get_settings, get_configuration_manager
 
 logger = logging.getLogger(__name__)
@@ -169,9 +169,9 @@ async def get_configuration(request: Request) -> ConfigurationResponse:
             ),
             # Service endpoints (non-sensitive)
             ConfigurationItem(
-                key="anythingllm.endpoint",
-                value=config.anythingllm.endpoint,
-                description="AnythingLLM service endpoint",
+                key="weaviate.endpoint",
+                value=config.weaviate.endpoint,
+                description="Weaviate service endpoint",
             ),
         ]
 
@@ -302,7 +302,7 @@ async def update_configuration(
 @router.get("/collections", response_model=CollectionsResponse, tags=["search"])
 async def get_collections(
     request: Request,
-    anythingllm_client: AnythingLLMClient = Depends(get_anythingllm_client),
+    weaviate_client: WeaviateVectorClient = Depends(get_weaviate_client),
 ) -> CollectionsResponse:
     """
     GET /api/v1/collections - Lists available documentation collections (workspaces)
@@ -315,15 +315,15 @@ async def get_collections(
         CollectionsResponse with available collections
     """
     try:
-        # Get workspaces from AnythingLLM
-        workspaces = await anythingllm_client.list_workspaces()
+        # Get workspaces from Weaviate
+        workspaces = await weaviate_client.list_workspaces()
         
         # Convert to Collection objects
         collections = []
         for ws in workspaces:
             # Count documents in workspace
             try:
-                docs = await anythingllm_client.list_documents(ws["slug"])
+                docs = await weaviate_client.list_workspace_documents(ws["slug"])
                 doc_count = len(docs)
             except:
                 doc_count = 0
@@ -332,9 +332,9 @@ async def get_collections(
                 Collection(
                     slug=ws["slug"],
                     name=ws["name"],
-                    technology="unknown",  # AnythingLLM doesn't track technology
+                    technology="unknown",  # Weaviate doesn't track technology
                     document_count=doc_count,
-                    last_updated=datetime.utcnow(),  # Not tracked by AnythingLLM
+                    last_updated=datetime.utcnow(),  # Not tracked by Weaviate
                     is_active=True,
                 )
             )
@@ -345,9 +345,9 @@ async def get_collections(
 
     except Exception as e:
         logger.error(f"Collections retrieval failed: {e}")
-        # Return empty collections list when AnythingLLM is not available
-        # This allows the UI to function while AnythingLLM is being configured
-        logger.warning("AnythingLLM unavailable - returning empty collections list. Please configure the API key.")
+        # Return empty collections list when Weaviate is not available
+        # This allows the UI to function while Weaviate is being configured
+        logger.warning("Weaviate unavailable - returning empty collections list. Please configure the API key.")
         return CollectionsResponse(
             collections=[], 
             total_count=0

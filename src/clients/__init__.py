@@ -1,31 +1,31 @@
 """
 Client modules for external service integrations - PRD-004 through PRD-007
-External API clients for AnythingLLM, LLM providers, GitHub, and web scraping
+External API clients for Weaviate, LLM providers, GitHub, and web scraping
 
 This package contains all client implementations for external services
 following async patterns with proper error handling and circuit breakers.
 """
 
-from .anythingllm import AnythingLLMClient
+from .weaviate_client import WeaviateVectorClient
 from .github import GitHubClient
 from .exceptions import (
-    AnythingLLMError,
-    AnythingLLMConnectionError,
-    AnythingLLMAuthenticationError,
-    AnythingLLMRateLimitError,
-    AnythingLLMWorkspaceError,
-    AnythingLLMDocumentError,
-    AnythingLLMCircuitBreakerError,
+    WeaviateError,
+    WeaviateConnectionError,
+    WeaviateAuthenticationError,
+    WeaviateRateLimitError,
+    WeaviateWorkspaceError,
+    WeaviateDocumentError,
+    WeaviateCircuitBreakerError,
 )
 
 __all__ = [
-    "AnythingLLMClient",
+    "WeaviateVectorClient",
     "GitHubClient",
-    "AnythingLLMError",
-    "AnythingLLMConnectionError",
-    "AnythingLLMAuthenticationError",
-    "AnythingLLMRateLimitError",
-    "AnythingLLMWorkspaceError",
-    "AnythingLLMDocumentError",
-    "AnythingLLMCircuitBreakerError",
+    "WeaviateError",
+    "WeaviateConnectionError",
+    "WeaviateAuthenticationError",
+    "WeaviateRateLimitError",
+    "WeaviateWorkspaceError",
+    "WeaviateDocumentError",
+    "WeaviateCircuitBreakerError",
 ]

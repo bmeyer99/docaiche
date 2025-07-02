@@ -23,10 +23,10 @@ content:
   min_content_length: 50
   max_content_length: 1000000
 
-# AnythingLLM Integration Configuration
-anythingllm:
-  endpoint: "http://anythingllm:3001"
-  api_key: "${ANYTHINGLLM_API_KEY}"  # Set via environment variable
+# Weaviate Vector Database Configuration
+weaviate:
+  endpoint: "http://weaviate:8080"
+  api_key: "${WEAVIATE_API_KEY}"  # Set via environment variable
   circuit_breaker:
     failure_threshold: 3
     recovery_timeout: 60
@@ -171,7 +171,7 @@ api_response_pipeline:
 #    - Enable SSL/TLS by setting REDIS_SSL=true if needed
 #
 # 4. API Keys and Tokens:
-#    - ANYTHINGLLM_API_KEY: Required for AnythingLLM integration
+#    - WEAVIATE_API_KEY: Required for Weaviate vector database integration
 #    - GITHUB_API_TOKEN: Required for GitHub repository access
 #    - OPENAI_API_KEY: Required if using OpenAI as primary/fallback provider
 #    - BRAVE_API_KEY: Required for Brave Search external provider (get free at https://brave.com/search/api/)
