@@ -98,6 +98,15 @@ class BrowserLogger {
   }
 
   private log(level: LogEntry['level'], message: string, metadata?: Record<string, any>) {
+    // Skip logging when on the logs page to prevent infinite loops
+    if (window.location.pathname.includes('/dashboard/logs')) {
+      // Still log to console for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console[level](`[BrowserLogger-Skipped] ${message}`, metadata);
+      }
+      return;
+    }
+
     const entry: LogEntry = {
       level,
       message,

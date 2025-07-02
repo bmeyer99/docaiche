@@ -76,22 +76,21 @@ export default function LogsViewer() {
           setSelectedService(response.services[0].id);
         }
       } catch (error) {
-        toast({
-          title: 'Failed to fetch services',
-          description: error instanceof Error ? error.message : 'Unknown error',
-          variant: 'destructive'
-        });
+        // Don't show toast on logs page to prevent creating more logs
+        console.error('[LogsViewer] Failed to fetch services:', error instanceof Error ? error.message : 'Unknown error');
       }
     };
 
     fetchServices();
-  }, [apiClient, toast]); // Added dependencies
+  }, [apiClient]); // Removed toast from dependencies
 
   // Initial log fetch - reduced to 100 logs to prevent rate limiting issues
   useEffect(() => {
     if (!selectedService) return;
 
-    const fetchInitialLogs = async () => {
+    // Debounce initial fetch to prevent rapid API calls
+    const timeoutId = setTimeout(async () => {
+      const fetchInitialLogs = async () => {
       setLoading(true);
       try {
         const params = new URLSearchParams({
@@ -112,11 +111,8 @@ export default function LogsViewer() {
         // Don't show error toast if it's due to circuit breaker or connection issues
         // The global health provider will handle these notifications
         if (error instanceof Error && !error.message.includes('Circuit Breaker') && !error.message.includes('Connection')) {
-          toast({
-            title: 'Failed to fetch logs',
-            description: error instanceof Error ? error.message : 'Unknown error',
-            variant: 'destructive'
-          });
+          // Don't show toast on logs page to prevent creating more logs
+          console.error('[LogsViewer] Failed to fetch logs:', error.message);
         }
       } finally {
         setLoading(false);
@@ -124,16 +120,23 @@ export default function LogsViewer() {
     };
 
     fetchInitialLogs();
-  }, [selectedService, apiClient, logLevel, searchTerm, toast]); // Added dependencies
+    }, 300); // 300ms debounce for initial fetch
 
-  // Start WebSocket connection for real-time updates
+    return () => clearTimeout(timeoutId);
+  }, [selectedService, apiClient, logLevel, searchTerm]); // Removed toast from dependencies
+
+  // Start WebSocket connection for real-time updates with debouncing
   useEffect(() => {
     if (!selectedService) return;
 
-    // Auto-start streaming for real-time updates
-    startStreaming();
+    // Debounce WebSocket reconnection to prevent rapid reconnects
+    const timeoutId = setTimeout(() => {
+      // Auto-start streaming for real-time updates
+      startStreaming();
+    }, 500); // 500ms debounce
 
     return () => {
+      clearTimeout(timeoutId);
       stopStreaming();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,10 +174,8 @@ export default function LogsViewer() {
     
     ws.onopen = () => {
       setStreaming(true);
-      toast({
-        title: 'Connected',
-        description: 'Real-time log streaming started'
-      });
+      // Don't show toast on logs page to prevent creating more logs
+      console.debug('[LogsViewer] WebSocket connected');
     };
 
     ws.onmessage = (event) => {
@@ -183,15 +184,12 @@ export default function LogsViewer() {
         // Connection successful, no need to show another toast
         // as we already show one in onopen
       } else if (data.type === 'error') {
-        toast({
-          title: 'Log Stream Error',
-          description: data.data?.message || 'Failed to stream logs',
-          variant: 'destructive'
-        });
+        // Don't show toast on logs page to prevent creating more logs
+        console.error('[LogsViewer] Stream error:', data.data?.message || 'Failed to stream logs');
         setStreaming(false);
       } else if (data.type === 'log') {
-        // Only add new logs if streaming is enabled
-        if (streaming) {
+        // Add logs if WebSocket is connected (don't rely on state due to race conditions)
+        if (ws.readyState === WebSocket.OPEN) {
           setLogs(prev => {
             // Prevent duplicates by checking timestamp
             const exists = prev.some(log => 
@@ -240,11 +238,8 @@ export default function LogsViewer() {
 
   const copyLogsToClipboard = async () => {
     if (logs.length === 0) {
-      toast({
-        title: 'No logs to copy',
-        description: 'There are no logs to copy to clipboard',
-        variant: 'destructive'
-      });
+      // Use alert instead of toast to prevent creating logs
+      alert('No logs to copy to clipboard');
       return;
     }
 
@@ -257,16 +252,11 @@ export default function LogsViewer() {
 
       await navigator.clipboard.writeText(textContent);
       
-      toast({
-        title: 'Copied to clipboard',
-        description: `${logs.length} log entries copied`
-      });
+      // Silent success - no notification to prevent creating logs
+      console.info(`[LogsViewer] Copied ${logs.length} log entries to clipboard`);
     } catch (error) {
-      toast({
-        title: 'Copy failed',
-        description: 'Failed to copy logs to clipboard',
-        variant: 'destructive'
-      });
+      // Use alert for errors to prevent creating logs
+      alert('Failed to copy logs to clipboard');
     }
   };
 
@@ -290,16 +280,11 @@ export default function LogsViewer() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: 'Logs exported',
-        description: `Logs exported as ${format.toUpperCase()}`
-      });
+      // Silent success - no notification to prevent creating logs
+      console.info(`[LogsViewer] Logs exported as ${format.toUpperCase()}`);
     } catch (error) {
-      toast({
-        title: 'Export failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive'
-      });
+      // Use alert for export errors to prevent creating logs
+      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -463,11 +448,8 @@ export default function LogsViewer() {
                 } catch (error) {
                   // Don't show error toast if it's due to circuit breaker or connection issues
                   if (error instanceof Error && !error.message.includes('Circuit Breaker') && !error.message.includes('Connection')) {
-                    toast({
-                      title: 'Failed to refresh logs',
-                      description: error instanceof Error ? error.message : 'Unknown error',
-                      variant: 'destructive'
-                    });
+                    // Don't show toast on logs page to prevent creating more logs
+                    console.error('[LogsViewer] Failed to refresh logs:', error.message);
                   }
                 } finally {
                   setLoading(false);

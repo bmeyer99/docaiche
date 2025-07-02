@@ -45,10 +45,10 @@ AVAILABLE_SERVICES = {
         "container_pattern": "docaiche-redis",
         "log_level": "WARN"
     },
-    "anythingllm": {
-        "id": "anythingllm",
-        "name": "AnythingLLM",
-        "container_pattern": "docaiche-anythingllm",
+    "weaviate": {
+        "id": "weaviate",
+        "name": "Weaviate",
+        "container_pattern": "docaiche-weaviate",
         "log_level": "INFO"
     },
     "loki": {
