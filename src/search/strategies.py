@@ -108,6 +108,7 @@ class WorkspaceSearchStrategy:
 
             # Step 1: Get all available workspaces from database
             available_workspaces = await self._get_available_workspaces()
+            logger.info(f"Found {len(available_workspaces)} available workspaces")
 
             if not available_workspaces:
                 logger.warning("No workspaces available in database")
@@ -228,8 +229,9 @@ class WorkspaceSearchStrategy:
                 search_tasks.append(task)
 
             # Step 2: Execute searches and collect results
-            logger.info("Launching concurrent workspace searches...")
+            logger.info(f"Launching concurrent workspace searches for {len(search_tasks)} workspaces...")
             search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+            logger.info(f"Gathered {len(search_results)} search results")
 
             # Step 3: Process results and handle failures gracefully
             all_results = []
@@ -240,8 +242,9 @@ class WorkspaceSearchStrategy:
                 workspace_slug = workspaces[i].slug
 
                 if isinstance(result, Exception):
-                    logger.warning(
-                        f"Search failed for workspace {workspace_slug}: {result}"
+                    logger.error(
+                        f"Search failed for workspace {workspace_slug}: {result}",
+                        exc_info=result if hasattr(result, '__traceback__') else None
                     )
                     failed_searches += 1
                 elif isinstance(result, list):
@@ -331,6 +334,8 @@ class WorkspaceSearchStrategy:
                 raw_results = await asyncio.wait_for(
                     search_coro, timeout=timeout_seconds
                 )
+                
+                logger.info(f"Workspace {workspace.slug} returned {len(raw_results)} raw results")
 
                 # Convert raw results to SearchResult objects
                 search_results = []
@@ -338,7 +343,7 @@ class WorkspaceSearchStrategy:
                     search_result = self._convert_raw_result(raw_result, workspace)
                     search_results.append(search_result)
 
-                logger.debug(
+                logger.info(
                     f"Workspace {workspace.slug} search completed: {len(search_results)} results"
                 )
                 return search_results
@@ -353,7 +358,7 @@ class WorkspaceSearchStrategy:
                     operation=f"search_workspace_{workspace.slug}",
                 )
             except Exception as e:
-                logger.error(f"Search failed in workspace {workspace.slug}: {e}")
+                logger.error(f"Search failed in workspace {workspace.slug}: {e}", exc_info=True)
                 raise VectorSearchError(
                     f"Workspace search failed: {str(e)}",
                     workspace_slug=workspace.slug,
@@ -363,13 +368,49 @@ class WorkspaceSearchStrategy:
 
     async def _get_available_workspaces(self) -> List[Dict[str, Any]]:
         """
-        Get available workspaces from database.
+        Get available workspaces from Weaviate directly.
 
         Returns:
             List of workspace dictionaries with metadata
         """
         try:
-            # Query content_metadata table for available workspaces
+            # First try to get workspaces from Weaviate directly
+            if self.weaviate_client:
+                try:
+                    weaviate_workspaces = await self.weaviate_client.list_workspaces()
+                    if weaviate_workspaces:
+                        # Convert Weaviate workspace format to expected format
+                        workspaces = []
+                        for ws in weaviate_workspaces:
+                            # Extract technology from workspace name if possible
+                            technology = "general"
+                            slug = ws.get("slug", "")
+                            if "python" in slug.lower():
+                                technology = "python"
+                            elif "react" in slug.lower():
+                                technology = "react"
+                            elif "vue" in slug.lower():
+                                technology = "vue"
+                            elif "angular" in slug.lower():
+                                technology = "angular"
+                            elif "typescript" in slug.lower() or "ts" in slug.lower():
+                                technology = "typescript"
+                            elif "node" in slug.lower():
+                                technology = "nodejs"
+                            
+                            workspaces.append({
+                                "slug": slug,
+                                "technology": technology,
+                                "last_updated": datetime.utcnow(),
+                                "document_count": 0  # Will be 0 for empty workspaces
+                            })
+                        
+                        logger.info(f"Found {len(workspaces)} workspaces from Weaviate")
+                        return workspaces
+                except Exception as e:
+                    logger.warning(f"Failed to get workspaces from Weaviate: {e}")
+            
+            # Fallback to database query for workspaces with documents
             query = """
                 SELECT DISTINCT 
                     weaviate_workspace as slug,

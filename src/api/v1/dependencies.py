@@ -245,15 +245,16 @@ async def get_weaviate_client() -> WeaviateVectorClient:
     return _weaviate_client
 
 
-async def get_search_orchestrator(
-    db_manager: DatabaseManager = Depends(get_database_manager),
-    cache_manager: CacheManager = Depends(get_cache_manager),
-    weaviate_client: WeaviateVectorClient = Depends(get_weaviate_client),
-) -> SearchOrchestrator:
+async def get_search_orchestrator() -> SearchOrchestrator:
     """
     Dependency to get Enhanced SearchOrchestrator instance with LLM intelligence
     """
     global _search_orchestrator
+    
+    # Get the actual service instances
+    db_manager = await get_database_manager()
+    cache_manager = await get_cache_manager()
+    weaviate_client = await get_weaviate_client()
 
     # Always recreate if db_manager was reinitialized or is different
     if _search_orchestrator is None or (hasattr(_search_orchestrator, 'db_manager') and _search_orchestrator.db_manager != db_manager):

@@ -108,7 +108,7 @@ async def search_documents_post(
         
         logger.info(f"Search request: query={search_request.query!r}, tech_hint={search_request.technology_hint!r} (type: {type(search_request.technology_hint)}), limit={search_request.limit!r}")
         
-        # Execute real search through the orchestrator
+        # Execute real search through the orchestrator - it returns API-compatible response
         search_response = await search_orchestrator.search(
             query=search_request.query,
             technology_hint=search_request.technology_hint,
@@ -119,50 +119,26 @@ async def search_documents_post(
             use_external_search=search_request.use_external_search
         )
         
-        # Convert orchestrator results to API schema
-        results = []
-        for result in search_response.results[:search_request.limit]:
-            results.append(SearchResult(
-                content_id=result.content_id,
-                title=result.title or "Untitled",
-                snippet=result.snippet or "",
-                source_url=result.source_url or "",
-                technology=result.technology or "unknown",
-                relevance_score=result.relevance_score,
-                content_type=result.content_type or "document",
-                workspace=result.workspace or "default",
-            ))
-        
-        execution_time = (time.time() - start_time) * 1000  # Convert to ms
-        cache_hit = getattr(search_response, 'cache_hit', False)
-        
         # Log search metrics
+        execution_time = (time.time() - start_time) * 1000  # Convert to ms
         if metrics:
             metrics.log_search_query(
                 query=search_request.query,
-                result_count=len(results),
-                cache_hit=cache_hit,
+                result_count=len(search_response.results),
+                cache_hit=search_response.cache_hit,
                 duration=execution_time / 1000,  # Convert back to seconds for logging
                 technology_hint=search_request.technology_hint,
                 session_id=search_request.session_id
             )
 
-        logger.debug(f"Creating SearchResponse with technology_hint={search_request.technology_hint!r} (type: {type(search_request.technology_hint)})")
+        logger.info(f"Search completed with {len(search_response.results)} results")
         
-        return SearchResponse(
-            results=results,
-            total_count=len(search_response.results),
-            query=search_request.query,
-            technology_hint=search_request.technology_hint,
-            execution_time_ms=int(execution_time),
-            cache_hit=cache_hit,
-            enrichment_triggered=getattr(search_response, 'enrichment_triggered', False),
-            external_search_used=getattr(search_response, 'external_search_used', False),
-        )
+        # The orchestrator already returns API-compatible SearchResponse
+        return search_response
 
     except Exception as e:
-        logger.error(f"Search failed: {e}")
-        raise HTTPException(status_code=500, detail="Search execution failed")
+        logger.error(f"[{trace_id}] Search failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Search execution failed: {str(e)}")
 
 
 @router.get("/search", response_model=SearchResponse, tags=["search"])

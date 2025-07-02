@@ -206,18 +206,34 @@ class SearchOrchestrator:
                 logger.warning(f"Cache check failed, continuing without cache: {e}")
                 # Continue without caching
 
-            # Step 3: Multi-Workspace Search with timeout
-            try:
-                search_results = await asyncio.wait_for(
-                    self._execute_multi_workspace_search(normalized_query),
-                    timeout=self.search_timeout,
+            # Step 3: Multi-Workspace Search with timeout (skip if external-only requested)
+            search_results = None
+            if normalized_query.use_external_search is True and self.mcp_enhancer:
+                # Skip workspace search if external search is explicitly requested
+                logger.info("Skipping workspace search due to explicit external search request")
+                search_results = SearchResults(
+                    results=[],
+                    total_count=0,
+                    query_time_ms=0,
+                    strategy_used=normalized_query.strategy,
+                    cache_hit=False,
+                    workspaces_searched=[],
+                    enrichment_triggered=False,
                 )
-            except asyncio.TimeoutError:
-                raise SearchTimeoutError(
-                    f"Search timed out after {self.search_timeout}s",
-                    timeout_seconds=self.search_timeout,
-                    operation="multi_workspace_search",
-                )
+            else:
+                logger.info(f"Starting multi-workspace search for query: '{normalized_query.query}'")
+                try:
+                    search_results = await asyncio.wait_for(
+                        self._execute_multi_workspace_search(normalized_query),
+                        timeout=self.search_timeout,
+                    )
+                    logger.info(f"Workspace search completed: {len(search_results.results)} results from {len(search_results.workspaces_searched)} workspaces")
+                except asyncio.TimeoutError:
+                    raise SearchTimeoutError(
+                        f"Search timed out after {self.search_timeout}s",
+                        timeout_seconds=self.search_timeout,
+                        operation="multi_workspace_search",
+                    )
 
             # Step 4: AI Evaluation (optional)
             evaluation_result = None
@@ -234,34 +250,51 @@ class SearchOrchestrator:
             external_results_added = False
             # Check if external search should be used
             should_use_external = False
-            logger.info(f"External search check - use_external_search: {normalized_query.use_external_search}, has results: {bool(search_results.results)}")
+            
+            # Log search state for metrics
+            logger.info(
+                f"Search state - Query: '{normalized_query.query[:50]}...' | "
+                f"Internal results: {len(search_results.results)} | "
+                f"Quality score: {evaluation_result.quality_score if evaluation_result else 'N/A'} | "
+                f"External search requested: {normalized_query.use_external_search}"
+            )
             
             if normalized_query.use_external_search is True:
                 # Explicitly requested
                 should_use_external = True
-                logger.info("External search explicitly requested")
+                logger.info("External search explicitly requested by user")
+                # Log external search request if metrics available
+                pass  # Metrics logging disabled for now
             elif normalized_query.use_external_search is False:
                 # Explicitly disabled
                 should_use_external = False
-                logger.info("External search explicitly disabled")
+                logger.info("External search explicitly disabled by user")
             else:
                 # Auto-decide based on results quality
                 should_use_external = (not search_results.results or 
                                      (evaluation_result and evaluation_result.quality_score < 0.6))
-                logger.info(f"External search auto-decide: {should_use_external}")
+                logger.info(f"External search auto-decision: {should_use_external} (no results: {not search_results.results}, low quality: {evaluation_result and evaluation_result.quality_score < 0.6})")
+                # Log auto-triggered external search if metrics available
+                pass  # Metrics logging disabled for now
             
             logger.info(f"MCP enhancer available: {self.mcp_enhancer is not None}, should use external: {should_use_external}")
             if self.mcp_enhancer and should_use_external:
+                logger.info("Calling external search enhancement...")
                 try:
                     external_results = await self._enhance_with_external_search(
                         normalized_query, search_results
                     )
+                    logger.info(f"External search returned {len(external_results) if external_results else 0} results")
                     if external_results:
                         search_results.results.extend(external_results)
                         external_results_added = True
                         logger.info(f"Added {len(external_results)} external search results")
+                    else:
+                        logger.warning("External search returned no results")
                 except Exception as e:
-                    logger.warning(f"External search enhancement failed: {e}")
+                    logger.error(f"External search enhancement failed: {e}", exc_info=True)
+            else:
+                logger.warning(f"External search not called: mcp_enhancer={self.mcp_enhancer is not None}, should_use_external={should_use_external}")
 
             # Step 5: Enrichment Decision
             enrichment_triggered = False
@@ -530,7 +563,8 @@ class SearchOrchestrator:
                         },
                         technology='external',
                         workspace_slug='external_search',
-                        chunk_index=None
+                        chunk_index=None,
+                        quality_score=0.7
                     )
                     converted_results.append(search_result)
                     
@@ -873,9 +907,24 @@ class SearchOrchestrator:
         else:
             tech_hint = technology_hint
         
+        # Convert SearchResult objects to API dictionaries
+        api_results = []
+        for result in results.results[:limit]:
+            api_result = {
+                "content_id": result.content_id,
+                "title": result.title or "Untitled",
+                "snippet": result.content_snippet or "",
+                "source_url": result.source_url or "",
+                "technology": result.technology or "unknown",
+                "relevance_score": result.relevance_score,
+                "content_type": result.metadata.get("content_type", "document"),
+                "workspace": result.workspace_slug or "external_search",
+            }
+            api_results.append(api_result)
+        
         try:
             return APISearchResponse(
-                results=results.results[:limit],
+                results=api_results,
                 total_count=results.total_count,
                 query=query,
                 technology_hint=tech_hint,
