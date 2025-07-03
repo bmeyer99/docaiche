@@ -254,13 +254,10 @@ Original Query: "{original_query}"
 Search Results: {results_summary}
 Missing Information: {missing_info}
 
-Please generate a refined search query that:
-1. Is more specific and targeted
-2. Includes key technical terms
-3. Focuses on the missing information
-4. Is optimized for vector similarity search
+Generate a refined search query that is more specific and targeted.
+IMPORTANT: Return ONLY the refined query text, no explanations.
 
-Return only the refined query text.''',
+Refined query:''',
 
     PromptType.EXTERNAL_SEARCH_DECISION: '''Determine if external search is needed based on:
 
@@ -284,15 +281,11 @@ Original Query: "{original_query}"
 Failed AnythingLLM Results: {results_summary}
 Missing Information: {missing_info}
 
-Please create a search query that:
-1. Is formatted for web search engines
-2. Contains specific technical terms
-3. Uses quotes for exact phrases if appropriate
-4. Includes version numbers or specific technologies
-5. Is focused on documentation sources
-6. Prioritizes GitHub or official documentation
+Create a concise search query optimized for {search_provider}.
+IMPORTANT: Return ONLY the search query text itself, no explanations or formatting.
+Example response: python async await tutorial documentation
 
-Return only the search query text optimized for {search_provider}.''',
+Search query:''',
 
     PromptType.CONTENT_EXTRACTION: '''Extract the most relevant content from this documentation:
 

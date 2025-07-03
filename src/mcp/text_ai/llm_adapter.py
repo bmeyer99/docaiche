@@ -282,9 +282,14 @@ class TextAILLMAdapter(TextAIService):
         """
         Generate query optimized for external search using LLM with EXTERNAL_SEARCH_QUERY prompt.
         """
+        trace_id = getattr(query, 'trace_id', 'no-trace')
+        logger.info(f"[{trace_id}] TextAI.generate_external_query called")
+        logger.info(f"[{trace_id}] Input - Query: '{query.original_query}', Relevance: {evaluation.relevance_score}")
+        
         try:
             # Get prompt template
             template = self.prompt_templates[PromptType.EXTERNAL_SEARCH_QUERY]
+            logger.info(f"[{trace_id}] Using EXTERNAL_SEARCH_QUERY template")
             
             # Prepare results summary
             results_summary = f"Found {evaluation.relevance_assessment:.0%} relevant results with {evaluation.completeness_score:.0%} completeness"
@@ -297,18 +302,46 @@ class TextAILLMAdapter(TextAIService):
                 'search_provider': 'web search'  # Generic, could be made specific later
             }
             
+            logger.info(f"[{trace_id}] Template variables: {json.dumps(variables, indent=2)}")
+            
             # Render prompt
             prompt = template.format(**variables)
+            logger.info(f"[{trace_id}] Rendered prompt (first 500 chars): {prompt[:500]}...")
             
             # Call LLM directly for text response
             start_time = time.time()
+            logger.info(f"[{trace_id}] Calling LLM for external search query generation...")
+            
             external_query = await self.llm_client.generate(
                 prompt=prompt,
                 temperature=0.3,
                 max_tokens=150
             )
             
-            # Clean up the response
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.info(f"[{trace_id}] LLM external query generation completed in {duration_ms}ms")
+            logger.info(f"[{trace_id}] Raw LLM Response: '{external_query}'")
+            
+            # Clean up the response - extract just the query
+            external_query = external_query.strip()
+            
+            # Extract query from between backticks if present
+            if '`' in external_query:
+                import re
+                matches = re.findall(r'`([^`]+)`', external_query)
+                if matches:
+                    external_query = matches[0]
+            
+            # If response contains newlines, take first line
+            if '\n' in external_query:
+                lines = external_query.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith(('Here', 'This', '#', '*', '-')):
+                        external_query = line
+                        break
+            
+            # Final cleanup
             external_query = external_query.strip().strip('"\'')
             
             logger.info(f"LLM external query generation completed in {int((time.time() - start_time) * 1000)}ms: {external_query}")
@@ -882,9 +915,14 @@ class TextAILLMAdapter(TextAIService):
         """
         Decide if external search is needed using LLM with EXTERNAL_SEARCH_DECISION prompt.
         """
+        trace_id = getattr(query, 'trace_id', 'no-trace')
+        logger.info(f"[{trace_id}] TextAI.decide_external_search called")
+        logger.info(f"[{trace_id}] Input - Query: '{query.original_query}', Relevance: {evaluation.relevance_score}, Completeness: {evaluation.completeness_score}")
+        
         try:
             # Get prompt template
             template = self.prompt_templates[PromptType.EXTERNAL_SEARCH_DECISION]
+            logger.info(f"[{trace_id}] Using EXTERNAL_SEARCH_DECISION template")
             
             # Prepare results summary
             results_summary = {
@@ -902,8 +940,11 @@ class TextAILLMAdapter(TextAIService):
                 'missing_info': json.dumps(evaluation.missing_information) if evaluation.missing_information else "[]"
             }
             
+            logger.info(f"[{trace_id}] Template variables: {json.dumps(variables, indent=2)}")
+            
             # Render prompt
             prompt = template.format(**variables)
+            logger.info(f"[{trace_id}] Rendered prompt (first 500 chars): {prompt[:500]}...")
             
             # Define response model
             from pydantic import BaseModel, Field
@@ -919,6 +960,8 @@ class TextAILLMAdapter(TextAIService):
             
             # Call LLM
             start_time = time.time()
+            logger.info(f"[{trace_id}] Calling LLM for external search decision...")
+            
             llm_response = await self.llm_client.generate_structured(
                 prompt=prompt,
                 response_model=ExternalSearchDecisionResponse,
@@ -926,7 +969,9 @@ class TextAILLMAdapter(TextAIService):
                 max_tokens=500
             )
             
-            logger.info(f"LLM external search decision completed in {int((time.time() - start_time) * 1000)}ms: {llm_response.decision}")
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.info(f"[{trace_id}] LLM external search decision completed in {duration_ms}ms")
+            logger.info(f"[{trace_id}] LLM Response: {json.dumps(llm_response.dict(), indent=2)}")
             
             # Determine suggested providers based on analysis
             suggested_providers = []
