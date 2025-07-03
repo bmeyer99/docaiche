@@ -124,21 +124,34 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
       // Load only working endpoints - vector config and workspaces
       const [
         vectorConfig,
-        workspaces
+        workspaces,
+        embeddingConfig
       ] = await Promise.allSettled([
         apiClient.getWeaviateConfig(),
-        apiClient.getWeaviateWorkspaces()
+        apiClient.getWeaviateWorkspaces(),
+        apiClient.getEmbeddingConfig()
       ]);
       
-      console.log('[ConfigProvider] Loaded essential configurations:', {
+      console.log('[ConfigProvider] Loaded configurations:', {
         vectorConfig: vectorConfig.status,
-        workspaces: workspaces.status
+        workspaces: workspaces.status,
+        embeddingConfig: embeddingConfig.status
       });
+      
+      // Create default embedding config if API call failed
+      const defaultEmbeddingConfig = {
+        useDefaultEmbedding: true,
+        provider: '',
+        model: '',
+        dimensions: 768,
+        chunkSize: 1000,
+        chunkOverlap: 200
+      };
       
       setState({
         vectorConfig: vectorConfig.status === 'fulfilled' ? vectorConfig.value : null,
         workspaces: workspaces.status === 'fulfilled' ? workspaces.value : [],
-        embeddingConfig: { useDefaultEmbedding: true, provider: '', model: '', dimensions: 768, chunkSize: 1000, chunkOverlap: 200 },
+        embeddingConfig: embeddingConfig.status === 'fulfilled' ? embeddingConfig.value : defaultEmbeddingConfig,
         modelParameters: {},
         ingestionRules: [],
         ingestionSettings: null,  

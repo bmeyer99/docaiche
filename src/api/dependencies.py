@@ -94,15 +94,33 @@ async def get_search_orchestrator(
     db_manager: DatabaseManager = Depends(get_database_manager),
     cache_manager: Optional[CacheManager] = Depends(get_cache_manager),
 ) -> Optional[SearchOrchestrator]:
-    """Get or create the search orchestrator instance."""
+    """Get or create the search orchestrator instance with LLM client."""
     global _search_orchestrator
 
     if _search_orchestrator is None:
         try:
+            # Import LLM client for MCP integration
+            from src.llm.client import LLMProviderClient
+            from src.core.config import get_system_configuration
+            
+            # Get configuration and create LLM client
+            config = get_system_configuration()
+            llm_client = None
+            
+            if config and hasattr(config, 'ai'):
+                try:
+                    llm_client = LLMProviderClient(
+                        config.ai.model_dump() if hasattr(config.ai, 'model_dump') else config.ai.dict()
+                    )
+                    logger.info("LLM client initialized for search orchestrator")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize LLM client: {e}")
+            
             _search_orchestrator = await create_search_orchestrator(
-                db_manager=db_manager, cache_manager=cache_manager
+                db_manager=db_manager, cache_manager=cache_manager, llm_client=llm_client
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to create search orchestrator: {e}")
             # Search orchestrator might not be fully configured
             pass
 

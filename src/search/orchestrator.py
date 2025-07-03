@@ -247,7 +247,7 @@ class SearchOrchestrator:
 
             # Step 4: AI Evaluation (optional)
             evaluation_result = None
-            if self.llm_client and search_results.results:
+            if self.llm_client:
                 try:
                     evaluation_result = await self._evaluate_search_results(
                         normalized_query, search_results
@@ -258,6 +258,7 @@ class SearchOrchestrator:
 
             # Step 4.5: External Search Enhancement (if needed)
             external_results_added = False
+            external_search_executed = False
             # Check if external search should be used
             should_use_external = False
             
@@ -341,6 +342,7 @@ class SearchOrchestrator:
             if self.mcp_enhancer and should_use_external:
                 logger.info("Calling external search enhancement...")
                 try:
+                    external_search_executed = True
                     external_results = await self._enhance_with_external_search(
                         normalized_query, search_results
                     )
@@ -382,7 +384,7 @@ class SearchOrchestrator:
                 cache_hit=False,
                 workspaces_searched=search_results.workspaces_searched,
                 enrichment_triggered=enrichment_triggered,
-                external_search_used=external_results_added,
+                external_search_used=external_search_executed,
                 ingestion_status=ingestion_status,  # Add ingestion status to response
             )
 
@@ -405,7 +407,7 @@ class SearchOrchestrator:
             )
             logger.info(f"PIPELINE_METRICS: step=search_complete duration_ms={execution_time} "
                        f"total_results={len(final_results.results)} cache_hit=False "
-                       f"external_used={external_results_added} enrichment_triggered={enrichment_triggered} "
+                       f"external_used={external_search_executed} enrichment_triggered={enrichment_triggered} "
                        f"trace_id={trace_id}")
             return final_results, normalized_query
 

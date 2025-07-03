@@ -46,5 +46,5 @@ scrape_configs:
   # Weaviate metrics
   - job_name: 'weaviate'
     static_configs:
-      - targets: ['weaviate:8080']
-    metrics_path: /v1/.well-known/prometheus
+      - targets: ['weaviate:2112']
+    metrics_path: /metrics

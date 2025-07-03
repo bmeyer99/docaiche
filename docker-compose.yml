@@ -158,6 +158,9 @@ services:
       ASYNC_INDEXING: 'true'
       CLUSTER_HOSTNAME: 'node1'
       BACKUP_FILESYSTEM_PATH: '/var/lib/weaviate/backups'
+      PROMETHEUS_MONITORING_ENABLED: 'true'
+      PROMETHEUS_MONITORING_PORT: '2112'
+      PROMETHEUS_MONITORING_GROUP: 'true'
     volumes:
       - weaviate_data:/var/lib/weaviate
       - weaviate_backups:/var/lib/weaviate/backups

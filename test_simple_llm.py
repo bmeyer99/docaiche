@@ -25,16 +25,22 @@ def run_search():
     time.sleep(2)
     
     # Check logs for TextAI activity
-    log_cmd = ["docker-compose", "logs", "api", "--tail", "50"]
+    log_cmd = ["docker-compose", "logs", "api", "--tail", "200"]
     log_result = subprocess.run(log_cmd, capture_output=True, text=True)
     
     textai_calls = log_result.stdout.count("TextAI.generate_external_query called")
+    llm_calls = log_result.stdout.count("LLM external query generation")
     external_decisions = log_result.stdout.count("external search decision: True")
     
-    print(f"TextAI calls found: {textai_calls}")
-    print(f"External search decisions: {external_decisions}")
+    # Count total LLM activity
+    total_llm_activity = textai_calls + llm_calls
     
-    if textai_calls > 0:
+    print(f"TextAI calls found: {textai_calls}")
+    print(f"LLM calls found: {llm_calls}")
+    print(f"External search decisions: {external_decisions}")
+    print(f"Total LLM activity: {total_llm_activity}")
+    
+    if total_llm_activity > 0:
         print("✅ LLM external search is working!")
         return True
     else:

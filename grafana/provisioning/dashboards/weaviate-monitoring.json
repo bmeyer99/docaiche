@@ -25,7 +25,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -33,26 +33,19 @@
             "mode": "thresholds"
           },
           "mappings": [],
-          "max": 100,
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 60
-              },
-              {
-                "color": "green",
+                "color": "red",
                 "value": 80
               }
             ]
-          },
-          "unit": "percent"
+          }
         },
         "overrides": []
       },
@@ -64,35 +57,37 @@
       },
       "id": 1,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "values": false,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": ""
+          "fields": "",
+          "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "textMode": "auto"
       },
       "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "(redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) * 100",
+          "expr": "weaviate_schema_collections",
           "refId": "A"
         }
       ],
-      "title": "Cache Hit Rate",
-      "type": "gauge"
+      "title": "Schema Collections",
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -108,16 +103,11 @@
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 1000
-              },
-              {
                 "color": "red",
-                "value": 5000
+                "value": 80
               }
             ]
-          },
-          "unit": "short"
+          }
         },
         "overrides": []
       },
@@ -129,35 +119,37 @@
       },
       "id": 2,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "values": false,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": ""
+          "fields": "",
+          "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "textMode": "auto"
       },
       "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "redis_db_keys",
+          "expr": "weaviate_schema_shards",
           "refId": "A"
         }
       ],
-      "title": "Total Keys",
-      "type": "gauge"
+      "title": "Schema Shards",
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -173,16 +165,11 @@
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 100
-              },
-              {
                 "color": "red",
-                "value": 200
+                "value": 80
               }
             ]
-          },
-          "unit": "decmbytes"
+          }
         },
         "overrides": []
       },
@@ -194,42 +181,60 @@
       },
       "id": 3,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "values": false,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": ""
+          "fields": "",
+          "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "textMode": "auto"
       },
       "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "redis_memory_used_bytes / 1024 / 1024",
+          "expr": "weaviate_index_shards_total",
           "refId": "A"
         }
       ],
-      "title": "Memory Usage",
-      "type": "gauge"
+      "title": "Index Shards Total",
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -238,16 +243,11 @@
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 100
-              },
-              {
                 "color": "red",
-                "value": 1000
+                "value": 0.5
               }
             ]
-          },
-          "unit": "short"
+          }
         },
         "overrides": []
       },
@@ -259,35 +259,37 @@
       },
       "id": 4,
       "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "values": false,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": ""
+          "fields": "",
+          "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "textMode": "auto"
       },
       "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "rate(redis_evicted_keys_total[5m]) * 300",
+          "expr": "up{job=\"weaviate\"}",
           "refId": "A"
         }
       ],
-      "title": "Evictions (5m)",
-      "type": "gauge"
+      "title": "Weaviate Status",
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -304,9 +306,9 @@
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
+              "legend": false,
               "tooltip": false,
-              "viz": false,
-              "legend": false
+              "viz": false
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
@@ -332,10 +334,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           },
-          "unit": "ops"
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -362,20 +368,20 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "rate(redis_commands_total[5m])",
+          "expr": "rate(weaviate_http_request_duration_seconds_count[5m])",
           "refId": "A",
-          "legendFormat": "{{cmd}}"
+          "legendFormat": "HTTP Requests per second"
         }
       ],
-      "title": "Operations by Command",
+      "title": "HTTP Request Rate",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -392,9 +398,9 @@
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
+              "legend": false,
               "tooltip": false,
-              "viz": false,
-              "legend": false
+              "viz": false
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
@@ -420,10 +426,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           },
-          "unit": "percent"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -450,29 +460,29 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "(redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) * 100",
+          "expr": "histogram_quantile(0.95, rate(weaviate_http_request_duration_seconds_bucket[5m]))",
           "refId": "A",
-          "legendFormat": "Hit Rate"
+          "legendFormat": "95th percentile"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "(redis_keyspace_misses_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) * 100",
+          "expr": "histogram_quantile(0.50, rate(weaviate_http_request_duration_seconds_bucket[5m]))",
           "refId": "B",
-          "legendFormat": "Miss Rate"
+          "legendFormat": "50th percentile"
         }
       ],
-      "title": "Hit/Miss Rate Over Time",
+      "title": "HTTP Request Duration",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -489,9 +499,9 @@
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
+              "legend": false,
               "tooltip": false,
-              "viz": false,
-              "legend": false
+              "viz": false
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
@@ -517,10 +527,13 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
-          },
-          "unit": "decmbytes"
+          }
         },
         "overrides": []
       },
@@ -547,29 +560,29 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "redis_memory_used_bytes / 1024 / 1024",
+          "expr": "weaviate_http_requests_inflight",
           "refId": "A",
-          "legendFormat": "Used Memory"
+          "legendFormat": "HTTP Requests in Flight"
         },
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "redis_memory_max_bytes / 1024 / 1024",
+          "expr": "weaviate_grpc_server_requests_inflight",
           "refId": "B",
-          "legendFormat": "Max Memory"
+          "legendFormat": "gRPC Requests in Flight"
         }
       ],
-      "title": "Memory Usage Over Time",
+      "title": "Requests in Flight",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -586,9 +599,9 @@
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
+              "legend": false,
               "tooltip": false,
-              "viz": false,
-              "legend": false
+              "viz": false
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
@@ -614,10 +627,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
               }
             ]
           },
-          "unit": "short"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -644,51 +661,27 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "prometheus"
           },
-          "expr": "redis_connected_clients",
+          "expr": "rate(weaviate_cluster_store_fsm_apply_duration_seconds_sum[5m]) / rate(weaviate_cluster_store_fsm_apply_duration_seconds_count[5m])",
           "refId": "A",
-          "legendFormat": "Connected Clients"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$datasource"
-          },
-          "expr": "redis_blocked_clients",
-          "refId": "B",
-          "legendFormat": "Blocked Clients"
+          "legendFormat": "Average FSM Apply Duration"
         }
       ],
-      "title": "Client Connections",
+      "title": "Cluster Store Performance",
       "type": "timeseries"
     }
   ],
-  "refresh": "10s",
+  "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["cache", "redis"],
+  "tags": [
+    "docaiche",
+    "weaviate",
+    "vector-database"
+  ],
   "templating": {
-    "list": [
-      {
-        "current": {
-          "selected": false,
-          "text": "Prometheus",
-          "value": "Prometheus"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Prometheus",
-        "multi": false,
-        "name": "datasource",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-1h",
@@ -696,8 +689,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Cache Performance Dashboard",
-  "uid": "cache-metrics",
+  "title": "DocAIche Weaviate Monitoring",
+  "uid": "docaiche-weaviate",
   "version": 1,
   "weekStart": ""
 }
