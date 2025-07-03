@@ -249,8 +249,10 @@ services:
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
       - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
-      - GF_SERVER_ROOT_URL=http://localhost:4080/grafana/
+      - GF_SERVER_ROOT_URL=/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SECURITY_COOKIE_SECURE=false
+      - GF_SECURITY_COOKIE_SAMESITE=lax
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
@@ -280,8 +282,9 @@ services:
       - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
       - "traefik.http.routers.grafana.priority=98"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.grafana-stripprefix.stripprefix.prefixes=/grafana"
-      - "traefik.http.routers.grafana.middlewares=grafana-stripprefix"
+      - "traefik.http.middlewares.grafana-headers.headers.customrequestheaders.X-Forwarded-Proto=http"
+      - "traefik.http.middlewares.grafana-headers.headers.customrequestheaders.X-Forwarded-Host={{.Request.Host}}"
+      - "traefik.http.routers.grafana.middlewares=grafana-headers"
 
   prometheus:
     image: prom/prometheus:v3.4.2

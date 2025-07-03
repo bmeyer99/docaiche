@@ -99,8 +99,14 @@ export function IngestionConfig({ onChangeDetected }: IngestionConfigProps) {
       if (jobsResponse) {
         setRecentJobs(jobsResponse);
       }
-    } catch (error) {
-      console.error('Failed to load recent jobs:', error);
+    } catch (error: any) {
+      // Handle 404 gracefully - endpoint not implemented yet
+      if (error?.message?.includes('404')) {
+        console.warn('[Ingestion] Recent jobs endpoint not implemented yet (/ingestion/jobs)');
+        setRecentJobs([]); // Set empty array instead of undefined
+      } else {
+        console.error('Failed to load recent jobs:', error);
+      }
     }
   };
 

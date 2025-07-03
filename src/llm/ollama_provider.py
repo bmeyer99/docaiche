@@ -307,9 +307,11 @@ class OllamaProvider(BaseLLMProvider):
                 "stream": False,
                 "options": {"num_predict": 10, "temperature": 0.1},
             }
-            async with asyncio.wait_for(
+            logger.info(f"Ollama health check: endpoint={self.endpoint}, model={self.model}, payload={test_payload}")
+            response = await asyncio.wait_for(
                 self.session.post(url, json=test_payload), timeout=10.0
-            ) as response:
+            )
+            async with response:
                 if response.status == 200:
                     data = await response.json()
                     if "response" in data:

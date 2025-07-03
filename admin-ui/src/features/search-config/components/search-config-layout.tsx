@@ -210,11 +210,17 @@ function SearchConfigContent() {
             </TabsContent>
             
             <TabsContent value="vector" className="h-full m-0">
-              <VectorSearchConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
+              <VectorSearchConfig 
+                onChangeDetected={() => setHasUnsavedChanges(true)} 
+                onSaveSuccess={() => setHasUnsavedChanges(false)}
+              />
             </TabsContent>
             
             <TabsContent value="text-ai" className="h-full m-0">
-              <TextAIConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
+              <TextAIConfig 
+                onChangeDetected={() => setHasUnsavedChanges(true)} 
+                onSaveSuccess={() => setHasUnsavedChanges(false)}
+              />
             </TabsContent>
             
             <TabsContent value="ingestion" className="h-full m-0">

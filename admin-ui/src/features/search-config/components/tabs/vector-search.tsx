@@ -33,6 +33,7 @@ import { useSearchConfig } from '../../contexts/config-context';
 
 interface VectorSearchConfigProps {
   onChangeDetected?: () => void;
+  onSaveSuccess?: () => void;
 }
 
 interface VectorConfig {
@@ -53,7 +54,7 @@ interface EmbeddingConfig {
   chunkOverlap?: number;
 }
 
-export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps) {
+export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSearchConfigProps) {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
   const { providers } = useProviderSettings();
@@ -174,6 +175,8 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
     try {
       const updated = await apiClient.updateEmbeddingConfig(data);
       updateEmbeddingConfig(updated);
+      // Clear unsaved changes after successful save
+      onSaveSuccess?.();
       toast({
         title: "Configuration Saved",
         description: "Embedding configuration updated successfully"
@@ -189,9 +192,23 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
 
   // Get tested providers that support embeddings
   const getEmbeddingProviders = () => {
+    // Guard against missing or invalid providers data
+    if (!providers || typeof providers !== 'object') {
+      console.warn('[VectorSearch] Providers data is invalid:', providers);
+      return [];
+    }
+    
     return Object.entries(providers)
       .filter(([id, config]) => {
+        // Guard against missing config or provider definition
+        if (!config || !id) return false;
+        
         const provider = AI_PROVIDERS[id];
+        if (!provider) {
+          console.warn(`[VectorSearch] Provider definition not found for: ${id}`);
+          return false;
+        }
+        
         return (
           provider?.supportsEmbedding &&
           (config.status === 'tested' || config.status === 'connected')
@@ -199,18 +216,29 @@ export function VectorSearchConfig({ onChangeDetected }: VectorSearchConfigProps
       })
       .map(([id, config]) => ({
         id,
-        name: AI_PROVIDERS[id].displayName,
-        models: config.models || []
+        name: AI_PROVIDERS[id]?.displayName || id,
+        models: Array.isArray(config.models) ? config.models : []
       }));
   };
 
   // Get embedding models for selected provider
   const getEmbeddingModels = () => {
-    if (!selectedProvider || !providers[selectedProvider]) return [];
+    // Guard against missing or invalid data
+    if (!selectedProvider || !providers || !providers[selectedProvider]) {
+      console.warn('[VectorSearch] Cannot get models - invalid provider data:', { selectedProvider, providers });
+      return [];
+    }
     
-    const models = providers[selectedProvider].models || [];
+    const providerData = providers[selectedProvider];
+    if (!providerData || !Array.isArray(providerData.models)) {
+      console.warn('[VectorSearch] Provider models data is invalid:', providerData);
+      return [];
+    }
+    
+    const models = providerData.models;
     // Filter for embedding models
     return models.filter((model: string) => {
+      if (typeof model !== 'string') return false;
       const lowerModel = model.toLowerCase();
       return (
         lowerModel.includes('embed') ||

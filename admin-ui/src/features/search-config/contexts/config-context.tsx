@@ -121,37 +121,30 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     setState(prev => ({ ...prev, isLoading: true, loadError: null }));
     
     try {
-      // Load all configurations in parallel
+      // Load only working endpoints - vector config and workspaces
       const [
         vectorConfig,
-        workspaces,
-        embeddingConfig,
-        ingestionRules,
-        ingestionSettings,
-        alertRules,
-        dashboardUrls,
-        systemSettings
+        workspaces
       ] = await Promise.allSettled([
         apiClient.getWeaviateConfig(),
-        apiClient.getWeaviateWorkspaces(),
-        apiClient.getEmbeddingConfig(),
-        apiClient.getIngestionRules(),
-        apiClient.getIngestionSettings(),
-        apiClient.getAlertRules(),
-        apiClient.getDashboardUrls(),
-        apiClient.getSystemSettings()
+        apiClient.getWeaviateWorkspaces()
       ]);
+      
+      console.log('[ConfigProvider] Loaded essential configurations:', {
+        vectorConfig: vectorConfig.status,
+        workspaces: workspaces.status
+      });
       
       setState({
         vectorConfig: vectorConfig.status === 'fulfilled' ? vectorConfig.value : null,
         workspaces: workspaces.status === 'fulfilled' ? workspaces.value : [],
-        embeddingConfig: embeddingConfig.status === 'fulfilled' ? embeddingConfig.value : null,
-        modelParameters: {}, // Will be loaded on demand per provider/model
-        ingestionRules: ingestionRules.status === 'fulfilled' ? ingestionRules.value : [],
-        ingestionSettings: ingestionSettings.status === 'fulfilled' ? ingestionSettings.value : null,
-        alertRules: alertRules.status === 'fulfilled' ? alertRules.value : [],
-        dashboardUrls: dashboardUrls.status === 'fulfilled' ? dashboardUrls.value : null,
-        systemSettings: systemSettings.status === 'fulfilled' ? systemSettings.value : null,
+        embeddingConfig: { useDefaultEmbedding: true, provider: '', model: '', dimensions: 768, chunkSize: 1000, chunkOverlap: 200 },
+        modelParameters: {},
+        ingestionRules: [],
+        ingestionSettings: null,  
+        alertRules: [],
+        dashboardUrls: null,
+        systemSettings: null,
         isLoading: false,
         loadError: null
       });

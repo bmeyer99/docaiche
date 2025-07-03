@@ -32,6 +32,7 @@ import { useSearchConfig } from '../../contexts/config-context';
 
 interface TextAIConfigProps {
   onChangeDetected?: () => void;
+  onSaveSuccess?: () => void;
 }
 
 interface ModelParameters {
@@ -44,7 +45,7 @@ interface ModelParameters {
   systemPrompt?: string;
 }
 
-export function TextAIConfig({ onChangeDetected }: TextAIConfigProps) {
+export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { providers } = useProviderSettings();
   const { modelSelection, updateModelSelection } = useModelSelection();
@@ -120,6 +121,8 @@ export function TextAIConfig({ onChangeDetected }: TextAIConfigProps) {
     try {
       await apiClient.updateModelParameters(selectedProvider, selectedModel, data);
       updateModelParameters(selectedProvider, selectedModel, data);
+      // Clear unsaved changes after successful save
+      onSaveSuccess?.();
       toast({
         title: "Configuration Saved",
         description: "Text AI model parameters updated successfully"
@@ -137,9 +140,23 @@ export function TextAIConfig({ onChangeDetected }: TextAIConfigProps) {
 
   // Get tested providers that support text generation
   const getTextProviders = () => {
+    // Guard against missing or invalid providers data
+    if (!providers || typeof providers !== 'object') {
+      console.warn('[TextAI] Providers data is invalid:', providers);
+      return [];
+    }
+    
     return Object.entries(providers)
       .filter(([id, config]) => {
+        // Guard against missing config or provider definition
+        if (!config || !id) return false;
+        
         const provider = AI_PROVIDERS[id];
+        if (!provider) {
+          console.warn(`[TextAI] Provider definition not found for: ${id}`);
+          return false;
+        }
+        
         return (
           provider?.supportsChat &&
           (config.status === 'tested' || config.status === 'connected')
@@ -147,18 +164,29 @@ export function TextAIConfig({ onChangeDetected }: TextAIConfigProps) {
       })
       .map(([id, config]) => ({
         id,
-        name: AI_PROVIDERS[id].displayName,
-        models: config.models || []
+        name: AI_PROVIDERS[id]?.displayName || id,
+        models: Array.isArray(config.models) ? config.models : []
       }));
   };
 
   // Get text generation models for selected provider
   const getTextModels = () => {
-    if (!selectedProvider || !providers[selectedProvider]) return [];
+    // Guard against missing or invalid data
+    if (!selectedProvider || !providers || !providers[selectedProvider]) {
+      console.warn('[TextAI] Cannot get models - invalid provider data:', { selectedProvider, providers });
+      return [];
+    }
     
-    const models = providers[selectedProvider].models || [];
+    const providerData = providers[selectedProvider];
+    if (!providerData || !Array.isArray(providerData.models)) {
+      console.warn('[TextAI] Provider models data is invalid:', providerData);
+      return [];
+    }
+    
+    const models = providerData.models;
     // Filter out embedding models
     return models.filter((model: string) => {
+      if (typeof model !== 'string') return false;
       const lowerModel = model.toLowerCase();
       return !(
         lowerModel.includes('embed') ||

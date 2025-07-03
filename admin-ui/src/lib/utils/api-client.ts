@@ -969,7 +969,18 @@ export class DocaicheApiClient {
   }
 
   async getEmbeddingConfig(): Promise<any> {
-    return this.get<any>('/weaviate/embeddings');
+    // Note: The backend only supports PUT /weaviate/embeddings for updates
+    // For getting embedding config, we'll return a default structure
+    // since there's no GET endpoint available yet
+    console.warn('[API] getEmbeddingConfig: Backend only supports PUT /weaviate/embeddings, returning default config');
+    return {
+      useDefaultEmbedding: true,
+      provider: '',
+      model: '',
+      dimensions: 768,
+      chunkSize: 1000,
+      chunkOverlap: 200
+    };
   }
 
   async updateEmbeddingConfig(config: any): Promise<any> {
