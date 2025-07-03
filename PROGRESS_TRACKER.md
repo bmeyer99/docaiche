@@ -1,7 +1,7 @@
 # MCP Implementation Progress Tracker
 
-## Current Status: Task 3 Complete, Ready for Task 4
-**Last Updated**: 2025-01-03
+## Current Status: Task 3 Complete + Database Config Fix, Ready for Task 4
+**Last Updated**: 2025-07-03
 
 ## Quick Context Recovery
 - **Goal**: Fix MCP pipeline so all 10 steps execute based on LLM decisions (not hardcoded logic)
@@ -29,6 +29,15 @@
    - Updated mcp_integration.py to register Context7 providers
    - Created API endpoint `/api/v1/mcp/context7/fetch` for direct doc retrieval
    - Implements library detection and version tracking
+   - Fixed ProviderConfig to support provider-specific configuration
+   - Fixed ProviderCapabilities validation errors
+
+4. ✅ **Database Configuration Persistence Fix**
+   - Fixed critical issue where Brave API keys were lost on container restart
+   - Added `get_raw_configuration()` method to access merged config with DB overrides
+   - Updated MCP provider registration to use raw configuration
+   - Database-configured providers (brave, brave2) now persist correctly
+   - All 3 providers (brave, brave2, context7) now register successfully
 
 ## Active Task: Task 4 - Make Knowledge Ingestion Synchronous Option
 **Status**: [ ] Ready to implement
@@ -44,14 +53,16 @@
 - Knowledge enricher to support synchronous mode
 
 ## Remaining Tasks
-4. ⏳ Task 4: Make Knowledge Ingestion Synchronous Option
-5. ⏹️ Task 5: Implement Query Refinement Loop
-6. ⏹️ Task 6: Add Comprehensive Pipeline Metrics
+5. ⏳ Task 4: Make Knowledge Ingestion Synchronous Option
+6. ⏹️ Task 5: Implement Query Refinement Loop
+7. ⏹️ Task 6: Add Comprehensive Pipeline Metrics
 
 ## Key Milestones
 - [x] External search triggers correctly via LLM (Task 1)
 - [x] TextAI uses real LLM calls (Task 2)
 - [x] Context7 provider working (Task 3)
+- [x] Database configuration persistence fixed
+- [x] All 3 MCP providers registered (brave, brave2, context7)
 - [ ] Sync ingestion option available (Task 4)
 - [ ] Query refinement loop active (Task 5)
 - [ ] Full pipeline observability (Task 6)

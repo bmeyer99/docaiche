@@ -324,6 +324,12 @@ class EnrichmentConfig(BaseModel):
     min_confidence_threshold: float = Field(
         0.7, ge=0.0, le=1.0, description="Minimum confidence threshold"
     )
+    sync_ingestion: bool = Field(
+        False, description="Enable synchronous knowledge ingestion"
+    )
+    sync_ingestion_timeout: int = Field(
+        10, ge=1, le=60, description="Synchronous ingestion timeout in seconds"
+    )
 
 
 class MCPProviderConfig(BaseModel):
