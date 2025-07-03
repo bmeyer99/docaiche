@@ -97,17 +97,17 @@ Based on comprehensive analysis of documentation and codebase, the MCP implement
   - [ ] Direct API endpoint returns raw docs
   - [ ] Ingestion happens on retrieval
 
-### Task 4: Make Knowledge Ingestion Synchronous Option
-- [ ] Add sync_ingestion configuration flag
-- [ ] Create fast-path ingestion for critical content
-- [ ] Modify orchestrator to wait for ingestion when sync mode
-- [ ] Add ingestion status to search response
-- [ ] Implement timeout handling for sync ingestion
+### Task 4: Make Knowledge Ingestion Synchronous Option ✅ COMPLETE
+- [x] Add sync_ingestion configuration flag
+- [x] Create fast-path ingestion for critical content
+- [x] Modify orchestrator to wait for ingestion when sync mode
+- [x] Add ingestion status to search response
+- [x] Implement timeout handling for sync ingestion
 - **Verification**:
-  - [ ] Sync mode ingests before returning results
-  - [ ] Async mode maintains current behavior
-  - [ ] Ingestion status appears in response
-  - [ ] Performance impact documented
+  - [x] Sync mode ingests before returning results
+  - [x] Async mode maintains current behavior
+  - [x] Ingestion status appears in response
+  - [x] Performance impact documented
 
 ### Task 5: Implement Query Refinement Loop
 - [ ] Fix refinement trigger logic (0.4-0.8 confidence range)

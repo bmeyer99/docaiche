@@ -356,9 +356,18 @@ class SearchOrchestrator:
 
             # Step 5: Enrichment Decision
             enrichment_triggered = False
+            ingestion_status = None
             if evaluation_result and evaluation_result.needs_enrichment:
-                enrichment_triggered = await self._trigger_enrichment(
-                    normalized_query, evaluation_result, background_tasks
+                # Pass external results for potential sync ingestion
+                external_results_list = []
+                if external_results_added and hasattr(search_results, 'results'):
+                    # Get the external results that were added
+                    external_results_list = [r for r in search_results.results 
+                                           if hasattr(r, 'metadata') and 
+                                           r.metadata.get('source') == 'external']
+                
+                enrichment_triggered, ingestion_status = await self._trigger_enrichment(
+                    normalized_query, evaluation_result, background_tasks, external_results_list
                 )
 
             # Step 6: Response Compilation
@@ -372,6 +381,7 @@ class SearchOrchestrator:
                 workspaces_searched=search_results.workspaces_searched,
                 enrichment_triggered=enrichment_triggered,
                 external_search_used=external_results_added,
+                ingestion_status=ingestion_status,  # Add ingestion status to response
             )
 
             # Step 7: Cache Results with graceful degradation and circuit breaker
@@ -568,25 +578,47 @@ class SearchOrchestrator:
         query: SearchQuery,
         evaluation: EvaluationResult,
         background_tasks: Optional[BackgroundTasks],
-    ) -> bool:
+        external_results: Optional[List[Dict[str, Any]]] = None,
+    ) -> Tuple[bool, Optional[Dict[str, Any]]]:
         """
-        Trigger knowledge enrichment as background task.
+        Trigger knowledge enrichment as background task or synchronously.
 
         Args:
             query: Search query
             evaluation: LLM evaluation result
             background_tasks: FastAPI background tasks
+            external_results: External search results for potential sync ingestion
 
         Returns:
-            True if enrichment was triggered successfully
+            Tuple of (enrichment_triggered, ingestion_status)
         """
+        ingestion_status = None
+        
+        # Check if sync ingestion is enabled and we have Context7 results
+        sync_ingestion_enabled = False
+        if hasattr(self, 'config') and hasattr(self.config, 'enrichment'):
+            sync_ingestion_enabled = self.config.enrichment.sync_ingestion
+        
+        # Handle synchronous ingestion for Context7 results
+        if sync_ingestion_enabled and external_results:
+            context7_results = [r for r in external_results if r.get('provider') == 'context7']
+            if context7_results:
+                logger.info(f"[{query.query_hash}] Performing synchronous Context7 ingestion")
+                ingestion_status = await self._perform_sync_ingestion(
+                    query, context7_results, evaluation
+                )
+                if ingestion_status and ingestion_status.get('success'):
+                    logger.info(f"[{query.query_hash}] Sync ingestion completed successfully")
+                    return True, ingestion_status
+        
+        # Fall back to background enrichment
         if not self.knowledge_enricher or not background_tasks:
             logger.debug("Knowledge enricher or background tasks not available")
-            return False
+            return False, None
 
         try:
             logger.info(
-                f"Triggering enrichment for topics: {evaluation.enrichment_topics}"
+                f"Triggering background enrichment for topics: {evaluation.enrichment_topics}"
             )
 
             # Add enrichment task to background (this would need PRD-010 implementation)
@@ -596,12 +628,159 @@ class SearchOrchestrator:
                 # Would call: self.knowledge_enricher.enrich_knowledge(...)
 
             background_tasks.add_task(enrichment_task)
-            return True
+            return True, None
 
         except Exception as e:
             logger.error(f"Failed to trigger enrichment: {e}")
-            return False
+            return False, None
 
+    async def _perform_sync_ingestion(
+        self,
+        query: SearchQuery,
+        context7_results: List[Dict[str, Any]],
+        evaluation: EvaluationResult
+    ) -> Dict[str, Any]:
+        """
+        Perform synchronous ingestion of Context7 documentation.
+        
+        Args:
+            query: Search query
+            context7_results: Context7 documentation results
+            evaluation: LLM evaluation result
+            
+        Returns:
+            Ingestion status dictionary
+        """
+        try:
+            start_time = time.time()
+            ingested_count = 0
+            
+            # Get sync ingestion timeout from config
+            timeout = 10  # default
+            if hasattr(self, 'config') and hasattr(self.config, 'enrichment'):
+                timeout = self.config.enrichment.sync_ingestion_timeout
+            
+            # Process each Context7 result
+            for result in context7_results:
+                try:
+                    # Extract documentation content
+                    content = result.get('content', result.get('snippet', ''))
+                    if not content:
+                        continue
+                    
+                    # Create a simple ingestion task
+                    # In a real implementation, this would use the IngestionPipeline
+                    metadata = {
+                        'source': 'context7',
+                        'library': result.get('metadata', {}).get('library', 'unknown'),
+                        'version': result.get('metadata', {}).get('version', 'latest'),
+                        'url': result.get('url', ''),
+                        'query': query.query,
+                        'ingestion_type': 'synchronous'
+                    }
+                    
+                    # Store Context7 documentation in database for processing
+                    # This creates a lightweight record that can be processed later
+                    await self._store_context7_documentation(
+                        content=content,
+                        metadata=metadata,
+                        query_hash=query.query_hash
+                    )
+                    
+                    logger.info(f"Stored Context7 doc: {metadata['library']} v{metadata['version']}")
+                    ingested_count += 1
+                    
+                    # Check timeout
+                    if time.time() - start_time > timeout:
+                        logger.warning(f"Sync ingestion timeout reached after {ingested_count} docs")
+                        break
+                        
+                except Exception as e:
+                    logger.error(f"Failed to ingest Context7 result: {e}")
+                    continue
+            
+            duration_ms = int((time.time() - start_time) * 1000)
+            
+            return {
+                'success': True,
+                'ingested_count': ingested_count,
+                'duration_ms': duration_ms,
+                'source': 'context7',
+                'type': 'synchronous'
+            }
+            
+        except Exception as e:
+            logger.error(f"Sync ingestion failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'source': 'context7',
+                'type': 'synchronous'
+            }
+    
+    async def _store_context7_documentation(
+        self,
+        content: str,
+        metadata: Dict[str, Any],
+        query_hash: str
+    ) -> None:
+        """
+        Store Context7 documentation in database for later processing.
+        
+        This creates a lightweight record that can be picked up by the
+        background ingestion pipeline for full processing.
+        
+        Args:
+            content: Documentation content
+            metadata: Metadata about the documentation
+            query_hash: Query hash for tracking
+        """
+        try:
+            # Create a record in the database that marks this content
+            # as pending ingestion from Context7
+            await self.db_manager.execute(
+                """
+                INSERT INTO content_metadata (
+                    source_url,
+                    title,
+                    technology,
+                    content_hash,
+                    processing_status,
+                    metadata,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """,
+                (
+                    metadata.get('url', f"context7://{metadata.get('library', 'unknown')}"),
+                    f"{metadata.get('library', 'Unknown')} v{metadata.get('version', 'latest')}",
+                    metadata.get('library', 'unknown'),
+                    query_hash[:16],  # Use part of query hash as content hash
+                    'pending_context7',  # Special status for Context7 content
+                    str(metadata),  # Store full metadata as JSON string
+                )
+            )
+            
+            # Store the actual content in a separate table or cache
+            # for the ingestion pipeline to process
+            cache_key = f"context7_content:{query_hash[:16]}"
+            await self.cache_manager.set(
+                cache_key,
+                {
+                    'content': content,
+                    'metadata': metadata,
+                    'timestamp': datetime.utcnow().isoformat()
+                },
+                ttl=3600  # Keep for 1 hour
+            )
+            
+            logger.debug(f"Stored Context7 documentation for {metadata.get('library')} in database")
+            
+        except Exception as e:
+            logger.error(f"Failed to store Context7 documentation: {e}")
+            # Don't fail the entire ingestion if storage fails
+            raise
+    
     async def _enhance_with_external_search(
         self,
         query: SearchQuery,

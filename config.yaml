@@ -113,6 +113,8 @@ enrichment:
   enable_tag_generation: true
   enable_quality_assessment: true
   min_confidence_threshold: 0.7
+  sync_ingestion: true  # Enable synchronous ingestion for Context7 results
+  sync_ingestion_timeout: 10  # Timeout in seconds for sync ingestion
 
 # MCP External Search Providers Configuration
 mcp:

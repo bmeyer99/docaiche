@@ -287,13 +287,13 @@ class TextAILLMAdapter(TextAIService):
             template = self.prompt_templates[PromptType.EXTERNAL_SEARCH_QUERY]
             
             # Prepare results summary
-            results_summary = f"Found {evaluation.relevance_score:.0%} relevant results with {evaluation.completeness_score:.0%} completeness"
+            results_summary = f"Found {evaluation.relevance_assessment:.0%} relevant results with {evaluation.completeness_score:.0%} completeness"
             
             # Prepare variables
             variables = {
                 'original_query': query.original_query,
                 'results_summary': results_summary,
-                'missing_info': json.dumps(evaluation.missing_information) if evaluation.missing_information else "General information needed",
+                'missing_info': json.dumps(evaluation.enrichment_topics) if evaluation.enrichment_topics else "General information needed",
                 'search_provider': 'web search'  # Generic, could be made specific later
             }
             

@@ -122,14 +122,13 @@ class MCPSearchEnhancer:
         )
         
         # Simple evaluation for external query generation
-        from src.mcp.core.models import EvaluationResult
+        from src.search.models import EvaluationResult
         evaluation = EvaluationResult(
             overall_quality=0.3,  # Low to trigger external search
             relevance_assessment=0.3,
             completeness_score=0.3,
-            needs_refinement=False,
-            needs_external_search=True,
-            missing_information=[],
+            needs_enrichment=True,  # Changed from needs_external_search
+            enrichment_topics=[],  # Changed from missing_information
             confidence_level=0.7,
             reasoning="Generating external query for enhanced search results"
         )

@@ -93,6 +93,9 @@ class SearchResults(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(
         None, description="Additional metadata"
     )
+    ingestion_status: Optional[Dict[str, Any]] = Field(
+        None, description="Status of synchronous ingestion if performed"
+    )
 
 
 class WorkspaceInfo(BaseModel):
