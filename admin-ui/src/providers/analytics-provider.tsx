@@ -15,7 +15,7 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
     // Initialize WebSocket connection on app mount
     const wsManager = CleanAnalyticsManager.getInstance();
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${wsProtocol}//${window.location.host}/api/v1/ws/analytics/clean`;
+    const url = `${wsProtocol}//${window.location.host}/ws/analytics/clean`;
     
     wsManager.connect(url);
     

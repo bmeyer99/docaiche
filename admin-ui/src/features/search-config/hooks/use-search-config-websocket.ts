@@ -60,7 +60,7 @@ export function useSearchConfigWebSocket(options: UseSearchConfigWebSocketOption
   }, [onConfigUpdate, onHealthUpdate, onMetricsUpdate, onAlert]);
   
   const wsState = useWebSocket(
-    '/api/v1/admin/search/ws',
+    '/ws/admin/search',
     {
       reconnect: autoConnect,
       reconnectAttempts: 5,

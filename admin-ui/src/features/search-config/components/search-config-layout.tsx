@@ -56,7 +56,7 @@ function SearchConfigContent() {
   const { isLoading, loadError } = useSearchConfig();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'providers');
+  const [activeTab, setActiveTab] = useState(searchParams?.get('tab') || 'providers');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,7 +68,7 @@ function SearchConfigContent() {
       }
     }
     setActiveTab(value);
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams || '');
     params.set('tab', value);
     router.push(`?${params.toString()}`);
   };

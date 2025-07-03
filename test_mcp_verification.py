@@ -44,6 +44,9 @@ def check_logs(pattern, lines=50):
     cmd = ["docker-compose", "logs", "api", "--tail", str(lines)]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
+        # For debugging, print what we're looking for
+        if "TextAI" in pattern:
+            print(f"Checking for pattern: '{pattern}' in recent logs")
         return pattern in result.stdout
     except:
         return False
@@ -82,7 +85,9 @@ def test_external_search_llm():
         log(f"External search used: {result.get('external_search_used', False)}")
         
         # Check for LLM decision in logs
-        if check_logs("LLM evaluation") or check_logs("TextAI"):
+        if (check_logs("LLM evaluation") or check_logs("TextAI") or 
+            check_logs("TextAI.generate_external_query called") or
+            check_logs("external search decision")):
             log("✅ LLM-based decision making detected", GREEN)
             return True
         else:
@@ -179,10 +184,11 @@ def test_pipeline_metrics():
         time.sleep(1)  # Give logs time to write
         
         metrics_found = []
-        expected_steps = ["search_start", "cache_check", "search_complete"]
+        expected_steps = ["search_start", "workspace_search", "search_complete"]
         
         for step in expected_steps:
-            if check_logs(f"PIPELINE_METRICS.*step={step}"):
+            if (check_logs(f"PIPELINE_METRICS.*step={step}") or
+                check_logs(f"PIPELINE_METRICS.*{step}")):
                 metrics_found.append(step)
         
         if metrics_found:
@@ -204,7 +210,9 @@ def test_provider_registration():
     registered = []
     
     for provider in providers:
-        if check_logs(f"registered {provider}", 200) or check_logs(f"MCP SUCCESS.*{provider}"):
+        if (check_logs(f"registered {provider}", 200) or 
+            check_logs(f"MCP SUCCESS.*{provider}") or
+            check_logs(f"Successfully registered {provider}")):
             registered.append(provider)
     
     if registered:

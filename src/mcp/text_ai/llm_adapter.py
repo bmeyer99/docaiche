@@ -58,6 +58,49 @@ class TextAILLMAdapter(TextAIService):
         # Initialize prompt templates
         self.prompt_templates = DEFAULT_TEMPLATES.copy()
         
+        # Check if LLM client has working providers
+        has_providers = False
+        if self.llm_client:
+            try:
+                # Try a simple test to see if providers are available
+                test_result = self.llm_client._check_providers_available()
+                has_providers = test_result
+                logger.info(f"LLM client provider check: {has_providers}")
+            except:
+                try:
+                    # Fallback check - look for _providers attribute
+                    has_providers = hasattr(self.llm_client, '_providers') and bool(self.llm_client._providers)
+                    logger.info(f"LLM client _providers check: {has_providers}")
+                except:
+                    has_providers = False
+                    logger.warning("Could not check LLM client providers")
+        
+        # Create a working LLM client if the provided one is empty
+        if not has_providers:
+            logger.warning("Provided LLM client has no working providers, creating new one")
+            try:
+                from src.core.config import get_system_configuration
+                config = get_system_configuration()
+                if config and hasattr(config, 'ai'):
+                    new_client = LLMProviderClient(
+                        config.ai.model_dump() if hasattr(config.ai, 'model_dump') else config.ai.dict()
+                    )
+                    # Test the new client
+                    try:
+                        test_available = new_client._check_providers_available()
+                        if test_available:
+                            self.llm_client = new_client
+                            logger.info("Created new working LLM client for TextAI")
+                        else:
+                            logger.error("New LLM client also has no providers")
+                    except:
+                        self.llm_client = new_client
+                        logger.info("Created new LLM client for TextAI (provider check failed)")
+                else:
+                    logger.error("No AI configuration found, TextAI will use fallback methods")
+            except Exception as e:
+                logger.error(f"Failed to create LLM client for TextAI: {e}")
+        
         logger.info("TextAILLMAdapter initialized with existing LLM infrastructure and prompt templates")
     
     async def analyze_normalized_query(self, query: NormalizedQuery) -> QueryAnalysis:
@@ -284,7 +327,7 @@ class TextAILLMAdapter(TextAIService):
         """
         trace_id = getattr(query, 'trace_id', 'no-trace')
         logger.info(f"[{trace_id}] TextAI.generate_external_query called")
-        logger.info(f"[{trace_id}] Input - Query: '{query.original_query}', Relevance: {evaluation.relevance_score}")
+        logger.info(f"[{trace_id}] Input - Query: '{query.original_query}', Relevance: {evaluation.relevance_assessment}")
         
         try:
             # Get prompt template
@@ -323,7 +366,9 @@ class TextAILLMAdapter(TextAIService):
             logger.info(f"[{trace_id}] Raw LLM Response: '{external_query}'")
             
             # Clean up the response - extract just the query
+            original_response = external_query
             external_query = external_query.strip()
+            logger.info(f"[{trace_id}] After strip: '{external_query}'")
             
             # Extract query from between backticks if present
             if '`' in external_query:
@@ -331,6 +376,7 @@ class TextAILLMAdapter(TextAIService):
                 matches = re.findall(r'`([^`]+)`', external_query)
                 if matches:
                     external_query = matches[0]
+                    logger.info(f"[{trace_id}] Extracted from backticks: '{external_query}'")
             
             # If response contains newlines, take first line
             if '\n' in external_query:
@@ -339,12 +385,12 @@ class TextAILLMAdapter(TextAIService):
                     line = line.strip()
                     if line and not line.startswith(('Here', 'This', '#', '*', '-')):
                         external_query = line
+                        logger.info(f"[{trace_id}] Selected line: '{external_query}'")
                         break
             
             # Final cleanup
             external_query = external_query.strip().strip('"\'')
-            
-            logger.info(f"LLM external query generation completed in {int((time.time() - start_time) * 1000)}ms: {external_query}")
+            logger.info(f"[{trace_id}] Final cleaned query: '{external_query}'")
             
             return external_query
             

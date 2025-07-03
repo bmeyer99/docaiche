@@ -163,7 +163,7 @@ export default function LogsViewer() {
 
     const wsUrl = new URL(window.location.href);
     wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-    wsUrl.pathname = `/api/v1/logs/ws/${selectedService}`;
+    wsUrl.pathname = `/ws/logs/${selectedService}`;
     
     const params = new URLSearchParams();
     if (logLevel !== 'all') params.append('level', logLevel);

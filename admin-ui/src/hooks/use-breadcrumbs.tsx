@@ -27,12 +27,12 @@ export function useBreadcrumbs() {
 
   const breadcrumbs = useMemo(() => {
     // Check if we have a custom mapping for this exact path
-    if (routeMapping[pathname]) {
+    if (pathname && routeMapping[pathname]) {
       return routeMapping[pathname];
     }
 
     // If no exact match, fall back to generating breadcrumbs from the path
-    const segments = pathname.split('/').filter(Boolean);
+    const segments = pathname?.split('/').filter(Boolean) || [];
     return segments.map((segment, index) => {
       const path = `/${segments.slice(0, index + 1).join('/')}`;
       return {

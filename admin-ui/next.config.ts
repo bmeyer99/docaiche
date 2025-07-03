@@ -29,30 +29,6 @@ const baseConfig: NextConfig = {
     return config
   },
   
-  async rewrites() {
-    return [
-      {
-        source: '/ws/:path*',
-        destination: 'http://api:4000/api/v1/ws/:path*',
-      },
-      {
-        source: '/ws/analytics/progressive',
-        destination: 'http://api:4000/api/v1/ws/analytics/progressive',
-      },
-      {
-        source: '/grafana/:path*',
-        destination: 'http://grafana:3000/:path*',
-      },
-      {
-        source: '/prometheus/:path*',
-        destination: 'http://prometheus:9090/:path*',
-      },
-      {
-        source: '/loki/:path*',
-        destination: 'http://loki:3100/:path*',
-      },
-    ]
-  },
 
   images: {
     remotePatterns: [

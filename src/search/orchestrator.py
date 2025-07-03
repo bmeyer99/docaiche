@@ -297,6 +297,8 @@ class SearchOrchestrator:
                             query_hash="",
                             tokens=[]
                         )
+                        # Add trace_id for logging
+                        normalized.trace_id = trace_id
                         
                         # Convert evaluation result to MCP format
                         from src.mcp.core.models import EvaluationResult as MCPEvalResult
