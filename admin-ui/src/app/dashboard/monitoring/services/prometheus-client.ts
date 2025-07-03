@@ -134,23 +134,30 @@ class PrometheusClient {
    */
   async getContainerMetrics(timeRange: { start: number; end: number; step?: string }) {
     const queries = {
-      cpu: 'rate(container_cpu_usage_seconds_total[5m]) * 100',
-      memory: 'container_memory_usage_bytes',
-      network_rx: 'rate(container_network_receive_bytes_total[5m])',
-      network_tx: 'rate(container_network_transmit_bytes_total[5m])'
+      grafana_requests: 'rate(grafana_http_request_duration_seconds_count[5m])',
+      weaviate_requests: 'rate(weaviate_http_request_duration_seconds_count[5m])',
+      prometheus_requests: 'rate(prometheus_http_requests_total[5m])',
+      go_memory: 'go_memstats_alloc_bytes'
     };
 
-    const results = await Promise.all(
-      Object.entries(queries).map(async ([metric, query]) => {
+    const results = [];
+    // Process queries sequentially to avoid overwhelming the server
+    for (const [metric, query] of Object.entries(queries)) {
+      try {
         const data = await this.queryRange(
           query,
           timeRange.start,
           timeRange.end,
           timeRange.step || '30s'
         );
-        return { metric, data };
-      })
-    );
+        results.push({ metric, data });
+        // Small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Failed to fetch container metric ${metric}:`, error);
+        results.push({ metric, data: [] });
+      }
+    }
 
     return results.reduce((acc, { metric, data }) => {
       acc[metric] = data;
@@ -172,22 +179,24 @@ class PrometheusClient {
       hit_rate: 'redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total) * 100'
     };
 
-    const results = await Promise.all(
-      Object.entries(queries).map(async ([metric, query]) => {
-        try {
-          const data = await this.queryRange(
-            query,
-            timeRange.start,
-            timeRange.end,
-            timeRange.step || '30s'
-          );
-          return { metric, data };
-        } catch (error) {
-          console.error(`Failed to fetch Redis metric ${metric}:`, error);
-          return { metric, data: [] };
-        }
-      })
-    );
+    const results = [];
+    // Process queries sequentially to avoid overwhelming the server
+    for (const [metric, query] of Object.entries(queries)) {
+      try {
+        const data = await this.queryRange(
+          query,
+          timeRange.start,
+          timeRange.end,
+          timeRange.step || '30s'
+        );
+        results.push({ metric, data });
+        // Small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Failed to fetch Redis metric ${metric}:`, error);
+        results.push({ metric, data: [] });
+      }
+    }
 
     return results.reduce((acc, { metric, data }) => {
       acc[metric] = data;
@@ -200,29 +209,31 @@ class PrometheusClient {
    */
   async getAPIMetrics(timeRange: { start: number; end: number; step?: string }) {
     const queries = {
-      request_rate: 'sum(rate(http_requests_total[5m]))',
-      error_rate: 'sum(rate(http_requests_total{status=~"5.."}[5m]))',
-      latency_p50: 'histogram_quantile(0.5, rate(http_request_duration_seconds_bucket[5m]))',
-      latency_p95: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))',
-      latency_p99: 'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))'
+      request_rate: 'sum(rate(grafana_http_request_duration_seconds_count[5m]) + rate(weaviate_http_request_duration_seconds_count[5m]))',
+      latency_p50: 'histogram_quantile(0.5, rate(grafana_http_request_duration_seconds_bucket[5m]))',
+      latency_p95: 'histogram_quantile(0.95, rate(grafana_http_request_duration_seconds_bucket[5m]))',
+      latency_p99: 'histogram_quantile(0.99, rate(grafana_http_request_duration_seconds_bucket[5m]))',
+      weaviate_latency_p95: 'histogram_quantile(0.95, rate(weaviate_http_request_duration_seconds_bucket[5m]))'
     };
 
-    const results = await Promise.all(
-      Object.entries(queries).map(async ([metric, query]) => {
-        try {
-          const data = await this.queryRange(
-            query,
-            timeRange.start,
-            timeRange.end,
-            timeRange.step || '30s'
-          );
-          return { metric, data };
-        } catch (error) {
-          console.error(`Failed to fetch API metric ${metric}:`, error);
-          return { metric, data: [] };
-        }
-      })
-    );
+    const results = [];
+    // Process queries sequentially to avoid overwhelming the server
+    for (const [metric, query] of Object.entries(queries)) {
+      try {
+        const data = await this.queryRange(
+          query,
+          timeRange.start,
+          timeRange.end,
+          timeRange.step || '30s'
+        );
+        results.push({ metric, data });
+        // Small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Failed to fetch API metric ${metric}:`, error);
+        results.push({ metric, data: [] });
+      }
+    }
 
     return results.reduce((acc, { metric, data }) => {
       acc[metric] = data;

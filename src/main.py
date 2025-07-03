@@ -195,6 +195,10 @@ def create_app() -> FastAPI:
     # Exception handlers
     setup_exception_handlers(app)
 
+    # MCP routes (direct mount for /mcp endpoint)
+    from src.api.v1.mcp import router as mcp_router
+    app.include_router(mcp_router, prefix="/mcp")
+    
     # API routes
     app.include_router(api_router, prefix="/api/v1")
 

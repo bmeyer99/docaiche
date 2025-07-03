@@ -27,14 +27,14 @@ export default function MonitoringPage() {
 
   // Calculate time range based on selection
   const getTimeRange = useCallback(() => {
-    const now = Date.now();
+    const now = Math.floor(Date.now() / 1000); // Convert to Unix seconds
     const ranges: Record<string, number> = {
-      '5m': 5 * 60 * 1000,
-      '15m': 15 * 60 * 1000,
-      '1h': 60 * 60 * 1000,
-      '6h': 6 * 60 * 60 * 1000,
-      '24h': 24 * 60 * 60 * 1000,
-      '7d': 7 * 24 * 60 * 60 * 1000
+      '5m': 5 * 60,
+      '15m': 15 * 60,
+      '1h': 60 * 60,
+      '6h': 6 * 60 * 60,
+      '24h': 24 * 60 * 60,
+      '7d': 7 * 24 * 60 * 60
     };
     const duration = ranges[selectedTimeRange] || ranges['1h'];
     return {
@@ -48,17 +48,24 @@ export default function MonitoringPage() {
     setLoading(true);
     try {
       const timeRange = getTimeRange();
-      const [containerData, redisData, apiData] = await Promise.all([
-        getContainerMetrics(timeRange),
-        getRedisMetrics(timeRange),
-        getAPIMetrics(timeRange)
-      ]);
+      
+      // Fetch metrics sequentially to avoid overwhelming the server
+      const containerData = await getContainerMetrics(timeRange);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const redisData = await getRedisMetrics(timeRange);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const apiData = await getAPIMetrics(timeRange);
 
-      setMetrics({
+      const allMetrics = {
         ...containerData,
         ...redisData,
         ...apiData
-      });
+      };
+      
+      console.log('Fetched metrics:', allMetrics);
+      setMetrics(allMetrics);
     } catch (error) {
       console.error('Failed to fetch metrics:', error);
       toast({
@@ -101,20 +108,18 @@ export default function MonitoringPage() {
     }
   }, [toast]);
 
-  // Auto-refresh effect
+  // Initial load only
   useEffect(() => {
     fetchMetrics();
-    
-    if (autoRefresh) {
-      const interval = setInterval(fetchMetrics, 30000); // Refresh every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [fetchMetrics, autoRefresh]);
+  }, []);
 
-  // Update metrics when time range changes
+  // Update metrics when time range changes (debounced)
   useEffect(() => {
-    fetchMetrics();
-  }, [selectedTimeRange, fetchMetrics]);
+    const timer = setTimeout(() => {
+      fetchMetrics();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [selectedTimeRange]);
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -153,7 +158,7 @@ export default function MonitoringPage() {
           <TabsTrigger value="custom">Custom Dashboards</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card 
               className="cursor-pointer hover:shadow-lg transition-shadow"
@@ -306,63 +311,107 @@ export default function MonitoringPage() {
             </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {metrics.request_rate && (
-              <MetricChart
-                title="Request Volume"
-                series={metrics.request_rate}
-                height={300}
-                onDataPointClick={handleDataPointClick}
-                onRefresh={fetchMetrics}
-                loading={loading}
-                unit="/s"
-                description="HTTP requests per second across all services"
-                enableZoom={true}
-                enableBrush={true}
-              />
-            )}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Request Volume</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-[300px] w-full" />
+                ) : metrics.request_rate && metrics.request_rate.length > 0 ? (
+                  <MetricChart
+                    title=""
+                    series={metrics.request_rate}
+                    height={300}
+                    onDataPointClick={handleDataPointClick}
+                    onRefresh={fetchMetrics}
+                    loading={loading}
+                    unit="/s"
+                    enableZoom={true}
+                    enableBrush={true}
+                  />
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No request rate data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-            {metrics.memory_used && (
-              <MetricChart
-                title="Redis Memory Usage"
-                series={metrics.memory_used.map(s => ({
-                  ...s,
-                  data: s.data.map(d => ({ ...d, value: d.value / 1024 / 1024 })) // Convert to MB
-                }))}
-                height={300}
-                onDataPointClick={handleDataPointClick}
-                onRefresh={fetchMetrics}
-                loading={loading}
-                unit="MB"
-                description="Redis memory consumption over time"
-                chartType="area"
-              />
-            )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Redis Memory Usage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-[300px] w-full" />
+                ) : metrics.memory_used && metrics.memory_used.length > 0 ? (
+                  <MetricChart
+                    title=""
+                    series={metrics.memory_used.map(s => ({
+                      ...s,
+                      data: s.data.map(d => ({ ...d, value: d.value / 1024 / 1024 })) // Convert to MB
+                    }))}
+                    height={300}
+                    onDataPointClick={handleDataPointClick}
+                    onRefresh={fetchMetrics}
+                    loading={loading}
+                    unit="MB"
+                    chartType="area"
+                  />
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No Redis memory data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
-          {metrics.cpu && metrics.memory && (
-            <MetricChart
-              title="Container Resource Usage"
-              series={[
-                ...(metrics.cpu || []).map(s => ({ 
-                  ...s, 
-                  name: 'CPU %',
-                  data: s.data.map(d => ({ ...d, value: d.value * 100 }))
-                })),
-                ...(metrics.memory || []).map(s => ({ 
-                  ...s, 
-                  name: 'Memory MB',
-                  data: s.data.map(d => ({ ...d, value: d.value / 1024 / 1024 }))
-                }))
-              ]}
-              height={400}
-              onDataPointClick={handleDataPointClick}
-              onRefresh={fetchMetrics}
-              loading={loading}
-              description="CPU and Memory usage across containers"
-              showLegend={true}
-            />
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Service Metrics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <Skeleton className="h-[400px] w-full" />
+              ) : (metrics.grafana_requests && metrics.grafana_requests.length > 0) || (metrics.go_memory && metrics.go_memory.length > 0) ? (
+                <MetricChart
+                  title=""
+                  series={[
+                    ...(metrics.grafana_requests || []).map(s => ({ 
+                      ...s, 
+                      name: 'Grafana Requests/sec',
+                      data: s.data.map(d => ({ ...d, value: d.value }))
+                    })),
+                    ...(metrics.weaviate_requests || []).map(s => ({ 
+                      ...s, 
+                      name: 'Weaviate Requests/sec',
+                      data: s.data.map(d => ({ ...d, value: d.value }))
+                    })),
+                    ...(metrics.go_memory || []).map(s => ({ 
+                      ...s, 
+                      name: 'Go Memory MB',
+                      data: s.data.map(d => ({ ...d, value: d.value / 1024 / 1024 }))
+                    }))
+                  ]}
+                  height={400}
+                  onDataPointClick={handleDataPointClick}
+                  onRefresh={fetchMetrics}
+                  loading={loading}
+                  chartType="line"
+                  enableZoom={true}
+                  enableBrush={true}
+                  showLegend={true}
+                />
+              ) : (
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                  No service metrics data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="services" className="space-y-4">

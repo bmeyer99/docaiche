@@ -4,13 +4,16 @@ async function captureConsoleErrors() {
   console.log('Starting Chrome to capture console errors...');
   
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-web-security',
-      '--disable-features=VizDisplayCompositor'
+      '--disable-features=VizDisplayCompositor',
+      '--disable-gpu',
+      '--disable-extensions',
+      '--no-first-run'
     ]
   });
 
@@ -56,8 +59,8 @@ async function captureConsoleErrors() {
       timeout: 30000
     });
 
-    console.log('Waiting 10 seconds to capture real-time errors...');
-    await page.waitForTimeout(10000);
+    console.log('Waiting 5 seconds to capture real-time errors...');
+    await page.waitForTimeout(5000);
 
     // Try clicking around to trigger more interactions
     console.log('Attempting to interact with charts...');

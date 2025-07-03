@@ -112,8 +112,9 @@ class Context7Provider(SearchProvider):
                 return SearchResults(
                     results=[],
                     total_results=0,
-                    search_time_ms=int((time.time() - start_time) * 1000),
+                    execution_time_ms=int((time.time() - start_time) * 1000),
                     provider="context7",
+                    query=options.query,
                     error="No library name detected in query"
                 )
             
@@ -127,8 +128,9 @@ class Context7Provider(SearchProvider):
                 return SearchResults(
                     results=[],
                     total_results=0,
-                    search_time_ms=int((time.time() - start_time) * 1000),
+                    execution_time_ms=int((time.time() - start_time) * 1000),
                     provider="context7",
+                    query=options.query,
                     error=f"Library '{library_name}' not found"
                 )
             
@@ -159,8 +161,9 @@ class Context7Provider(SearchProvider):
             return SearchResults(
                 results=results,
                 total_results=len(results),
-                search_time_ms=search_time,
-                provider="context7"
+                execution_time_ms=search_time,
+                provider="context7",
+                query=options.query
             )
             
         except Exception as e:
@@ -170,8 +173,9 @@ class Context7Provider(SearchProvider):
             return SearchResults(
                 results=[],
                 total_results=0,
-                search_time_ms=int((time.time() - start_time) * 1000),
+                execution_time_ms=int((time.time() - start_time) * 1000),
                 provider="context7",
+                query=options.query,
                 error=str(e)
             )
     

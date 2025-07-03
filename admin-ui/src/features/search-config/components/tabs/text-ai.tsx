@@ -62,8 +62,8 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
       try {
         const centralConfig = await apiClient.getConfiguration();
         const modelSelectionItem = centralConfig.items?.find(i => i.key === 'ai.model_selection');
-        if (modelSelectionItem?.value?.textGeneration) {
-          const textConfig = modelSelectionItem.value.textGeneration;
+        if (modelSelectionItem?.value && typeof modelSelectionItem.value === 'object' && 'textGeneration' in modelSelectionItem.value) {
+          const textConfig = (modelSelectionItem.value as any).textGeneration;
           setSavedConfig({
             provider: textConfig.provider || '',
             model: textConfig.model || ''
@@ -247,25 +247,71 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
     return textModels;
   };
 
-  const handleProviderChange = (providerId: string) => {
-    updateModelSelection({
+  const handleProviderChange = async (providerId: string) => {
+    const newSelection = {
       ...modelSelection,
       textGeneration: {
         provider: providerId,
         model: '' // Reset model
       }
-    });
+    };
+    updateModelSelection(newSelection);
+    setSavedConfig({ provider: providerId, model: '' });
+    
+    // Save to central config
+    try {
+      const currentConfig = await apiClient.getConfiguration();
+      const modelSelectionItem = currentConfig.items?.find(i => i.key === 'ai.model_selection');
+      const currentModelSelection = modelSelectionItem?.value || {};
+      
+      await apiClient.updateConfiguration({
+        key: 'ai.model_selection',
+        value: {
+          ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
+          textGeneration: {
+            provider: providerId,
+            model: ''
+          }
+        }
+      });
+    } catch (error) {
+      console.error('[TextAI] Failed to save provider selection:', error);
+    }
+    
     onChangeDetected?.();
   };
 
-  const handleModelChange = (model: string) => {
-    updateModelSelection({
+  const handleModelChange = async (model: string) => {
+    const newSelection = {
       ...modelSelection,
       textGeneration: {
-        ...modelSelection.textGeneration,
+        provider: selectedProvider,
         model
       }
-    });
+    };
+    updateModelSelection(newSelection);
+    setSavedConfig({ provider: selectedProvider, model });
+    
+    // Save to central config
+    try {
+      const currentConfig = await apiClient.getConfiguration();
+      const modelSelectionItem = currentConfig.items?.find(i => i.key === 'ai.model_selection');
+      const currentModelSelection = modelSelectionItem?.value || {};
+      
+      await apiClient.updateConfiguration({
+        key: 'ai.model_selection',
+        value: {
+          ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
+          textGeneration: {
+            provider: selectedProvider,
+            model
+          }
+        }
+      });
+    } catch (error) {
+      console.error('[TextAI] Failed to save model selection:', error);
+    }
+    
     onChangeDetected?.();
   };
 

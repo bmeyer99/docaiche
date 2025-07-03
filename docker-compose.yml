@@ -69,7 +69,7 @@ services:
     labels:
       - "docaiche.service=api"
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=PathPrefix(`/api/`) || PathPrefix(`/ws/`)"
+      - "traefik.http.routers.api.rule=PathPrefix(`/api/`) || PathPrefix(`/ws/`) || PathPrefix(`/mcp`)"
       - "traefik.http.routers.api.priority=105"
       - "traefik.http.services.api.loadbalancer.server.port=4000"
       - "traefik.http.middlewares.ws-rewrite.replacepathregex.regex=^/ws/(.*)"
@@ -256,6 +256,9 @@ services:
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_SECURITY_COOKIE_SECURE=false
       - GF_SECURITY_COOKIE_SAMESITE=lax
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning

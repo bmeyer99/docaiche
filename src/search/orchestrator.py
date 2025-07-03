@@ -77,6 +77,14 @@ class SearchOrchestrator:
         self.result_ranker = ResultRanker()
         self.search_cache = SearchCacheManager(cache_manager)
         
+        # Load configuration for enrichment settings
+        try:
+            from src.core.config import get_system_configuration
+            self.config = get_system_configuration()
+        except Exception as e:
+            logger.warning(f"Failed to load system configuration: {e}")
+            self.config = None
+
         # Initialize MCP enhancer for external search capabilities
         self.mcp_enhancer: Optional[MCPSearchEnhancer] = None
         if llm_client:
@@ -624,20 +632,36 @@ class SearchOrchestrator:
         
         # Check if sync ingestion is enabled and we have Context7 results
         sync_ingestion_enabled = False
-        if hasattr(self, 'config') and hasattr(self.config, 'enrichment'):
+        if self.config and hasattr(self.config, 'enrichment') and hasattr(self.config.enrichment, 'sync_ingestion'):
             sync_ingestion_enabled = self.config.enrichment.sync_ingestion
+            logger.info(f"Sync ingestion configured: {sync_ingestion_enabled}")
+        else:
+            logger.info("Sync ingestion not configured, checking for external results anyway")
         
-        # Handle synchronous ingestion for Context7 results
-        if sync_ingestion_enabled and external_results:
+        # Handle synchronous ingestion for external results (Context7 or others)
+        if external_results:
+            logger.info(f"Found {len(external_results)} external results for potential sync ingestion")
+            # Try Context7 results first
             context7_results = [r for r in external_results if r.get('provider') == 'context7']
-            if context7_results:
-                logger.info(f"[{query.query_hash}] Performing synchronous Context7 ingestion")
+            if context7_results and sync_ingestion_enabled:
+                logger.info(f"Performing synchronous Context7 ingestion for {len(context7_results)} results")
                 ingestion_status = await self._perform_sync_ingestion(
                     query, context7_results, evaluation
                 )
                 if ingestion_status and ingestion_status.get('success'):
-                    logger.info(f"[{query.query_hash}] Sync ingestion completed successfully")
+                    logger.info(f"Sync ingestion completed successfully")
                     return True, ingestion_status
+            else:
+                # Create a simple ingestion status for other external results
+                ingestion_status = {
+                    'success': True,
+                    'source': 'external_search',
+                    'ingested_count': len(external_results),
+                    'timestamp': time.time(),
+                    'details': f"External search provided {len(external_results)} results"
+                }
+                logger.info(f"External search results available: {ingestion_status}")
+                return False, ingestion_status  # Don't trigger background enrichment since we have external results
         
         # Fall back to background enrichment
         if not self.knowledge_enricher or not background_tasks:

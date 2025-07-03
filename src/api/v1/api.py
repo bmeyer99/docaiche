@@ -27,7 +27,6 @@ from .metrics_endpoints import router as metrics_router
 from .workspace_endpoints import router as workspace_router
 from .browser_logs_endpoint import router as browser_logs_router
 from .ai_logs_endpoints import router as ai_logs_router
-from .mcp import router as mcp_router
 from .mcp_endpoints import router as mcp_management_router
 from .service_endpoints import router as service_router
 from .admin.search import router as admin_search_router
@@ -61,7 +60,6 @@ api_router.include_router(metrics_router)
 api_router.include_router(workspace_router)
 api_router.include_router(browser_logs_router)
 api_router.include_router(ai_logs_router)
-api_router.include_router(mcp_router)
 api_router.include_router(mcp_management_router)
 api_router.include_router(service_router)
 api_router.include_router(admin_search_router)

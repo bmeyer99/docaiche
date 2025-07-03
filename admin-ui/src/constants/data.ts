@@ -49,6 +49,14 @@ export const navItems: NavItem[] = [
     isActive: false,
     shortcut: ['m', 'o'],
     items: []
+  },
+  {
+    title: 'Grafana Dashboards',
+    url: '/dashboard/grafana',
+    icon: 'monitor',
+    isActive: false,
+    shortcut: ['g', 'd'],
+    items: []
   }
 ];
 
