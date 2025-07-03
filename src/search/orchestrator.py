@@ -320,9 +320,9 @@ class SearchOrchestrator:
                             normalized_text=normalized_query.query.lower().strip(),
                             technology_hint=normalized_query.technology_hint,
                             query_hash="",
-                            tokens=[]
+                            extracted_entities=[]
                         )
-                        # Add trace_id for logging
+                        # Add trace_id as attribute for logging (not a model field)
                         normalized.trace_id = trace_id
                         
                         # Convert evaluation result to MCP format

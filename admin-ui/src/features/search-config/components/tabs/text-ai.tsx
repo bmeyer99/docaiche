@@ -52,9 +52,42 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
   const apiClient = useApiClient();
   const { toast } = useToast();
   const { modelParameters, updateModelParameters } = useSearchConfig();
+  
+  // Try to get saved configuration from central config first
+  const [savedConfig, setSavedConfig] = useState<{provider: string, model: string} | null>(null);
+  
+  useEffect(() => {
+    // Load saved text generation configuration
+    const loadSavedConfig = async () => {
+      try {
+        const centralConfig = await apiClient.getConfiguration();
+        const modelSelectionItem = centralConfig.items?.find(i => i.key === 'ai.model_selection');
+        if (modelSelectionItem?.value?.textGeneration) {
+          const textConfig = modelSelectionItem.value.textGeneration;
+          setSavedConfig({
+            provider: textConfig.provider || '',
+            model: textConfig.model || ''
+          });
+          // Update model selection to show saved config
+          if (textConfig.provider && textConfig.model) {
+            updateModelSelection({
+              ...modelSelection,
+              textGeneration: {
+                provider: textConfig.provider,
+                model: textConfig.model
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('[TextAI] Failed to load saved configuration:', error);
+      }
+    };
+    loadSavedConfig();
+  }, []);
 
-  const selectedProvider = modelSelection.textGeneration.provider;
-  const selectedModel = modelSelection.textGeneration.model;
+  const selectedProvider = savedConfig?.provider || modelSelection.textGeneration.provider;
+  const selectedModel = savedConfig?.model || modelSelection.textGeneration.model;
   
   // Get pre-loaded parameters for selected model
   const loadedParams = modelParameters[selectedProvider]?.[selectedModel];
@@ -316,7 +349,7 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
 
               {selectedProvider && selectedModel && (
                 <div className="p-4 border rounded-lg bg-muted/30">
-                  <h4 className="font-medium mb-2">Selected Configuration</h4>
+                  <h4 className="font-medium mb-2">Current Saved Configuration</h4>
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Provider:</span>
@@ -327,6 +360,10 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Model:</span>
                       <Badge variant="secondary">{selectedModel}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Status:</span>
+                      <Badge variant="outline">Saved</Badge>
                     </div>
                   </div>
                 </div>

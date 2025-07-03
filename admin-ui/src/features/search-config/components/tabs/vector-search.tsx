@@ -101,6 +101,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
   // Reset form when loaded config changes
   useEffect(() => {
     if (loadedEmbeddingConfig) {
+      console.log('[VectorSearch] Loading saved embedding config:', loadedEmbeddingConfig);
       resetEmbedding(loadedEmbeddingConfig);
     }
   }, [loadedEmbeddingConfig, resetEmbedding]);
@@ -517,9 +518,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                           disabled={!embeddingConfig.provider}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select model">
-                              {embeddingConfig.model || "Select model"}
-                            </SelectValue>
+                            <SelectValue placeholder="Select model" />
                           </SelectTrigger>
                           <SelectContent>
                             {getEmbeddingModels().length === 0 ? (
@@ -537,6 +536,29 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                         </Select>
                       </div>
                     </div>
+
+                    {/* Display Current Saved Configuration */}
+                    {(embeddingConfig.provider && embeddingConfig.model) && (
+                      <div className="p-4 border rounded-lg bg-muted/30">
+                        <h4 className="font-medium mb-2">Current Saved Configuration</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Provider:</span>
+                            <Badge variant="secondary">
+                              {AI_PROVIDERS[embeddingConfig.provider]?.displayName || embeddingConfig.provider}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Model:</span>
+                            <Badge variant="secondary">{embeddingConfig.model}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Status:</span>
+                            <Badge variant="outline">Saved</Badge>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Model Configuration */}
                     {embeddingConfig.model && (

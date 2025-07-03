@@ -2,5 +2,8 @@
   "dependencies": {
     "puppeteer": "^24.11.2",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "node-fetch": "^3.3.2"
   }
 }

@@ -42,8 +42,8 @@ class PrometheusClient {
   private baseUrl: string;
 
   constructor() {
-    // Use the API proxy to access Prometheus
-    this.baseUrl = '/api/prometheus';
+    // Access Prometheus through the proxy
+    this.baseUrl = '/prometheus';
   }
 
   /**

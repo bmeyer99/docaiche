@@ -19,7 +19,7 @@ cp loki-config-optimized.yaml loki-config.yaml
 
 # Validate configurations
 echo "3. Validating configurations..."
-docker run --rm -v $(pwd):/config prom/prometheus:latest promtool check config /config/prometheus.yml || {
+docker run --rm -v $(pwd):/config --entrypoint promtool prom/prometheus:latest check config /config/prometheus.yml || {
     echo "ERROR: Prometheus configuration validation failed!"
     exit 1
 }

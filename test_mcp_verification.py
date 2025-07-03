@@ -118,9 +118,9 @@ def test_context7():
     log("Testing Context7 direct fetch endpoint...")
     result = run_api_request(endpoint, "GET")
     
-    if result and result.get("status") == "success":
+    if result and "documentation" in result:
         log("✅ Context7 direct fetch working", GREEN)
-        docs = result.get("data", {}).get("documents", [])
+        docs = result.get("documentation", [])
         log(f"   Documents retrieved: {len(docs)}")
         if docs:
             log(f"   First doc: {docs[0].get('title', 'N/A')[:50]}...")

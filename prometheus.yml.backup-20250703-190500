@@ -1,0 +1,51 @@
+global:
+  scrape_interval: 60s
+  evaluation_interval: 60s
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []  # Add alertmanager endpoint here if available
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "prometheus-alerts.yml"
+  - "prometheus-recording-rules.yml"
+
+scrape_configs:
+  # Docker metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323']
+    metrics_path: /metrics
+    
+  # Node exporter for system metrics
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+      
+  # DocAIche API (no direct metrics endpoint - uses structured logging)
+    
+  # Redis exporter
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+      
+  # Loki metrics
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+    metrics_path: /metrics
+    
+  # Grafana metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: /metrics
+    
+  # Weaviate metrics
+  - job_name: 'weaviate'
+    static_configs:
+      - targets: ['weaviate:2112']
+    metrics_path: /metrics

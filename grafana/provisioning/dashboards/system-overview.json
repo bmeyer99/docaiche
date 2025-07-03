@@ -32,16 +32,24 @@
           "color": {
             "mode": "thresholds"
           },
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background"
+            },
+            "filterable": false,
+            "inspect": false
+          },
           "mappings": [
             {
               "options": {
                 "0": {
-                  "color": "red",
+                  "color": "dark-red",
                   "index": 1,
                   "text": "DOWN"
                 },
                 "1": {
-                  "color": "green",
+                  "color": "dark-green",
                   "index": 0,
                   "text": "UP"
                 }
@@ -67,84 +75,46 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "up{instance=\"node-exporter:9100\", job=\"node\"}"
+              "options": "Service"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "Node Exporter"
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "up{instance=\"redis-exporter:9121\", job=\"redis\"}"
+              "options": "Status"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "Redis"
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "up{instance=\"weaviate:2112\", job=\"weaviate\"}"
+              "options": "Instance"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "Weaviate"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "up{instance=\"loki:3100\", job=\"loki\"}"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Loki"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "up{instance=\"grafana:3000\", job=\"grafana\"}"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Grafana"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "up{instance=\"localhost:9323\", job=\"docker\"}"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Docker"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "up{instance=\"api:8000\", job=\"docaiche-api\"}"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "API (Port 8000)"
+                "id": "custom.width",
+                "value": 150
               }
             ]
           }
@@ -158,18 +128,22 @@
       },
       "id": 1,
       "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
           "fields": "",
-          "values": false
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "textMode": "auto"
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Service"
+          }
+        ]
       },
       "pluginVersion": "10.0.0",
       "targets": [
@@ -179,23 +153,59 @@
             "uid": "prometheus"
           },
           "expr": "up",
-          "format": "time_series",
-          "instant": false,
-          "legendFormat": "{{job}} ({{instance}})",
-          "range": true,
+          "format": "table",
+          "instant": true,
           "refId": "A"
         }
       ],
-      "title": "Service Status",
+      "title": "Service Health Status",
       "transformations": [
         {
-          "id": "labelsToFields",
+          "id": "organize",
           "options": {
-            "keepLabels": ["job", "instance"]
+            "excludeByName": {
+              "Time": true,
+              "__name__": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value": "Status",
+              "job": "Service",
+              "instance": "Instance"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Service",
+            "mode": "string",
+            "reduce": {
+              "reducer": "last"
+            },
+            "replaceFields": true,
+            "binary": {
+              "left": "Service",
+              "reducer": "sum",
+              "right": ""
+            },
+            "replacePattern": "^node$",
+            "replaceValue": "Node Exporter"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Service"
+              }
+            ]
           }
         }
       ],
-      "type": "stat"
+      "type": "table"
     },
     {
       "datasource": {
@@ -686,7 +696,7 @@
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
