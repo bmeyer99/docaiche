@@ -12,6 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertModal } from '@/components/modal/alert-modal';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { 
   Table, 
   TableBody, 
@@ -33,7 +39,8 @@ import {
   TestTube, 
   Trash2,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Info
 } from 'lucide-react';
 import { useMCPProviders } from '../../hooks/use-mcp-providers';
 import { MCPProviderForm } from '../shared/mcp-provider-form';
@@ -45,6 +52,11 @@ export function MCPProvidersTab() {
   const [editingProvider, setEditingProvider] = useState<MCPProvider | null>(null);
   const [deletingProvider, setDeletingProvider] = useState<MCPProvider | null>(null);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  
+  // Find the active provider (lowest priority among enabled providers)
+  const activeProvider = data?.providers
+    .filter(p => p.config.enabled)
+    .sort((a, b) => a.config.priority - b.config.priority)[0];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -138,7 +150,21 @@ export function MCPProvidersTab() {
                 <TableHead>Status</TableHead>
                 <TableHead>Priority</TableHead>
                 <TableHead>Performance</TableHead>
-                <TableHead>Enabled</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    Enabled
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>The provider with the lowest priority number that is enabled will be active</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -171,9 +197,16 @@ export function MCPProvidersTab() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={provider.config.enabled ? 'default' : 'secondary'}>
-                      {provider.config.enabled ? 'Enabled' : 'Disabled'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={provider.config.enabled ? 'default' : 'secondary'}>
+                        {provider.config.enabled ? 'Enabled' : 'Disabled'}
+                      </Badge>
+                      {provider.provider_id === activeProvider?.provider_id && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                          Active
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

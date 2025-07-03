@@ -1,0 +1,106 @@
+groups:
+  - name: docaiche_performance_optimization
+    interval: 30s
+    rules:
+      # CPU usage by container - pre-aggregate for faster dashboard loading
+      - record: container_cpu_usage_percent
+        expr: |
+          100 * (
+            rate(container_cpu_usage_seconds_total{name=~"docaiche.*"}[5m])
+          )
+      
+      # Memory usage by container - pre-aggregate
+      - record: container_memory_usage_percent
+        expr: |
+          100 * (
+            container_memory_usage_bytes{name=~"docaiche.*"} 
+            / 
+            container_spec_memory_limit_bytes{name=~"docaiche.*"}
+          )
+      
+      # Service availability - pre-aggregate
+      - record: service_up_status
+        expr: |
+          up{job=~"node|redis|weaviate|loki|grafana"}
+      
+      # API request rate - pre-aggregate
+      - record: api_request_rate_5m
+        expr: |
+          sum(rate(http_requests_total{service="api"}[5m])) by (method, status)
+      
+      # API response time percentiles - pre-aggregate
+      - record: api_response_time_percentile_95
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{service="api"}[5m])) by (le, method)
+          )
+      
+      - record: api_response_time_percentile_99
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(http_request_duration_seconds_bucket{service="api"}[5m])) by (le, method)
+          )
+      
+      # Error rate - pre-aggregate
+      - record: api_error_rate_5m
+        expr: |
+          sum(rate(http_requests_total{service="api",status=~"5.."}[5m]))
+      
+      # Weaviate query performance - pre-aggregate
+      - record: weaviate_query_rate_5m
+        expr: |
+          sum(rate(weaviate_query_total[5m])) by (class_name, operation)
+      
+      - record: weaviate_query_latency_p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(weaviate_query_duration_seconds_bucket[5m])) by (le, class_name, operation)
+          )
+      
+      # Redis operations - pre-aggregate
+      - record: redis_ops_rate_5m
+        expr: |
+          sum(rate(redis_commands_total[5m])) by (cmd)
+      
+      - record: redis_memory_usage_mb
+        expr: |
+          redis_memory_used_bytes / 1024 / 1024
+      
+      # System resource saturation score
+      - record: system_resource_saturation_score
+        expr: |
+          (
+            avg(container_cpu_usage_percent) * 0.5 +
+            avg(container_memory_usage_percent) * 0.5
+          )
+      
+      # Container restart frequency
+      - record: container_restart_frequency_1h
+        expr: |
+          increase(container_restart_count{name=~"docaiche.*"}[1h])
+
+  - name: docaiche_capacity_planning
+    interval: 5m
+    rules:
+      # Memory growth rate for prediction
+      - record: memory_growth_rate_1h
+        expr: |
+          deriv(container_memory_usage_bytes{name=~"docaiche.*"}[1h])
+      
+      # Predicted time to memory limit
+      - record: memory_limit_eta_minutes
+        expr: |
+          (container_spec_memory_limit_bytes - container_memory_usage_bytes) 
+          / 
+          clamp_min(memory_growth_rate_1h, 1)
+          / 60
+      
+      # CPU usage trend
+      - record: cpu_usage_trend_1h
+        expr: |
+          deriv(container_cpu_usage_percent[1h])
+      
+      # Log volume by service
+      - record: log_volume_rate_5m
+        expr: |
+          sum(rate(promtail_read_lines_total[5m])) by (service)

@@ -69,8 +69,8 @@ interface ConfigState {
 interface ConfigContextValue extends ConfigState {
   // Update methods
   updateVectorConfig: (config: VectorConfig) => void;
-  updateEmbeddingConfig: (config: EmbeddingConfig) => void;
-  updateModelParameters: (provider: string, model: string, params: ModelParameters) => void;
+  updateEmbeddingConfig: (config: EmbeddingConfig) => Promise<void>;
+  updateModelParameters: (provider: string, model: string, params: ModelParameters) => Promise<void>;
   updateIngestionRules: (rules: any[]) => void;
   updateIngestionSettings: (settings: any) => void;
   updateAlertRules: (rules: any[]) => void;
@@ -121,47 +121,48 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     setState(prev => ({ ...prev, isLoading: true, loadError: null }));
     
     try {
-      // Load only working endpoints - vector config and workspaces
+      // Load central configuration first
+      const centralConfig = await apiClient.getConfiguration();
+      console.log('[ConfigProvider] Loaded central configuration');
+      
+      // Extract configurations from central store
+      const configs = extractConfigurationsFromCentral(centralConfig);
+      
+      // Load service-specific data
       const [
         vectorConfig,
-        workspaces,
-        embeddingConfig
+        workspaces
       ] = await Promise.allSettled([
         apiClient.getWeaviateConfig(),
-        apiClient.getWeaviateWorkspaces(),
-        apiClient.getEmbeddingConfig()
+        apiClient.getWeaviateWorkspaces()
       ]);
       
-      console.log('[ConfigProvider] Loaded configurations:', {
+      console.log('[ConfigProvider] Loaded service configurations:', {
         vectorConfig: vectorConfig.status,
-        workspaces: workspaces.status,
-        embeddingConfig: embeddingConfig.status
+        workspaces: workspaces.status
       });
       
-      // Create default embedding config if API call failed
-      const defaultEmbeddingConfig = {
-        useDefaultEmbedding: true,
-        provider: '',
-        model: '',
-        dimensions: 768,
-        chunkSize: 1000,
-        chunkOverlap: 200
-      };
-      
       setState({
+        // From central config
+        embeddingConfig: configs.embeddingConfig,
+        modelParameters: configs.modelParameters,
+        ingestionSettings: configs.ingestionSettings,
+        systemSettings: configs.systemSettings,
+        dashboardUrls: configs.dashboardUrls,
+        
+        // From service endpoints
         vectorConfig: vectorConfig.status === 'fulfilled' ? vectorConfig.value : null,
         workspaces: workspaces.status === 'fulfilled' ? workspaces.value : [],
-        embeddingConfig: embeddingConfig.status === 'fulfilled' ? embeddingConfig.value : defaultEmbeddingConfig,
-        modelParameters: {},
+        
+        // Not yet implemented
         ingestionRules: [],
-        ingestionSettings: null,  
         alertRules: [],
-        dashboardUrls: null,
-        systemSettings: null,
+        
         isLoading: false,
         loadError: null
       });
     } catch (error) {
+      console.error('[ConfigProvider] Failed to load configurations:', error);
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -175,16 +176,104 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     }
   };
   
+  // Helper function to extract configurations from central config response
+  const extractConfigurationsFromCentral = (configResponse: any) => {
+    const configs = {
+      embeddingConfig: {
+        useDefaultEmbedding: true,
+        provider: '',
+        model: '',
+        dimensions: 768,
+        chunkSize: 1000,
+        chunkOverlap: 200
+      },
+      modelParameters: {} as Record<string, Record<string, ModelParameters>>,
+      ingestionSettings: null,
+      systemSettings: {} as Record<string, any>,
+      dashboardUrls: null
+    };
+    
+    // Process config items
+    if (configResponse?.items) {
+      configResponse.items.forEach((item: any) => {
+        // Extract model selection for embedding config
+        if (item.key === 'ai.model_selection' && item.value) {
+          const selection = item.value;
+          if (selection.embeddings) {
+            configs.embeddingConfig = {
+              useDefaultEmbedding: false,
+              provider: selection.embeddings.provider || '',
+              model: selection.embeddings.model || '',
+              dimensions: 768,
+              chunkSize: 1000,
+              chunkOverlap: 200
+            };
+          }
+        }
+        
+        // Extract model parameters
+        const modelParamMatch = item.key.match(/^ai\.models\.([^.]+)\.([^.]+)\.parameters$/);
+        if (modelParamMatch) {
+          const [, provider, model] = modelParamMatch;
+          if (!configs.modelParameters[provider]) {
+            configs.modelParameters[provider] = {};
+          }
+          configs.modelParameters[provider][model] = item.value;
+        }
+        
+        // Extract ingestion settings
+        if (item.key === 'ingestion.settings' && item.value) {
+          configs.ingestionSettings = item.value;
+        }
+        
+        // Extract system settings
+        if (item.key.startsWith('system.') && item.value) {
+          const settingKey = item.key.replace('system.', '');
+          configs.systemSettings[settingKey] = item.value;
+        }
+        
+        // Extract dashboard URLs
+        if (item.key === 'monitoring.dashboard_urls' && item.value) {
+          configs.dashboardUrls = item.value;
+        }
+      });
+    }
+    
+    return configs;
+  };
+  
   // Update methods
   const updateVectorConfig = (config: VectorConfig) => {
     setState(prev => ({ ...prev, vectorConfig: config }));
   };
   
-  const updateEmbeddingConfig = (config: EmbeddingConfig) => {
+  const updateEmbeddingConfig = async (config: EmbeddingConfig) => {
     setState(prev => ({ ...prev, embeddingConfig: config }));
+    
+    // Save to central config if not using default embedding
+    if (!config.useDefaultEmbedding && config.provider && config.model) {
+      try {
+        const currentConfig = await apiClient.getConfiguration();
+        const modelSelectionItem = currentConfig.items.find(i => i.key === 'ai.model_selection');
+        const currentModelSelection = modelSelectionItem?.value || {};
+        
+        await apiClient.updateConfiguration({
+          key: 'ai.model_selection',
+          value: {
+            ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
+            embeddings: {
+              provider: config.provider,
+              model: config.model
+            }
+          }
+        });
+      } catch (error) {
+        console.error('[ConfigProvider] Failed to save embedding config:', error);
+      }
+    }
   };
   
-  const updateModelParameters = (provider: string, model: string, params: ModelParameters) => {
+  const updateModelParameters = async (provider: string, model: string, params: ModelParameters) => {
     setState(prev => ({
       ...prev,
       modelParameters: {
@@ -195,6 +284,16 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         }
       }
     }));
+    
+    // Save to central config
+    try {
+      await apiClient.updateConfiguration({
+        key: `ai.models.${provider}.${model}.parameters`,
+        value: params as unknown as Record<string, unknown>
+      });
+    } catch (error) {
+      console.error('[ConfigProvider] Failed to save model parameters:', error);
+    }
   };
   
   const updateIngestionRules = (rules: any[]) => {

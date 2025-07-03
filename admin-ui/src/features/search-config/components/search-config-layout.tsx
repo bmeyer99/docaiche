@@ -30,16 +30,14 @@ import { ProvidersConfig } from './tabs/providers';
 import { VectorSearchConfig } from './tabs/vector-search';
 import { TextAIConfig } from './tabs/text-ai';
 import { IngestionConfig } from './tabs/ingestion';
-import { MonitoringConfig } from './tabs/monitoring';
 import { SystemSettings } from './tabs/settings';
 
 const TABS: TabConfig[] = [
   { id: 'providers', label: 'AI Providers', icon: 'Users', shortcut: 'Cmd+1' },
   { id: 'vector', label: 'Vector Search', icon: 'Database', shortcut: 'Cmd+2' },
   { id: 'text-ai', label: 'Text AI', icon: 'Bot', shortcut: 'Cmd+3' },
-  { id: 'ingestion', label: 'Ingestion', icon: 'HardDrive', shortcut: 'Cmd+4' },
-  { id: 'monitoring', label: 'Monitoring', icon: 'BarChart3', shortcut: 'Cmd+5' },
-  { id: 'settings', label: 'Settings', icon: 'Settings', shortcut: 'Cmd+6' }
+  { id: 'ingestion', label: 'Ingestion', icon: 'HardDrive', shortcut: 'Cmd+4', badge: 'Soon' },
+  { id: 'settings', label: 'Settings', icon: 'Settings', shortcut: 'Cmd+5', badge: 'Soon' }
 ];
 
 const ICON_MAP = {
@@ -59,6 +57,7 @@ function SearchConfigContent() {
   const [activeTab, setActiveTab] = useState(searchParams?.get('tab') || 'providers');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [providerRefreshKey, setProviderRefreshKey] = useState(0);
 
   // Update URL when tab changes
   const handleTabChange = (value: string) => {
@@ -206,11 +205,15 @@ function SearchConfigContent() {
 
           <div className="flex-1 overflow-auto">
             <TabsContent value="providers" className="h-full m-0">
-              <ProvidersConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
+              <ProvidersConfig 
+                onChangeDetected={() => setHasUnsavedChanges(true)} 
+                onProviderUpdate={() => setProviderRefreshKey(prev => prev + 1)}
+              />
             </TabsContent>
             
             <TabsContent value="vector" className="h-full m-0">
               <VectorSearchConfig 
+                key={`vector-${providerRefreshKey}`}
                 onChangeDetected={() => setHasUnsavedChanges(true)} 
                 onSaveSuccess={() => setHasUnsavedChanges(false)}
               />
@@ -218,6 +221,7 @@ function SearchConfigContent() {
             
             <TabsContent value="text-ai" className="h-full m-0">
               <TextAIConfig 
+                key={`textai-${providerRefreshKey}`}
                 onChangeDetected={() => setHasUnsavedChanges(true)} 
                 onSaveSuccess={() => setHasUnsavedChanges(false)}
               />
@@ -225,10 +229,6 @@ function SearchConfigContent() {
             
             <TabsContent value="ingestion" className="h-full m-0">
               <IngestionConfig onChangeDetected={() => setHasUnsavedChanges(true)} />
-            </TabsContent>
-            
-            <TabsContent value="monitoring" className="h-full m-0">
-              <MonitoringConfig />
             </TabsContent>
             
             <TabsContent value="settings" className="h-full m-0">

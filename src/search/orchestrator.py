@@ -256,7 +256,31 @@ class SearchOrchestrator:
                     logger.warning(f"AI evaluation failed: {e}")
                     # Continue without evaluation
 
-            # Step 4.5: External Search Enhancement (if needed)
+            # Step 4.5: Query Refinement (if needed)
+            refined_query_attempted = False
+            if evaluation_result and 0.4 <= evaluation_result.overall_quality < 0.8:
+                # Results are partially relevant - try query refinement
+                logger.info(f"[{trace_id}] Results partially relevant (score: {evaluation_result.overall_quality}), attempting query refinement")
+                try:
+                    refined_results = await self._refine_and_retry_search(
+                        normalized_query, search_results, evaluation_result, trace_id
+                    )
+                    if refined_results and len(refined_results.results) > len(search_results.results):
+                        logger.info(f"[{trace_id}] Query refinement improved results from {len(search_results.results)} to {len(refined_results.results)}")
+                        search_results = refined_results
+                        refined_query_attempted = True
+                        # Re-evaluate with refined results
+                        if self.llm_client:
+                            try:
+                                evaluation_result = await self._evaluate_search_results(
+                                    normalized_query, search_results
+                                )
+                            except Exception as e:
+                                logger.warning(f"Re-evaluation after refinement failed: {e}")
+                except Exception as e:
+                    logger.error(f"[{trace_id}] Query refinement failed: {e}")
+            
+            # Step 4.6: External Search Enhancement (if needed)
             external_results_added = False
             external_search_executed = False
             # Check if external search should be used
@@ -266,7 +290,7 @@ class SearchOrchestrator:
             logger.info(
                 f"Search state - Query: '{normalized_query.query[:50]}...' | "
                 f"Internal results: {len(search_results.results)} | "
-                f"Quality score: {evaluation_result.quality_score if evaluation_result else 'N/A'} | "
+                f"Quality score: {evaluation_result.overall_quality if evaluation_result else 'N/A'} | "
                 f"External search requested: {normalized_query.use_external_search}"
             )
             
@@ -722,6 +746,79 @@ class SearchOrchestrator:
                 'type': 'synchronous'
             }
     
+    async def _refine_and_retry_search(
+        self,
+        original_query: SearchQuery,
+        initial_results: SearchResults,
+        evaluation: EvaluationResult,
+        trace_id: str
+    ) -> Optional[SearchResults]:
+        """
+        Refine query based on initial results and retry search.
+        
+        Args:
+            original_query: Original search query
+            initial_results: Initial search results
+            evaluation: LLM evaluation of initial results
+            trace_id: Request trace ID
+            
+        Returns:
+            New search results or None if refinement fails
+        """
+        try:
+            if not self.mcp_enhancer or not self.mcp_enhancer.text_ai:
+                logger.warning(f"[{trace_id}] Query refinement unavailable - no TextAI")
+                return None
+            
+            # Create MCP models for refinement
+            from src.mcp.core.models import NormalizedQuery, RefinedQuery
+            
+            normalized = NormalizedQuery(
+                original_query=original_query.query,
+                normalized_text=original_query.query.lower().strip(),
+                technology_hint=original_query.technology_hint,
+                query_hash="",
+                tokens=[]
+            )
+            
+            # Get refined query from TextAI
+            logger.info(f"[{trace_id}] Generating refined query with TextAI")
+            refined = await self.mcp_enhancer.text_ai.refine_query(
+                normalized,
+                initial_results.results[:5],  # Pass top 5 results
+                evaluation.enrichment_topics  # Missing aspects
+            )
+            
+            if not refined or refined.refined_query == original_query.query:
+                logger.info(f"[{trace_id}] No meaningful refinement generated")
+                return None
+            
+            logger.info(f"[{trace_id}] Refined query: '{refined.refined_query}' (confidence: {refined.confidence})")
+            logger.info(f"PIPELINE_METRICS: step=query_refinement duration_ms=0 "
+                       f"original_query=\"{original_query.query}\" "
+                       f"refined_query=\"{refined.refined_query}\" "
+                       f"confidence={refined.confidence} trace_id={trace_id}")
+            
+            # Create new search query with refined text
+            refined_search_query = SearchQuery(
+                query=refined.refined_query,
+                filters=original_query.filters,
+                limit=original_query.limit,
+                offset=original_query.offset,
+                technology_hint=original_query.technology_hint,
+                use_external_search=False  # Don't trigger external for refined query
+            )
+            
+            # Execute search with refined query
+            logger.info(f"[{trace_id}] Executing search with refined query")
+            refined_results = await self._execute_multi_workspace_search(refined_search_query)
+            
+            return refined_results
+            
+        except Exception as e:
+            logger.error(f"[{trace_id}] Query refinement error: {e}")
+            return None
+    
     async def _store_context7_documentation(
         self,
         content: str,
@@ -849,7 +946,7 @@ class SearchOrchestrator:
                         technology='external',
                         workspace_slug='external_search',
                         chunk_index=None,
-                        quality_score=0.7
+                        overall_quality=0.7
                     )
                     converted_results.append(search_result)
                     
@@ -1224,7 +1321,8 @@ class SearchOrchestrator:
                 execution_time_ms=results.query_time_ms,
                 cache_hit=results.cache_hit,
                 enrichment_triggered=results.enrichment_triggered,
-                external_search_used=results.external_search_used
+                external_search_used=results.external_search_used,
+                ingestion_status=results.ingestion_status
             )
         except Exception as e:
             logger.error(f"Failed to create SearchResponse: {e}")

@@ -38,9 +38,10 @@ import type {
 
 interface ProvidersConfigProps {
   onChangeDetected?: () => void;
+  onProviderUpdate?: () => void;
 }
 
-export function ProvidersConfig({ onChangeDetected }: ProvidersConfigProps) {
+export function ProvidersConfig({ onChangeDetected, onProviderUpdate }: ProvidersConfigProps) {
   // Global provider settings
   const {
     providers: globalProviders,
@@ -195,6 +196,11 @@ export function ProvidersConfig({ onChangeDetected }: ProvidersConfigProps) {
         models: result.success && result.availableModels ? result.availableModels : [],
         enabled: result.success
       })
+      
+      // Notify parent that providers have been updated
+      if (result.success && onProviderUpdate) {
+        onProviderUpdate()
+      }
     } catch (error) {
       setIsTestingConnection(false)
       toast({

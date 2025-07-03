@@ -11,6 +11,7 @@ alerting:
 # Load rules once and periodically evaluate them
 rule_files:
   - "prometheus-alerts.yml"
+  - "prometheus-recording-rules.yml"
 
 scrape_configs:
   # Docker metrics

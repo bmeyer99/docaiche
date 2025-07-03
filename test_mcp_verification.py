@@ -73,9 +73,11 @@ def test_external_search_llm():
     
     # Test with a query that should trigger external search
     import time
+    import random
     timestamp = int(time.time())
+    rand = random.randint(1000, 9999)
     query = {
-        "query": f"latest react 19 features documentation {timestamp}",
+        "query": f"latest react 19 features documentation {timestamp}-{rand}",
         "limit": 5
     }
     
@@ -111,13 +113,10 @@ def test_context7():
     log("\n=== Test 3: Context7 Provider ===", BLUE)
     
     # Test direct Context7 fetch
-    context7_data = {
-        "library": "react",
-        "version": "latest"
-    }
+    endpoint = "/mcp/context7/fetch?library=react&version=latest"
     
     log("Testing Context7 direct fetch endpoint...")
-    result = run_api_request("/mcp/context7/fetch", "POST", context7_data)
+    result = run_api_request(endpoint, "GET")
     
     if result and result.get("status") == "success":
         log("✅ Context7 direct fetch working", GREEN)

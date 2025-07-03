@@ -81,7 +81,13 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
 
   const vectorConfig = watchVector();
 
-  const { register: registerEmbedding, handleSubmit: handleSubmitEmbedding, watch: watchEmbedding, setValue: setEmbeddingValue } = useForm<EmbeddingConfig>({
+  // Debug logging
+  useEffect(() => {
+    console.log('[VectorSearch] Loaded embedding config:', loadedEmbeddingConfig);
+    console.log('[VectorSearch] Available providers:', providers);
+  }, [loadedEmbeddingConfig, providers]);
+  
+  const { register: registerEmbedding, handleSubmit: handleSubmitEmbedding, watch: watchEmbedding, setValue: setEmbeddingValue, reset: resetEmbedding } = useForm<EmbeddingConfig>({
     defaultValues: loadedEmbeddingConfig || {
       useDefaultEmbedding: true,
       provider: '',
@@ -91,9 +97,17 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
       chunkOverlap: 200
     }
   });
+  
+  // Reset form when loaded config changes
+  useEffect(() => {
+    if (loadedEmbeddingConfig) {
+      resetEmbedding(loadedEmbeddingConfig);
+    }
+  }, [loadedEmbeddingConfig, resetEmbedding]);
 
   const embeddingConfig = watchEmbedding();
   const selectedProvider = embeddingConfig.provider;
+  const selectedModel = embeddingConfig.model;
 
   // Set connection status from loaded config
   useEffect(() => {
@@ -198,7 +212,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
       return [];
     }
     
-    return Object.entries(providers)
+    const embeddingProviders = Object.entries(providers)
       .filter(([id, config]) => {
         // Guard against missing config or provider definition
         if (!config || !id) return false;
@@ -219,6 +233,9 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
         name: AI_PROVIDERS[id]?.displayName || id,
         models: Array.isArray(config.models) ? config.models : []
       }));
+      
+    console.log('[VectorSearch] Embedding providers:', embeddingProviders);
+    return embeddingProviders;
   };
 
   // Get embedding models for selected provider
@@ -236,8 +253,26 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
     }
     
     const models = providerData.models;
-    // Filter for embedding models
-    return models.filter((model: string) => {
+    
+    // For Ollama, show models that have embedding capabilities
+    if (selectedProvider === 'ollama') {
+      const ollamaEmbedModels = models.filter((model: string) => {
+        if (typeof model !== 'string') return false;
+        const modelName = model.toLowerCase();
+        return (
+          modelName.includes('embed') ||
+          modelName.includes('e5') ||
+          modelName.includes('bge') ||
+          modelName.includes('nomic') ||
+          modelName.includes('mxbai')
+        );
+      });
+      console.log('[VectorSearch] Ollama embedding models:', ollamaEmbedModels);
+      return ollamaEmbedModels;
+    }
+    
+    // For other providers, filter for embedding models
+    const filteredModels = models.filter((model: string) => {
       if (typeof model !== 'string') return false;
       const lowerModel = model.toLowerCase();
       return (
@@ -248,6 +283,9 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
         lowerModel.includes('all-minilm')
       );
     });
+    
+    console.log('[VectorSearch] Filtered embedding models for', selectedProvider, ':', filteredModels);
+    return filteredModels;
   };
 
   return (
@@ -471,7 +509,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                       <div>
                         <Label htmlFor="model">Embedding Model</Label>
                         <Select
-                          value={embeddingConfig.model}
+                          value={embeddingConfig.model || ''}
                           onValueChange={(value) => {
                             setEmbeddingValue('model', value);
                             onChangeDetected?.();
@@ -479,14 +517,22 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                           disabled={!embeddingConfig.provider}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select model" />
+                            <SelectValue placeholder="Select model">
+                              {embeddingConfig.model || "Select model"}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            {getEmbeddingModels().map((model: string) => (
-                              <SelectItem key={model} value={model}>
-                                {model}
+                            {getEmbeddingModels().length === 0 ? (
+                              <SelectItem value="" disabled>
+                                No embedding models available
                               </SelectItem>
-                            ))}
+                            ) : (
+                              getEmbeddingModels().map((model: string) => (
+                                <SelectItem key={model} value={model}>
+                                  {model}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       </div>

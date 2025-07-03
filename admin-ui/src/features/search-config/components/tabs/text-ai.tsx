@@ -146,7 +146,7 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
       return [];
     }
     
-    return Object.entries(providers)
+    const textProviders = Object.entries(providers)
       .filter(([id, config]) => {
         // Guard against missing config or provider definition
         if (!config || !id) return false;
@@ -167,6 +167,10 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
         name: AI_PROVIDERS[id]?.displayName || id,
         models: Array.isArray(config.models) ? config.models : []
       }));
+      
+    console.log('[TextAI] Text providers:', textProviders);
+    console.log('[TextAI] Current selection:', { selectedProvider, selectedModel });
+    return textProviders;
   };
 
   // Get text generation models for selected provider
@@ -185,9 +189,18 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
     
     const models = providerData.models;
     // Filter out embedding models
-    return models.filter((model: string) => {
+    const textModels = models.filter((model: string) => {
       if (typeof model !== 'string') return false;
       const lowerModel = model.toLowerCase();
+      // For Ollama, be more specific about what to exclude
+      if (selectedProvider === 'ollama') {
+        return !(
+          lowerModel.includes('embed') ||
+          lowerModel === 'nomic-embed-text:latest' ||
+          lowerModel === 'mxbai-embed-large:latest'
+        );
+      }
+      // For other providers, use general filter
       return !(
         lowerModel.includes('embed') ||
         lowerModel.includes('e5-') ||
@@ -196,6 +209,9 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
         lowerModel.includes('all-minilm')
       );
     });
+    
+    console.log('[TextAI] Text models for', selectedProvider, ':', textModels);
+    return textModels;
   };
 
   const handleProviderChange = (providerId: string) => {

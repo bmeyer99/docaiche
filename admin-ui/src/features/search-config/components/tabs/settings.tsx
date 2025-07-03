@@ -223,7 +223,22 @@ export function SystemSettings({ onChangeDetected }: SystemSettingsProps) {
 
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 relative">
+      {/* Coming Soon Overlay */}
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="rounded-full bg-muted p-4 inline-block">
+            <Settings className="h-12 w-12 text-muted-foreground" />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold">Coming Soon</h3>
+            <p className="text-muted-foreground mt-2 max-w-md">
+              System settings configuration is currently under development. 
+              This feature will allow you to configure system-wide settings, manage backups, and control advanced options.
+            </p>
+          </div>
+        </div>
+      </div>
       <form onSubmit={handleSubmit(saveConfiguration)}>
         <div className="flex justify-end mb-4">
           <Button 

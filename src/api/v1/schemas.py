@@ -89,6 +89,9 @@ class SearchResponse(BaseModel):
     external_search_used: bool = Field(
         False, description="Whether external search providers were used"
     )
+    ingestion_status: Optional[Dict[str, Any]] = Field(
+        None, description="Status of synchronous knowledge ingestion if performed"
+    )
 
 
 # Feedback Models

@@ -1,0 +1,119 @@
+global:
+  # Optimize scrape intervals for performance
+  scrape_interval: 30s      # Reduced from 60s for more granular data
+  evaluation_interval: 30s   # Match scrape interval
+  # Reduce timeout to fail fast
+  scrape_timeout: 10s
+  # Enable query log for performance analysis
+  query_log_file: /prometheus/query.log
+  # External labels for federation (if needed)
+  external_labels:
+    cluster: 'docaiche'
+    environment: 'production'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []  # Add alertmanager endpoint here if available
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "prometheus-alerts.yml"
+  - "prometheus-recording-rules.yml"
+
+# Storage configuration
+storage:
+  tsdb:
+    # Optimize retention for performance
+    retention.time: 7d      # Keep 7 days of data
+    retention.size: 10GB    # Maximum size limit
+    # WAL compression
+    wal_compression: true
+    # Optimize block duration
+    min_block_duration: 2h
+    max_block_duration: 2h
+
+scrape_configs:
+  # Docker metrics with optimized settings
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323']
+    metrics_path: /metrics
+    # Reduce scrape interval for critical metrics
+    scrape_interval: 15s
+    # Add metric relabeling to reduce cardinality
+    metric_relabel_configs:
+      # Drop detailed filesystem metrics to reduce load
+      - source_labels: [__name__]
+        regex: 'node_filesystem_.*'
+        action: drop
+      # Keep only important network metrics
+      - source_labels: [__name__, device]
+        regex: 'node_network.*;(eth0|docker0)'
+        action: keep
+    
+  # Node exporter with optimizations
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    # Less frequent scraping for system metrics
+    scrape_interval: 30s
+    # Drop high-cardinality metrics
+    metric_relabel_configs:
+      # Drop detailed CPU metrics
+      - source_labels: [__name__]
+        regex: 'node_cpu_seconds_total'
+        action: drop
+      # Drop detailed disk metrics for non-critical paths
+      - source_labels: [__name__, mountpoint]
+        regex: 'node_filesystem.*;(/sys|/proc|/dev|/run).*'
+        action: drop
+      
+  # Redis exporter with focused metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+    metric_relabel_configs:
+      # Keep only essential Redis metrics
+      - source_labels: [__name__]
+        regex: 'redis_(connected_clients|used_memory|commands_total|keyspace_hits|keyspace_misses|evicted_keys|expired_keys).*'
+        action: keep
+      
+  # Loki metrics - less frequent
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+    metrics_path: /metrics
+    scrape_interval: 60s  # Loki metrics change less frequently
+    
+  # Grafana metrics - less frequent
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: /metrics
+    scrape_interval: 60s
+    
+  # Weaviate metrics with optimization
+  - job_name: 'weaviate'
+    static_configs:
+      - targets: ['weaviate:2112']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    metric_relabel_configs:
+      # Focus on key Weaviate metrics
+      - source_labels: [__name__]
+        regex: 'weaviate_(objects_total|queries_total|query_duration_seconds|imports_total|batch_operations_total).*'
+        action: keep
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metric_relabel_configs:
+      # Keep only essential Prometheus metrics
+      - source_labels: [__name__]
+        regex: 'prometheus_(tsdb_.*|rule_.*|http_requests_total|query_duration_seconds).*'
+        action: keep

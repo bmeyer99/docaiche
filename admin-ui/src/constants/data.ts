@@ -41,6 +41,14 @@ export const navItems: NavItem[] = [
     isActive: false,
     shortcut: ['l', 'o'],
     items: []
+  },
+  {
+    title: 'Monitoring',
+    url: '/dashboard/monitoring',
+    icon: 'activity',
+    isActive: false,
+    shortcut: ['m', 'o'],
+    items: []
   }
 ];
 

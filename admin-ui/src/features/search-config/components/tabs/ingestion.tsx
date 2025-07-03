@@ -175,7 +175,22 @@ export function IngestionConfig({ onChangeDetected }: IngestionConfigProps) {
 
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 relative">
+      {/* Coming Soon Overlay */}
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="rounded-full bg-muted p-4 inline-block">
+            <Clock className="h-12 w-12 text-muted-foreground" />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold">Coming Soon</h3>
+            <p className="text-muted-foreground mt-2 max-w-md">
+              Ingestion rules configuration is currently under development. 
+              This feature will allow you to configure automated content ingestion and workspace assignment.
+            </p>
+          </div>
+        </div>
+      </div>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
