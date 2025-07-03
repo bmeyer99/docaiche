@@ -420,6 +420,18 @@ def create_mcp_enhancer(
                 providers_config = external_search.providers if hasattr(external_search, 'providers') else {}
             else:
                 providers_config = {}
+                
+            # Also load raw YAML config for Context7 custom fields
+            raw_config = {}
+            try:
+                import yaml
+                with open('config.yaml', 'r') as f:
+                    raw_yaml = yaml.safe_load(f)
+                    if raw_yaml and 'mcp' in raw_yaml and 'external_search' in raw_yaml['mcp']:
+                        raw_config = raw_yaml['mcp']['external_search'].get('providers', {})
+                        print(f"MCP DEBUG: Raw Context7 config: {raw_config.get('context7', {})}")
+            except Exception as e:
+                logger.warning(f"Failed to load raw YAML config: {e}")
             
             print(f"MCP DEBUG: Config loaded - mcp_config exists: {mcp_config is not None}")
             print(f"MCP DEBUG: providers_config: {providers_config}")
@@ -443,6 +455,8 @@ def create_mcp_enhancer(
                     provider_type = ProviderType.PERPLEXITY
                 elif 'kagi' in provider_id.lower():
                     provider_type = ProviderType.KAGI
+                elif 'context7' in provider_id.lower():
+                    provider_type = ProviderType.CONTEXT7
                 else:
                     logger.warning(f"Unknown provider type for {provider_id}, skipping")
                     continue
@@ -464,7 +478,9 @@ def create_mcp_enhancer(
                     if not api_key:
                         logger.warning(f"Brave provider {provider_id} enabled but no API key found")
                         continue
-                # DuckDuckGo removed - no official API
+                elif provider_type == ProviderType.CONTEXT7:
+                    # Context7 doesn't need an API key
+                    api_key = "not_required"
                 else:
                     # For other providers, get API key from config
                     api_key = provider_config_data.api_key
@@ -485,20 +501,33 @@ def create_mcp_enhancer(
                 )
                 
                 # Create and register provider
+                print(f"MCP DEBUG: Attempting to create provider {provider_id} of type {provider_type}")
+                logger.info(f"MCP DEBUG: Attempting to create provider {provider_id} of type {provider_type}")
                 try:
                     if provider_type == ProviderType.BRAVE:
                         provider = BraveSearchProvider(provider_config)
-                    # DuckDuckGo removed - no official API
-                    # elif provider_type == ProviderType.DUCKDUCKGO:
-                    #     provider = DuckDuckGoSearchProvider(provider_config)
+                    elif provider_type == ProviderType.CONTEXT7:
+                        from src.mcp.providers.implementations.context7_provider import Context7Provider
+                        # Get Context7-specific config from raw YAML
+                        context7_raw = raw_config.get('context7', {})
+                        provider_config.config = {
+                            'command': context7_raw.get('command', 'npx'),
+                            'args': context7_raw.get('args', ['-y', '@upstash/context7-mcp']),
+                            'cache_ttl': context7_raw.get('cache_ttl', 3600)
+                        }
+                        print(f"MCP DEBUG: Creating Context7Provider with config: {provider_config.config}")
+                        provider = Context7Provider(provider_config)
+                        print(f"MCP DEBUG: Context7Provider created successfully")
                     else:
                         logger.warning(f"No implementation for provider type {provider_type}")
                         continue
                     
                     enhancer.register_external_provider(provider_id, provider)
                     registered_count += 1
+                    print(f"MCP DEBUG: Successfully registered {provider_id} provider (type: {provider_type})")
                     logger.info(f"Registered {provider_id} provider (type: {provider_type})")
                 except Exception as e:
+                    print(f"MCP ERROR: Failed to create provider {provider_id}: {e}")
                     logger.error(f"Failed to create provider {provider_id}: {e}", exc_info=True)
             
             print(f"MCP SUCCESS: Registered {registered_count} external providers")

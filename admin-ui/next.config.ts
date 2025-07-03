@@ -32,10 +32,6 @@ const baseConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/v1/:path*',
-        destination: 'http://api:4000/api/v1/:path*',
-      },
-      {
         source: '/ws/:path*',
         destination: 'http://api:4000/api/v1/ws/:path*',
       },

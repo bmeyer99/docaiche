@@ -170,11 +170,13 @@ class SearchOrchestrator:
             SearchTimeoutError: If search exceeds timeout
         """
         start_time = time.time()
+        trace_id = f"search_{int(time.time() * 1000)}_{query.query[:10].replace(' ', '_')}"
 
         try:
             logger.info(
-                f"Starting search orchestration for query: {query.query[:100]}..."
+                f"[{trace_id}] Starting search orchestration for query: {query.query[:100]}..."
             )
+            logger.info(f"PIPELINE_METRICS: step=search_start trace_id={trace_id} query=\"{query.query}\"")
 
             # Step 1: Query Normalization
             normalized_query = await self._normalize_query(query)
@@ -192,8 +194,10 @@ class SearchOrchestrator:
                         execution_time = int((time.time() - start_time) * 1000)
                         cached_results.query_time_ms = execution_time
                         logger.info(
-                            f"Cache hit - returning {len(cached_results.results)} results"
+                            f"[{trace_id}] Cache hit - returning {len(cached_results.results)} results"
                         )
+                        logger.info(f"PIPELINE_METRICS: step=cache_check duration_ms={execution_time} "
+                                   f"decision=cache_hit result_count={len(cached_results.results)} trace_id={trace_id}")
                         return cached_results, normalized_query
                     else:
                         self._cache_circuit_on_success()
@@ -210,7 +214,9 @@ class SearchOrchestrator:
             search_results = None
             if normalized_query.use_external_search is True and self.mcp_enhancer:
                 # Skip workspace search if external search is explicitly requested
-                logger.info("Skipping workspace search due to explicit external search request")
+                logger.info(f"[{trace_id}] Skipping workspace search due to explicit external search request")
+                logger.info(f"PIPELINE_METRICS: step=workspace_search duration_ms=0 "
+                           f"decision=skip_internal trace_id={trace_id}")
                 search_results = SearchResults(
                     results=[],
                     total_count=0,
@@ -221,13 +227,17 @@ class SearchOrchestrator:
                     enrichment_triggered=False,
                 )
             else:
-                logger.info(f"Starting multi-workspace search for query: '{normalized_query.query}'")
+                ws_start = time.time()
+                logger.info(f"[{trace_id}] Starting multi-workspace search for query: '{normalized_query.query}'")
                 try:
                     search_results = await asyncio.wait_for(
                         self._execute_multi_workspace_search(normalized_query),
                         timeout=self.search_timeout,
                     )
-                    logger.info(f"Workspace search completed: {len(search_results.results)} results from {len(search_results.workspaces_searched)} workspaces")
+                    ws_time = int((time.time() - ws_start) * 1000)
+                    logger.info(f"[{trace_id}] Workspace search completed: {len(search_results.results)} results from {len(search_results.workspaces_searched)} workspaces")
+                    logger.info(f"PIPELINE_METRICS: step=workspace_search duration_ms={ws_time} "
+                               f"result_count={len(search_results.results)} workspaces={len(search_results.workspaces_searched)} trace_id={trace_id}")
                 except asyncio.TimeoutError:
                     raise SearchTimeoutError(
                         f"Search timed out after {self.search_timeout}s",
@@ -262,20 +272,68 @@ class SearchOrchestrator:
             if normalized_query.use_external_search is True:
                 # Explicitly requested
                 should_use_external = True
-                logger.info("External search explicitly requested by user")
-                # Log external search request if metrics available
-                pass  # Metrics logging disabled for now
+                logger.info(f"[{trace_id}] External search explicitly requested by user")
+                logger.info(f"PIPELINE_METRICS: step=external_search_decision duration_ms=0 "
+                           f"decision=explicit_true trace_id={trace_id}")
             elif normalized_query.use_external_search is False:
                 # Explicitly disabled
                 should_use_external = False
-                logger.info("External search explicitly disabled by user")
+                logger.info(f"[{trace_id}] External search explicitly disabled by user")
+                logger.info(f"PIPELINE_METRICS: step=external_search_decision duration_ms=0 "
+                           f"decision=explicit_false trace_id={trace_id}")
             else:
-                # Auto-decide based on results quality
-                should_use_external = (not search_results.results or 
-                                     (evaluation_result and evaluation_result.quality_score < 0.6))
-                logger.info(f"External search auto-decision: {should_use_external} (no results: {not search_results.results}, low quality: {evaluation_result and evaluation_result.quality_score < 0.6})")
-                # Log auto-triggered external search if metrics available
-                pass  # Metrics logging disabled for now
+                # Auto-decide using TextAI with EXTERNAL_SEARCH_DECISION prompt
+                decision_start = time.time()
+                if self.mcp_enhancer and self.mcp_enhancer.text_ai and evaluation_result:
+                    try:
+                        logger.info(f"[{trace_id}] Calling TextAI for external search decision")
+                        
+                        # Convert to MCP models
+                        from src.mcp.core.models import NormalizedQuery
+                        normalized = NormalizedQuery(
+                            original_query=normalized_query.query,
+                            normalized_text=normalized_query.query.lower().strip(),
+                            technology_hint=normalized_query.technology_hint,
+                            query_hash="",
+                            tokens=[]
+                        )
+                        
+                        # Convert evaluation result to MCP format
+                        from src.mcp.core.models import EvaluationResult as MCPEvalResult
+                        mcp_eval = MCPEvalResult(
+                            relevance_score=evaluation_result.overall_quality,
+                            completeness_score=evaluation_result.completeness_score,
+                            needs_refinement=evaluation_result.overall_quality < 0.8,
+                            needs_external_search=False,  # This is what we're deciding
+                            missing_information=evaluation_result.enrichment_topics,
+                            confidence=evaluation_result.confidence_level
+                        )
+                        
+                        # Call TextAI to decide
+                        external_decision = await self.mcp_enhancer.text_ai.decide_external_search(
+                            normalized, mcp_eval
+                        )
+                        should_use_external = external_decision.should_search
+                        
+                        decision_time = int((time.time() - decision_start) * 1000)
+                        logger.info(
+                            f"[{trace_id}] TextAI external search decision in {decision_time}ms: "
+                            f"{should_use_external} (reason: {external_decision.reasoning})"
+                        )
+                        logger.info(f"PIPELINE_METRICS: step=external_search_decision duration_ms={decision_time} "
+                                   f"decision={'use_external' if should_use_external else 'skip_external'} "
+                                   f"confidence={external_decision.confidence} trace_id={trace_id}")
+                    except Exception as e:
+                        logger.error(f"[{trace_id}] TextAI external search decision failed: {e}")
+                        # Fallback to simple logic
+                        should_use_external = (not search_results.results or 
+                                             evaluation_result.overall_quality < 0.6)
+                        logger.info(f"[{trace_id}] Fallback external search decision: {should_use_external}")
+                else:
+                    # No TextAI available, use simple logic
+                    should_use_external = (not search_results.results or 
+                                         (evaluation_result and evaluation_result.overall_quality < 0.6))
+                    logger.info(f"[{trace_id}] Simple external search decision: {should_use_external}")
             
             logger.info(f"MCP enhancer available: {self.mcp_enhancer is not None}, should use external: {should_use_external}")
             if self.mcp_enhancer and should_use_external:
@@ -331,8 +389,12 @@ class SearchOrchestrator:
                 # Continue without caching - this is non-critical
 
             logger.info(
-                f"Search completed: {len(final_results.results)} results in {execution_time}ms"
+                f"[{trace_id}] Search completed: {len(final_results.results)} results in {execution_time}ms"
             )
+            logger.info(f"PIPELINE_METRICS: step=search_complete duration_ms={execution_time} "
+                       f"total_results={len(final_results.results)} cache_hit=False "
+                       f"external_used={external_results_added} enrichment_triggered={enrichment_triggered} "
+                       f"trace_id={trace_id}")
             return final_results, normalized_query
 
         except SearchTimeoutError:
@@ -429,37 +491,77 @@ class SearchOrchestrator:
         Returns:
             EvaluationResult with quality assessment
         """
-        if not self.llm_client:
+        if not self.mcp_enhancer or not self.mcp_enhancer.text_ai:
+            logger.warning("MCP enhancer or text AI not available, using fallback evaluation")
             return None
 
         try:
-            logger.debug("Evaluating search results with LLM")
+            start_time = time.time()
+            trace_id = getattr(query, 'trace_id', f"search_{int(time.time() * 1000)}")
+            logger.info(f"[{trace_id}] Evaluating search results with TextAI for query: {query.query}")
 
-            # Prepare evaluation prompt (simplified implementation)
-            # evaluation_prompt = self._create_evaluation_prompt(query, results)
+            # Convert to MCP normalized query format
+            from src.mcp.core.models import NormalizedQuery, VectorSearchResults
+            normalized = NormalizedQuery(
+                original_query=query.query,
+                normalized_text=query.query.lower().strip(),
+                technology_hint=query.technology_hint,
+                query_hash="",  # Not needed for evaluation
+                tokens=[]
+            )
 
-            # Call LLM client (this would need to be implemented based on PRD-005)
-            # For now, return a placeholder evaluation
+            # Convert results to VectorSearchResults format
+            vector_results = VectorSearchResults(
+                results=results.results,
+                total_count=results.total_count,
+                query_time_ms=results.query_time_ms
+            )
+
+            # Call TextAI evaluation with RESULT_RELEVANCE prompt
+            mcp_eval = await self.mcp_enhancer.text_ai.evaluate_results(
+                normalized, vector_results
+            )
+
+            # Convert MCP evaluation to orchestrator format
             evaluation_result = EvaluationResult(
-                overall_quality=0.7,
-                relevance_assessment=0.8,
-                completeness_score=0.6,
-                needs_enrichment=len(results.results) < 5,  # Simple heuristic
-                enrichment_topics=(
+                overall_quality=mcp_eval.relevance_score,
+                relevance_assessment=mcp_eval.relevance_score,
+                completeness_score=mcp_eval.completeness_score,
+                needs_enrichment=mcp_eval.needs_external_search or len(mcp_eval.missing_information) > 0,
+                enrichment_topics=mcp_eval.missing_information or (
                     [query.technology_hint] if query.technology_hint else []
                 ),
-                confidence_level=0.8,
-                reasoning="Automated evaluation based on result count and relevance",
+                confidence_level=mcp_eval.confidence,
+                reasoning=f"LLM evaluation - relevance: {mcp_eval.relevance_score:.2f}, needs_external: {mcp_eval.needs_external_search}",
             )
 
-            logger.debug(
-                f"LLM evaluation completed: quality={evaluation_result.overall_quality:.2f}"
+            eval_time = int((time.time() - start_time) * 1000)
+            logger.info(
+                f"[{trace_id}] TextAI evaluation completed in {eval_time}ms: "
+                f"quality={evaluation_result.overall_quality:.2f}, "
+                f"confidence={evaluation_result.confidence_level:.2f}, "
+                f"needs_external={mcp_eval.needs_external_search}"
             )
+            
+            # Log metrics for pipeline visualization
+            logger.info(f"PIPELINE_METRICS: step=text_ai_evaluation duration_ms={eval_time} "
+                       f"confidence_score={evaluation_result.overall_quality} "
+                       f"decision=evaluate_results trace_id={trace_id}")
+            
             return evaluation_result
 
         except Exception as e:
-            logger.error(f"LLM evaluation failed: {e}")
-            return None
+            logger.error(f"TextAI evaluation failed: {e}", exc_info=True)
+            # Fallback to simple evaluation
+            return EvaluationResult(
+                overall_quality=0.5,
+                relevance_assessment=0.5,
+                completeness_score=0.5,
+                needs_enrichment=True,
+                enrichment_topics=[query.technology_hint] if query.technology_hint else [],
+                confidence_level=0.3,
+                reasoning=f"Fallback evaluation due to error: {str(e)}",
+            )
 
     async def _trigger_enrichment(
         self,

@@ -150,12 +150,12 @@ export function ApiHealthProvider({ children }: ApiHealthProviderProps) {
     checkHealth();
   }, []);
 
-  // Set up interval for health checks every minute
+  // Set up interval for health checks every 5 minutes
   useEffect(() => {
     // Start interval
     checkIntervalRef.current = setInterval(() => {
       checkHealth();
-    }, 60000); // 1 minute
+    }, 300000); // 5 minutes
 
     // Cleanup
     return () => {

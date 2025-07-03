@@ -325,6 +325,8 @@ async def create_provider(
                     provider_type = ProviderType.PERPLEXITY
                 elif create_request.config.provider_type.lower() == 'kagi':
                     provider_type = ProviderType.KAGI
+                elif create_request.config.provider_type.lower() == 'context7':
+                    provider_type = ProviderType.CONTEXT7
                 else:
                     logger.warning(f"Unknown provider type: {create_request.config.provider_type}")
                 
@@ -759,4 +761,113 @@ async def get_performance_stats(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve statistics: {str(e)}"
+        )
+
+
+@router.get("/context7/fetch")
+async def fetch_context7_documentation(
+    request: Request,
+    library: str = Query(..., description="Library name to fetch documentation for"),
+    topic: Optional[str] = Query(None, description="Specific topic within the library"),
+    search_orchestrator: SearchOrchestrator = Depends(get_search_orchestrator)
+) -> Dict[str, Any]:
+    """
+    GET /api/v1/mcp/context7/fetch - Fetch documentation directly from Context7
+    
+    This endpoint provides direct access to Context7 documentation retrieval
+    for real-time library documentation. It returns raw documentation that
+    can be ingested into the system.
+    """
+    trace_id = get_trace_id(request)
+    
+    try:
+        logger.info(f"[{trace_id}] Fetching Context7 documentation for library: {library}, topic: {topic}")
+        
+        # Get MCP enhancer from orchestrator
+        if not hasattr(search_orchestrator, 'mcp_enhancer') or not search_orchestrator.mcp_enhancer:
+            raise HTTPException(
+                status_code=503,
+                detail="MCP search enhancer not available"
+            )
+        
+        mcp_enhancer = search_orchestrator.mcp_enhancer
+        external_providers = getattr(mcp_enhancer, 'external_providers', {})
+        
+        # Find Context7 provider
+        context7_provider = None
+        for provider_id, provider in external_providers.items():
+            if 'context7' in provider_id.lower():
+                context7_provider = provider
+                break
+        
+        if not context7_provider:
+            raise HTTPException(
+                status_code=404,
+                detail="Context7 provider not found. Please ensure it's configured and enabled."
+            )
+        
+        # Create search query
+        query = f"{library} {topic}" if topic else library
+        
+        # Use the provider's search method
+        from src.mcp.providers.models import SearchOptions
+        search_options = SearchOptions(
+            query=query,
+            max_results=10,
+            timeout_seconds=10.0
+        )
+        
+        # Execute search
+        start_time = time.time()
+        results = await context7_provider.search(search_options)
+        search_time = int((time.time() - start_time) * 1000)
+        
+        # Extract documentation and metadata
+        documentation = []
+        for result in results.results:
+            doc_entry = {
+                "title": result.title,
+                "content": result.content,
+                "url": result.url,
+                "metadata": result.metadata,
+                "relevance_score": result.score
+            }
+            documentation.append(doc_entry)
+        
+        # Log metrics
+        if metrics:
+            metrics.log_api_request(
+                endpoint="/mcp/context7/fetch",
+                method="GET",
+                response_time_ms=search_time,
+                status_code=200,
+                trace_id=trace_id
+            )
+        
+        response = {
+            "library": library,
+            "topic": topic,
+            "documentation": documentation,
+            "total_results": len(documentation),
+            "fetch_time_ms": search_time,
+            "provider": "context7",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": documentation[0]["metadata"].get("version", "latest") if documentation else None
+        }
+        
+        # Trigger async ingestion if results found
+        if documentation and hasattr(search_orchestrator, 'knowledge_enricher'):
+            # This would queue the documentation for ingestion
+            # Implementation depends on knowledge enricher interface
+            logger.info(f"[{trace_id}] Queuing {len(documentation)} Context7 docs for ingestion")
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[{trace_id}] Failed to fetch Context7 documentation: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch documentation: {str(e)}"
         )

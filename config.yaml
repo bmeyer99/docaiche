@@ -133,10 +133,19 @@ mcp:
         max_requests_per_minute: 100
         timeout_seconds: 3
       duckduckgo:
-        enabled: true  # No API key required
+        enabled: false  # Disabled - no official API available
         priority: 3
         max_requests_per_minute: 30
         timeout_seconds: 4
+      context7:
+        enabled: true  # No API key required - uses Context7 MCP server
+        priority: 4
+        max_requests_per_minute: 30
+        timeout_seconds: 5
+        # Context7-specific configuration for MCP subprocess
+        command: "npx"
+        args: ["-y", "@upstash/context7-mcp"]
+        cache_ttl: 3600
     circuit_breaker:
       failure_threshold: 3
       recovery_timeout: 300

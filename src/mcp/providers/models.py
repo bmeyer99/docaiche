@@ -38,6 +38,7 @@ class ProviderType(str, Enum):
     SEARXNG = "searxng"
     PERPLEXITY = "perplexity"
     KAGI = "kagi"
+    CONTEXT7 = "context7"
     CUSTOM = "custom"
 
 
@@ -566,6 +567,11 @@ class ProviderConfig(BaseModel):
         description="Seconds before circuit breaker resets",
         ge=10,
         le=600
+    )
+    
+    config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Provider-specific configuration"
     )
     
     @validator('api_key')
