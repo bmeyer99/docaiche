@@ -894,6 +894,7 @@ class SearchOrchestrator:
             } if technology_hint else {},
             limit=limit,
             offset=offset,
+            technology_hint=technology_hint,
             external_providers=external_providers,
             use_external_search=use_external_search
         )

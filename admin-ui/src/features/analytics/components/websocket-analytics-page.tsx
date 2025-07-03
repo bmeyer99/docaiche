@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { useAnalyticsWebSocket } from '@/lib/hooks/use-websocket';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useAnalyticsStore } from '@/stores/analytics-store';
+import CleanAnalyticsManager from '@/lib/clean-analytics-manager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,11 +34,30 @@ const COLORS = [
 ];
 
 export default function WebSocketAnalyticsPage() {
-  const [timeRange, setTimeRange] = useState('24h');
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('area');
   
-  // Always connect WebSocket - monitoring should always be available
-  const { analytics, stats, isConnected, error } = useAnalyticsWebSocket(timeRange, true);
+  // Use global analytics store
+  const { 
+    analytics, 
+    stats, 
+    connectionStatus, 
+    timeRange, 
+    setTimeRange,
+    lastUpdateTime
+  } = useAnalyticsStore();
+  
+  // Derived state for compatibility with existing code
+  const isConnected = connectionStatus === 'connected';
+  const error = connectionStatus === 'disconnected' ? new Error('WebSocket disconnected') : null;
+  
+  // Handle time range changes
+  const handleTimeRangeChange = useCallback((newTimeRange: string) => {
+    setTimeRange(newTimeRange);
+    
+    // Send time range update to Clean WebSocket manager
+    const wsManager = CleanAnalyticsManager.getInstance();
+    wsManager.sendTimeRange(newTimeRange);
+  }, [setTimeRange]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -82,7 +102,12 @@ export default function WebSocketAnalyticsPage() {
               {isConnected ? 'Connected' : 'Disconnected'}
             </span>
           </div>
-          <Select value={timeRange} onValueChange={setTimeRange}>
+          {lastUpdateTime > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Last updated: {new Date(lastUpdateTime).toLocaleTimeString()}
+            </div>
+          )}
+          <Select value={timeRange} onValueChange={handleTimeRangeChange}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -133,6 +158,7 @@ export default function WebSocketAnalyticsPage() {
 
               // Categorize services and group API endpoints
               const apiEndpoints: any[] = [];
+              
               
               Object.entries(analytics.systemHealth).forEach(([component, health]: [string, any]) => {
                 const group = health.group || 'infrastructure';
@@ -197,12 +223,11 @@ export default function WebSocketAnalyticsPage() {
                   )}
                   
                   {Object.entries(serviceGroups).map(([groupKey, group]) => {
-                    if (group.services.length === 0) return null;
-                    
                     // Calculate group health summary
                     const healthyCounts = group.services.filter(s => s.health.status === 'healthy').length;
                     const totalCounts = group.services.length;
-                    const groupStatus = healthyCounts === totalCounts ? 'healthy' : 
+                    const groupStatus = totalCounts === 0 ? 'unknown' :
+                                      healthyCounts === totalCounts ? 'healthy' : 
                                       healthyCounts > 0 ? 'degraded' : 'unhealthy';
 
                     return (
@@ -213,13 +238,31 @@ export default function WebSocketAnalyticsPage() {
                             <h3 className="font-semibold text-base">{group.title}</h3>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <div className={`w-2 h-2 rounded-full ${getStatusColor(groupStatus)}`} />
-                              <span>{healthyCounts}/{totalCounts} services healthy</span>
+                              <span>
+                                {totalCounts === 0 ? 'Loading services...' : `${healthyCounts}/${totalCounts} services healthy`}
+                              </span>
                             </div>
                           </div>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {group.services.map(({ component, health, endpoints }) => (
+                          {group.services.length === 0 ? (
+                            // Show loading skeletons when no services are loaded yet
+                            <>
+                              {[1, 2, 3].map((i) => (
+                                <div key={`skeleton-${i}`} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="w-3 h-3 rounded-full bg-gray-300 animate-pulse" />
+                                    <div className="flex-1">
+                                      <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
+                                      <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </>
+                          ) : (
+                            group.services.map(({ component, health, endpoints }) => (
                             <div key={component} className="flex items-center justify-between p-3 rounded-lg border bg-card">
                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <div className={`w-3 h-3 rounded-full ${getStatusColor(health.status)} ${
@@ -251,7 +294,7 @@ export default function WebSocketAnalyticsPage() {
                                 </Button>
                               )}
                             </div>
-                          ))}
+                          )))}
                         </div>
                       </div>
                     );

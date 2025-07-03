@@ -660,56 +660,16 @@ async def check_system_health():
             "group": "search_ai"
         }
     
-    # API Endpoints Health Check - Dynamically discover and monitor all endpoints
+    # API Endpoints Health Check - Monitor only essential endpoints
     try:
-        # Import FastAPI app to get routes
-        from ...main import app
-        
-        # Discover all API endpoints dynamically
-        api_endpoints = []
-        
-        # Get all routes from the FastAPI app
-        for route in app.routes:
-            if hasattr(route, 'path') and hasattr(route, 'methods'):
-                # Skip WebSocket routes and internal routes
-                if route.path.startswith('/ws/') or route.path == '/openapi.json' or route.path == '/docs' or route.path == '/redoc':
-                    continue
-                
-                # Skip parameterized routes (containing {})
-                if '{' in route.path or '}' in route.path:
-                    continue
-                    
-                # Only monitor GET endpoints (health checks)
-                if 'GET' in route.methods:
-                    # Only include top-level API routes
-                    if route.path.startswith('/api/v1/'):
-                        # Extract a friendly name from the path
-                        path_parts = route.path.strip('/').split('/')
-                        if path_parts:
-                            # Get the last meaningful part
-                            name = path_parts[-1].replace('-', ' ').replace('_', ' ').title()
-                            
-                            # Special cases for better names
-                            name_map = {
-                                'V1': 'API Root',
-                                'Health': 'Health Check',
-                                'Mcp': 'MCP Tools',
-                                'Recent': 'Recent Activity',
-                                'Config': 'Configuration',
-                                'Analytics': 'Analytics',
-                                'Providers': 'Providers',
-                                'Stats': 'Statistics',
-                                'Metrics': 'Metrics',
-                                'Search': 'Search',
-                                'Logs': 'Logs',
-                            }
-                            
-                            name = name_map.get(name, name)
-                            
-                            api_endpoints.append({
-                                "path": route.path,
-                                "name": name
-                            })
+        # Curated list of essential endpoints only
+        api_endpoints = [
+            {"path": "/api/v1/health", "name": "Health Check"},
+            {"path": "/api/v1/search/content", "name": "Search Content"},
+            {"path": "/api/v1/mcp", "name": "MCP Tools"},
+            {"path": "/api/v1/providers", "name": "Providers"},
+            {"path": "/api/v1/analytics", "name": "Analytics"},
+        ]
         
         
         # Sort endpoints by path for consistent ordering

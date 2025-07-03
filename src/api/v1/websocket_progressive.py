@@ -112,6 +112,174 @@ async def get_system_health_quick():
     return health_status
 
 
+async def get_search_ai_services_quick():
+    """Get Search & AI services health quickly."""
+    import time
+    from src.core.config import get_system_configuration
+    
+    health_status = {}
+    
+    # Vector Store (Weaviate) Health Check
+    try:
+        weaviate_client = await get_weaviate_client()
+        start = time.time()
+        weaviate_health = await weaviate_client.health_check()
+        response_time = int((time.time() - start) * 1000)
+        
+        health_status["vector_store"] = {
+            "status": "healthy" if weaviate_health.get("status") == "healthy" else "degraded",
+            "message": weaviate_health.get("message", "Vector store operational"),
+            "response_time": response_time,
+            "group": "search_ai"
+        }
+    except Exception as e:
+        health_status["vector_store"] = {
+            "status": "degraded",
+            "message": "Vector store not configured or unreachable",
+            "group": "search_ai"
+        }
+    
+    # AI Text Providers Health Check (quick configuration check)
+    try:
+        config = get_system_configuration()
+        ai_config = getattr(config, "ai", None)
+        
+        # Check if any AI providers are configured
+        ollama_enabled = bool(ai_config and getattr(ai_config, "ollama", None))
+        openai_enabled = bool(ai_config and getattr(ai_config, "openai", None))
+        anthropic_enabled = bool(ai_config and getattr(ai_config, "anthropic", None))
+        
+        provider_count = sum([ollama_enabled, openai_enabled, anthropic_enabled])
+        
+        if provider_count > 0:
+            health_status["text_ai_providers"] = {
+                "status": "healthy",
+                "message": f"{provider_count} AI provider(s) configured",
+                "group": "search_ai"
+            }
+        else:
+            health_status["text_ai_providers"] = {
+                "status": "degraded",
+                "message": "No AI providers configured",
+                "group": "search_ai"
+            }
+    except Exception as e:
+        health_status["text_ai_providers"] = {
+            "status": "degraded",
+            "message": "Unable to check AI provider configuration",
+            "group": "search_ai"
+        }
+    
+    # Search Orchestrator Health Check (quick)
+    try:
+        search_orchestrator = await get_search_orchestrator()
+        start = time.time()
+        search_health = await search_orchestrator.health_check()
+        response_time = int((time.time() - start) * 1000)
+        
+        if search_health.get("overall_status") == "healthy":
+            health_status["search_service"] = {
+                "status": "healthy",
+                "message": "Search service operational",
+                "response_time": response_time,
+                "group": "search_ai"
+            }
+        else:
+            health_status["search_service"] = {
+                "status": "unhealthy",
+                "message": "Search service unavailable",
+                "group": "search_ai"
+            }
+    except Exception as e:
+        health_status["search_service"] = {
+            "status": "unhealthy",
+            "message": "Search orchestrator error",
+            "group": "search_ai"
+        }
+    
+    return health_status
+
+
+async def get_monitoring_services_quick():
+    """Get Monitoring & Operations services health quickly."""
+    import aiohttp
+    
+    health_status = {}
+    monitoring_services = []
+    
+    # Check Grafana (quick)
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=1)) as session:
+            async with session.get("http://grafana:3000/api/health") as response:
+                if response.status == 200:
+                    monitoring_services.append("Grafana")
+    except Exception:
+        pass
+    
+    # Check Prometheus (quick)
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=1)) as session:
+            async with session.get("http://prometheus:9090/-/healthy") as response:
+                if response.status == 200:
+                    monitoring_services.append("Prometheus")
+    except Exception:
+        pass
+    
+    # Check Loki (quick)
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=1)) as session:
+            async with session.get("http://loki:3100/ready") as response:
+                if response.status == 200:
+                    monitoring_services.append("Loki")
+    except Exception:
+        pass
+    
+    # Monitoring Stack Health
+    if len(monitoring_services) >= 2:
+        health_status["monitoring_stack"] = {
+            "status": "healthy",
+            "message": f"Monitoring active: {', '.join(monitoring_services)}",
+            "group": "monitoring"
+        }
+    elif len(monitoring_services) == 1:
+        health_status["monitoring_stack"] = {
+            "status": "degraded",
+            "message": f"Partial monitoring: {monitoring_services[0]} only",
+            "group": "monitoring"
+        }
+    else:
+        health_status["monitoring_stack"] = {
+            "status": "degraded",
+            "message": "Monitoring services not responding",
+            "group": "monitoring"
+        }
+    
+    # Admin UI Health Check (quick)
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=1)) as session:
+            async with session.get("http://admin-ui:3000") as response:
+                if response.status == 200:
+                    health_status["admin_ui"] = {
+                        "status": "healthy", 
+                        "message": "Admin interface available",
+                        "group": "monitoring"
+                    }
+                else:
+                    health_status["admin_ui"] = {
+                        "status": "degraded",
+                        "message": "Admin interface not responding",
+                        "group": "monitoring"
+                    }
+    except Exception:
+        health_status["admin_ui"] = {
+            "status": "degraded",
+            "message": "Admin interface status unknown",
+            "group": "monitoring"
+        }
+    
+    return health_status
+
+
 async def get_basic_stats():
     """Get basic statistics quickly."""
     db_manager = await get_database_manager()
@@ -293,54 +461,14 @@ async def send_progressive_api_endpoints(websocket: WebSocket):
     import time
     
     try:
-        # Import FastAPI app to get routes
-        from ...main import app
-        
-        # Discover all API endpoints dynamically
-        api_endpoints = []
-        
-        # Get all routes from the FastAPI app
-        for route in app.routes:
-            if hasattr(route, 'path') and hasattr(route, 'methods'):
-                # Skip WebSocket routes and internal routes
-                if route.path.startswith('/ws/') or route.path == '/openapi.json' or route.path == '/docs' or route.path == '/redoc':
-                    continue
-                
-                # Skip parameterized routes (containing {})
-                if '{' in route.path or '}' in route.path:
-                    continue
-                    
-                # Only monitor GET endpoints (health checks)
-                if 'GET' in route.methods:
-                    # Only include top-level API routes
-                    if route.path.startswith('/api/v1/'):
-                        # Extract a friendly name from the path
-                        path_parts = route.path.strip('/').split('/')
-                        if path_parts:
-                            # Get the last meaningful part
-                            name = path_parts[-1].replace('-', ' ').replace('_', ' ').title()
-                            
-                            # Special cases for better names
-                            name_map = {
-                                'V1': 'API Root',
-                                'Health': 'Health Check',
-                                'Mcp': 'MCP Tools',
-                                'Recent': 'Recent Activity',
-                                'Config': 'Configuration',
-                                'Analytics': 'Analytics',
-                                'Providers': 'Providers',
-                                'Stats': 'Statistics',
-                                'Metrics': 'Metrics',
-                                'Search': 'Search',
-                                'Logs': 'Logs',
-                            }
-                            
-                            name = name_map.get(name, name)
-                            
-                            api_endpoints.append({
-                                "path": route.path,
-                                "name": name
-                            })
+        # Curated list of essential endpoints only
+        api_endpoints = [
+            {"path": "/api/v1/health", "name": "Health Check"},
+            {"path": "/api/v1/search/content", "name": "Search Content"},
+            {"path": "/api/v1/mcp", "name": "MCP Tools"},
+            {"path": "/api/v1/providers", "name": "Providers"},
+            {"path": "/api/v1/analytics", "name": "Analytics"},
+        ]
         
         # Sort endpoints by path for consistent ordering
         api_endpoints.sort(key=lambda x: x['path'])
@@ -440,6 +568,42 @@ async def progressive_analytics_websocket(websocket: WebSocket):
                 "health"
             )
         
+        # Send Search & AI services health (relatively quick)
+        try:
+            search_ai_health = await get_search_ai_services_quick()
+            await send_progressive_message(
+                websocket,
+                "analytics_update",
+                {"systemHealth": search_ai_health},
+                "search_ai_health"
+            )
+        except Exception as e:
+            logger.error(f"Error getting Search & AI health: {e}")
+            await send_progressive_message(
+                websocket,
+                "analytics_update",
+                {"systemHealth": {"error": "Search & AI services unavailable"}},
+                "search_ai_health"
+            )
+        
+        # Send Monitoring services health (quick)
+        try:
+            monitoring_health = await get_monitoring_services_quick()
+            await send_progressive_message(
+                websocket,
+                "analytics_update",
+                {"systemHealth": monitoring_health},
+                "monitoring_health"
+            )
+        except Exception as e:
+            logger.error(f"Error getting Monitoring health: {e}")
+            await send_progressive_message(
+                websocket,
+                "analytics_update",
+                {"systemHealth": {"error": "Monitoring services unavailable"}},
+                "monitoring_health"
+            )
+
         # Send basic stats next (relatively quick)
         try:
             basic_stats = await get_basic_stats()
@@ -584,6 +748,62 @@ async def progressive_analytics_websocket(websocket: WebSocket):
                         )
                     except Exception as e:
                         logger.error(f"Error handling timerange change: {e}")
+                
+                elif data.get("type") == "refresh_data":
+                    # Handle fresh data request when tab becomes visible
+                    try:
+                        logger.info("Received refresh_data request - sending fresh analytics data progressively")
+                        
+                        # Send fresh core infrastructure health
+                        basic_health_data = await get_system_health_quick()
+                        await send_progressive_message(
+                            websocket,
+                            "analytics_update",
+                            {"systemHealth": basic_health_data},
+                            "health_update"
+                        )
+                        
+                        # Send fresh Search & AI services health
+                        search_ai_health = await get_search_ai_services_quick()
+                        await send_progressive_message(
+                            websocket,
+                            "analytics_update",
+                            {"systemHealth": search_ai_health},
+                            "search_ai_health"
+                        )
+                        
+                        # Send fresh Monitoring services health
+                        monitoring_health = await get_monitoring_services_quick()
+                        await send_progressive_message(
+                            websocket,
+                            "analytics_update",
+                            {"systemHealth": monitoring_health},
+                            "monitoring_health"
+                        )
+                        
+                        # Send fresh basic stats
+                        basic_stats = await get_basic_stats()
+                        await send_progressive_message(
+                            websocket,
+                            "analytics_update",
+                            {"stats": basic_stats},
+                            "stats_update"
+                        )
+                        
+                        # Send fresh service metrics if available
+                        try:
+                            service_metrics = await get_service_metrics_async()
+                            await send_progressive_message(
+                                websocket,
+                                "analytics_update",
+                                {"service_metrics": service_metrics},
+                                "service_metrics"
+                            )
+                        except Exception as e:
+                            logger.debug(f"Service metrics unavailable during refresh: {e}")
+                        
+                    except Exception as e:
+                        logger.error(f"Error handling refresh_data: {e}")
                 
                 elif data.get("type") == "ping":
                     await websocket.send_json({"type": "pong"})

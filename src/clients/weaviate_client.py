@@ -433,18 +433,23 @@ class WeaviateVectorClient:
             
         except Exception as e:
             error_str = str(e).lower()
-            logger.info(f"Weaviate search exception for workspace {workspace_slug}: {e} (type: {type(e).__name__})")
+            error_type = type(e).__name__
+            logger.info(f"Weaviate search exception for workspace '{workspace_slug}': {e} (type: {error_type})")
             
-            # Handle workspace not found as empty results, not an error
-            if any(phrase in error_str for phrase in [
-                "tenant", "not found", "does not exist", "no such tenant", "no objects found", "empty"
-            ]):
-                logger.info(f"Workspace {workspace_slug} not found or empty, returning empty results")
+            # Handle data-related scenarios as empty results (not system errors)
+            data_related_errors = [
+                "tenant", "not found", "does not exist", "no such tenant", 
+                "no objects found", "empty", "no results", "no schema",
+                "collection", "class", "not exist"
+            ]
+            
+            if any(phrase in error_str for phrase in data_related_errors):
+                logger.info(f"Workspace '{workspace_slug}' has no data or doesn't exist - returning empty results")
                 return []
             
-            # Handle other exceptions as actual errors
-            logger.error(f"Search failed for workspace {workspace_slug}: {e}")
-            raise WeaviateError(f"Search failed: {str(e)}")
+            # Log full exception details for system errors
+            logger.error(f"System error in workspace search '{workspace_slug}': {e}", exc_info=True)
+            raise WeaviateError(f"Search failed for workspace {workspace_slug}: {str(e)}")
     
     async def list_workspace_documents(
         self, workspace_slug: str

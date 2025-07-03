@@ -5,6 +5,7 @@ import { ApiClientProvider } from '@/components/providers/api-client-provider';
 import { ApiHealthProvider } from '@/components/providers/api-health-provider';
 import { BrowserLoggerProvider } from '@/components/providers/browser-logger-provider';
 import { ProviderSettingsProvider } from '@/lib/hooks/use-provider-settings';
+import { AnalyticsProvider } from '@/providers/analytics-provider';
 
 export default function Providers({
   activeThemeValue,
@@ -20,7 +21,9 @@ export default function Providers({
           <ApiHealthProvider>
             <BrowserLoggerProvider>
               <ProviderSettingsProvider>
-                {children}
+                <AnalyticsProvider>
+                  {children}
+                </AnalyticsProvider>
               </ProviderSettingsProvider>
             </BrowserLoggerProvider>
           </ApiHealthProvider>

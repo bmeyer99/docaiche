@@ -20,6 +20,7 @@ from .provider_endpoints import router as provider_router
 from .activity_endpoints import router as activity_router
 from .websocket_endpoints import router as websocket_router
 from .websocket_progressive import router as websocket_progressive_router
+from .websocket_clean import router as websocket_clean_router
 from .logs_endpoints import router as logs_router
 from .containers_endpoints import router as containers_router
 from .metrics_endpoints import router as metrics_router
@@ -53,6 +54,7 @@ api_router.include_router(provider_router)
 api_router.include_router(activity_router)
 api_router.include_router(websocket_router)
 api_router.include_router(websocket_progressive_router)
+api_router.include_router(websocket_clean_router)
 api_router.include_router(logs_router)
 api_router.include_router(containers_router)
 api_router.include_router(metrics_router)

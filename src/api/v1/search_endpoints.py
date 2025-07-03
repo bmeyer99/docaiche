@@ -105,12 +105,12 @@ async def search_documents_post(
     trace_id = get_trace_id(request)
     
     try:
-        
+        logger.info(f"[{trace_id}] Search endpoint started")
         logger.info(f"Search request: query={search_request.query!r}, tech_hint={search_request.technology_hint!r} (type: {type(search_request.technology_hint)}), limit={search_request.limit!r}")
         logger.info(f"Search orchestrator type: {type(search_orchestrator)}")
         
         # Execute real search through the orchestrator - it returns API-compatible response
-        logger.info(f"[{trace_id}] Calling orchestrator.search method")
+        logger.info(f"[{trace_id}] About to call orchestrator.search method")
         search_response = await search_orchestrator.search(
             query=search_request.query,
             technology_hint=search_request.technology_hint,
@@ -176,7 +176,7 @@ async def search_documents_get(
 
     # Use the same logic as POST endpoint
     return await search_documents_post(
-        request, search_request, BackgroundTasks(), search_orchestrator
+        request, search_request, BackgroundTasks(), search_orchestrator, config_manager
     )
 
 
