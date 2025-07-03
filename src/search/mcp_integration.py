@@ -398,28 +398,34 @@ def create_mcp_enhancer(
             from src.mcp.providers.models import ProviderConfig, ProviderType
             print("MCP DEBUG: Imported models")
             from src.core.config import get_system_configuration
+            from src.core.config.manager import ConfigurationManager
             import os
             print("MCP DEBUG: All imports successful")
             
-            # Get configuration
+            # Get both structured config and raw config
             config = get_system_configuration()
+            config_manager = ConfigurationManager()
+            raw_config_dict = config_manager.get_raw_configuration()
+            
             print(f"MCP DEBUG: Full config type: {type(config)}")
-            print(f"MCP DEBUG: Config attributes: {dir(config) if config else 'None'}")
+            print(f"MCP DEBUG: Raw config dict keys: {list(raw_config_dict.keys())}")
             
-            # Try to access MCP config directly from the raw dict
-            if config and hasattr(config, '__dict__'):
-                print(f"MCP DEBUG: Config dict keys: {list(config.__dict__.keys())}")
-                print(f"MCP DEBUG: mcp value: {config.__dict__.get('mcp', 'NOT FOUND')}")
+            # Get MCP configuration from raw dict (includes database overrides)
+            raw_mcp_config = raw_config_dict.get('mcp', {})
+            raw_external_search = raw_mcp_config.get('external_search', {})
+            raw_providers = raw_external_search.get('providers', {})
             
-            mcp_config = getattr(config, 'mcp', None) if config else None
-            print(f"MCP DEBUG: mcp_config value: {mcp_config}")
+            print(f"MCP DEBUG: Raw MCP config: {raw_mcp_config}")
+            print(f"MCP DEBUG: Raw providers from database: {list(raw_providers.keys())}")
             
-            # Handle the case where mcp_config might be None
-            if mcp_config and hasattr(mcp_config, 'external_search'):
-                external_search = mcp_config.external_search
-                providers_config = external_search.providers if hasattr(external_search, 'providers') else {}
-            else:
-                providers_config = {}
+            # Use raw providers config (includes database overrides)
+            providers_config = raw_providers
+            
+            # Log what we're getting from each source
+            if config and hasattr(config, 'mcp') and config.mcp:
+                structured_providers = config.mcp.external_search.providers if hasattr(config.mcp.external_search, 'providers') else {}
+                print(f"MCP DEBUG: Structured config providers: {list(structured_providers.keys())}")
+            print(f"MCP DEBUG: Using raw config providers: {list(providers_config.keys())}")
                 
             # Also load raw YAML config for Context7 custom fields
             raw_config = {}
@@ -433,14 +439,32 @@ def create_mcp_enhancer(
             except Exception as e:
                 logger.warning(f"Failed to load raw YAML config: {e}")
             
-            print(f"MCP DEBUG: Config loaded - mcp_config exists: {mcp_config is not None}")
-            print(f"MCP DEBUG: providers_config: {providers_config}")
+            print(f"MCP DEBUG: Config loaded - providers_config has {len(providers_config)} providers")
+            print(f"MCP DEBUG: providers_config: {list(providers_config.keys())}")
             
             registered_count = 0
             
             # Register all providers from configuration
             for provider_id, provider_config_data in providers_config.items():
-                if not provider_config_data or not provider_config_data.enabled:
+                print(f"MCP DEBUG: Processing provider {provider_id}, data type: {type(provider_config_data)}")
+                print(f"MCP DEBUG: Provider data: {provider_config_data}")
+                
+                # Handle both dict and object access patterns
+                if isinstance(provider_config_data, dict):
+                    enabled = provider_config_data.get('enabled', True)
+                    api_key_from_config = provider_config_data.get('api_key')
+                    priority = provider_config_data.get('priority', 100)
+                    max_requests = provider_config_data.get('max_requests_per_minute', 60)
+                    timeout = provider_config_data.get('timeout_seconds', 5.0)
+                else:
+                    enabled = getattr(provider_config_data, 'enabled', True)
+                    api_key_from_config = getattr(provider_config_data, 'api_key', None)
+                    priority = getattr(provider_config_data, 'priority', 100)
+                    max_requests = getattr(provider_config_data, 'max_requests_per_minute', 60)
+                    timeout = getattr(provider_config_data, 'timeout_seconds', 5.0)
+                
+                if not provider_config_data or not enabled:
+                    print(f"MCP DEBUG: Skipping disabled provider {provider_id}")
                     continue
                     
                 # Determine provider type
@@ -465,14 +489,13 @@ def create_mcp_enhancer(
                 api_key = None
                 if provider_type == ProviderType.BRAVE:
                     env_key = os.getenv('BRAVE_API_KEY')
-                    config_key = provider_config_data.api_key
-                    logger.debug(f"Provider {provider_id}: env_key={env_key}, config_key={config_key}")
+                    logger.debug(f"Provider {provider_id}: env_key={env_key}, config_key={api_key_from_config}")
                     
                     api_key = env_key
                     if not api_key:
                         # Only use config key if it's not an environment variable placeholder
-                        if config_key and config_key != '${BRAVE_API_KEY}':
-                            api_key = config_key
+                        if api_key_from_config and api_key_from_config != '${BRAVE_API_KEY}':
+                            api_key = api_key_from_config
                             logger.debug(f"Using config key for {provider_id}: {api_key[:10]}...")
                     
                     if not api_key:
@@ -483,7 +506,7 @@ def create_mcp_enhancer(
                     api_key = "not_required"
                 else:
                     # For other providers, get API key from config
-                    api_key = provider_config_data.api_key
+                    api_key = api_key_from_config
                     if not api_key:
                         logger.warning(f"Provider {provider_id} enabled but no API key found")
                         continue
@@ -494,9 +517,9 @@ def create_mcp_enhancer(
                     provider_type=provider_type,
                     enabled=True,
                     api_key=api_key,
-                    priority=provider_config_data.priority,
-                    max_requests_per_minute=provider_config_data.max_requests_per_minute,
-                    timeout_seconds=provider_config_data.timeout_seconds,
+                    priority=priority,
+                    max_requests_per_minute=max_requests,
+                    timeout_seconds=timeout,
                     custom_headers={}
                 )
                 

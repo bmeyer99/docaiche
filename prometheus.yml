@@ -1,6 +1,16 @@
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 60s
+  evaluation_interval: 60s
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []  # Add alertmanager endpoint here if available
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "prometheus-alerts.yml"
 
 scrape_configs:
   # Docker metrics

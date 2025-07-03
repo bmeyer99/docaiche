@@ -147,30 +147,76 @@ class ConfigurationManager:
         """
         config_dict = {}
 
+        # If db_manager is not initialized, try to create a direct connection
         if not self._db_manager:
-            return config_dict
+            try:
+                # Try direct database connection for configuration loading
+                import aiosqlite
+                import os
+                
+                db_path = os.getenv('DATABASE_PATH', '/data/docaiche.db')
+                if os.path.exists(db_path):
+                    async with aiosqlite.connect(db_path) as db:
+                        async with db.execute("SELECT key, value FROM system_config") as cursor:
+                            rows = await cursor.fetchall()
+                            
+                            for row in rows:
+                                try:
+                                    key = row[0]
+                                    value = json.loads(row[1])
+                                    apply_nested_override(config_dict, key, value)
+                                    
+                                    # Debug logging for MCP providers
+                                    if key == "mcp" and isinstance(value, dict):
+                                        external_search = value.get("external_search", {})
+                                        providers = external_search.get("providers", {})
+                                        if providers:
+                                            logger.info(f"Database MCP providers loaded (direct): {list(providers.keys())}")
+                                            
+                                except (json.JSONDecodeError, AttributeError):
+                                    # Treat as string value
+                                    apply_nested_override(config_dict, row[0], row[1])
+                            
+                            if rows:
+                                logger.info(f"Loaded {len(rows)} configuration overrides from database (direct connection)")
+                                
+            except Exception as e:
+                logger.debug(f"Direct database connection not available: {e}")
+                return config_dict
+        else:
+            # Use existing db_manager if available
+            try:
+                # Query system_config table for configuration overrides
+                rows = await self._db_manager.fetch_all(
+                    "SELECT key, value FROM system_config",
+                    (),
+                )
 
-        try:
-            # Query system_config table for configuration overrides
-            rows = await self._db_manager.fetch_all(
-                "SELECT key, value FROM system_config",
-                (),
-            )
+                for row in rows:
+                    try:
+                        # Parse JSON value
+                        value = json.loads(row.value)
+                        apply_nested_override(config_dict, row.key, value)
+                        
+                        # Debug logging for MCP providers
+                        if row.key == "mcp" and isinstance(value, dict):
+                            external_search = value.get("external_search", {})
+                            providers = external_search.get("providers", {})
+                            if providers:
+                                logger.info(f"Database MCP providers loaded: {list(providers.keys())}")
+                                for provider_id, provider_config in providers.items():
+                                    if isinstance(provider_config, dict) and provider_config.get("api_key"):
+                                        logger.info(f"Provider {provider_id} has API key: {provider_config['api_key'][:10]}...")
+                                        
+                    except (json.JSONDecodeError, AttributeError):
+                        # Treat as string value
+                        apply_nested_override(config_dict, row.key, row.value)
 
-            for row in rows:
-                try:
-                    # Parse JSON value
-                    value = json.loads(row.value)
-                    apply_nested_override(config_dict, row.key, value)
-                except (json.JSONDecodeError, AttributeError):
-                    # Treat as string value
-                    apply_nested_override(config_dict, row.key, row.value)
+                if config_dict:
+                    logger.info(f"Loaded {len(rows)} configuration overrides from database")
 
-            if config_dict:
-                logger.info(f"Loaded {len(rows)} configuration overrides from database")
-
-        except Exception as e:
-            logger.warning(f"Failed to load configuration from database: {e}")
+            except Exception as e:
+                logger.warning(f"Failed to load configuration from database: {e}")
 
         return config_dict
 
@@ -482,6 +528,77 @@ class ConfigurationManager:
                 "Configuration not loaded. Call load_configuration() first."
             )
         return self._config
+    
+    def get_raw_configuration(self) -> Dict[str, Any]:
+        """
+        Get raw configuration dictionary with all database overrides applied.
+        
+        This method returns the merged configuration from all sources before
+        it's converted to the SystemConfiguration model. Useful for accessing
+        database-provided configurations that might not be in the model schema.
+        
+        Returns:
+            Dict containing merged configuration from database, yaml, and env
+        """
+        # Handle async context properly
+        import asyncio
+        import concurrent.futures
+        
+        def run_async():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(self._get_raw_configuration_async())
+            finally:
+                loop.close()
+        
+        # Check if we're already in an event loop
+        try:
+            current_loop = asyncio.get_running_loop()
+            # We're in an async context, use thread pool
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_async)
+                return future.result()
+        except RuntimeError:
+            # No event loop running, we can create one
+            return run_async()
+    
+    async def _get_raw_configuration_async(self) -> Dict[str, Any]:
+        """
+        Async helper to get raw configuration dictionary.
+        
+        Returns:
+            Dict containing merged configuration from all sources
+        """
+        # Step 1: Load base configuration from database (lowest priority)
+        config_dict = await self._load_from_database()
+        
+        # Debug logging for raw MCP config from database
+        if "mcp" in config_dict:
+            mcp_config = config_dict.get("mcp", {})
+            external_search = mcp_config.get("external_search", {}) if isinstance(mcp_config, dict) else {}
+            providers = external_search.get("providers", {}) if isinstance(external_search, dict) else {}
+            if providers:
+                logger.info(f"Raw config - Database MCP providers: {list(providers.keys())}")
+        
+        # Step 2: Load and merge config.yaml (medium priority)
+        yaml_config = await self._load_from_yaml()
+        if yaml_config:
+            self._merge_config_dict(config_dict, yaml_config)
+        
+        # Step 3: Load and merge environment variables (highest priority)
+        env_overrides = get_environment_overrides()
+        for key, value in env_overrides.items():
+            apply_nested_override(config_dict, key, value)
+        
+        # Final debug logging
+        if "mcp" in config_dict:
+            mcp_config = config_dict.get("mcp", {})
+            external_search = mcp_config.get("external_search", {}) if isinstance(mcp_config, dict) else {}
+            providers = external_search.get("providers", {}) if isinstance(external_search, dict) else {}
+            logger.info(f"Raw config - Final MCP providers after merge: {list(providers.keys())}")
+        
+        return config_dict
 
     async def reload_configuration(self) -> SystemConfiguration:
         """

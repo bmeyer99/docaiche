@@ -40,10 +40,6 @@ const baseConfig: NextConfig = {
         destination: 'http://api:4000/api/v1/ws/analytics/progressive',
       },
       {
-        source: '/grafana/:path*',
-        destination: 'http://grafana:3000/:path*',
-      },
-      {
         source: '/prometheus/:path*',
         destination: 'http://prometheus:9090/:path*',
       },

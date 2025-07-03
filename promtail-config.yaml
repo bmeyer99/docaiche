@@ -89,27 +89,28 @@ scrape_configs:
           request_type:
       
       # Extract and track AI token usage as metric (only if fields exist)
-      - match:
-          selector: '{tokens_used!=""}'
-          stages:
-            - metrics:
-                ai_tokens_used:
-                  type: Counter
-                  description: "Total AI tokens used"
-                  source: tokens_used
-                  config:
-                    action: add
+      # Commented out metrics to fix negative metadata errors
+      # - match:
+      #     selector: '{tokens_used!=""}'
+      #     stages:
+      #       - metrics:
+      #           ai_tokens_used:
+      #             type: Counter
+      #             description: "Total AI tokens used"
+      #             source: tokens_used
+      #             config:
+      #               action: add
       
-      - match:
-          selector: '{duration!=""}'
-          stages:
-            - metrics:
-                ai_request_duration:
-                  type: Histogram
-                  description: "AI request duration in seconds"
-                  source: duration
-                  config:
-                    buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
+      # - match:
+      #     selector: '{duration!=""}'
+      #     stages:
+      #       - metrics:
+      #           ai_request_duration:
+      #             type: Histogram
+      #             description: "AI request duration in seconds"
+      #             source: duration
+      #             config:
+      #               buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
       
       # Output the actual log message
       - output:
@@ -179,27 +180,28 @@ scrape_configs:
           request_type:
       
       # Track metrics (only if fields exist)
-      - match:
-          selector: '{tokens_used!=""}'
-          stages:
-            - metrics:
-                ai_tokens_total:
-                  type: Counter
-                  description: "Total AI tokens consumed"
-                  source: tokens_used
-                  config:
-                    action: add
+      # Commented out metrics to fix negative metadata errors
+      # - match:
+      #     selector: '{tokens_used!=""}'
+      #     stages:
+      #       - metrics:
+      #           ai_tokens_total:
+      #             type: Counter
+      #             description: "Total AI tokens consumed"
+      #             source: tokens_used
+      #             config:
+      #               action: add
       
-      - match:
-          selector: '{duration!=""}'
-          stages:
-            - metrics:
-                ai_request_duration_seconds:
-                  type: Histogram
-                  description: "AI request duration"
-                  source: duration
-                  config:
-                    buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
+      # - match:
+      #     selector: '{duration!=""}'
+      #     stages:
+      #       - metrics:
+      #           ai_request_duration_seconds:
+      #             type: Histogram
+      #             description: "AI request duration"
+      #             source: duration
+      #             config:
+      #               buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
       
       # Output message
       - output:

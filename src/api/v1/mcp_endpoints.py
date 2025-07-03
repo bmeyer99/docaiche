@@ -27,7 +27,8 @@ from .mcp_schemas import (
     ProviderTestResponse,
     ConfigValidationResponse,
     ProviderHealth,
-    ProviderStats
+    ProviderStats,
+    ProviderConfig
 )
 from .middleware import get_trace_id
 from .dependencies import get_search_orchestrator, get_configuration_manager
@@ -156,17 +157,17 @@ async def list_providers(
                 # Create provider response
                 provider_response = ProviderResponse(
                     provider_id=provider_id,
-                    config={
-                        "provider_id": provider_id,
-                        "provider_type": getattr(provider.config, 'provider_type', 'unknown').value if hasattr(getattr(provider.config, 'provider_type', None), 'value') else str(getattr(provider.config, 'provider_type', 'unknown')),
-                        "enabled": getattr(provider.config, 'enabled', True),
-                        "priority": getattr(provider.config, 'priority', 99),
-                        "max_results": 10,
-                        "timeout_seconds": getattr(provider.config, 'timeout_seconds', 3.0),
-                        "rate_limit_per_minute": getattr(provider.config, 'max_requests_per_minute', 60),
-                        "custom_headers": getattr(provider.config, 'custom_headers', {}),
-                        "custom_params": {}
-                    },
+                    config=ProviderConfig(
+                        provider_id=provider_id,
+                        provider_type=getattr(provider.config, 'provider_type', 'unknown').value if hasattr(getattr(provider.config, 'provider_type', None), 'value') else str(getattr(provider.config, 'provider_type', 'unknown')),
+                        enabled=getattr(provider.config, 'enabled', True),
+                        priority=min(getattr(provider.config, 'priority', 1), 10),  # Ensure <= 10
+                        max_results=10,
+                        timeout_seconds=getattr(provider.config, 'timeout_seconds', 3.0),
+                        rate_limit_per_minute=getattr(provider.config, 'max_requests_per_minute', 60),
+                        custom_headers=getattr(provider.config, 'custom_headers', {}),
+                        custom_params={}
+                    ),
                     capabilities=capabilities,
                     health=ProviderHealth(
                         provider_id=provider_id,
@@ -187,21 +188,21 @@ async def list_providers(
                 # Create basic error response
                 error_response = ProviderResponse(
                     provider_id=provider_id,
-                    config={
-                        "provider_id": provider_id,
-                        "provider_type": "unknown",
-                        "enabled": False,
-                        "priority": 99,
-                        "max_results": 0,
-                        "timeout_seconds": 0.0,
-                        "rate_limit_per_minute": 0,
-                        "custom_headers": {},
-                        "custom_params": {}
-                    },
+                    config=ProviderConfig(
+                        provider_id=provider_id,
+                        provider_type="unknown",
+                        enabled=False,
+                        priority=10,
+                        max_results=10,
+                        timeout_seconds=5.0,
+                        rate_limit_per_minute=60,
+                        custom_headers={},
+                        custom_params={}
+                    ),
                     capabilities=[],
                     health=ProviderHealth(
                         provider_id=provider_id,
-                        status="error",
+                        status="unhealthy",
                         last_check=datetime.utcnow(),
                         response_time_ms=0,
                         success_rate=0.0
