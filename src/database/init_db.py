@@ -81,7 +81,7 @@ class DatabaseInitializer:
         """
         # Delegate to PostgreSQL initializer if using PostgreSQL
         if self.is_postgres:
-            from .init_db_postgres import PostgreSQLInitializer
+            from src.database.init_db_postgres import PostgreSQLInitializer
             pg_init = PostgreSQLInitializer(self.database_url)
             pg_init.initialize_database(force_recreate=force_recreate)
             return
