@@ -239,7 +239,7 @@ export class DocaicheApiClient {
       }
       
       // Don't retry on certain errors (user cancellation, etc.)
-      if (error instanceof TypeError && error.message.includes('aborted') || 
+      if (error instanceof TypeError && error.message?.includes('aborted') || 
           (error as Error).name === 'AbortError') {
         throw this.createApiError('Request Cancelled', 'Request was cancelled');
       }
@@ -255,7 +255,7 @@ export class DocaicheApiClient {
 
       // Record failure and throw
       this.recordFailure(endpoint);
-      throw this.createApiError('Request Failed', lastError.message);
+      throw this.createApiError('Request Failed', lastError?.message || 'Unknown error');
     }
   }
 
@@ -265,13 +265,14 @@ export class DocaicheApiClient {
   private shouldRetry(error: Error, _endpoint: string): boolean {
     // Always retry on network errors, timeouts, and server errors
     // No retry limit - will continue trying every 30 seconds
-    return error.message.includes('fetch') || 
-           error.message.includes('network') ||
-           error.message.includes('timeout') ||
-           error.message.includes('500') ||
-           error.message.includes('502') ||
-           error.message.includes('503') ||
-           error.message.includes('504');
+    const message = error?.message || '';
+    return message.includes('fetch') || 
+           message.includes('network') ||
+           message.includes('timeout') ||
+           message.includes('500') ||
+           message.includes('502') ||
+           message.includes('503') ||
+           message.includes('504');
   }
 
   /**
@@ -624,7 +625,7 @@ export class DocaicheApiClient {
       }>>('/providers');
     } catch (error) {
       // Return empty array on circuit breaker or repeated failures
-      if (error instanceof Error && error.message.includes('Circuit Breaker')) {
+      if (error instanceof Error && error.message?.includes('Circuit Breaker')) {
         console.warn('Provider configurations unavailable due to circuit breaker');
         return [];
       }

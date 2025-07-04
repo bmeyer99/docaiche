@@ -567,7 +567,22 @@ async def test_provider_connection(
             endpoint = f"{base_url_clean}/api/tags"
 
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(endpoint)
+                try:
+                    response = await client.get(endpoint)
+                except httpx.ConnectError as e:
+                    logger.warning(f"Cannot connect to Ollama at {endpoint}: {str(e)}")
+                    # Provide helpful guidance based on the URL
+                    help_message = ""
+                    if "localhost" in test_config.base_url or "127.0.0.1" in test_config.base_url:
+                        help_message = " Note: Use http://172.17.0.1:11434 (Linux) or http://host.docker.internal:11434 (Mac/Windows) instead of localhost when running in Docker."
+                    elif "All connection attempts failed" in str(e):
+                        help_message = " Please verify: 1) Ollama is running on the host, 2) The port is correct, 3) No firewall is blocking the connection."
+                    
+                    return ProviderTestResponse(
+                        success=False,
+                        message=f"Cannot connect to Ollama at {test_config.base_url}.{help_message}",
+                        latency=0,
+                    )
 
                 if response.status_code == 200:
                     models = response.json().get("models", [])
