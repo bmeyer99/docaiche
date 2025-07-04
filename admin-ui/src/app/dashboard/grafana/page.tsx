@@ -32,7 +32,6 @@ export default function GrafanaDashboardsPage() {
   const [dashboards, setDashboards] = useState<GrafanaDashboard[]>([]);
   const [folders, setFolders] = useState<GrafanaFolder[]>([]);
   const [selectedDashboard, setSelectedDashboard] = useState<string>('');
-  const [selectedFolder, setSelectedFolder] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [iframeKey, setIframeKey] = useState(0);
@@ -80,10 +79,8 @@ export default function GrafanaDashboardsPage() {
     fetchGrafanaData();
   }, []);
 
-  // Filter dashboards by folder
-  const filteredDashboards = dashboards.filter(dashboard => 
-    selectedFolder === 'all' || dashboard.folderId.toString() === selectedFolder
-  );
+  // Show all dashboards
+  const filteredDashboards = dashboards;
 
   // Get current dashboard info
   const currentDashboard = dashboards.find(d => d.uid === selectedDashboard);
@@ -190,26 +187,6 @@ export default function GrafanaDashboardsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Folder Filter */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Filter by Folder</label>
-                <Select value={selectedFolder} onValueChange={setSelectedFolder}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select folder" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Folders</SelectItem>
-                    {folders.map((folder) => (
-                      <SelectItem key={folder.id} value={folder.id.toString()}>
-                        {folder.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
               {/* Dashboard List */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Available Dashboards</label>
