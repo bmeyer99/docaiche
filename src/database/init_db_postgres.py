@@ -142,7 +142,9 @@ class PostgreSQLInitializer:
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 last_accessed_at TIMESTAMP,
                 access_count INTEGER NOT NULL DEFAULT 0,
-                metadata JSONB
+                metadata JSONB,
+                expires_at TIMESTAMP,
+                source_provider TEXT
             )
         """))
         
@@ -344,6 +346,8 @@ class PostgreSQLInitializer:
             "CREATE INDEX IF NOT EXISTS idx_content_metadata_processing_status ON content_metadata(processing_status)",
             "CREATE INDEX IF NOT EXISTS idx_content_metadata_created_at ON content_metadata(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_content_metadata_last_accessed_at ON content_metadata(last_accessed_at)",
+            "CREATE INDEX IF NOT EXISTS idx_content_metadata_expires_at ON content_metadata(expires_at)",
+            "CREATE INDEX IF NOT EXISTS idx_content_metadata_source_provider ON content_metadata(source_provider)",
             # Feedback events indexes
             "CREATE INDEX IF NOT EXISTS idx_feedback_events_content_id ON feedback_events(content_id)",
             "CREATE INDEX IF NOT EXISTS idx_feedback_events_feedback_type ON feedback_events(feedback_type)",

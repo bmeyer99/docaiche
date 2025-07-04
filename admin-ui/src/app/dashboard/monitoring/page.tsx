@@ -85,27 +85,35 @@ export default function MonitoringPage() {
       const data = await response.json();
       
       if (data.status === 'success') {
-        const serviceList = data.data.result.map((result: any) => {
-          const instance = result.metric.instance || result.metric.job || 'unknown';
-          const job = result.metric.job || 'unknown';
-          const isUp = result.value[1] === '1';
-          
-          // Categorize services
-          let category = 'Infrastructure';
-          if (['admin-ui', 'api', 'db', 'traefik'].includes(job)) {
-            category = 'Core Application';
-          } else if (['redis', 'weaviate', 'redis-exporter'].includes(job)) {
-            category = 'Data & Storage';
-          } else if (['prometheus', 'grafana', 'loki', 'promtail', 'node-exporter'].includes(job)) {
-            category = 'Monitoring & Observability';
-          }
-          
-          return {
-            name: job.charAt(0).toUpperCase() + job.slice(1).replace('-', ' '),
-            status: isUp ? 'UP' : 'DOWN',
-            category
-          };
-        });
+        const serviceList = data.data.result
+          .filter((result: any) => {
+            // Filter out admin-ui from the interface
+            if (result.metric.job === 'admin-ui') {
+              return false;
+            }
+            return true;
+          })
+          .map((result: any) => {
+            const instance = result.metric.instance || result.metric.job || 'unknown';
+            const job = result.metric.job || 'unknown';
+            const isUp = result.value[1] === '1';
+            
+            // Categorize services
+            let category = 'Infrastructure';
+            if (['admin-ui', 'api', 'postgres', 'traefik'].includes(job)) {
+              category = 'Core Application';
+            } else if (['redis', 'weaviate', 'redis-exporter', 'postgres-exporter'].includes(job)) {
+              category = 'Data & Storage';
+            } else if (['prometheus', 'grafana', 'loki', 'promtail', 'node-exporter'].includes(job)) {
+              category = 'Monitoring & Observability';
+            }
+            
+            return {
+              name: job === 'postgres' ? 'PostgreSQL' : job.charAt(0).toUpperCase() + job.slice(1).replace('-', ' '),
+              status: isUp ? 'UP' : 'DOWN',
+              category
+            };
+          });
         
         setServices(serviceList);
       }
@@ -113,18 +121,18 @@ export default function MonitoringPage() {
       console.error('Failed to fetch service status:', error);
       // Fallback to static list
       setServices([
-        {name: 'Admin UI', status: 'UP', category: 'Core Application'},
-        {name: 'API', status: 'UP', category: 'Core Application'},
-        {name: 'Database', status: 'UP', category: 'Core Application'},
-        {name: 'Traefik', status: 'UP', category: 'Core Application'},
-        {name: 'Redis', status: 'UP', category: 'Data & Storage'},
-        {name: 'Weaviate', status: 'UP', category: 'Data & Storage'},
-        {name: 'Redis Exporter', status: 'UP', category: 'Data & Storage'},
-        {name: 'Prometheus', status: 'UP', category: 'Monitoring & Observability'},
-        {name: 'Grafana', status: 'UP', category: 'Monitoring & Observability'},
-        {name: 'Loki', status: 'UP', category: 'Monitoring & Observability'},
-        {name: 'Promtail', status: 'UP', category: 'Monitoring & Observability'},
-        {name: 'Node Exporter', status: 'UP', category: 'Monitoring & Observability'},
+        {name: 'API', status: 'UNKNOWN', category: 'Core Application'},
+        {name: 'PostgreSQL', status: 'UNKNOWN', category: 'Core Application'},
+        {name: 'Traefik', status: 'UNKNOWN', category: 'Core Application'},
+        {name: 'Redis', status: 'UNKNOWN', category: 'Data & Storage'},
+        {name: 'Weaviate', status: 'UNKNOWN', category: 'Data & Storage'},
+        {name: 'Redis Exporter', status: 'UNKNOWN', category: 'Data & Storage'},
+        {name: 'Postgres Exporter', status: 'UNKNOWN', category: 'Data & Storage'},
+        {name: 'Prometheus', status: 'UNKNOWN', category: 'Monitoring & Observability'},
+        {name: 'Grafana', status: 'UNKNOWN', category: 'Monitoring & Observability'},
+        {name: 'Loki', status: 'UNKNOWN', category: 'Monitoring & Observability'},
+        {name: 'Promtail', status: 'UNKNOWN', category: 'Monitoring & Observability'},
+        {name: 'Node Exporter', status: 'UNKNOWN', category: 'Monitoring & Observability'},
       ]);
     }
   }, []);
@@ -360,36 +368,70 @@ export default function MonitoringPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-                {services.map(service => (
-                  <div 
-                    key={service.name} 
-                    className="flex flex-col items-center justify-center p-4 border rounded-lg space-y-2 cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
-                    onClick={() => setSelectedView(`service-${service.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {service.status === 'UP' ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <AlertTriangle className="h-4 w-4 text-red-500" />
-                      )}
-                      <span className="font-medium">{service.name}</span>
-                    </div>
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${
-                        service.status === 'UP' 
-                          ? 'text-green-600 border-green-600' 
-                          : 'text-red-600 border-red-600'
-                      }`}
+              <div className="space-y-4">
+                {/* Split services into 2 rows */}
+                <div className="flex gap-4 justify-between">
+                  {services.slice(0, Math.ceil(services.length / 2)).map(service => (
+                    <div 
+                      key={service.name} 
+                      className="flex flex-col items-center justify-center p-4 border rounded-lg space-y-2 cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+                      onClick={() => setSelectedView(`service-${service.name.toLowerCase().replace(/\s+/g, '-')}`)}
                     >
-                      {service.status}
-                    </Badge>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Click to view details
+                      <div className="flex items-center gap-2">
+                        {service.status === 'UP' ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-red-500" />
+                        )}
+                        <span className="font-medium">{service.name}</span>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          service.status === 'UP' 
+                            ? 'text-green-600 border-green-600' 
+                            : 'text-red-600 border-red-600'
+                        }`}
+                      >
+                        {service.status}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Click to view details
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="flex gap-4 justify-between">
+                  {services.slice(Math.ceil(services.length / 2)).map(service => (
+                    <div 
+                      key={service.name} 
+                      className="flex flex-col items-center justify-center p-4 border rounded-lg space-y-2 cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
+                      onClick={() => setSelectedView(`service-${service.name.toLowerCase().replace(/\s+/g, '-')}`)}
+                    >
+                      <div className="flex items-center gap-2">
+                        {service.status === 'UP' ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-red-500" />
+                        )}
+                        <span className="font-medium">{service.name}</span>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          service.status === 'UP' 
+                            ? 'text-green-600 border-green-600' 
+                            : 'text-red-600 border-red-600'
+                        }`}
+                      >
+                        {service.status}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Click to view details
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

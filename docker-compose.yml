@@ -403,6 +403,24 @@ services:
     labels:
       - "docaiche.service=redis-exporter"
 
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      - DATA_SOURCE_NAME=postgresql://docaiche:${POSTGRES_PASSWORD:-docaiche-secure-password-2025}@postgres:5432/docaiche?sslmode=disable
+    networks:
+      - docaiche
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9187/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    labels:
+      - "docaiche.service=postgres-exporter"
+
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.101.0
     command:

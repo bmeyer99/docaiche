@@ -68,6 +68,17 @@ scrape_configs:
       - source_labels: [__name__]
         regex: 'redis_(connected_clients|used_memory|commands_total|keyspace_hits|keyspace_misses|evicted_keys|expired_keys).*'
         action: keep
+
+  # PostgreSQL exporter with focused metrics
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    metric_relabel_configs:
+      # Keep only essential PostgreSQL metrics
+      - source_labels: [__name__]
+        regex: 'pg_(up|stat_database_.*|locks_count|connections|database_size_bytes).*'
+        action: keep
       
   # Loki metrics - less frequent
   - job_name: 'loki'
@@ -120,12 +131,6 @@ scrape_configs:
     metrics_path: /metrics
     scrape_interval: 30s
 
-  # Database (if it has metrics endpoint)
-  - job_name: 'db'
-    static_configs:
-      - targets: ['db:5432']
-    metrics_path: /metrics
-    scrape_interval: 30s
 
   # Traefik
   - job_name: 'traefik'

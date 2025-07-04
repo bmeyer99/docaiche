@@ -166,3 +166,152 @@ async def update_embedding_config(
     except Exception as e:
         logger.error(f"Failed to update embedding config: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/workspaces/{workspace_slug}/expired")
+async def get_expired_documents(
+    workspace_slug: str,
+    limit: int = 10000,
+    config_manager: ConfigurationManager = Depends(get_configuration_manager)
+):
+    """
+    Get expired documents in a workspace.
+    
+    Args:
+        workspace_slug: The workspace to search in
+        limit: Maximum number of objects to fetch (default: 10000)
+    """
+    try:
+        config = config_manager.get_configuration()
+        
+        async with WeaviateVectorClient(config.weaviate) as client:
+            expired_docs = await client.get_expired_documents(workspace_slug, limit=limit)
+            
+            return {
+                "workspace": workspace_slug,
+                "expired_documents": expired_docs,
+                "count": len(expired_docs),
+                "limit": limit
+            }
+    except Exception as e:
+        logger.error(f"Failed to get expired documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/workspaces/{workspace_slug}/expired")
+async def cleanup_expired_documents(
+    workspace_slug: str,
+    batch_size: int = 50,
+    config_manager: ConfigurationManager = Depends(get_configuration_manager)
+):
+    """
+    Clean up expired documents in a workspace.
+    
+    Args:
+        workspace_slug: The workspace to clean up
+        batch_size: Number of documents to process in each batch (default: 50)
+    """
+    try:
+        config = config_manager.get_configuration()
+        
+        async with WeaviateVectorClient(config.weaviate) as client:
+            result = await client.cleanup_expired_documents(workspace_slug, batch_size=batch_size)
+            
+            return {
+                "workspace": workspace_slug,
+                "cleanup_result": result,
+                "batch_size": batch_size
+            }
+    except Exception as e:
+        logger.error(f"Failed to cleanup expired documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/workspaces/{workspace_slug}/providers/{provider}")
+async def get_documents_by_provider(
+    workspace_slug: str,
+    provider: str,
+    limit: int = 10000,
+    config_manager: ConfigurationManager = Depends(get_configuration_manager)
+):
+    """
+    Get documents by source provider in a workspace.
+    
+    Args:
+        workspace_slug: The workspace to search in
+        provider: The source provider to filter by
+        limit: Maximum number of objects to fetch (default: 10000)
+    """
+    try:
+        config = config_manager.get_configuration()
+        
+        async with WeaviateVectorClient(config.weaviate) as client:
+            docs = await client.get_documents_by_provider(workspace_slug, provider, limit=limit)
+            
+            return {
+                "workspace": workspace_slug,
+                "source_provider": provider,
+                "documents": docs,
+                "count": len(docs),
+                "limit": limit
+            }
+    except Exception as e:
+        logger.error(f"Failed to get documents by provider: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/workspaces/{workspace_slug}/expired/optimized")
+async def get_expired_documents_optimized(
+    workspace_slug: str,
+    limit: int = 10000,
+    config_manager: ConfigurationManager = Depends(get_configuration_manager)
+):
+    """
+    Get expired documents using optimized native filtering when available.
+    
+    Args:
+        workspace_slug: The workspace to search in
+        limit: Maximum number of objects to fetch (default: 10000)
+    """
+    try:
+        config = config_manager.get_configuration()
+        
+        async with WeaviateVectorClient(config.weaviate) as client:
+            expired_docs = await client.get_expired_documents_optimized(workspace_slug, limit=limit)
+            
+            return {
+                "workspace": workspace_slug,
+                "expired_documents": expired_docs,
+                "count": len(expired_docs),
+                "limit": limit,
+                "optimized": True
+            }
+    except Exception as e:
+        logger.error(f"Failed to get expired documents (optimized): {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/workspaces/{workspace_slug}/expiration/statistics")
+async def get_expiration_statistics(
+    workspace_slug: str,
+    config_manager: ConfigurationManager = Depends(get_configuration_manager)
+):
+    """
+    Get comprehensive expiration statistics for a workspace.
+    
+    Args:
+        workspace_slug: The workspace to analyze
+    """
+    try:
+        config = config_manager.get_configuration()
+        
+        async with WeaviateVectorClient(config.weaviate) as client:
+            stats = await client.get_expiration_statistics(workspace_slug)
+            
+            return {
+                "workspace": workspace_slug,
+                "statistics": stats
+            }
+    except Exception as e:
+        logger.error(f"Failed to get expiration statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

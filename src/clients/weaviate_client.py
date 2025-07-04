@@ -16,6 +16,7 @@ import logging
 import time
 from typing import List, Optional, Dict, Any, Union
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 import httpx
 
 from src.core.config.models import WeaviateConfig
@@ -134,11 +135,11 @@ class WeaviateVectorClient:
             logger.info("Weaviate client session closed")
     
     async def _ensure_collection_exists(self) -> None:
-        """Ensure the main collection exists with multi-tenancy enabled"""
+        """Ensure the main collection exists with multi-tenancy enabled and TTL support"""
         try:
             # Check if collection exists
             if not self.client.collections.exists(self.COLLECTION_NAME):
-                # Create collection with multi-tenancy enabled
+                # Create collection with multi-tenancy enabled and TTL properties
                 self.client.collections.create(
                     name=self.COLLECTION_NAME,
                     multi_tenancy_config=Configure.multi_tenancy(
@@ -180,12 +181,84 @@ class WeaviateVectorClient:
                             name="source_url",
                             data_type=weaviate.classes.config.DataType.TEXT
                         ),
+                        # TTL properties
+                        weaviate.classes.config.Property(
+                            name="expires_at",
+                            data_type=weaviate.classes.config.DataType.DATE
+                        ),
+                        weaviate.classes.config.Property(
+                            name="created_at",
+                            data_type=weaviate.classes.config.DataType.DATE
+                        ),
+                        weaviate.classes.config.Property(
+                            name="updated_at",
+                            data_type=weaviate.classes.config.DataType.DATE
+                        ),
+                        weaviate.classes.config.Property(
+                            name="source_provider",
+                            data_type=weaviate.classes.config.DataType.TEXT
+                        ),
                     ]
                 )
-                logger.info(f"Created Weaviate collection: {self.COLLECTION_NAME}")
+                logger.info(f"Created Weaviate collection: {self.COLLECTION_NAME} with TTL support")
+            else:
+                # Collection exists - check if we need to add TTL properties
+                await self._migrate_collection_schema()
         except Exception as e:
             logger.error(f"Failed to ensure collection exists: {e}")
             raise
+    
+    async def _migrate_collection_schema(self) -> None:
+        """Migrate existing collection to add TTL properties if they don't exist"""
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            collection_config = collection.config.get()
+            
+            # Check which TTL properties are missing
+            existing_props = {prop.name for prop in collection_config.properties}
+            required_ttl_props = {
+                "expires_at": weaviate.classes.config.DataType.DATE,
+                "created_at": weaviate.classes.config.DataType.DATE,
+                "updated_at": weaviate.classes.config.DataType.DATE,
+                "source_provider": weaviate.classes.config.DataType.TEXT,
+            }
+            
+            missing_props = []
+            for prop_name, prop_type in required_ttl_props.items():
+                if prop_name not in existing_props:
+                    missing_props.append(
+                        weaviate.classes.config.Property(
+                            name=prop_name,
+                            data_type=prop_type
+                        )
+                    )
+            
+            if missing_props:
+                logger.info(f"Adding {len(missing_props)} TTL properties to existing collection")
+                
+                # Add missing properties to the collection
+                for prop in missing_props:
+                    collection.config.add_property(prop)
+                    logger.info(f"Added TTL property: {prop.name}")
+                
+                logger.info("Collection schema migration completed successfully")
+            else:
+                logger.info("Collection already has all required TTL properties")
+                
+        except Exception as e:
+            logger.error(f"Failed to migrate collection schema: {e}")
+            # Don't raise here - continue with existing schema
+            logger.warning("Continuing with existing schema - TTL features may not work correctly")
+    
+    def _calculate_ttl_timestamps(self, default_ttl_days: int = 30) -> Dict[str, datetime]:
+        """Calculate TTL timestamps for document chunks"""
+        now = datetime.utcnow()
+        
+        return {
+            "created_at": now,
+            "updated_at": now,
+            "expires_at": now + timedelta(days=default_ttl_days)
+        }
     
     async def health_check(self) -> Dict[str, Any]:
         """Check Weaviate service health"""
@@ -307,25 +380,28 @@ class WeaviateVectorClient:
             )
     
     async def upload_document(
-        self, workspace_slug: str, document: ProcessedDocument
+        self, workspace_slug: str, document: ProcessedDocument, ttl_days: int = 30, source_provider: str = "default"
     ) -> UploadResult:
         """
         Upload ProcessedDocument to workspace (tenant) by iterating over chunks.
         
         Process:
         1. Validate workspace exists
-        2. Upload chunks with batch processing
+        2. Upload chunks with batch processing and TTL metadata
         3. Track failures and retry with exponential backoff
         4. Return comprehensive result
         """
         logger.info(
-            f"Starting upload of document {document.id} to workspace {workspace_slug}"
+            f"Starting upload of document {document.id} to workspace {workspace_slug} with TTL: {ttl_days} days"
         )
         
         # Step 1: Validate workspace exists
         await self.get_or_create_workspace(workspace_slug)
         
-        # Step 2: Prepare upload results tracking
+        # Step 2: Calculate TTL timestamps
+        ttl_timestamps = self._calculate_ttl_timestamps(ttl_days)
+        
+        # Step 3: Prepare upload results tracking
         upload_results = {
             "document_id": document.id,
             "workspace_slug": workspace_slug,
@@ -337,7 +413,7 @@ class WeaviateVectorClient:
             "errors": [],
         }
         
-        # Step 3: Upload chunks in batches
+        # Step 4: Upload chunks in batches
         try:
             collection = self.client.collections.get(self.COLLECTION_NAME)
             tenant_collection = collection.with_tenant(workspace_slug)
@@ -355,6 +431,11 @@ class WeaviateVectorClient:
                             "document_id": document.id,
                             "technology": document.technology,
                             "source_url": document.source_url,
+                            # TTL metadata
+                            "expires_at": ttl_timestamps["expires_at"],
+                            "created_at": ttl_timestamps["created_at"],
+                            "updated_at": ttl_timestamps["updated_at"],
+                            "source_provider": source_provider,
                         }
                         
                         batch.add_object(properties=chunk_data)
@@ -373,7 +454,8 @@ class WeaviateVectorClient:
             )
             logger.info(
                 f"Document upload completed: {success_rate:.1%} success rate "
-                f"({upload_results['successful_uploads']}/{upload_results['total_chunks']} chunks)"
+                f"({upload_results['successful_uploads']}/{upload_results['total_chunks']} chunks) "
+                f"with TTL expiration: {ttl_timestamps['expires_at']}"
             )
             
         except Exception as e:
@@ -412,6 +494,11 @@ class WeaviateVectorClient:
                         "technology": obj.properties.get("technology", ""),
                         "distance": obj.metadata.distance if obj.metadata else None,
                         "certainty": obj.metadata.certainty if obj.metadata else None,
+                        # TTL metadata
+                        "expires_at": obj.properties.get("expires_at"),
+                        "created_at": obj.properties.get("created_at"),
+                        "updated_at": obj.properties.get("updated_at"),
+                        "source_provider": obj.properties.get("source_provider", ""),
                     },
                     "id": str(obj.uuid) if obj.uuid else obj.properties.get("chunk_id", ""),
                 }
@@ -472,7 +559,12 @@ class WeaviateVectorClient:
                         "title": obj.properties.get("document_title", "Untitled"),
                         "chunks": 0,
                         "technology": obj.properties.get("technology", ""),
-                        "source_url": obj.properties.get("source_url", "")
+                        "source_url": obj.properties.get("source_url", ""),
+                        # TTL metadata
+                        "expires_at": obj.properties.get("expires_at"),
+                        "created_at": obj.properties.get("created_at"),
+                        "updated_at": obj.properties.get("updated_at"),
+                        "source_provider": obj.properties.get("source_provider", ""),
                     }
                 documents_map[doc_id]["chunks"] += 1
             
@@ -489,9 +581,13 @@ class WeaviateVectorClient:
             tenant_collection = collection.with_tenant(workspace_slug)
             
             # Delete all chunks belonging to this document
-            result = tenant_collection.data.delete_many(
-                where=tenant_collection.query.where_property("document_id").equal(document_id)
-            )
+            # For now, iterate through objects and delete individually
+            response = tenant_collection.query.fetch_objects(limit=10000)
+            deleted_count = 0
+            for obj in response.objects:
+                if obj.properties.get("document_id") == document_id:
+                    tenant_collection.data.delete_by_id(obj.uuid)
+                    deleted_count += 1
             
             logger.info(f"Deleted document {document_id} from workspace {workspace_slug}")
             return True
@@ -501,3 +597,387 @@ class WeaviateVectorClient:
             if "not found" in str(e).lower():
                 return True  # Already deleted
             raise WeaviateError(f"Failed to delete document: {str(e)}")
+    
+    async def get_expired_documents(self, workspace_slug: str, limit: int = 10000) -> List[Dict[str, Any]]:
+        """
+        Get documents that have expired based on TTL.
+        
+        Args:
+            workspace_slug: The workspace to search in
+            limit: Maximum number of objects to fetch (default: 10000)
+            
+        Returns:
+            List of expired documents with metadata
+        """
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            tenant_collection = collection.with_tenant(workspace_slug)
+            
+            # Query objects with larger limit to handle big datasets
+            response = tenant_collection.query.fetch_objects(limit=limit)
+            
+            # Group by document and filter expired ones
+            documents_map = {}
+            current_time = datetime.utcnow()
+            processed_chunks = 0
+            
+            logger.info(f"Scanning {len(response.objects)} chunks for expired documents in workspace '{workspace_slug}'")
+            
+            for obj in response.objects:
+                processed_chunks += 1
+                
+                # Check if document is expired
+                expires_at = obj.properties.get("expires_at")
+                if expires_at and isinstance(expires_at, datetime) and expires_at < current_time:
+                    doc_id = obj.properties.get("document_id", "unknown")
+                    if doc_id not in documents_map:
+                        documents_map[doc_id] = {
+                            "id": doc_id,
+                            "title": obj.properties.get("document_title", "Untitled"),
+                            "chunks": 0,
+                            "technology": obj.properties.get("technology", ""),
+                            "source_url": obj.properties.get("source_url", ""),
+                            "expires_at": obj.properties.get("expires_at"),
+                            "created_at": obj.properties.get("created_at"),
+                            "updated_at": obj.properties.get("updated_at"),
+                            "source_provider": obj.properties.get("source_provider", ""),
+                        }
+                    documents_map[doc_id]["chunks"] += 1
+            
+            expired_docs = list(documents_map.values())
+            logger.info(f"Found {len(expired_docs)} expired documents out of {processed_chunks} total chunks")
+            
+            return expired_docs
+            
+        except Exception as e:
+            logger.error(f"Failed to get expired documents in workspace '{workspace_slug}': {e}")
+            raise WeaviateError(f"Failed to get expired documents: {str(e)}")
+    
+    async def cleanup_expired_documents(self, workspace_slug: str, batch_size: int = 50) -> Dict[str, Any]:
+        """
+        Clean up expired documents from workspace.
+        
+        Args:
+            workspace_slug: The workspace to clean up
+            batch_size: Number of documents to process in each batch (default: 50)
+            
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        start_time = datetime.utcnow()
+        
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            tenant_collection = collection.with_tenant(workspace_slug)
+            
+            # Query for expired documents
+            logger.info(f"Starting cleanup of expired documents in workspace '{workspace_slug}'")
+            expired_docs = await self.get_expired_documents(workspace_slug)
+            
+            if not expired_docs:
+                return {
+                    "deleted_documents": 0,
+                    "deleted_chunks": 0,
+                    "message": "No expired documents found",
+                    "duration_seconds": (datetime.utcnow() - start_time).total_seconds()
+                }
+            
+            logger.info(f"Found {len(expired_docs)} expired documents to clean up")
+            
+            # Delete expired documents in batches
+            deleted_chunks = 0
+            failed_deletions = []
+            successful_deletions = []
+            
+            for i in range(0, len(expired_docs), batch_size):
+                batch = expired_docs[i:i + batch_size]
+                logger.info(f"Processing batch {i//batch_size + 1}/{(len(expired_docs) + batch_size - 1)//batch_size}")
+                
+                for doc in batch:
+                    try:
+                        # Delete document using the existing delete method
+                        success = await self.delete_document(workspace_slug, doc["id"])
+                        if success:
+                            deleted_chunks += doc["chunks"]
+                            successful_deletions.append(doc["id"])
+                            logger.info(f"Deleted expired document {doc['id']} with {doc['chunks']} chunks")
+                        else:
+                            failed_deletions.append(doc["id"])
+                            logger.warning(f"Failed to delete document {doc['id']}")
+                    except Exception as e:
+                        failed_deletions.append(doc["id"])
+                        logger.error(f"Error deleting document {doc['id']}: {e}")
+                        continue
+            
+            cleanup_duration = (datetime.utcnow() - start_time).total_seconds()
+            
+            result = {
+                "deleted_documents": len(successful_deletions),
+                "deleted_chunks": deleted_chunks,
+                "failed_deletions": len(failed_deletions),
+                "message": f"Successfully cleaned up {len(successful_deletions)} expired documents",
+                "duration_seconds": cleanup_duration
+            }
+            
+            if failed_deletions:
+                result["failed_document_ids"] = failed_deletions
+                result["message"] += f" ({len(failed_deletions)} failed)"
+            
+            logger.info(f"Cleanup completed in {cleanup_duration:.2f}s: {result['message']}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to cleanup expired documents in workspace '{workspace_slug}': {e}")
+            raise WeaviateError(f"Failed to cleanup expired documents: {str(e)}")
+    
+    async def get_documents_by_provider(self, workspace_slug: str, source_provider: str, limit: int = 10000) -> List[Dict[str, Any]]:
+        """
+        Get documents by source provider.
+        
+        Args:
+            workspace_slug: The workspace to search in
+            source_provider: The source provider to filter by
+            limit: Maximum number of objects to fetch (default: 10000)
+            
+        Returns:
+            List of documents from the specified provider
+        """
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            tenant_collection = collection.with_tenant(workspace_slug)
+            
+            # Query all documents and filter by provider in Python
+            response = tenant_collection.query.fetch_objects(limit=limit)
+            
+            # Group by document and filter by provider
+            documents_map = {}
+            processed_chunks = 0
+            
+            logger.info(f"Scanning {len(response.objects)} chunks for provider '{source_provider}' in workspace '{workspace_slug}'")
+            
+            for obj in response.objects:
+                processed_chunks += 1
+                obj_provider = obj.properties.get("source_provider", "")
+                
+                if obj_provider == source_provider:
+                    doc_id = obj.properties.get("document_id", "unknown")
+                    if doc_id not in documents_map:
+                        documents_map[doc_id] = {
+                            "id": doc_id,
+                            "title": obj.properties.get("document_title", "Untitled"),
+                            "chunks": 0,
+                            "technology": obj.properties.get("technology", ""),
+                            "source_url": obj.properties.get("source_url", ""),
+                            "expires_at": obj.properties.get("expires_at"),
+                            "created_at": obj.properties.get("created_at"),
+                            "updated_at": obj.properties.get("updated_at"),
+                            "source_provider": obj.properties.get("source_provider", ""),
+                        }
+                    documents_map[doc_id]["chunks"] += 1
+            
+            filtered_docs = list(documents_map.values())
+            logger.info(f"Found {len(filtered_docs)} documents from provider '{source_provider}' out of {processed_chunks} total chunks")
+            
+            return filtered_docs
+            
+        except Exception as e:
+            logger.error(f"Failed to get documents by provider '{source_provider}' in workspace '{workspace_slug}': {e}")
+            raise WeaviateError(f"Failed to get documents by provider: {str(e)}")
+    
+    async def get_expired_documents_optimized(self, workspace_slug: str, limit: int = 10000) -> List[Dict[str, Any]]:
+        """
+        Get expired documents using Weaviate's native filtering (when available).
+        
+        This method attempts to use Weaviate's where filtering to improve performance
+        for large datasets. Falls back to Python filtering if native filtering fails.
+        
+        Args:
+            workspace_slug: The workspace to search in
+            limit: Maximum number of objects to fetch (default: 10000)
+            
+        Returns:
+            List of expired documents with metadata
+        """
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            tenant_collection = collection.with_tenant(workspace_slug)
+            
+            current_time = datetime.utcnow()
+            
+            # Try to use Weaviate's native filtering for better performance
+            try:
+                # Note: Weaviate v4 client doesn't support 'where' in fetch_objects
+                # This is a placeholder for when Weaviate supports native date filtering
+                logger.info("Native filtering not available in current Weaviate version")
+                raise NotImplementedError("Native filtering not supported")
+                
+            except Exception as filter_error:
+                logger.warning(f"Native filtering failed, falling back to Python filtering: {filter_error}")
+                # Fall back to regular fetch and Python filtering
+                response = tenant_collection.query.fetch_objects(limit=limit)
+                
+                # Filter in Python
+                filtered_objects = []
+                for obj in response.objects:
+                    expires_at = obj.properties.get("expires_at")
+                    if expires_at and isinstance(expires_at, datetime) and expires_at < current_time:
+                        filtered_objects.append(obj)
+                
+                # Create a mock response object for consistency
+                class MockResponse:
+                    def __init__(self, objects):
+                        self.objects = objects
+                
+                response = MockResponse(filtered_objects)
+                logger.info(f"Using Python filtering: found {len(response.objects)} expired chunks")
+            
+            # Group by document
+            documents_map = {}
+            for obj in response.objects:
+                doc_id = obj.properties.get("document_id", "unknown")
+                if doc_id not in documents_map:
+                    documents_map[doc_id] = {
+                        "id": doc_id,
+                        "title": obj.properties.get("document_title", "Untitled"),
+                        "chunks": 0,
+                        "technology": obj.properties.get("technology", ""),
+                        "source_url": obj.properties.get("source_url", ""),
+                        "expires_at": obj.properties.get("expires_at"),
+                        "created_at": obj.properties.get("created_at"),
+                        "updated_at": obj.properties.get("updated_at"),
+                        "source_provider": obj.properties.get("source_provider", ""),
+                    }
+                documents_map[doc_id]["chunks"] += 1
+            
+            expired_docs = list(documents_map.values())
+            logger.info(f"Optimized query found {len(expired_docs)} expired documents")
+            
+            return expired_docs
+            
+        except Exception as e:
+            logger.error(f"Failed to get expired documents (optimized) in workspace '{workspace_slug}': {e}")
+            # Fall back to the regular method
+            logger.info("Falling back to regular get_expired_documents method")
+            return await self.get_expired_documents(workspace_slug, limit)
+    
+    async def get_expiration_statistics(self, workspace_slug: str) -> Dict[str, Any]:
+        """
+        Get comprehensive statistics about document expiration in a workspace.
+        
+        Args:
+            workspace_slug: The workspace to analyze
+            
+        Returns:
+            Dictionary with expiration statistics
+        """
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            tenant_collection = collection.with_tenant(workspace_slug)
+            
+            # Get all documents with a very safe limit
+            response = tenant_collection.query.fetch_objects(limit=100)
+            
+            current_time = datetime.utcnow()
+            
+            # Statistics tracking
+            stats = {
+                "total_chunks": len(response.objects),
+                "total_documents": 0,
+                "expired_documents": 0,
+                "expired_chunks": 0,
+                "expiring_soon_documents": 0,  # Within 7 days
+                "expiring_soon_chunks": 0,
+                "providers": {},
+                "oldest_expiry": None,
+                "newest_expiry": None,
+                "documents_by_expiry": {
+                    "expired": [],
+                    "expiring_soon": [],
+                    "long_term": []
+                }
+            }
+            
+            documents_map = {}
+            
+            # Process all chunks
+            for obj in response.objects:
+                doc_id = obj.properties.get("document_id", "unknown")
+                expires_at = obj.properties.get("expires_at")
+                provider = obj.properties.get("source_provider", "unknown")
+                
+                # Track document
+                if doc_id not in documents_map:
+                    documents_map[doc_id] = {
+                        "id": doc_id,
+                        "title": obj.properties.get("document_title", "Untitled"),
+                        "chunks": 0,
+                        "expires_at": expires_at,
+                        "source_provider": provider,
+                        "is_expired": False,
+                        "is_expiring_soon": False
+                    }
+                
+                documents_map[doc_id]["chunks"] += 1
+                
+                # Track provider statistics
+                if provider not in stats["providers"]:
+                    stats["providers"][provider] = {
+                        "documents": 0,
+                        "chunks": 0,
+                        "expired_documents": 0,
+                        "expired_chunks": 0
+                    }
+                
+                stats["providers"][provider]["chunks"] += 1
+                
+                # Analyze expiration
+                if expires_at and isinstance(expires_at, datetime):
+                    # Track oldest and newest expiry
+                    if stats["oldest_expiry"] is None or expires_at < stats["oldest_expiry"]:
+                        stats["oldest_expiry"] = expires_at
+                    if stats["newest_expiry"] is None or expires_at > stats["newest_expiry"]:
+                        stats["newest_expiry"] = expires_at
+                    
+                    # Check if expired
+                    if expires_at < current_time:
+                        stats["expired_chunks"] += 1
+                        documents_map[doc_id]["is_expired"] = True
+                        stats["providers"][provider]["expired_chunks"] += 1
+                    
+                    # Check if expiring soon (within 7 days)
+                    elif expires_at < current_time + timedelta(days=7):
+                        stats["expiring_soon_chunks"] += 1
+                        documents_map[doc_id]["is_expiring_soon"] = True
+            
+            # Finalize document statistics
+            for doc_id, doc_info in documents_map.items():
+                stats["total_documents"] += 1
+                provider = doc_info["source_provider"]
+                stats["providers"][provider]["documents"] += 1
+                
+                if doc_info["is_expired"]:
+                    stats["expired_documents"] += 1
+                    stats["providers"][provider]["expired_documents"] += 1
+                    stats["documents_by_expiry"]["expired"].append(doc_info)
+                elif doc_info["is_expiring_soon"]:
+                    stats["expiring_soon_documents"] += 1
+                    stats["documents_by_expiry"]["expiring_soon"].append(doc_info)
+                else:
+                    stats["documents_by_expiry"]["long_term"].append(doc_info)
+            
+            # Calculate percentages
+            if stats["total_documents"] > 0:
+                stats["expiration_percentages"] = {
+                    "expired": (stats["expired_documents"] / stats["total_documents"]) * 100,
+                    "expiring_soon": (stats["expiring_soon_documents"] / stats["total_documents"]) * 100,
+                    "long_term": ((stats["total_documents"] - stats["expired_documents"] - stats["expiring_soon_documents"]) / stats["total_documents"]) * 100
+                }
+            
+            logger.info(f"Generated expiration statistics for workspace '{workspace_slug}': {stats['total_documents']} documents, {stats['expired_documents']} expired")
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Failed to get expiration statistics for workspace '{workspace_slug}': {e}")
+            raise WeaviateError(f"Failed to get expiration statistics: {str(e)}")

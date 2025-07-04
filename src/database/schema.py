@@ -106,7 +106,9 @@ def _create_content_metadata_table(conn) -> None:
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             last_accessed_at TIMESTAMP,
-            access_count INTEGER NOT NULL DEFAULT 0
+            access_count INTEGER NOT NULL DEFAULT 0,
+            expires_at TIMESTAMP,
+            source_provider TEXT
         )
     """
     )
@@ -224,6 +226,8 @@ def _create_all_indexes(conn) -> None:
         "CREATE INDEX IF NOT EXISTS idx_content_metadata_processing_status ON content_metadata(processing_status)",
         "CREATE INDEX IF NOT EXISTS idx_content_metadata_created_at ON content_metadata(created_at)",
         "CREATE INDEX IF NOT EXISTS idx_content_metadata_last_accessed_at ON content_metadata(last_accessed_at)",
+        "CREATE INDEX IF NOT EXISTS idx_content_metadata_expires_at ON content_metadata(expires_at)",
+        "CREATE INDEX IF NOT EXISTS idx_content_metadata_source_provider ON content_metadata(source_provider)",
         # Feedback events indexes (lines 165-168)
         "CREATE INDEX IF NOT EXISTS idx_feedback_events_content_id ON feedback_events(content_id)",
         "CREATE INDEX IF NOT EXISTS idx_feedback_events_feedback_type ON feedback_events(feedback_type)",

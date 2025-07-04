@@ -72,6 +72,10 @@ class DocumentChunk(BaseModel):
     chunk_index: int
     total_chunks: int
     created_at: datetime
+    # TTL fields
+    expires_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    source_provider: Optional[str] = None
 
 
 class ProcessedDocument(BaseModel):
