@@ -23,11 +23,30 @@ from sqlalchemy import (
     UniqueConstraint,
     Index,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy import TypeDecorator
+import os
 
 logger = logging.getLogger(__name__)
+
+# Create a custom JSON type that uses JSONB for PostgreSQL and JSON for others
+class JSONType(TypeDecorator):
+    """Platform-agnostic JSON type that uses JSONB on PostgreSQL."""
+    impl = JSON
+    cache_ok = True
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(JSONB)
+        else:
+            return dialect.type_descriptor(JSON)
+
+# Use JSONType instead of JSON in models
+JSONField = JSONType
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -50,7 +69,7 @@ class SystemConfig(Base):
     __tablename__ = "system_config"
 
     key: Mapped[str] = mapped_column(String, primary_key=True)
-    value: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    value: Mapped[Dict[str, Any]] = mapped_column(JSONField, nullable=False)
     schema_version: Mapped[str] = mapped_column(String, nullable=False, default="1.0")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.current_timestamp()
@@ -71,8 +90,8 @@ class ConfigurationAuditLog(Base):
     )
     user: Mapped[str] = mapped_column(String, nullable=False)
     section: Mapped[str] = mapped_column(String, nullable=False)
-    changes: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
-    previous_values: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    changes: Mapped[Dict[str, Any]] = mapped_column(JSONField, nullable=False)
+    previous_values: Mapped[Dict[str, Any]] = mapped_column(JSONField, nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text)
     
     __table_args__ = (
@@ -89,9 +108,9 @@ class SearchCache(Base):
 
     query_hash: Mapped[str] = mapped_column(String, primary_key=True)
     original_query: Mapped[str] = mapped_column(String, nullable=False)
-    search_results: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    search_results: Mapped[Dict[str, Any]] = mapped_column(JSONField, nullable=False)
     technology_hint: Mapped[Optional[str]] = mapped_column(String)
-    workspace_slugs: Mapped[Optional[List[str]]] = mapped_column(JSON)
+    workspace_slugs: Mapped[Optional[List[str]]] = mapped_column(JSONField)
     result_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     execution_time_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cache_hit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

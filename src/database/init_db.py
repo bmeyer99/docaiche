@@ -37,8 +37,18 @@ class DatabaseInitializer:
         Args:
             db_path: Override database path (uses config if None)
         """
-        if db_path:
+        # Check for DATABASE_URL environment variable first
+        self.database_url = os.environ.get("DATABASE_URL")
+        
+        if self.database_url:
+            # Using PostgreSQL or other database URL
+            self.db_path = None
+            self.is_postgres = "postgresql" in self.database_url
+            logger.info(f"Using DATABASE_URL: {self.database_url.split('@')[0]}...")
+        elif db_path:
             self.db_path = db_path
+            self.database_url = f"sqlite:///{db_path}"
+            self.is_postgres = False
         else:
             # Integrate with CFG-001 configuration system
             try:
@@ -56,22 +66,33 @@ class DatabaseInitializer:
                     f"Could not load CFG-001 configuration, using default path: {e}"
                 )
                 self.db_path = "/data/docaiche.db"
+            
+            self.database_url = f"sqlite:///{self.db_path}"
+            self.is_postgres = False
 
         self.schema_version = "1.0.0"
 
     def initialize_database(self, force_recreate: bool = False) -> None:
         """
-        Initialize the SQLite database with all tables and indexes.
+        Initialize the database with all tables and indexes.
 
         Args:
             force_recreate: If True, drop existing database and recreate
         """
-        # Create data directory if it doesn't exist
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-
-        if force_recreate and os.path.exists(self.db_path):
-            os.remove(self.db_path)
-            logger.info(f"Removed existing database: {self.db_path}")
+        # Delegate to PostgreSQL initializer if using PostgreSQL
+        if self.is_postgres:
+            from .init_db_postgres import PostgreSQLInitializer
+            pg_init = PostgreSQLInitializer(self.database_url)
+            pg_init.initialize_database(force_recreate=force_recreate)
+            return
+        
+        # Original SQLite initialization code
+        if self.db_path:
+            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+            
+            if force_recreate and os.path.exists(self.db_path):
+                os.remove(self.db_path)
+                logger.info(f"Removed existing database: {self.db_path}")
 
         with sqlite3.connect(self.db_path) as conn:
             # Enable foreign key constraints

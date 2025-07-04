@@ -134,15 +134,37 @@ class DatabaseManager:
         try:
             if _db_logger:
                 _db_logger.log_connection_event("connection_attempt", client_ip="localhost")
-            # Create async engine with SQLite-specific configuration
+            # Create async engine with database-specific configuration
+            connect_args = {}
+            pool_size = 10
+            max_overflow = 20
+            
+            # Configure based on database type
+            if self.database_url.startswith("sqlite"):
+                connect_args = {"check_same_thread": False}
+                pool_size = 1  # SQLite doesn't support true concurrency
+                max_overflow = 0
+            elif self.database_url.startswith("postgresql"):
+                # PostgreSQL optimizations
+                connect_args = {
+                    "server_settings": {
+                        "application_name": "docaiche",
+                        "jit": "off"  # Disable JIT for more predictable performance
+                    },
+                    "command_timeout": 60,
+                    "prepared_statement_cache_size": 0,  # Disable to prevent cache bloat
+                }
+                pool_size = 10
+                max_overflow = 20
+            
             self.engine = create_async_engine(
                 self.database_url,
                 echo=False,  # Set to True for SQL logging in debug mode
                 pool_pre_ping=True,
                 pool_recycle=3600,
-                connect_args={
-                    "check_same_thread": False,  # Required for SQLite with async
-                },
+                pool_size=pool_size,
+                max_overflow=max_overflow,
+                connect_args=connect_args,
             )
 
             # Create session factory
@@ -150,15 +172,22 @@ class DatabaseManager:
                 self.engine, class_=AsyncSession, expire_on_commit=False
             )
 
-            # Test connection and configure SQLite for proper isolation
+            # Test connection and configure database-specific settings
             async with self.engine.begin() as conn:
-                # CRITICAL: Enable foreign key constraints for data integrity
-                await conn.execute(text("PRAGMA foreign_keys = ON"))
-                # Ensure we can see changes from other connections
-                await conn.execute(text("PRAGMA journal_mode = WAL"))
-                await conn.execute(text("PRAGMA synchronous = NORMAL"))
-                # Force a checkpoint to ensure we see all committed changes
-                await conn.execute(text("PRAGMA wal_checkpoint(PASSIVE)"))
+                if self.database_url.startswith("sqlite"):
+                    # SQLite-specific configuration
+                    await conn.execute(text("PRAGMA foreign_keys = ON"))
+                    await conn.execute(text("PRAGMA journal_mode = WAL"))
+                    await conn.execute(text("PRAGMA synchronous = NORMAL"))
+                    await conn.execute(text("PRAGMA wal_checkpoint(PASSIVE)"))
+                elif self.database_url.startswith("postgresql"):
+                    # PostgreSQL-specific configuration
+                    # Set search path if needed
+                    await conn.execute(text("SET search_path TO public"))
+                    # Ensure we're using UTC
+                    await conn.execute(text("SET timezone = 'UTC'"))
+                
+                # Test connection
                 await conn.execute(text("SELECT 1"))
 
             self._connected = True
@@ -1069,31 +1098,42 @@ async def create_database_manager(
     Returns:
         Configured DatabaseManager instance
     """
-    if config is None:
-        # Integrate with CFG-001 configuration system
-        try:
-            if get_system_configuration is not None:
-                system_config = get_system_configuration()
-                db_path = f"{system_config.app.data_dir}/docaiche.db"
-            else:
-                db_path = "/data/docaiche.db"
-        except Exception as e:
-            logger.warning(f"Could not load configuration, using default: {e}")
-            db_path = "/data/docaiche.db"
+    # Check for DATABASE_URL environment variable first
+    database_url = os.environ.get("DATABASE_URL")
+    
+    if database_url:
+        # Use the provided DATABASE_URL
+        logger.info(f"Using DATABASE_URL from environment: {database_url.split('@')[0]}...")
+    elif config and "database_url" in config:
+        database_url = config["database_url"]
     else:
-        db_path = config.get("db_path", "/data/docaiche.db")
+        # Fall back to SQLite configuration
+        if config is None:
+            # Integrate with CFG-001 configuration system
+            try:
+                if get_system_configuration is not None:
+                    system_config = get_system_configuration()
+                    db_path = f"{system_config.app.data_dir}/docaiche.db"
+                else:
+                    db_path = "/data/docaiche.db"
+            except Exception as e:
+                logger.warning(f"Could not load configuration, using default: {e}")
+                db_path = "/data/docaiche.db"
+        else:
+            db_path = config.get("db_path", "/data/docaiche.db")
 
-    # Fix SQLite URL construction for aiosqlite
-    # Convert relative paths to absolute and ensure proper URL format
-    if not os.path.isabs(db_path):
-        db_path = os.path.abspath(db_path)
+        # Fix SQLite URL construction for aiosqlite
+        # Convert relative paths to absolute and ensure proper URL format
+        if not os.path.isabs(db_path):
+            db_path = os.path.abspath(db_path)
 
-    # Ensure database directory exists
-    db_dir = os.path.dirname(db_path)
-    os.makedirs(db_dir, exist_ok=True)
+        # Ensure database directory exists for SQLite
+        db_dir = os.path.dirname(db_path)
+        os.makedirs(db_dir, exist_ok=True)
 
-    # Construct proper SQLite URL for aiosqlite
-    database_url = f"sqlite+aiosqlite:///{db_path}"
+        # Construct proper SQLite URL for aiosqlite
+        database_url = f"sqlite+aiosqlite:///{db_path}"
+    
     return DatabaseManager(database_url)
 
 

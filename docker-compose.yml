@@ -19,7 +19,7 @@ services:
       dockerfile: src/api/Dockerfile
     # Port not exposed - access through admin-ui proxy on port 4080
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -30,8 +30,12 @@ services:
       - REDIS_PORT=6379
       - WEAVIATE_URL=http://weaviate:8080
       - WEAVIATE_API_KEY=${WEAVIATE_API_KEY:-docaiche-weaviate-key-2025}
-      - DATABASE_URL=sqlite+aiosqlite:///data/docaiche.db
-      - DB_PATH=/data/docaiche.db
+      - DATABASE_URL=postgresql+asyncpg://docaiche:${POSTGRES_PASSWORD:-docaiche-secure-password-2025}@postgres:5432/docaiche
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=docaiche
+      - POSTGRES_USER=docaiche
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-docaiche-secure-password-2025}
       - ENVIRONMENT=development
       - DATA_DIR=/data
       - LOG_LEVEL=INFO
@@ -49,7 +53,7 @@ services:
     command: >
       sh -c "
         mkdir -p /var/log/docaiche &&
-        python src/database/init_db.py --db-path /data/docaiche.db &&
+        python src/database/init_db.py &&
         (python /app/init-weaviate-workspace.py > /var/log/docaiche/workspace-init.log 2>&1 &) &&
         uvicorn src.main:app --host 0.0.0.0 --port 4000
       "
@@ -62,7 +66,6 @@ services:
       retries: 5
       start_period: 60s
     volumes:
-      - db_data:/data
       - ./config.yaml:/app/config.yaml:ro
       - logs_data:/var/log/docaiche
     restart: unless-stopped
@@ -130,23 +133,52 @@ services:
     labels:
       - "docaiche.service=redis"
 
-  db:
-    image: python:3.11-alpine
-    command: ["sh", "-c", "mkdir -p /data && touch /data/docaiche.db && chmod 666 /data/docaiche.db && python /app/db-metrics-server.py"]
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: docaiche
+      POSTGRES_USER: docaiche
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docaiche-secure-password-2025}
+      POSTGRES_MAX_CONNECTIONS: 100
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_MAINTENANCE_WORK_MEM: 64MB
+      POSTGRES_CHECKPOINT_COMPLETION_TARGET: 0.9
+      POSTGRES_WAL_BUFFERS: 16MB
+      POSTGRES_DEFAULT_STATISTICS_TARGET: 100
+      POSTGRES_RANDOM_PAGE_COST: 1.1
+      POSTGRES_EFFECTIVE_IO_CONCURRENCY: 200
+      POSTGRES_WORK_MEM: 4MB
+      POSTGRES_MIN_WAL_SIZE: 1GB
+      POSTGRES_MAX_WAL_SIZE: 4GB
+    command: 
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
     volumes:
-      - db_data:/data
-      - ./db-metrics-server.py:/app/db-metrics-server.py:ro
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - docaiche
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5432/health"]
-      interval: 30s
+      test: ["CMD-SHELL", "pg_isready -U docaiche -d docaiche"]
+      interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 30s
     restart: unless-stopped
     labels:
-      - "docaiche.service=database"
+      - "docaiche.service=postgresql"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   weaviate:
     image: semitechnologies/weaviate:latest
@@ -376,7 +408,7 @@ networks:
 
 volumes:
   redis_data:
-  db_data:
+  postgres_data:
   weaviate_data:
   weaviate_backups:
   loki_data:
