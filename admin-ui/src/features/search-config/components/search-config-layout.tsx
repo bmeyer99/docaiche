@@ -24,6 +24,9 @@ import {
 } from 'lucide-react';
 import { TabConfig } from '../types';
 import { ConfigProvider, useSearchConfig } from '../contexts/config-context';
+import { useProviderSettings, useModelSelection } from '@/lib/hooks/use-provider-settings';
+import { validateSearchConfig } from '@/lib/utils/config-validator';
+import { ConfigValidation, ValidationStatusBadge } from './config-validation';
 
 // Import tab components
 import { ProvidersConfig } from './tabs/providers';
@@ -51,13 +54,30 @@ const ICON_MAP = {
 };
 
 function SearchConfigContent() {
-  const { isLoading, loadError } = useSearchConfig();
+  const { 
+    isLoading, 
+    loadError, 
+    vectorConfig, 
+    embeddingConfig, 
+    modelParameters 
+  } = useSearchConfig();
+  const { providers } = useProviderSettings();
+  const { modelSelection } = useModelSelection();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams?.get('tab') || 'providers');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [providerRefreshKey, setProviderRefreshKey] = useState(0);
+  
+  // Calculate validation status
+  const validation = validateSearchConfig(
+    vectorConfig,
+    embeddingConfig,
+    modelSelection,
+    modelParameters,
+    providers
+  );
 
   // Update URL when tab changes
   const handleTabChange = (value: string) => {
@@ -177,6 +197,14 @@ function SearchConfigContent() {
         </div>
       </div>
 
+      {/* Configuration Validation */}
+      <div className="px-6 py-4 border-b bg-gray-50/50">
+        <ConfigValidation 
+          validation={validation}
+          onNavigateToTab={handleTabChange}
+        />
+      </div>
+
       {/* Tabs */}
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full">
@@ -196,6 +224,12 @@ function SearchConfigContent() {
                       <Badge variant="secondary" className="ml-2">
                         {tab.badge}
                       </Badge>
+                    )}
+                    {/* Show validation status for specific tabs */}
+                    {(tab.id === 'vector' || tab.id === 'text-ai') && (
+                      <div className="ml-2">
+                        <ValidationStatusBadge validation={validation} />
+                      </div>
                     )}
                   </TabsTrigger>
                 );

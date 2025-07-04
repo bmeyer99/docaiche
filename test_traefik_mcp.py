@@ -28,12 +28,12 @@ def trace_mcp_request():
     print(f"=== MCP Request Trace ===")
     print(f"Request ID: {request_id}")
     print(f"Query: {request['params']['arguments']['query']}")
-    print(f"Endpoint: http://localhost:4080/api/v1/mcp (Traefik)")
+    print(f"Endpoint: http://localhost:4080/mcp (Traefik)")
     
     # Send request
     cmd = [
         "curl", "-s", "-X", "POST",
-        "http://localhost:4080/api/v1/mcp",
+        "http://localhost:4080/mcp",
         "-H", "Content-Type: application/json",
         "-d", json.dumps(request)
     ]

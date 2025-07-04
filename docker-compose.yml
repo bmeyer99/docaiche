@@ -91,6 +91,8 @@ services:
       # AI Logging Access for UI
       - NEXT_PUBLIC_AI_LOGS_ENABLED=true
       - NEXT_PUBLIC_AI_LOGS_WEBSOCKET_ENABLED=true
+      # API URL - uses relative path so it works through Traefik
+      - NEXT_PUBLIC_API_URL=/api/v1
     depends_on:
       api:
         condition: service_healthy
@@ -129,17 +131,19 @@ services:
       - "docaiche.service=redis"
 
   db:
-    image: alpine:3.18
-    command: ["sh", "-c", "mkdir -p /data && touch /data/docaiche.db && chmod 666 /data/docaiche.db && tail -f /dev/null"]
+    image: python:3.11-alpine
+    command: ["sh", "-c", "mkdir -p /data && touch /data/docaiche.db && chmod 666 /data/docaiche.db && python /app/db-metrics-server.py"]
     volumes:
       - db_data:/data
+      - ./db-metrics-server.py:/app/db-metrics-server.py:ro
     networks:
       - docaiche
     healthcheck:
-      test: ["CMD", "test", "-f", "/data/docaiche.db"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5432/health"]
       interval: 30s
       timeout: 5s
       retries: 5
+      start_period: 10s
     restart: unless-stopped
     labels:
       - "docaiche.service=database"

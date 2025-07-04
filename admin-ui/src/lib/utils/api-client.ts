@@ -969,10 +969,26 @@ export class DocaicheApiClient {
   }
 
   async getEmbeddingConfig(): Promise<any> {
-    // Note: The backend only supports PUT /weaviate/embeddings for updates
-    // For getting embedding config, we'll return a default structure
-    // since there's no GET endpoint available yet
-    console.warn('[API] getEmbeddingConfig: Backend only supports PUT /weaviate/embeddings, returning default config');
+    // Use central configuration to get embedding config
+    try {
+      const config = await this.getConfiguration();
+      const modelSelectionItem = config.items?.find(item => item.key === 'ai.model_selection');
+      if (modelSelectionItem?.value && typeof modelSelectionItem.value === 'object' && 'embeddings' in modelSelectionItem.value) {
+        const embeddings = (modelSelectionItem.value as any).embeddings;
+        return {
+          useDefaultEmbedding: false,
+          provider: embeddings.provider || '',
+          model: embeddings.model || '',
+          dimensions: 768,
+          chunkSize: 1000,
+          chunkOverlap: 200
+        };
+      }
+    } catch (error) {
+      console.warn('[API] Failed to get embedding config from central store:', error);
+    }
+    
+    // Return default config if not found
     return {
       useDefaultEmbedding: true,
       provider: '',
@@ -984,16 +1000,46 @@ export class DocaicheApiClient {
   }
 
   async updateEmbeddingConfig(config: any): Promise<any> {
-    return this.put<any>('/weaviate/embeddings', config);
+    // Save to central configuration
+    if (!config.useDefaultEmbedding && config.provider && config.model) {
+      const currentConfig = await this.getConfiguration();
+      const modelSelectionItem = currentConfig.items?.find(i => i.key === 'ai.model_selection');
+      const currentModelSelection = modelSelectionItem?.value || {};
+      
+      return this.updateConfiguration({
+        key: 'ai.model_selection',
+        value: {
+          ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
+          embeddings: {
+            provider: config.provider,
+            model: config.model
+          }
+        }
+      });
+    }
+    return config;
   }
 
   // Model Parameters
   async getModelParameters(provider: string, model: string): Promise<any> {
-    return this.get<any>(`/providers/${provider}/models/${model}/parameters`);
+    // Use central configuration instead of dedicated endpoint
+    try {
+      const config = await this.getConfiguration();
+      const paramKey = `ai.models.${provider}.${model}.parameters`;
+      const paramItem = config.items?.find(item => item.key === paramKey);
+      return paramItem?.value || null;
+    } catch (error) {
+      console.warn(`[API] Failed to get model parameters for ${provider}/${model}:`, error);
+      return null;
+    }
   }
 
   async updateModelParameters(provider: string, model: string, parameters: any): Promise<any> {
-    return this.put<any>(`/providers/${provider}/models/${model}/parameters`, parameters);
+    // Use central configuration instead of dedicated endpoint
+    return this.updateConfiguration({
+      key: `ai.models.${provider}.${model}.parameters`,
+      value: parameters
+    });
   }
 }
 

@@ -88,3 +88,38 @@ scrape_configs:
       - source_labels: [__name__]
         regex: 'prometheus_(tsdb_.*|rule_.*|http_requests_total|query_duration_seconds).*'
         action: keep
+
+  # Admin UI
+  - job_name: 'admin-ui'
+    static_configs:
+      - targets: ['admin-ui:3000']
+    metrics_path: /api/metrics
+    scrape_interval: 30s
+
+  # API
+  - job_name: 'api'
+    static_configs:
+      - targets: ['api:4000']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Database (if it has metrics endpoint)
+  - job_name: 'db'
+    static_configs:
+      - targets: ['db:5432']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Traefik
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8080']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # Promtail
+  - job_name: 'promtail'
+    static_configs:
+      - targets: ['promtail:9080']
+    metrics_path: /metrics
+    scrape_interval: 30s

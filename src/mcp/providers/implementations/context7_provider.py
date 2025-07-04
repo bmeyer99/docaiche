@@ -1,15 +1,17 @@
 """
-Context7 MCP Provider
+Context7 HTTP Provider
 =====================
 
-Provider that fetches real-time documentation via Context7 MCP server.
-Uses stdio transport to communicate with the Context7 subprocess.
+Provider that fetches real-time documentation via Context7 HTTP API.
+Uses direct HTTP requests to Context7 endpoints in format:
+https://context7.com/vercel/{technology}/llms.txt
 """
 
 import asyncio
 import json
 import logging
 import time
+import aiohttp
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
@@ -31,10 +33,10 @@ logger = logging.getLogger(__name__)
 
 class Context7Provider(SearchProvider):
     """
-    Context7 MCP provider for real-time documentation retrieval.
+    Context7 HTTP provider for real-time documentation retrieval.
     
-    This provider uses the Context7 MCP server to fetch up-to-date
-    documentation for various libraries and frameworks.
+    This provider uses direct HTTP requests to Context7 API in the format:
+    https://context7.com/vercel/{technology}/llms.txt
     """
     
     def __init__(self, config: ProviderConfig):
@@ -42,52 +44,36 @@ class Context7Provider(SearchProvider):
         Initialize Context7 provider.
         
         Args:
-            config: Provider configuration including MCP command
+            config: Provider configuration
         """
         super().__init__(config)
-        self.process: Optional[asyncio.subprocess.Process] = None
-        self.reader: Optional[asyncio.StreamReader] = None
-        self.writer: Optional[asyncio.StreamWriter] = None
-        self.request_id = 0
-        self._lock = asyncio.Lock()
+        self.base_url = "https://context7.com/vercel"
+        self.session = None
         
-        # MCP configuration
-        self.command = config.config.get('command', 'npx')
-        self.args = config.config.get('args', ['-y', '@upstash/context7-mcp'])
-        
-        # Cache for library IDs
-        self._library_cache: Dict[str, str] = {}
+        # Cache for documentation
+        self._doc_cache: Dict[str, Dict[str, Any]] = {}
         self._cache_ttl = config.config.get('cache_ttl', 3600)  # 1 hour default
-        self._last_cache_update = 0
         
-        logger.info(f"Initialized Context7Provider with command: {self.command} {' '.join(self.args)}")
+        # HTTP client timeout
+        self.timeout = aiohttp.ClientTimeout(total=30)
+        
+        logger.info(f"Initialized Context7Provider with base URL: {self.base_url}")
     
     async def initialize(self) -> None:
-        """Start the Context7 MCP subprocess."""
+        """Initialize HTTP session for Context7 API."""
         try:
-            self.process = await asyncio.create_subprocess_exec(
-                self.command,
-                *self.args,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+            if not self.session:
+                self.session = aiohttp.ClientSession(
+                    timeout=self.timeout,
+                    headers={
+                        'User-Agent': 'DocAIche-Context7-Provider/1.0'
+                    }
+                )
             
-            # Initialize JSON-RPC communication
-            await self._send_request({
-                "jsonrpc": "2.0",
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": "0.1.0",
-                    "capabilities": {}
-                },
-                "id": self._get_next_id()
-            })
-            
-            logger.info("Context7 MCP subprocess initialized successfully")
+            logger.info("Context7 HTTP provider initialized successfully")
             
         except Exception as e:
-            logger.error(f"Failed to initialize Context7 subprocess: {e}")
+            logger.error(f"Failed to initialize Context7 HTTP provider: {e}")
             raise
     
     async def search(self, options: SearchOptions) -> SearchResults:
@@ -106,54 +92,56 @@ class Context7Provider(SearchProvider):
             # Skip circuit breaker check for now - Context7 is reliable
             # TODO: Implement proper circuit breaker if needed
             
-            # Extract library name from query
-            library_name = self._extract_library_name(options.query)
-            if not library_name:
+            # Extract technology name from query
+            technology = self._extract_technology_name(options.query)
+            if not technology:
                 return SearchResults(
                     results=[],
                     total_results=0,
                     execution_time_ms=int((time.time() - start_time) * 1000),
                     provider="context7",
                     query=options.query,
-                    error="No library name detected in query"
+                    error="No technology name detected in query"
                 )
             
-            # Ensure subprocess is running
-            if not self.process or self.process.returncode is not None:
+            # Ensure HTTP session is initialized
+            if not self.session:
                 await self.initialize()
             
-            # Get library ID
-            library_id = await self._resolve_library_id(library_name)
-            if not library_id:
+            # Fetch documentation content
+            content = await self._fetch_documentation(technology)
+            if not content:
                 return SearchResults(
                     results=[],
                     total_results=0,
                     execution_time_ms=int((time.time() - start_time) * 1000),
                     provider="context7",
                     query=options.query,
-                    error=f"Library '{library_name}' not found"
+                    error=f"No documentation found for '{technology}'"
                 )
             
-            # Fetch documentation
-            docs = await self._get_library_docs(library_id, options.query)
-            
-            # Convert to search results
+            # Create search result from documentation content
             results = []
-            for doc in docs:
-                results.append(SearchResult(
-                    title=doc.get('title', f"{library_name} Documentation"),
-                    url=doc.get('url', ''),
-                    snippet=doc.get('content', '')[:500],
-                    content=doc.get('content', ''),
-                    score=doc.get('relevance', 0.8),
-                    metadata={
-                        'library': library_name,
-                        'library_id': library_id,
-                        'version': doc.get('version', 'latest'),
-                        'last_updated': doc.get('last_updated', str(datetime.now())),
-                        'source': 'context7'
-                    }
-                ))
+            if content:
+                # Split content into chunks for better relevance
+                content_chunks = self._split_content(content, options.query)
+                
+                for i, chunk in enumerate(content_chunks[:5]):  # Limit to top 5 chunks
+                    results.append(SearchResult(
+                        title=f"{technology.title()} Documentation - Section {i+1}",
+                        url=f"https://context7.com/vercel/{technology}/llms.txt",
+                        snippet=chunk[:500],
+                        content=chunk,
+                        score=self._calculate_relevance(chunk, options.query),
+                        metadata={
+                            'technology': technology,
+                            'section': i+1,
+                            'total_sections': len(content_chunks),
+                            'last_updated': str(datetime.now()),
+                            'source': 'context7',
+                            'type': SearchResultType.DOCUMENTATION
+                        }
+                    ))
             
             search_time = int((time.time() - start_time) * 1000)
             # TODO: Implement metrics tracking if needed
@@ -179,159 +167,238 @@ class Context7Provider(SearchProvider):
                 error=str(e)
             )
     
-    async def _resolve_library_id(self, library_name: str) -> Optional[str]:
+    async def _fetch_documentation(self, technology: str) -> Optional[str]:
         """
-        Resolve library name to Context7 ID.
+        Fetch documentation content from Context7 API.
         
         Args:
-            library_name: Name of the library
+            technology: Technology name (e.g., 'next.js', 'react')
             
         Returns:
-            Library ID or None if not found
+            Documentation content or None if not found
         """
         # Check cache first
-        if library_name in self._library_cache:
-            return self._library_cache[library_name]
+        cache_key = f"docs_{technology}"
+        if cache_key in self._doc_cache:
+            cached = self._doc_cache[cache_key]
+            if time.time() - cached['timestamp'] < self._cache_ttl:
+                logger.debug(f"Returning cached documentation for {technology}")
+                return cached['content']
         
         try:
-            response = await self._send_request({
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {
-                    "name": "resolve-library-id",
-                    "arguments": {
-                        "libraryName": library_name
-                    }
-                },
-                "id": self._get_next_id()
-            })
+            url = f"{self.base_url}/{technology}/llms.txt"
+            logger.info(f"Fetching Context7 documentation from: {url}")
             
-            if response and response.get('result'):
-                library_id = response['result'].get('libraryId')
-                if library_id:
-                    self._library_cache[library_name] = library_id
-                    return library_id
+            async with self.session.get(url) as response:
+                if response.status == 200:
+                    content = await response.text()
+                    
+                    # Cache the result
+                    self._doc_cache[cache_key] = {
+                        'content': content,
+                        'timestamp': time.time()
+                    }
+                    
+                    logger.info(f"Successfully fetched {len(content)} characters for {technology}")
+                    return content
+                else:
+                    logger.warning(f"Context7 API returned status {response.status} for {technology}")
+                    return None
             
         except Exception as e:
-            logger.error(f"Failed to resolve library ID for '{library_name}': {e}")
-        
-        return None
-    
-    async def _get_library_docs(self, library_id: str, query: str) -> List[Dict[str, Any]]:
-        """
-        Fetch documentation for a library.
-        
-        Args:
-            library_id: Context7 library ID
-            query: Search query for filtering docs
-            
-        Returns:
-            List of documentation entries
-        """
-        try:
-            response = await self._send_request({
-                "jsonrpc": "2.0",
-                "method": "tools/call",
-                "params": {
-                    "name": "get-library-docs",
-                    "arguments": {
-                        "libraryId": library_id,
-                        "topic": query  # Use query as topic filter
-                    }
-                },
-                "id": self._get_next_id()
-            })
-            
-            if response and response.get('result'):
-                docs = response['result'].get('documentation', [])
-                return docs
-            
-        except Exception as e:
-            logger.error(f"Failed to fetch docs for library '{library_id}': {e}")
-        
-        return []
-    
-    async def _send_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """
-        Send JSON-RPC request to Context7 subprocess.
-        
-        Args:
-            request: JSON-RPC request
-            
-        Returns:
-            JSON-RPC response
-        """
-        async with self._lock:
-            if not self.process or self.process.stdin is None:
-                raise RuntimeError("Context7 subprocess not initialized")
-            
-            # Send request
-            request_str = json.dumps(request) + '\n'
-            self.process.stdin.write(request_str.encode())
-            await self.process.stdin.drain()
-            
-            # Read response
-            if self.process.stdout:
-                response_line = await self.process.stdout.readline()
-                if response_line:
-                    return json.loads(response_line.decode())
-            
+            logger.error(f"Failed to fetch documentation for '{technology}': {e}")
             return None
     
-    def _extract_library_name(self, query: str) -> Optional[str]:
+    def _split_content(self, content: str, query: str) -> List[str]:
         """
-        Extract library name from search query.
+        Split documentation content into relevant chunks.
+        
+        Args:
+            content: Full documentation content
+            query: Search query for relevance filtering
+            
+        Returns:
+            List of content chunks
+        """
+        # Split by common documentation delimiters
+        chunks = []
+        
+        # Split by double newlines (common section delimiter)
+        sections = content.split('\n\n')
+        
+        for section in sections:
+            section = section.strip()
+            if len(section) > 100:  # Only include substantial sections
+                # Further split large sections
+                if len(section) > 2000:
+                    # Split by single newlines and group
+                    lines = section.split('\n')
+                    current_chunk = []
+                    current_length = 0
+                    
+                    for line in lines:
+                        if current_length + len(line) > 1500:
+                            if current_chunk:
+                                chunks.append('\n'.join(current_chunk))
+                            current_chunk = [line]
+                            current_length = len(line)
+                        else:
+                            current_chunk.append(line)
+                            current_length += len(line)
+                    
+                    if current_chunk:
+                        chunks.append('\n'.join(current_chunk))
+                else:
+                    chunks.append(section)
+        
+        # Sort chunks by relevance to query
+        query_lower = query.lower()
+        scored_chunks = []
+        
+        for chunk in chunks:
+            score = self._calculate_relevance(chunk, query)
+            scored_chunks.append((score, chunk))
+        
+        # Sort by score (descending) and return chunks
+        scored_chunks.sort(key=lambda x: x[0], reverse=True)
+        return [chunk for score, chunk in scored_chunks]
+    
+    def _calculate_relevance(self, content: str, query: str) -> float:
+        """
+        Calculate relevance score for content against query.
+        
+        Args:
+            content: Content to score
+            query: Search query
+            
+        Returns:
+            Relevance score between 0 and 1
+        """
+        content_lower = content.lower()
+        query_lower = query.lower()
+        
+        # Simple relevance calculation
+        score = 0.0
+        query_words = query_lower.split()
+        
+        for word in query_words:
+            if word in content_lower:
+                # Count occurrences
+                occurrences = content_lower.count(word)
+                score += min(occurrences * 0.1, 0.3)  # Cap contribution per word
+        
+        # Normalize by query length
+        if query_words:
+            score = min(score / len(query_words), 1.0)
+        
+        # Boost score for exact phrase matches
+        if query_lower in content_lower:
+            score += 0.2
+        
+        return max(0.1, score)  # Minimum score of 0.1
+    
+    def _extract_technology_name(self, query: str) -> Optional[str]:
+        """
+        Extract technology name from search query.
         
         Args:
             query: Search query
             
         Returns:
-            Library name or None
+            Technology name or None
         """
-        # Common patterns for library mentions
-        # This is a simple implementation - could be enhanced with NLP
+        # Common patterns for technology mentions
         query_lower = query.lower()
         
-        # Known libraries (extend this list)
-        known_libraries = [
-            'react', 'vue', 'angular', 'svelte',
-            'express', 'fastify', 'nestjs', 'koa',
-            'django', 'flask', 'fastapi',
-            'numpy', 'pandas', 'scikit-learn', 'tensorflow', 'pytorch',
-            'axios', 'lodash', 'moment', 'dayjs',
-            'tailwind', 'bootstrap', 'material-ui',
-            'redux', 'mobx', 'zustand', 'recoil',
-            'next', 'nuxt', 'gatsby',
-            'jest', 'mocha', 'cypress', 'playwright'
+        # Known technologies available on Context7
+        known_technologies = [
+            'next.js', 'nextjs', 'next',
+            'react', 'reactjs',
+            'vue', 'vuejs', 'vue.js',
+            'angular', 'angularjs',
+            'svelte', 'sveltekit',
+            'express', 'expressjs',
+            'fastify',
+            'nestjs', 'nest',
+            'koa', 'koajs',
+            'django',
+            'flask',
+            'fastapi',
+            'nuxt', 'nuxtjs', 'nuxt.js',
+            'gatsby', 'gatsbyjs',
+            'tailwind', 'tailwindcss',
+            'bootstrap',
+            'material-ui', 'mui',
+            'redux',
+            'mobx',
+            'zustand',
+            'typescript', 'ts',
+            'javascript', 'js',
+            'node', 'nodejs', 'node.js'
         ]
         
-        for lib in known_libraries:
-            if lib in query_lower:
-                return lib
+        # Direct matches
+        for tech in known_technologies:
+            if tech in query_lower:
+                # Map common variations to standard names
+                if tech in ['nextjs', 'next']:
+                    return 'next.js'
+                elif tech in ['reactjs']:
+                    return 'react'
+                elif tech in ['vuejs', 'vue.js']:
+                    return 'vue'
+                elif tech in ['angularjs']:
+                    return 'angular'
+                elif tech in ['expressjs']:
+                    return 'express'
+                elif tech in ['nestjs', 'nest']:
+                    return 'nestjs'
+                elif tech in ['koajs']:
+                    return 'koa'
+                elif tech in ['nuxtjs', 'nuxt.js']:
+                    return 'nuxt'
+                elif tech in ['gatsbyjs']:
+                    return 'gatsby'
+                elif tech in ['tailwindcss']:
+                    return 'tailwind'
+                elif tech in ['material-ui', 'mui']:
+                    return 'material-ui'
+                elif tech in ['ts']:
+                    return 'typescript'
+                elif tech in ['js']:
+                    return 'javascript'
+                elif tech in ['nodejs', 'node.js']:
+                    return 'node'
+                else:
+                    return tech
         
         # Try to extract from patterns like "X documentation" or "how to use X"
         import re
         patterns = [
-            r'(\w+)\s+documentation',
-            r'(\w+)\s+docs',
-            r'how\s+to\s+use\s+(\w+)',
-            r'(\w+)\s+tutorial',
-            r'(\w+)\s+guide'
+            r'(\w+(?:\.\w+)?)\s+documentation',
+            r'(\w+(?:\.\w+)?)\s+docs',
+            r'how\s+to\s+use\s+(\w+(?:\.\w+)?)',
+            r'(\w+(?:\.\w+)?)\s+tutorial',
+            r'(\w+(?:\.\w+)?)\s+guide',
+            r'learn\s+(\w+(?:\.\w+)?)',
+            r'(\w+(?:\.\w+)?)\s+api'
         ]
         
         for pattern in patterns:
             match = re.search(pattern, query_lower)
             if match:
-                potential_lib = match.group(1)
-                if len(potential_lib) > 2:  # Skip very short matches
-                    return potential_lib
+                potential_tech = match.group(1)
+                if len(potential_tech) > 2:  # Skip very short matches
+                    # Check if it's a known technology
+                    for tech in known_technologies:
+                        if potential_tech == tech or potential_tech in tech:
+                            return tech
+                    # If not known, try the extracted name as-is
+                    return potential_tech
         
         return None
     
-    def _get_next_id(self) -> int:
-        """Get next request ID for JSON-RPC."""
-        self.request_id += 1
-        return self.request_id
+    
     
     def _get_capabilities(self) -> ProviderCapabilities:
         """Get Context7 provider capabilities."""
@@ -356,35 +423,34 @@ class Context7Provider(SearchProvider):
     async def check_health(self) -> HealthCheck:
         """Check Context7 provider health."""
         try:
-            # Check if subprocess is running
-            if not self.process or self.process.returncode is not None:
-                return HealthCheck(
-                    status=HealthStatus.UNHEALTHY,
-                    latency_ms=0,
-                    error="Subprocess not running"
-                )
+            # Ensure session is initialized
+            if not self.session:
+                await self.initialize()
             
-            # Try a simple request
+            # Try a simple health check by fetching a known technology
             start_time = time.time()
-            response = await self._send_request({
-                "jsonrpc": "2.0",
-                "method": "health",
-                "id": self._get_next_id()
-            })
+            test_url = f"{self.base_url}/next.js/llms.txt"
             
-            latency = int((time.time() - start_time) * 1000)
-            
-            if response:
-                return HealthCheck(
-                    status=HealthStatus.HEALTHY,
-                    latency_ms=latency
-                )
-            else:
-                return HealthCheck(
-                    status=HealthStatus.DEGRADED,
-                    latency_ms=latency,
-                    error="No response from subprocess"
-                )
+            async with self.session.head(test_url) as response:
+                latency = int((time.time() - start_time) * 1000)
+                
+                if response.status == 200:
+                    return HealthCheck(
+                        status=HealthStatus.HEALTHY,
+                        latency_ms=latency
+                    )
+                elif response.status in [404, 403]:
+                    return HealthCheck(
+                        status=HealthStatus.DEGRADED,
+                        latency_ms=latency,
+                        error=f"API returned {response.status}"
+                    )
+                else:
+                    return HealthCheck(
+                        status=HealthStatus.UNHEALTHY,
+                        latency_ms=latency,
+                        error=f"Unexpected status {response.status}"
+                    )
                 
         except Exception as e:
             return HealthCheck(
@@ -400,11 +466,19 @@ class Context7Provider(SearchProvider):
         Returns:
             True if configuration is valid
         """
-        # Context7 doesn't need API key validation
-        # Just check that command is available
-        if not self.command:
-            raise ValueError("Context7 command not specified")
-        return True
+        # Context7 HTTP provider doesn't need special configuration
+        # Just check that base URL is accessible
+        try:
+            if not self.session:
+                await self.initialize()
+            
+            # Test connectivity
+            health = await self.check_health()
+            return health.status in [HealthStatus.HEALTHY, HealthStatus.DEGRADED]
+            
+        except Exception as e:
+            logger.error(f"Context7 configuration validation failed: {e}")
+            return False
     
     async def _check_circuit_breaker(self) -> bool:
         """Check if circuit breaker allows request."""
@@ -422,11 +496,11 @@ class Context7Provider(SearchProvider):
         pass
     
     async def cleanup(self) -> None:
-        """Clean up Context7 subprocess."""
-        if self.process:
+        """Clean up Context7 HTTP session."""
+        if self.session:
             try:
-                self.process.terminate()
-                await self.process.wait()
-                logger.info("Context7 subprocess terminated")
+                await self.session.close()
+                self.session = None
+                logger.info("Context7 HTTP session closed")
             except Exception as e:
-                logger.error(f"Error terminating Context7 subprocess: {e}")
+                logger.error(f"Error closing Context7 HTTP session: {e}")

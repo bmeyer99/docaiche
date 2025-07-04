@@ -11,6 +11,7 @@ from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.api.v1.api import api_router, setup_exception_handlers
@@ -214,6 +215,41 @@ def create_app() -> FastAPI:
     async def root_health():
         """Basic health check endpoint."""
         return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+    # Metrics endpoint for Prometheus
+    @app.get("/metrics", response_class=PlainTextResponse)
+    async def metrics_endpoint():
+        """Prometheus metrics endpoint."""
+        import psutil
+        import time
+        
+        # Basic metrics
+        metrics_data = []
+        
+        # Up metric
+        metrics_data.append("# HELP api_up Whether the API is up")
+        metrics_data.append("# TYPE api_up gauge")
+        metrics_data.append("api_up 1")
+        
+        # Uptime
+        uptime = time.time() - psutil.boot_time()
+        metrics_data.append("# HELP api_uptime_seconds API uptime in seconds")
+        metrics_data.append("# TYPE api_uptime_seconds counter")
+        metrics_data.append(f"api_uptime_seconds {uptime}")
+        
+        # Memory usage
+        memory = psutil.virtual_memory()
+        metrics_data.append("# HELP api_memory_usage_bytes Memory usage in bytes")
+        metrics_data.append("# TYPE api_memory_usage_bytes gauge")
+        metrics_data.append(f"api_memory_usage_bytes {memory.used}")
+        
+        # CPU usage
+        cpu_percent = psutil.cpu_percent()
+        metrics_data.append("# HELP api_cpu_usage_percent CPU usage percentage")
+        metrics_data.append("# TYPE api_cpu_usage_percent gauge")
+        metrics_data.append(f"api_cpu_usage_percent {cpu_percent}")
+        
+        return "\n".join(metrics_data)
 
     return app
 
