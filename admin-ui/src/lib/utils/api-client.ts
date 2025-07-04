@@ -1001,22 +1001,36 @@ export class DocaicheApiClient {
 
   async updateEmbeddingConfig(config: any): Promise<any> {
     // Save to central configuration
-    if (!config.useDefaultEmbedding && config.provider && config.model) {
-      const currentConfig = await this.getConfiguration();
-      const modelSelectionItem = currentConfig.items?.find(i => i.key === 'ai.model_selection');
-      const currentModelSelection = modelSelectionItem?.value || {};
-      
-      return this.updateConfiguration({
-        key: 'ai.model_selection',
-        value: {
-          ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
-          embeddings: {
-            provider: config.provider,
-            model: config.model
-          }
-        }
-      });
-    }
+    const currentConfig = await this.getConfiguration();
+    const modelSelectionItem = currentConfig.items?.find(i => i.key === 'ai.model_selection');
+    const currentModelSelection = modelSelectionItem?.value || {};
+    
+    // Handle both default and custom embedding configurations
+    const embeddingConfig = config.useDefaultEmbedding 
+      ? { useDefault: true }
+      : {
+          useDefault: false,
+          provider: config.provider,
+          model: config.model,
+          dimensions: config.dimensions,
+          chunkSize: config.chunkSize,
+          chunkOverlap: config.chunkOverlap
+        };
+    
+    await this.updateConfiguration({
+      key: 'ai.model_selection',
+      value: {
+        ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
+        embeddings: embeddingConfig
+      }
+    });
+    
+    // Also save the embedding config separately
+    await this.updateConfiguration({
+      key: 'vector.embedding',
+      value: config
+    });
+    
     return config;
   }
 
