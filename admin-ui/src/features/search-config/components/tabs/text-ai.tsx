@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useProviderSettings, useModelSelection } from '@/lib/hooks/use-provider-settings';
 import { AI_PROVIDERS } from '@/lib/config/providers';
 import { useSearchConfig } from '../../contexts/config-context';
+import { SystemPromptsManager } from '../system-prompts-manager';
 
 interface TextAIConfigProps {
   onChangeDetected?: () => void;
@@ -583,73 +584,11 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
         </TabsContent>
 
         {/* System Prompts Tab */}
-        <TabsContent value="prompts" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Prompts</CardTitle>
-              <CardDescription>
-                Configure system prompts for different use cases
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="systemPrompt">Default System Prompt</Label>
-                <Textarea
-                  id="systemPrompt"
-                  {...register('systemPrompt')}
-                  placeholder="Enter a system prompt to guide the AI's behavior..."
-                  className="min-h-[200px] font-mono text-sm"
-                  onChange={(e) => onChangeDetected?.()}
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  This prompt will be prepended to all AI requests to set context and behavior
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-medium">Prompt Templates</h4>
-                <div className="grid gap-3">
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-medium">Search Enhancement</h5>
-                      <Badge variant="secondary">Default</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      You are an AI assistant helping users find technical documentation. 
-                      Provide clear, concise answers based on the search results provided.
-                    </p>
-                  </div>
-                  
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-medium">Code Explanation</h5>
-                      <Badge variant="secondary">Custom</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      You are a code expert. When presented with code snippets, explain them 
-                      clearly, identify potential issues, and suggest improvements.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={() => handleSubmit(handleSaveConfig)()} disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Prompts
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="prompts" className="h-full">
+          <SystemPromptsManager 
+            onChangeDetected={onChangeDetected}
+            onSaveSuccess={onSaveSuccess}
+          />
         </TabsContent>
       </Tabs>
     </div>

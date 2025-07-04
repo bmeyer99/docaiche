@@ -21,6 +21,10 @@ export { HealthIndicator } from './components/shared/health-indicator';
 export { ProviderCard } from './components/shared/provider-card';
 export { ConfigurationForm } from './components/shared/configuration-form';
 
+// System Prompts Manager
+export { SystemPromptsManager } from './components/system-prompts-manager';
+export type { SystemPrompt, SystemPromptsResponse } from './components/system-prompts-manager';
+
 // Hooks
 export * from './hooks/use-search-config-websocket';
 

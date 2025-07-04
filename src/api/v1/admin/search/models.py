@@ -200,8 +200,9 @@ class PromptUpdateRequest(BaseModel):
     """Request to update a prompt template."""
     template: str
     variables: Optional[List[str]] = None
-    activate: bool = Field(default=False, description="Make this the active version")
-    comment: Optional[str] = None
+    active: bool = Field(default=True, description="Whether this version is active")
+    notes: Optional[str] = Field(default=None, description="Notes about this version")
+    performance_metrics: Optional[Dict[str, Any]] = Field(default=None, description="Performance metrics to track")
 
 
 class PromptTestRequest(BaseModel):

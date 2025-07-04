@@ -136,3 +136,82 @@
 .fade-in-sequence > *:nth-child(3) { animation-delay: 0.3s; }
 .fade-in-sequence > *:nth-child(4) { animation-delay: 0.4s; }
 .fade-in-sequence > *:nth-child(5) { animation-delay: 0.5s; }
+
+/* Floating save button animations */
+@keyframes floatDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes floatUp {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -100%);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+}
+
+@keyframes progressFill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress-width);
+  }
+}
+
+/* Floating save button styles */
+.floating-save-enter {
+  animation: floatDown 0.3s ease-out;
+}
+
+.floating-save-exit {
+  animation: floatUp 0.3s ease-in;
+}
+
+.floating-save-glow {
+  animation: glowPulse 2s infinite;
+}
+
+.progress-bar {
+  animation: progressFill 0.3s ease-out;
+}
+
+/* Backdrop blur support */
+.backdrop-blur-custom {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Enhanced shadows */
+.shadow-floating {
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.15),
+    0 20px 40px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.shadow-floating-lg {
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.2),
+    0 30px 60px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+}

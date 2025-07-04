@@ -14,6 +14,7 @@ from weaviate.classes.query import MetadataQuery
 import asyncio
 import logging
 import time
+import uuid
 from typing import List, Optional, Dict, Any, Union
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -653,18 +654,22 @@ class WeaviateVectorClient:
             logger.error(f"Failed to get expired documents in workspace '{workspace_slug}': {e}")
             raise WeaviateError(f"Failed to get expired documents: {str(e)}")
     
-    async def cleanup_expired_documents(self, workspace_slug: str, batch_size: int = 50) -> Dict[str, Any]:
+    async def cleanup_expired_documents(self, workspace_slug: str, batch_size: int = 50, correlation_id: str = None) -> Dict[str, Any]:
         """
         Clean up expired documents from workspace.
         
         Args:
             workspace_slug: The workspace to clean up
             batch_size: Number of documents to process in each batch (default: 50)
+            correlation_id: Optional correlation ID for tracking
             
         Returns:
             Dictionary with cleanup statistics
         """
         start_time = datetime.utcnow()
+        perf_start = time.time()
+        if correlation_id is None:
+            correlation_id = f"wv_cleanup_{uuid.uuid4().hex[:8]}"
         
         try:
             collection = self.client.collections.get(self.COLLECTION_NAME)
@@ -981,3 +986,200 @@ class WeaviateVectorClient:
         except Exception as e:
             logger.error(f"Failed to get expiration statistics for workspace '{workspace_slug}': {e}")
             raise WeaviateError(f"Failed to get expiration statistics: {str(e)}")
+    
+    async def delete_document(self, workspace_slug: str, document_id: str) -> Dict[str, Any]:
+        """
+        Delete a document and all its chunks from the workspace.
+        
+        Args:
+            workspace_slug: The workspace to delete from
+            document_id: The document ID to delete
+            
+        Returns:
+            Dict with deletion results
+        """
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            tenant_collection = collection.with_tenant(workspace_slug)
+            
+            # First, find all chunks for this document
+            response = tenant_collection.query.fetch_objects(
+                where=weaviate.classes.query.Filter.by_property("document_id").equal(document_id),
+                limit=10000
+            )
+            
+            chunk_ids = []
+            for obj in response.objects:
+                chunk_ids.append(obj.uuid)
+            
+            # Delete all chunks
+            deleted_count = 0
+            for chunk_id in chunk_ids:
+                try:
+                    tenant_collection.data.delete_by_id(chunk_id)
+                    deleted_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to delete chunk {chunk_id}: {e}")
+            
+            result = {
+                "document_id": document_id,
+                "workspace_slug": workspace_slug,
+                "total_chunks": len(chunk_ids),
+                "deleted_chunks": deleted_count,
+                "success": deleted_count > 0,
+                "deleted_at": datetime.utcnow().isoformat()
+            }
+            
+            logger.info(f"Deleted document {document_id}: {deleted_count}/{len(chunk_ids)} chunks")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to delete document {document_id}: {e}")
+            return {
+                "document_id": document_id,
+                "workspace_slug": workspace_slug,
+                "total_chunks": 0,
+                "deleted_chunks": 0,
+                "success": False,
+                "error": str(e),
+                "deleted_at": datetime.utcnow().isoformat()
+            }
+    
+    async def update_document_ttl(
+        self, 
+        workspace_slug: str, 
+        document_id: str, 
+        new_ttl_days: int
+    ) -> Dict[str, Any]:
+        """
+        Update TTL for a document and all its chunks.
+        
+        Args:
+            workspace_slug: The workspace containing the document
+            document_id: The document ID to update
+            new_ttl_days: New TTL in days
+            
+        Returns:
+            Dict with update results
+        """
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            tenant_collection = collection.with_tenant(workspace_slug)
+            
+            # Calculate new TTL timestamps
+            ttl_timestamps = self._calculate_ttl_timestamps(new_ttl_days)
+            
+            # Find all chunks for this document
+            response = tenant_collection.query.fetch_objects(
+                where=weaviate.classes.query.Filter.by_property("document_id").equal(document_id),
+                limit=10000
+            )
+            
+            updated_count = 0
+            for obj in response.objects:
+                try:
+                    # Update TTL properties
+                    tenant_collection.data.update(
+                        uuid=obj.uuid,
+                        properties={
+                            "expires_at": ttl_timestamps["expires_at"],
+                            "updated_at": ttl_timestamps["updated_at"]
+                        }
+                    )
+                    updated_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to update chunk {obj.uuid}: {e}")
+            
+            result = {
+                "document_id": document_id,
+                "workspace_slug": workspace_slug,
+                "total_chunks": len(response.objects),
+                "updated_chunks": updated_count,
+                "new_ttl_days": new_ttl_days,
+                "new_expires_at": ttl_timestamps["expires_at"].isoformat(),
+                "success": updated_count > 0,
+                "updated_at": datetime.utcnow().isoformat()
+            }
+            
+            logger.info(f"Updated TTL for document {document_id}: {updated_count}/{len(response.objects)} chunks")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to update TTL for document {document_id}: {e}")
+            return {
+                "document_id": document_id,
+                "workspace_slug": workspace_slug,
+                "total_chunks": 0,
+                "updated_chunks": 0,
+                "new_ttl_days": new_ttl_days,
+                "success": False,
+                "error": str(e),
+                "updated_at": datetime.utcnow().isoformat()
+            }
+    
+    async def get_document_ttl_info(
+        self, 
+        workspace_slug: str, 
+        document_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get TTL information for a document.
+        
+        Args:
+            workspace_slug: The workspace containing the document
+            document_id: The document ID to query
+            
+        Returns:
+            Dict with TTL information or None if not found
+        """
+        try:
+            collection = self.client.collections.get(self.COLLECTION_NAME)
+            tenant_collection = collection.with_tenant(workspace_slug)
+            
+            # Find first chunk for this document to get TTL info
+            response = tenant_collection.query.fetch_objects(
+                where=weaviate.classes.query.Filter.by_property("document_id").equal(document_id),
+                limit=1
+            )
+            
+            if not response.objects:
+                return None
+            
+            obj = response.objects[0]
+            expires_at = obj.properties.get("expires_at")
+            created_at = obj.properties.get("created_at")
+            updated_at = obj.properties.get("updated_at")
+            
+            # Calculate TTL days
+            ttl_days = None
+            if expires_at and created_at:
+                if isinstance(expires_at, datetime) and isinstance(created_at, datetime):
+                    ttl_days = (expires_at - created_at).days
+            
+            # Calculate time remaining
+            time_remaining = None
+            expired = False
+            if expires_at and isinstance(expires_at, datetime):
+                now = datetime.utcnow()
+                if expires_at > now:
+                    time_remaining = (expires_at - now).total_seconds()
+                else:
+                    expired = True
+            
+            return {
+                "document_id": document_id,
+                "workspace_slug": workspace_slug,
+                "expires_at": expires_at.isoformat() if isinstance(expires_at, datetime) else expires_at,
+                "created_at": created_at.isoformat() if isinstance(created_at, datetime) else created_at,
+                "updated_at": updated_at.isoformat() if isinstance(updated_at, datetime) else updated_at,
+                "ttl_days": ttl_days,
+                "time_remaining_seconds": time_remaining,
+                "expired": expired,
+                "source_provider": obj.properties.get("source_provider"),
+                "technology": obj.properties.get("technology"),
+                "title": obj.properties.get("document_title")
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get TTL info for document {document_id}: {e}")
+            return None

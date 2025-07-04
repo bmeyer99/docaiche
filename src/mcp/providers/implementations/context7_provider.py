@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import time
+import uuid
 import aiohttp
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -87,6 +88,10 @@ class Context7Provider(SearchProvider):
             Documentation results
         """
         start_time = time.time()
+        correlation_id = f"ctx7_{uuid.uuid4().hex[:8]}"
+        
+        logger.info(f"PIPELINE_METRICS: step=context7_search_start correlation_id={correlation_id} "
+                   f"query=\"{options.query}\" provider=context7")
         
         try:
             # Skip circuit breaker check for now - Context7 is reliable
@@ -95,10 +100,13 @@ class Context7Provider(SearchProvider):
             # Extract technology info from query
             tech_info = self._extract_technology_info(options.query)
             if not tech_info:
+                duration_ms = int((time.time() - start_time) * 1000)
+                logger.info(f"PIPELINE_METRICS: step=context7_tech_extraction duration_ms={duration_ms} "
+                           f"correlation_id={correlation_id} decision=no_technology_detected success=false")
                 return SearchResults(
                     results=[],
                     total_results=0,
-                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    execution_time_ms=duration_ms,
                     provider="context7",
                     query=options.query,
                     error="No technology name detected in query"
@@ -107,17 +115,25 @@ class Context7Provider(SearchProvider):
             owner = tech_info['owner']
             technology = tech_info['technology']
             
+            tech_extraction_time = int((time.time() - start_time) * 1000)
+            logger.info(f"PIPELINE_METRICS: step=context7_tech_extraction duration_ms={tech_extraction_time} "
+                       f"correlation_id={correlation_id} technology={technology} owner={owner} success=true")
+            
             # Ensure HTTP session is initialized
             if not self.session:
                 await self.initialize()
             
             # Fetch documentation content
-            content = await self._fetch_documentation(owner, technology)
+            content = await self._fetch_documentation(owner, technology, correlation_id)
             if not content:
+                duration_ms = int((time.time() - start_time) * 1000)
+                logger.info(f"PIPELINE_METRICS: step=context7_fetch_complete duration_ms={duration_ms} "
+                           f"correlation_id={correlation_id} technology={technology} owner={owner} "
+                           f"success=false reason=no_content_found")
                 return SearchResults(
                     results=[],
                     total_results=0,
-                    execution_time_ms=int((time.time() - start_time) * 1000),
+                    execution_time_ms=duration_ms,
                     provider="context7",
                     query=options.query,
                     error=f"No documentation found for '{owner}/{technology}'"
@@ -136,6 +152,9 @@ class Context7Provider(SearchProvider):
                         snippet=chunk[:500],
                         content=chunk,
                         score=self._calculate_relevance(chunk, options.query),
+                        source_domain="context7.com",  # Add required field
+                        provider_rank=i + 1,  # Add required field (1-based ranking)
+                        content_type=SearchResultType.DOCUMENTATION,  # Use enum directly
                         metadata={
                             'owner': owner,
                             'technology': technology,
@@ -143,35 +162,49 @@ class Context7Provider(SearchProvider):
                             'total_sections': len(content_chunks),
                             'last_updated': str(datetime.now()),
                             'source': 'context7',
-                            'type': SearchResultType.DOCUMENTATION
+                            'type': SearchResultType.DOCUMENTATION.value,
+                            'ttl_seconds': 3600,  # Add TTL metadata for ingestion
+                            'ingestion_priority': 'high'  # High priority for fresh docs
                         }
                     ))
             
             search_time = int((time.time() - start_time) * 1000)
-            # TODO: Implement metrics tracking if needed
+            
+            logger.info(f"PIPELINE_METRICS: step=context7_search_complete duration_ms={search_time} "
+                       f"correlation_id={correlation_id} technology={technology} owner={owner} "
+                       f"result_count={len(results)} success=true")
             
             return SearchResults(
                 results=results,
                 total_results=len(results),
                 execution_time_ms=search_time,
                 provider="context7",
-                query=options.query
+                query=options.query,
+                metadata={
+                    'correlation_id': correlation_id,
+                    'technology': technology,
+                    'owner': owner,
+                    'content_length': len(content) if content else 0
+                }
             )
             
         except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
             logger.error(f"Context7 search failed: {e}")
-            # TODO: Implement metrics and circuit breaker if needed
+            logger.info(f"PIPELINE_METRICS: step=context7_search_error duration_ms={duration_ms} "
+                       f"correlation_id={correlation_id} error=\"{str(e)}\" success=false")
             
             return SearchResults(
                 results=[],
                 total_results=0,
-                execution_time_ms=int((time.time() - start_time) * 1000),
+                execution_time_ms=duration_ms,
                 provider="context7",
                 query=options.query,
-                error=str(e)
+                error=str(e),
+                metadata={'correlation_id': correlation_id}
             )
     
-    async def _fetch_documentation(self, owner: str, technology: str) -> Optional[str]:
+    async def _fetch_documentation(self, owner: str, technology: str, correlation_id: str = None) -> Optional[str]:
         """
         Fetch documentation content from Context7 API.
         
@@ -182,19 +215,31 @@ class Context7Provider(SearchProvider):
         Returns:
             Documentation content or None if not found
         """
+        fetch_start_time = time.time()
+        if correlation_id is None:
+            correlation_id = f"ctx7_fetch_{uuid.uuid4().hex[:8]}"
+        
         # Check cache first
         cache_key = f"docs_{owner}_{technology}"
         if cache_key in self._doc_cache:
             cached = self._doc_cache[cache_key]
             if time.time() - cached['timestamp'] < self._cache_ttl:
+                cache_hit_time = int((time.time() - fetch_start_time) * 1000)
                 logger.debug(f"Returning cached documentation for {owner}/{technology}")
+                logger.info(f"PIPELINE_METRICS: step=context7_cache_hit duration_ms={cache_hit_time} "
+                           f"correlation_id={correlation_id} technology={technology} owner={owner} "
+                           f"content_length={len(cached['content'])}")
                 return cached['content']
         
         try:
             url = f"{self.base_url}/{owner}/{technology}/llms.txt"
             logger.info(f"Fetching Context7 documentation from: {url}")
+            logger.info(f"PIPELINE_METRICS: step=context7_http_request_start "
+                       f"correlation_id={correlation_id} url={url} technology={technology} owner={owner}")
             
             async with self.session.get(url) as response:
+                http_duration = int((time.time() - fetch_start_time) * 1000)
+                
                 if response.status == 200:
                     content = await response.text()
                     
@@ -205,13 +250,23 @@ class Context7Provider(SearchProvider):
                     }
                     
                     logger.info(f"Successfully fetched {len(content)} characters for {owner}/{technology}")
+                    logger.info(f"PIPELINE_METRICS: step=context7_http_request_success duration_ms={http_duration} "
+                               f"correlation_id={correlation_id} status_code={response.status} "
+                               f"content_length={len(content)} technology={technology} owner={owner}")
                     return content
                 else:
                     logger.warning(f"Context7 API returned status {response.status} for {owner}/{technology}")
+                    logger.info(f"PIPELINE_METRICS: step=context7_http_request_failed duration_ms={http_duration} "
+                               f"correlation_id={correlation_id} status_code={response.status} "
+                               f"technology={technology} owner={owner} reason=non_200_status")
                     return None
             
         except Exception as e:
+            http_duration = int((time.time() - fetch_start_time) * 1000)
             logger.error(f"Failed to fetch documentation for '{owner}/{technology}': {e}")
+            logger.info(f"PIPELINE_METRICS: step=context7_http_request_error duration_ms={http_duration} "
+                       f"correlation_id={correlation_id} error=\"{str(e)}\" "
+                       f"technology={technology} owner={owner}")
             return None
     
     def _split_content(self, content: str, query: str) -> List[str]:
@@ -448,6 +503,8 @@ class Context7Provider(SearchProvider):
     
     async def check_health(self) -> HealthCheck:
         """Check Context7 provider health."""
+        health_correlation_id = f"ctx7_health_{uuid.uuid4().hex[:8]}"
+        
         try:
             # Ensure session is initialized
             if not self.session:
@@ -457,21 +514,33 @@ class Context7Provider(SearchProvider):
             start_time = time.time()
             test_url = f"{self.base_url}/vercel/next.js/llms.txt"
             
+            logger.info(f"PIPELINE_METRICS: step=context7_health_check_start "
+                       f"correlation_id={health_correlation_id} test_url={test_url}")
+            
             async with self.session.head(test_url) as response:
                 latency = int((time.time() - start_time) * 1000)
                 
                 if response.status == 200:
+                    logger.info(f"PIPELINE_METRICS: step=context7_health_check_success duration_ms={latency} "
+                               f"correlation_id={health_correlation_id} status_code={response.status} "
+                               f"health_status=healthy")
                     return HealthCheck(
                         status=HealthStatus.HEALTHY,
                         latency_ms=latency
                     )
                 elif response.status in [404, 403]:
+                    logger.info(f"PIPELINE_METRICS: step=context7_health_check_degraded duration_ms={latency} "
+                               f"correlation_id={health_correlation_id} status_code={response.status} "
+                               f"health_status=degraded")
                     return HealthCheck(
                         status=HealthStatus.DEGRADED,
                         latency_ms=latency,
                         error=f"API returned {response.status}"
                     )
                 else:
+                    logger.info(f"PIPELINE_METRICS: step=context7_health_check_unhealthy duration_ms={latency} "
+                               f"correlation_id={health_correlation_id} status_code={response.status} "
+                               f"health_status=unhealthy")
                     return HealthCheck(
                         status=HealthStatus.UNHEALTHY,
                         latency_ms=latency,
@@ -479,9 +548,13 @@ class Context7Provider(SearchProvider):
                     )
                 
         except Exception as e:
+            latency = int((time.time() - start_time) * 1000)
+            logger.info(f"PIPELINE_METRICS: step=context7_health_check_error duration_ms={latency} "
+                       f"correlation_id={health_correlation_id} error=\"{str(e)}\" "
+                       f"health_status=unhealthy")
             return HealthCheck(
                 status=HealthStatus.UNHEALTHY,
-                latency_ms=0,
+                latency_ms=latency,
                 error=str(e)
             )
     

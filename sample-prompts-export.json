@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2025-07-04T10:20:55.185858",
+  "metadata": {
+    "totalPrompts": 3,
+    "description": "System prompts export from Docaiche admin"
+  },
+  "prompts": [
+    {
+      "id": "intent_interpretation",
+      "name": "Intent Interpretation",
+      "description": "intent_interpretation",
+      "category": "search",
+      "template": "Given the search query: \"{query}\", identify the key concepts, technical terms, and user intent.",
+      "variables": [
+        "query"
+      ],
+      "version": "1.0.0",
+      "active": true,
+      "lastModified": "2025-07-04T10:20:55.185867",
+      "metadata": {
+        "usage_count": 1500,
+        "performance_score": 95.5
+      }
+    },
+    {
+      "id": "query_refinement",
+      "name": "Query Refinement",
+      "description": "query_refinement",
+      "category": "refinement",
+      "template": "Refine the following query: \"{query}\" to improve search results.",
+      "variables": [
+        "query"
+      ],
+      "version": "1.0.0",
+      "active": true,
+      "lastModified": "2025-07-04T10:20:55.185868"
+    },
+    {
+      "id": "relevance_evaluation",
+      "name": "Relevance Evaluation",
+      "description": "relevance_evaluation",
+      "category": "evaluation",
+      "template": "Evaluate the relevance of this result: {result} for query: \"{query}\"",
+      "variables": [
+        "result",
+        "query"
+      ],
+      "version": "1.0.0",
+      "active": true,
+      "lastModified": "2025-07-04T10:20:55.185869"
+    }
+  ]
+}

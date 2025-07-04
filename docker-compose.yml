@@ -39,6 +39,7 @@ services:
       - ENVIRONMENT=development
       - DATA_DIR=/data
       - LOG_LEVEL=INFO
+      - BRAVE_API_KEY=BSA9hqqU3rVqzDzpeSPqQr364PpaGu5
       # AI Logging Configuration
       - AI_LOG_ENABLED=true
       - AI_LOG_CACHE_TTL=300
@@ -461,6 +462,33 @@ services:
       - "traefik.http.services.victoriametrics.loadbalancer.server.port=8428"
       - "traefik.http.middlewares.vm-stripprefix.stripprefix.prefixes=/victoriametrics"
       - "traefik.http.routers.victoriametrics.middlewares=vm-stripprefix"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8081:8080"
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - docaiche
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    restart: unless-stopped
+    labels:
+      - "docaiche.service=cadvisor"
 
 networks:
   docaiche:

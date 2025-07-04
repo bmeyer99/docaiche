@@ -1056,6 +1056,24 @@ export class DocaicheApiClient {
       value: parameters
     });
   }
+
+  // System Prompts Management - Using Text AI endpoints
+  async getSystemPrompts(): Promise<any> {
+    return this.get<any>('/admin/search/text-ai/prompts');
+  }
+
+  async updateSystemPrompt(promptType: string, data: any): Promise<any> {
+    return this.put<any>(`/admin/search/text-ai/prompts/${promptType}`, data);
+  }
+  
+  async getPromptVersions(promptType: string): Promise<any[]> {
+    return this.get<any[]>(`/admin/search/text-ai/prompts/${promptType}/versions`);
+  }
+  
+  async enhancePrompt(promptId: string, data: any): Promise<any> {
+    return this.post<any>(`/admin/search/text-ai/prompts/${promptId}/enhance`, data);
+  }
+
 }
 
 // Export singleton instance

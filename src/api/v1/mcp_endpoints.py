@@ -689,8 +689,9 @@ async def external_search(
                 'snippet': result.get('snippet', ''),
                 'provider': result.get('provider', 'unknown'),
                 'content_type': result.get('content_type', 'web_page'),
-                'published_date': None,  # Would parse from result if available
-                'relevance_score': None
+                'published_date': result.get('published_date'),
+                'relevance_score': result.get('relevance_score', result.get('score')),
+                'metadata': result.get('metadata', {})  # Include metadata with TTL
             })
         
         execution_time = int((time.time() - start_time) * 1000)

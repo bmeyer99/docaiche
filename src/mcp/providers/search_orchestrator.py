@@ -562,7 +562,9 @@ class ExternalSearchOrchestrator:
             f"max:{max_results}",
             f"providers:{','.join(sorted(provider_ids or []))}"
         ]
-        return self.cache_manager.compute_key(*key_parts)
+        # Generate hash and add proper MCP prefix
+        hash_key = self.cache_manager.compute_key(*key_parts)
+        return f"mcp:search:results:{hash_key}"
     
     def _is_circuit_open(self, provider_id: str) -> bool:
         """Check if circuit breaker is open for provider."""

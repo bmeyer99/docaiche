@@ -49,10 +49,10 @@ scrape_configs:
     scrape_interval: 30s
     # Drop high-cardinality metrics
     metric_relabel_configs:
-      # Drop detailed CPU metrics
+      # Keep essential node metrics
       - source_labels: [__name__]
-        regex: 'node_cpu_seconds_total'
-        action: drop
+        regex: 'node_(cpu_seconds_total|memory_.*|filesystem_.*|load.*|disk_.*|network_.*)'
+        action: keep
       # Drop detailed disk metrics for non-critical paths
       - source_labels: [__name__, mountpoint]
         regex: 'node_filesystem.*;(/sys|/proc|/dev|/run).*'
@@ -100,11 +100,12 @@ scrape_configs:
       - targets: ['weaviate:2112']
     metrics_path: /metrics
     scrape_interval: 30s
-    metric_relabel_configs:
-      # Focus on key Weaviate metrics
-      - source_labels: [__name__]
-        regex: 'weaviate_(objects_total|queries_total|query_duration_seconds|imports_total|batch_operations_total).*'
-        action: keep
+    # Allow all Weaviate metrics for now
+    # metric_relabel_configs:
+    #   # Focus on key Weaviate metrics
+    #   - source_labels: [__name__]
+    #     regex: 'weaviate_(objects_total|queries_total|query_duration_seconds|imports_total|batch_operations_total).*'
+    #     action: keep
 
   # Prometheus self-monitoring
   - job_name: 'prometheus'
@@ -145,3 +146,15 @@ scrape_configs:
       - targets: ['promtail:9080']
     metrics_path: /metrics
     scrape_interval: 30s
+
+  # cAdvisor for container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    metric_relabel_configs:
+      # Keep only essential container metrics
+      - source_labels: [__name__]
+        regex: 'container_(cpu_usage_seconds_total|memory_usage_bytes|network_receive_bytes_total|network_transmit_bytes_total|fs_usage_bytes|fs_limit_bytes|spec_cpu_quota|spec_memory_limit_bytes|last_seen).*'
+        action: keep

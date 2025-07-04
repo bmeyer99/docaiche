@@ -1,0 +1,209 @@
+# Context7 TTL Configuration Examples
+# This file demonstrates various Context7 TTL configuration scenarios
+
+# Basic Context7 Configuration
+context7:
+  enabled: true
+  weaviate_ttl_enabled: true
+  enable_audit_logging: true
+  enable_performance_monitoring: true
+  max_memory_usage_mb: 512
+
+  # TTL Configuration
+  ttl:
+    # Base TTL settings
+    default_days: 7              # Default TTL for all Context7 documents
+    min_days: 1                  # Minimum allowed TTL
+    max_days: 90                 # Maximum allowed TTL
+    
+    # Feature toggles
+    enable_tech_multipliers: true      # Enable technology-specific multipliers
+    enable_doc_type_adjustments: true  # Enable document type adjustments
+    enable_freshness_boost: true       # Give fresh content longer TTL
+    enable_popularity_boost: true      # Give popular content longer TTL
+    
+    # Technology-specific TTL multipliers
+    tech_multipliers:
+      python: 2.0          # Python docs get 2x longer TTL (stable ecosystem)
+      react: 1.5           # React docs get 1.5x longer TTL
+      vue: 1.5             # Vue docs get 1.5x longer TTL
+      angular: 1.5         # Angular docs get 1.5x longer TTL
+      javascript: 1.2      # JavaScript docs get slightly longer TTL
+      typescript: 1.2      # TypeScript docs get slightly longer TTL
+      docker: 1.8          # Docker docs are fairly stable
+      kubernetes: 2.0      # Kubernetes docs are stable references
+      aws: 1.5             # AWS docs change moderately
+      azure: 1.5           # Azure docs change moderately
+      gcp: 1.5             # GCP docs change moderately
+      node: 1.3            # Node.js docs get slight boost
+      
+    # Document type TTL adjustments
+    doc_type_adjustments:
+      api: 0.8             # API docs expire faster (more volatile)
+      tutorial: 1.5        # Tutorials last longer (more stable)
+      guide: 1.3           # Guides last longer
+      reference: 2.0       # Reference docs last much longer
+      changelog: 0.5       # Changelogs expire quickly
+      blog: 0.6            # Blog posts expire relatively quickly
+      news: 0.4            # News expires very quickly
+      documentation: 1.2   # General documentation gets slight boost
+      example: 1.0         # Examples get default TTL
+    
+    # Freshness-based adjustments
+    freshness_boost_days: 30           # Content newer than 30 days is "fresh"
+    freshness_boost_multiplier: 1.5    # Fresh content gets 1.5x longer TTL
+    
+    # Popularity-based adjustments
+    popularity_threshold: 100          # Min views/stars for popularity boost
+    popularity_boost_multiplier: 1.3   # Popular content gets 1.3x longer TTL
+
+  # Ingestion Configuration
+  ingestion:
+    batch_size: 10                     # Documents per batch
+    max_concurrent_batches: 3          # Max concurrent processing
+    ingestion_timeout_seconds: 300     # Timeout for ingestion operations
+    retry_attempts: 3                  # Retry failed ingestions
+    retry_delay_seconds: 60            # Delay between retries
+    
+    # Synchronous ingestion
+    sync_enabled: true                 # Enable sync ingestion
+    sync_timeout_seconds: 15           # Timeout for sync operations
+    sync_batch_size: 5                 # Smaller batches for sync
+    
+    # Pipeline settings
+    enable_smart_pipeline: true        # Use intelligent processing
+    enable_content_validation: true    # Validate before ingestion
+    enable_duplicate_detection: true   # Detect and handle duplicates
+    
+    # Fallback handling
+    fallback_storage_enabled: true     # Enable fallback storage
+    max_fallback_items: 1000          # Max items in fallback
+    fallback_cleanup_days: 7          # Cleanup fallback after 7 days
+
+  # Cache Configuration
+  cache:
+    enabled: true                      # Enable caching
+    ttl_multiplier: 1.0               # Cache TTL = doc TTL * multiplier
+    max_cache_size: 10000             # Max cached items
+    eviction_policy: "lru"            # LRU eviction policy
+    cleanup_interval_seconds: 300     # Cache cleanup interval
+    
+    # Cache warming
+    enable_preload: false             # Disable preloading by default
+    preload_popular_items: true       # Preload popular items when enabled
+    preload_batch_size: 50            # Batch size for preloading
+
+  # Background Jobs Configuration
+  background_jobs:
+    # TTL cleanup
+    ttl_cleanup_enabled: true                    # Enable TTL cleanup job
+    ttl_cleanup_interval_seconds: 3600          # Run cleanup every hour
+    ttl_cleanup_batch_size: 100                 # Process 100 items per batch
+    
+    # Metrics collection
+    metrics_collection_enabled: true            # Enable metrics collection
+    metrics_collection_interval_seconds: 300   # Collect metrics every 5 minutes
+    
+    # Health checks
+    health_check_enabled: true                  # Enable health checks
+    health_check_interval_seconds: 60          # Check health every minute
+    
+    # Maintenance window (for enterprise deployments)
+    maintenance_window_enabled: false          # Disable by default
+    maintenance_window_start_hour: 2           # Start at 2 AM
+    maintenance_window_duration_hours: 4       # 4-hour window
+
+---
+# Environment Variable Examples
+# Set these environment variables to override configuration
+
+# Basic Context7 settings
+# CONTEXT7_ENABLED=true
+# CONTEXT7_WEAVIATE_TTL_ENABLED=true
+# CONTEXT7_ENABLE_AUDIT_LOGGING=true
+
+# TTL settings
+# CONTEXT7_TTL_DEFAULT_DAYS=7
+# CONTEXT7_TTL_MIN_DAYS=1
+# CONTEXT7_TTL_MAX_DAYS=90
+# CONTEXT7_TTL_ENABLE_TECH_MULTIPLIERS=true
+
+# Technology multipliers
+# CONTEXT7_TTL_TECH_PYTHON_MULTIPLIER=2.0
+# CONTEXT7_TTL_TECH_REACT_MULTIPLIER=1.5
+# CONTEXT7_TTL_TECH_DOCKER_MULTIPLIER=1.8
+
+# Document type adjustments
+# CONTEXT7_TTL_DOC_API_ADJUSTMENT=0.8
+# CONTEXT7_TTL_DOC_TUTORIAL_ADJUSTMENT=1.5
+# CONTEXT7_TTL_DOC_REFERENCE_ADJUSTMENT=2.0
+
+# Ingestion settings
+# CONTEXT7_INGESTION_BATCH_SIZE=10
+# CONTEXT7_INGESTION_SYNC_ENABLED=true
+# CONTEXT7_INGESTION_ENABLE_SMART_PIPELINE=true
+
+# Cache settings
+# CONTEXT7_CACHE_ENABLED=true
+# CONTEXT7_CACHE_TTL_MULTIPLIER=1.0
+# CONTEXT7_CACHE_MAX_CACHE_SIZE=10000
+
+# Background jobs
+# CONTEXT7_BACKGROUND_TTL_CLEANUP_ENABLED=true
+# CONTEXT7_BACKGROUND_TTL_CLEANUP_INTERVAL_SECONDS=3600
+# CONTEXT7_BACKGROUND_METRICS_COLLECTION_ENABLED=true
+
+---
+# Example Scenarios
+
+# Scenario 1: High-Performance Python Documentation Site
+context7_python_docs:
+  enabled: true
+  ttl:
+    default_days: 14                    # Longer default for stable ecosystem
+    tech_multipliers:
+      python: 3.0                       # Extra long for Python docs
+      django: 2.5                       # Django docs are stable
+      flask: 2.0                        # Flask docs are stable
+      fastapi: 1.8                      # FastAPI evolves moderately
+    enable_tech_multipliers: true
+    enable_doc_type_adjustments: true
+  ingestion:
+    batch_size: 20                      # Larger batches for performance
+    max_concurrent_batches: 5           # More concurrent processing
+  cache:
+    ttl_multiplier: 1.5                 # Cache longer than document TTL
+    max_cache_size: 20000               # Larger cache
+
+# Scenario 2: Fast-Changing API Documentation
+context7_api_docs:
+  enabled: true
+  ttl:
+    default_days: 3                     # Shorter default for APIs
+    doc_type_adjustments:
+      api: 0.5                          # API docs expire very quickly
+      changelog: 0.3                    # Changelogs expire fastest
+      guide: 1.5                        # Guides last longer
+    enable_freshness_boost: true
+    freshness_boost_multiplier: 2.0     # Fresh content gets significant boost
+  background_jobs:
+    ttl_cleanup_interval_seconds: 1800  # More frequent cleanup (30 minutes)
+
+# Scenario 3: Enterprise Setup with Maintenance Windows
+context7_enterprise:
+  enabled: true
+  ttl:
+    default_days: 10                    # Moderate default
+    max_days: 180                       # Longer max for enterprise
+  ingestion:
+    batch_size: 50                      # Large batches
+    max_concurrent_batches: 10          # High concurrency
+    ingestion_timeout_seconds: 600      # Longer timeout
+  background_jobs:
+    maintenance_window_enabled: true    # Enable maintenance window
+    maintenance_window_start_hour: 2    # 2 AM maintenance
+    maintenance_window_duration_hours: 6 # 6-hour window
+    ttl_cleanup_interval_seconds: 7200  # Cleanup every 2 hours
+  cache:
+    max_cache_size: 50000               # Very large cache
+  max_memory_usage_mb: 1024             # More memory for enterprise

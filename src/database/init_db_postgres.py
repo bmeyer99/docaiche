@@ -319,6 +319,20 @@ class PostgreSQLInitializer:
             )
         """))
         
+        # Prompt templates table
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS prompt_templates (
+                id TEXT PRIMARY KEY NOT NULL,
+                prompt_type TEXT NOT NULL,
+                content TEXT NOT NULL,
+                metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                version TEXT NOT NULL DEFAULT '1.0.0',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(prompt_type, version)
+            )
+        """))
+        
         logger.info("All tables created successfully")
     
     def _create_indexes(self, conn):
@@ -385,6 +399,16 @@ class PostgreSQLInitializer:
         
         # Create B-tree indexes
         for index_sql in btree_indexes:
+            conn.execute(text(index_sql))
+        
+        # Prompt templates indexes
+        prompt_indexes = [
+            "CREATE INDEX IF NOT EXISTS idx_prompt_templates_prompt_type ON prompt_templates(prompt_type)",
+            "CREATE INDEX IF NOT EXISTS idx_prompt_templates_version ON prompt_templates(version)",
+            "CREATE INDEX IF NOT EXISTS idx_prompt_templates_created_at ON prompt_templates(created_at)",
+        ]
+        
+        for index_sql in prompt_indexes:
             conn.execute(text(index_sql))
         
         logger.info("All indexes created successfully")

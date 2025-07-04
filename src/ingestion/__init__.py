@@ -7,6 +7,11 @@ from .pipeline import IngestionPipeline
 from .smart_pipeline import SmartIngestionPipeline, ProcessingResult, Chunk
 from .models import IngestionStatus, IngestionResult
 from .extractors import DocumentExtractor
+from .context7_ingestion_service import (
+    Context7IngestionService,
+    Context7Document,
+    TTLConfig,
+)
 
 __all__ = [
     "IngestionPipeline",
@@ -16,4 +21,7 @@ __all__ = [
     "IngestionStatus",
     "IngestionResult",
     "DocumentExtractor",
+    "Context7IngestionService",
+    "Context7Document", 
+    "TTLConfig",
 ]

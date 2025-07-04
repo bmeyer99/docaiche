@@ -34,6 +34,22 @@ SERVICE_CONFIG_MAP = {
     "database": [],  # Database config changes don't require service restarts
     "logging": ["logging-service"],  # Logging changes affect logging service
     "monitoring": ["metrics-service"],  # Monitoring config changes affect metrics service
+    
+    # Context7 configuration mappings
+    "context7": ["context7-service"],  # General Context7 config changes
+    "context7.enabled": ["context7-service"],  # Enable/disable Context7
+    "context7.ttl": ["context7-service"],  # TTL configuration changes
+    "context7.ttl.default_days": ["context7-service"],  # Default TTL changes
+    "context7.ttl.tech_multipliers": ["context7-service"],  # Technology multiplier changes
+    "context7.ttl.doc_type_adjustments": ["context7-service"],  # Document type adjustment changes
+    "context7.ingestion": ["context7-service"],  # Ingestion configuration changes
+    "context7.ingestion.batch_size": ["context7-service"],  # Batch size changes
+    "context7.ingestion.sync_enabled": ["context7-service"],  # Sync ingestion toggle
+    "context7.cache": ["context7-service"],  # Cache configuration changes
+    "context7.background_jobs": ["context7-service"],  # Background job configuration
+    "context7.weaviate_ttl_enabled": ["context7-service"],  # Weaviate TTL integration
+    "context7.enable_audit_logging": ["context7-service"],  # Audit logging toggle
+    "context7.enable_performance_monitoring": ["context7-service"],  # Performance monitoring
 }
 
 # Service restart priorities (lower number = higher priority)
@@ -41,9 +57,10 @@ SERVICE_RESTART_PRIORITY = {
     "redis": 1,
     "db": 2,
     "anythingllm": 3,
-    "promtail": 4,
-    "prometheus": 5,
-    "grafana": 6,
+    "context7-service": 4,  # Context7 service should restart after core services
+    "promtail": 5,
+    "prometheus": 6,
+    "grafana": 7,
 }
 
 
@@ -408,6 +425,20 @@ class ServiceConfigManager:
                     "correlation_id": correlation_id
                 })
                 # TODO: Implement actual restart mechanism
+                return True
+                
+            elif service_name == "context7-service":
+                # Context7 service restart logic
+                logger.info(f"Triggering Context7 service restart", extra={
+                    "event": "context7_service_restart",
+                    "correlation_id": correlation_id
+                })
+                # TODO: Implement actual restart mechanism for Context7 service
+                # This could involve:
+                # 1. Sending a SIGHUP signal to the Context7 process
+                # 2. Calling a Context7 management API endpoint
+                # 3. Updating a configuration file that Context7 monitors
+                # 4. Using a message queue to signal restart
                 return True
                 
             else:

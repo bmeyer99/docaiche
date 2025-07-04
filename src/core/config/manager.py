@@ -315,6 +315,8 @@ class ConfigurationManager:
                 OllamaConfig,
                 OpenAIConfig,
                 MCPConfig,
+                EnrichmentConfig,
+                Context7Config,
             )
 
             # Build configuration sections with defaults
@@ -351,6 +353,12 @@ class ConfigurationManager:
                 openai=openai_config,
             )
 
+            # Build Enrichment configuration
+            enrichment_config = EnrichmentConfig(**config_dict.get("enrichment", {}))
+
+            # Build Context7 configuration
+            context7_config = Context7Config(**config_dict.get("context7", {}))
+
             # Build MCP configuration
             mcp_config = None
             if "mcp" in config_dict:
@@ -366,6 +374,8 @@ class ConfigurationManager:
                 scraping=scraping_config,
                 redis=redis_config,
                 ai=ai_config,
+                enrichment=enrichment_config,
+                context7=context7_config,
                 mcp=mcp_config,
             )
 

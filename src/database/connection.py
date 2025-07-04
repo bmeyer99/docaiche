@@ -823,7 +823,7 @@ class CacheManager:
 
             # Decompress if data is compressed
             if key.startswith(
-                ("search:results:", "content:processed:", "github:repo:")
+                ("search:results:", "content:processed:", "github:repo:", "mcp:search:results:")
             ):
                 data = gzip.decompress(data)
 
@@ -896,7 +896,7 @@ class CacheManager:
 
             # Compress data for specific key patterns
             if key.startswith(
-                ("search:results:", "content:processed:", "github:repo:")
+                ("search:results:", "content:processed:", "github:repo:", "mcp:search:results:")
             ):
                 data = gzip.compress(data)
 

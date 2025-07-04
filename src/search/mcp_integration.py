@@ -166,14 +166,9 @@ class MCPSearchEnhancer:
         logger.info(f"[{trace_id}] Requested provider_ids: {provider_ids}")
         logger.info(f"[{trace_id}] Max results: {max_results}")
         
-        if not hasattr(self, '_external_orchestrator'):
-            # Initialize orchestrator lazily
-            logger.info(f"[{trace_id}] Initializing external orchestrator")
-            await self._init_external_orchestrator()
-        
-        if not self._external_orchestrator:
-            logger.warning(f"[{trace_id}] External search orchestrator not available, falling back to simple search")
-            return await self._execute_simple_external_search(query, provider_ids, trace_id)
+        # For now, always use simple search since orchestrator has issues
+        logger.info(f"[{trace_id}] Using simple external search (orchestrator disabled temporarily)")
+        return await self._execute_simple_external_search(query, provider_ids, trace_id, max_results)
         
         try:
             logger.info(f"[{trace_id}] Calling orchestrator search method")
@@ -217,18 +212,22 @@ class MCPSearchEnhancer:
     
     async def _init_external_orchestrator(self) -> None:
         """Initialize the high-performance external search orchestrator."""
+        logger.info("Starting _init_external_orchestrator")
         try:
             from src.mcp.providers.registry import ProviderRegistry
             from src.mcp.providers.search_orchestrator import ExternalSearchOrchestrator
             from src.search.optimized_cache import OptimizedCacheManager
             from src.database.connection import create_cache_manager
+            logger.info("Imports successful")
             
             # Get cache manager
+            logger.info("Creating cache manager")
             cache_manager = await create_cache_manager()
             if not cache_manager:
                 logger.warning("Cache manager not available for external search")
                 self._external_orchestrator = None
                 return
+            logger.info(f"Cache manager created: {type(cache_manager)}")
             
             # Create optimized cache
             optimized_cache = OptimizedCacheManager(
@@ -258,14 +257,15 @@ class MCPSearchEnhancer:
             logger.info("External search orchestrator initialized successfully")
             
         except Exception as e:
-            logger.error(f"Failed to initialize external search orchestrator: {e}")
+            logger.error(f"Failed to initialize external search orchestrator: {e}", exc_info=True)
             self._external_orchestrator = None
     
     async def _execute_simple_external_search(
         self,
         query: str,
         provider_ids: Optional[List[str]] = None,
-        trace_id: Optional[str] = None
+        trace_id: Optional[str] = None,
+        max_results: int = 10
     ) -> List[Dict[str, Any]]:
         """
         Fallback to simple external search without orchestrator.
@@ -274,6 +274,7 @@ class MCPSearchEnhancer:
             query: Search query
             provider_ids: Specific providers to use
             trace_id: Trace ID for request tracking
+            max_results: Maximum results to return
             
         Returns:
             Simple search results
@@ -283,6 +284,32 @@ class MCPSearchEnhancer:
             trace_id = f"simple-{uuid.uuid4().hex[:8]}"
             
         logger.info(f"[{trace_id}] Executing simple external search for: {query}, providers: {provider_ids}")
+        
+        # Generate cache key
+        import hashlib
+        cache_key_data = f"{query}:{provider_ids}:{max_results}"
+        cache_key = f"mcp:search:results:{hashlib.md5(cache_key_data.encode()).hexdigest()[:16]}"
+        logger.info(f"[{trace_id}] Cache key: {cache_key}")
+        
+        # Check cache first
+        cache_manager = None
+        try:
+            from src.database.connection import create_cache_manager
+            cache_manager = await create_cache_manager()
+            if cache_manager:
+                cached_results = await cache_manager.get(cache_key)
+                if cached_results:
+                    logger.info(f"[{trace_id}] Cache hit for key: {cache_key}")
+                    # Add cache_hit metadata
+                    for result in cached_results:
+                        if 'metadata' not in result:
+                            result['metadata'] = {}
+                        result['metadata']['cache_hit'] = True
+                    return cached_results
+                logger.info(f"[{trace_id}] Cache miss for key: {cache_key}")
+        except Exception as e:
+            logger.warning(f"[{trace_id}] Cache check failed: {e}")
+        
         results = []
         
         # Get providers to use
@@ -350,6 +377,14 @@ class MCPSearchEnhancer:
                         
             except Exception as e:
                 logger.error(f"[{trace_id}] Simple external search failed for {provider_id}: {e}", exc_info=True)
+        
+        # Cache results if we got any
+        if results and cache_manager:
+            try:
+                await cache_manager.set(cache_key, results, ttl=3600)  # 1 hour TTL
+                logger.info(f"[{trace_id}] Cached {len(results)} results with key: {cache_key}")
+            except Exception as e:
+                logger.warning(f"[{trace_id}] Failed to cache results: {e}")
         
         return results
     

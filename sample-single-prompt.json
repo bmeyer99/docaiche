@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2025-07-04T10:20:55.186097",
+  "prompt": {
+    "id": "content_extraction",
+    "name": "Content Extraction",
+    "type": "content_extraction",
+    "template": "Extract relevant content from: {document}",
+    "variables": [
+      "document"
+    ],
+    "version": "1.0.0",
+    "active": true,
+    "last_updated": "2025-07-04T10:20:55.186100"
+  }
+}

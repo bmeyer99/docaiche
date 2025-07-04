@@ -290,32 +290,13 @@ class OptimizedCacheManager:
     
     def _compress_value(self, value: Any) -> Any:
         """Compress value if it's large enough."""
-        # Serialize to JSON
-        serialized = json.dumps(value)
-        
-        # Check size
-        if len(serialized) > self.compress_threshold:
-            # Compress
-            compressed = zlib.compress(serialized.encode())
-            
-            if self.enable_stats:
-                self.stats['compressions'] += 1
-                ratio = len(compressed) / len(serialized)
-                # Update running average
-                avg = self.stats['avg_compression_ratio']
-                n = self.stats['compressions']
-                self.stats['avg_compression_ratio'] = (avg * (n-1) + ratio) / n
-            
-            return {'_compressed': True, 'data': compressed}
-        
+        # Don't double-compress - the L2 cache handles compression for certain keys
+        # Just return the value as-is and let the L2 cache manager handle compression
         return value
     
     def _decompress_value(self, value: Any) -> Any:
         """Decompress value if needed."""
-        if isinstance(value, dict) and value.get('_compressed'):
-            # Decompress
-            decompressed = zlib.decompress(value['data'])
-            return json.loads(decompressed)
+        # L2 cache already handles decompression, just return the value
         return value
     
     async def _batch_get_l2(self, keys: list) -> Dict[str, Any]:

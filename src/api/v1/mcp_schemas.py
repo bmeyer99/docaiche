@@ -176,6 +176,7 @@ class ExternalSearchResult(BaseModel):
     content_type: str = Field(..., description="Content type")
     published_date: Optional[datetime] = Field(None, description="Publication date")
     relevance_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Relevance score")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Provider-specific metadata including TTL")
 
 
 class ExternalSearchResponse(BaseModel):

@@ -1,0 +1,10 @@
+{
+  "prompts": [
+    {
+      "id": "intent_interpretation",
+      "name": "Intent Interpretation",
+      "template": "Updated template: Given the search query: \"{query}\", analyze intent and context.",
+      "category": "search"
+    }
+  ]
+}
