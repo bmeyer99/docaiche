@@ -10,6 +10,7 @@ compilation exactly as specified.
 import asyncio
 import logging
 import time
+import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any, Tuple, List
 
@@ -330,8 +331,8 @@ class SearchOrchestrator:
                             query_hash="",
                             extracted_entities=[]
                         )
-                        # Add trace_id as attribute for logging (not a model field)
-                        normalized.trace_id = trace_id
+                        # Store trace_id separately since it's not a model field
+                        # We'll pass it as a parameter where needed
                         
                         # Convert evaluation result to MCP format
                         from src.mcp.core.models import EvaluationResult as MCPEvalResult
@@ -393,15 +394,16 @@ class SearchOrchestrator:
             # Step 5: Enrichment Decision
             enrichment_triggered = False
             ingestion_status = None
-            if evaluation_result and evaluation_result.needs_enrichment:
-                # Pass external results for potential sync ingestion
-                external_results_list = []
-                if external_results_added and hasattr(search_results, 'results'):
-                    # Get the external results that were added
-                    external_results_list = [r for r in search_results.results 
-                                           if hasattr(r, 'metadata') and 
-                                           r.metadata.get('source') == 'external']
-                
+            # Get external results for potential sync ingestion
+            external_results_list = []
+            if external_results_added and hasattr(search_results, 'results'):
+                # Get the external results that were added (including Context7)
+                external_results_list = [r for r in search_results.results 
+                                       if hasattr(r, 'metadata') and 
+                                       r.metadata.get('source') in ('external', 'context7_search')]
+            
+            # Trigger enrichment if we have evaluation requesting it OR if we have external results
+            if (evaluation_result and evaluation_result.needs_enrichment) or external_results_list:
                 enrichment_triggered, ingestion_status = await self._trigger_enrichment(
                     normalized_query, evaluation_result, background_tasks, external_results_list
                 )
@@ -560,7 +562,7 @@ class SearchOrchestrator:
             vector_results = VectorSearchResults(
                 results=results.results,
                 total_count=results.total_count,
-                query_time_ms=results.query_time_ms
+                execution_time_ms=results.query_time_ms
             )
 
             # Call TextAI evaluation with RESULT_RELEVANCE prompt
@@ -638,20 +640,47 @@ class SearchOrchestrator:
         else:
             logger.info("Sync ingestion not configured, checking for external results anyway")
         
+        # Also check Context7-specific sync ingestion setting
+        if self.config and hasattr(self.config, 'context7') and hasattr(self.config.context7, 'sync_ingestion_enabled'):
+            context7_sync_enabled = self.config.context7.sync_ingestion_enabled
+            # If Context7 sync is explicitly enabled, use it regardless of general sync_ingestion setting
+            if context7_sync_enabled:
+                sync_ingestion_enabled = True
+                logger.info(f"Context7 sync ingestion override: {context7_sync_enabled}")
+        
         # Handle synchronous ingestion for external results (Context7 or others)
         if external_results:
             logger.info(f"Found {len(external_results)} external results for potential sync ingestion")
             # Try Context7 results first
-            context7_results = [r for r in external_results if r.get('provider') == 'context7']
-            if context7_results and sync_ingestion_enabled:
-                logger.info(f"Performing synchronous Context7 ingestion for {len(context7_results)} results")
-                ingestion_status = await self._perform_sync_ingestion(
-                    query, context7_results, evaluation
-                )
-                if ingestion_status and ingestion_status.get('success'):
-                    logger.info(f"Sync ingestion completed successfully")
-                    return True, ingestion_status
-            else:
+            context7_results = [r for r in external_results if r.metadata.get('provider') == 'context7']
+            logger.info(f"Filtered {len(context7_results)} Context7 results from {len(external_results)} external results")
+            
+            # Log details about external results for debugging
+            if external_results and not context7_results:
+                logger.debug(f"No Context7 results found. Sample external result metadata: {external_results[0].metadata if external_results else 'None'}")
+            
+            if context7_results:
+                if sync_ingestion_enabled:
+                    logger.info(f"Performing synchronous Context7 ingestion for {len(context7_results)} results")
+                    ingestion_status = await self._perform_sync_ingestion(
+                        query, context7_results, evaluation
+                    )
+                    if ingestion_status and ingestion_status.get('success'):
+                        logger.info(f"Sync ingestion completed successfully")
+                        return True, ingestion_status
+                else:
+                    logger.info(f"Context7 results available but sync ingestion disabled. Creating status for {len(context7_results)} results")
+                    # Still create ingestion status to indicate Context7 results are available
+                    ingestion_status = {
+                        'success': True,
+                        'source': 'context7',
+                        'ingested_count': len(context7_results),
+                        'sync_ingestion_disabled': True,
+                        'timestamp': time.time(),
+                        'details': f"Context7 provided {len(context7_results)} results (sync ingestion disabled)"
+                    }
+                    return False, ingestion_status
+            elif external_results:
                 # Create a simple ingestion status for other external results
                 ingestion_status = {
                     'success': True,
@@ -708,9 +737,11 @@ class SearchOrchestrator:
         """
         start_time = time.time()
         trace_id = getattr(query, 'trace_id', f"c7_ingest_{int(time.time() * 1000)}")
+        # Initialize correlation_id for ingestion tracking
+        correlation_id = f"c7_{uuid.uuid4().hex[:8]}"
         
         logger.info(f"PIPELINE_METRICS: step=context7_ingestion_start "
-                   f"result_count={len(context7_results)} trace_id={trace_id}")
+                   f"result_count={len(context7_results)} trace_id={trace_id} correlation_id={correlation_id}")
         
         try:
             ingested_count = 0
@@ -783,17 +814,25 @@ class SearchOrchestrator:
                     break
                 
                 try:
-                    # Extract documentation content
-                    content = result.get('content', result.get('snippet', ''))
-                    title = result.get('title', '')
-                    url = result.get('url', '')
+                    # Handle both SearchResult objects and dictionaries
+                    if hasattr(result, 'content_snippet'):
+                        # It's a SearchResult object
+                        content = result.content_snippet or ''
+                        title = result.title or ''
+                        url = result.source_url or ''
+                        result_metadata = result.metadata or {}
+                    else:
+                        # It's a dictionary (legacy support)
+                        content = result.get('content', result.get('snippet', ''))
+                        title = result.get('title', '')
+                        url = result.get('url', '')
+                        result_metadata = result.get('metadata', {})
                     
                     if not content or len(content.strip()) < 50:  # Skip very short content
                         logger.debug(f"[{trace_id}] Skipping short/empty content for result {i}")
                         continue
                     
                     # Extract Context7-specific metadata
-                    result_metadata = result.get('metadata', {})
                     technology = result_metadata.get('technology', query.technology_hint or 'unknown')
                     owner = result_metadata.get('owner', 'unknown')
                     doc_type = result_metadata.get('type', 'documentation')
@@ -1242,9 +1281,21 @@ class SearchOrchestrator:
             
             # Get refined query from TextAI
             logger.info(f"[{trace_id}] Generating refined query with TextAI")
+            # Create results summary for TextAI
+            results_summary = {
+                "total_results": len(initial_results.results),
+                "top_results": [
+                    {
+                        "title": r.title,
+                        "summary": r.summary[:200] if r.summary else "",
+                        "score": r.score
+                    }
+                    for r in initial_results.results[:5]
+                ]
+            }
             refined = await self.mcp_enhancer.text_ai.refine_query(
-                normalized,
-                initial_results.results[:5],  # Pass top 5 results
+                original_query.query,  # Pass the original query string
+                results_summary,       # Summary of results
                 evaluation.enrichment_topics  # Missing aspects
             )
             
@@ -1362,6 +1413,8 @@ class SearchOrchestrator:
             List of external search results converted to internal format
         """
         trace_id = getattr(query, 'trace_id', f"ext_{int(time.time() * 1000)}")
+        # Initialize correlation_id if not provided
+        correlation_id = f"ext_{uuid.uuid4().hex[:8]}"
         
         if not self.mcp_enhancer:
             logger.warning(f"[{trace_id}] MCP enhancer not available for external search")
@@ -1379,16 +1432,27 @@ class SearchOrchestrator:
             logger.info(f"[{trace_id}] Technology hint: {query.technology_hint}")
             logger.info(f"[{trace_id}] Current results count: {len(current_results.results)}")
             
+            logger.info(f"PIPELINE_METRICS: step=context7_external_search_start duration_ms=0 "
+                       f"trace_id={trace_id} correlation_id={correlation_id} "
+                       f"query=\"{query.query[:50]}\" technology_hint={query.technology_hint} "
+                       f"current_result_count={len(current_results.results)}")
+            
             # Generate optimized external query
             logger.info(f"[{trace_id}] Generating optimized external query...")
+            query_gen_start = time.time()
             external_query = await self.mcp_enhancer.get_external_search_query(
                 query.query,
                 technology_hint=query.technology_hint
             )
+            query_gen_time = int((time.time() - query_gen_start) * 1000)
             logger.info(f"[{trace_id}] External query generated: {external_query[:100]}...")
+            logger.info(f"PIPELINE_METRICS: step=context7_query_generation duration_ms={query_gen_time} "
+                       f"trace_id={trace_id} correlation_id={correlation_id} "
+                       f"original_query=\"{query.query[:50]}\" generated_query=\"{external_query[:50]}\"")
             
             # Execute external search with performance optimizations
             logger.info(f"[{trace_id}] Executing external search...")
+            search_exec_start = time.time()
             external_results = await self.mcp_enhancer.execute_external_search(
                 query=external_query,
                 technology_hint=query.technology_hint,
@@ -1396,7 +1460,12 @@ class SearchOrchestrator:
                 provider_ids=query.external_providers,
                 trace_id=trace_id
             )
-            logger.info(f"[{trace_id}] External search returned {len(external_results) if external_results else 0} results")
+            search_exec_time = int((time.time() - search_exec_start) * 1000)
+            result_count = len(external_results) if external_results else 0
+            logger.info(f"[{trace_id}] External search returned {result_count} results")
+            logger.info(f"PIPELINE_METRICS: step=context7_provider_execution duration_ms={search_exec_time} "
+                       f"trace_id={trace_id} correlation_id={correlation_id} "
+                       f"result_count={result_count} query=\"{external_query[:50]}\"")
             
             if not external_results:
                 return []
@@ -1414,13 +1483,15 @@ class SearchOrchestrator:
                         source_url=ext_result.get('url', ''),
                         relevance_score=0.7,  # Default external relevance
                         metadata={
-                            'source': 'external_search',
-                            'provider': ext_result.get('provider', 'unknown'),
-                            'content_type': ext_result.get('content_type', 'web_page'),
-                            'external': True
+                            'source': 'context7_search',
+                            'provider': ext_result.get('provider', 'context7'),
+                            'content_type': ext_result.get('content_type', 'documentation'),
+                            'external': True,
+                            'correlation_id': correlation_id,
+                            'trace_id': trace_id
                         },
-                        technology='external',
-                        workspace_slug='external_search',
+                        technology=query.technology_hint or 'external',
+                        workspace_slug='context7_search',
                         chunk_index=None,
                         overall_quality=0.7
                     )
@@ -1431,10 +1502,16 @@ class SearchOrchestrator:
                     continue
             
             logger.info(f"Successfully converted {len(converted_results)} external results")
+            logger.info(f"PIPELINE_METRICS: step=context7_result_conversion duration_ms=0 "
+                       f"trace_id={trace_id} correlation_id={correlation_id} "
+                       f"converted_count={len(converted_results)} original_count={len(external_results)}")
             return converted_results
             
         except Exception as e:
             logger.error(f"External search enhancement failed: {e}")
+            logger.info(f"PIPELINE_METRICS: step=context7_external_search_error duration_ms=0 "
+                       f"trace_id={trace_id} correlation_id={correlation_id} "
+                       f"error=\"{str(e)}\" success=false")
             return []
 
     async def _normalize_query(self, query: "SearchQuery") -> "SearchQuery":
