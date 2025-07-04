@@ -98,6 +98,16 @@ def get_environment_overrides() -> Dict[str, Any]:
             "enrichment.min_confidence_threshold",
             float,
         ),
+        # Context7 configuration
+        "CONTEXT7_ENABLED": ("context7.enabled", lambda x: x.lower() == "true"),
+        "CONTEXT7_DEFAULT_TTL_DAYS": ("context7.default_ttl_days", int),
+        "CONTEXT7_SYNC_INGESTION_ENABLED": ("context7.sync_ingestion_enabled", lambda x: x.lower() == "true"),
+        "CONTEXT7_SYNC_INGESTION_TIMEOUT": ("context7.sync_ingestion_timeout", int),
+        "CONTEXT7_ENABLE_SMART_PIPELINE": ("context7.enable_smart_pipeline", lambda x: x.lower() == "true"),
+        "CONTEXT7_TTL_ADJUSTMENT_ENABLED": ("context7.ttl_adjustment_enabled", lambda x: x.lower() == "true"),
+        "CONTEXT7_WEAVIATE_TTL_ENABLED": ("context7.weaviate_ttl_enabled", lambda x: x.lower() == "true"),
+        "CONTEXT7_FALLBACK_STORAGE_ENABLED": ("context7.fallback_storage_enabled", lambda x: x.lower() == "true"),
+        "CONTEXT7_CACHE_TTL_MULTIPLIER": ("context7.cache_ttl_multiplier", float),
     }
 
     # Process environment variables that are actually set

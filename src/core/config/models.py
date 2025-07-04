@@ -332,6 +332,36 @@ class EnrichmentConfig(BaseModel):
     )
 
 
+class Context7Config(BaseModel):
+    """Context7 documentation ingestion configuration"""
+    
+    enabled: bool = Field(True, description="Enable Context7 documentation ingestion")
+    default_ttl_days: int = Field(
+        7, ge=1, le=90, description="Default TTL for Context7 documentation in days"
+    )
+    sync_ingestion_enabled: bool = Field(
+        True, description="Enable synchronous ingestion of Context7 results"
+    )
+    sync_ingestion_timeout: int = Field(
+        15, ge=5, le=60, description="Timeout for synchronous ingestion in seconds"
+    )
+    enable_smart_pipeline: bool = Field(
+        True, description="Use SmartIngestionPipeline for Context7 processing"
+    )
+    ttl_adjustment_enabled: bool = Field(
+        True, description="Enable intelligent TTL adjustment based on doc type and freshness"
+    )
+    weaviate_ttl_enabled: bool = Field(
+        True, description="Apply TTL metadata to Weaviate documents"
+    )
+    fallback_storage_enabled: bool = Field(
+        True, description="Enable fallback storage when SmartIngestionPipeline fails"
+    )
+    cache_ttl_multiplier: float = Field(
+        1.0, ge=0.1, le=10.0, description="Multiplier for cache TTL (cache_ttl = doc_ttl * multiplier)"
+    )
+
+
 class MCPProviderConfig(BaseModel):
     """MCP external search provider configuration"""
     
@@ -373,6 +403,7 @@ class SystemConfiguration(BaseModel):
     redis: RedisConfig
     ai: AIConfig
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
+    context7: Context7Config = Field(default_factory=Context7Config, description="Context7 ingestion configuration")
     mcp: MCPConfig = Field(default_factory=MCPConfig, description="MCP configuration")
 
     model_config = {

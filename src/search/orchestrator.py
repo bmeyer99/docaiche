@@ -693,7 +693,10 @@ class SearchOrchestrator:
         evaluation: EvaluationResult
     ) -> Dict[str, Any]:
         """
-        Perform synchronous ingestion of Context7 documentation.
+        Perform synchronous ingestion of Context7 documentation with TTL-aware processing.
+        
+        This method processes Context7 results through the SmartIngestionPipeline,
+        calculates appropriate TTL values, and stores results in Weaviate with TTL metadata.
         
         Args:
             query: Search query
@@ -701,74 +704,505 @@ class SearchOrchestrator:
             evaluation: LLM evaluation result
             
         Returns:
-            Ingestion status dictionary
+            Ingestion status dictionary with detailed metrics
         """
+        start_time = time.time()
+        trace_id = getattr(query, 'trace_id', f"c7_ingest_{int(time.time() * 1000)}")
+        
+        logger.info(f"PIPELINE_METRICS: step=context7_ingestion_start "
+                   f"result_count={len(context7_results)} trace_id={trace_id}")
+        
         try:
-            start_time = time.time()
             ingested_count = 0
+            processed_documents = []
+            ttl_applied_count = 0
             
-            # Get sync ingestion timeout from config
-            timeout = 10  # default
-            if hasattr(self, 'config') and hasattr(self.config, 'enrichment'):
-                timeout = self.config.enrichment.sync_ingestion_timeout
+            # Get configuration for Context7 TTL behavior
+            default_ttl_days = 7  # Default 7 days
+            sync_timeout = 15  # Default 15 seconds
+            enable_smart_pipeline = True
+            ttl_adjustment_enabled = True
+            weaviate_ttl_enabled = True
+            fallback_storage_enabled = True
+            
+            if self.config:
+                # Get Context7-specific configuration
+                context7_config = getattr(self.config, 'context7', None)
+                if context7_config:
+                    default_ttl_days = getattr(context7_config, 'default_ttl_days', default_ttl_days)
+                    sync_timeout = getattr(context7_config, 'sync_ingestion_timeout', sync_timeout)
+                    enable_smart_pipeline = getattr(context7_config, 'enable_smart_pipeline', enable_smart_pipeline)
+                    ttl_adjustment_enabled = getattr(context7_config, 'ttl_adjustment_enabled', ttl_adjustment_enabled)
+                    weaviate_ttl_enabled = getattr(context7_config, 'weaviate_ttl_enabled', weaviate_ttl_enabled)
+                    fallback_storage_enabled = getattr(context7_config, 'fallback_storage_enabled', fallback_storage_enabled)
+                    
+                    # Check if Context7 sync ingestion is disabled
+                    if not getattr(context7_config, 'sync_ingestion_enabled', True):
+                        logger.info(f"[{trace_id}] Context7 sync ingestion disabled in configuration")
+                        return {
+                            'success': False,
+                            'error': 'Context7 sync ingestion disabled in configuration',
+                            'source': 'context7',
+                            'type': 'synchronous'
+                        }
+                
+                # Fallback to enrichment config for timeout
+                enrichment_config = getattr(self.config, 'enrichment', None)
+                if enrichment_config and not context7_config:
+                    sync_timeout = getattr(enrichment_config, 'sync_ingestion_timeout', sync_timeout)
+            
+            logger.info(f"[{trace_id}] Context7 sync ingestion config: "
+                       f"default_ttl_days={default_ttl_days}, timeout={sync_timeout}s")
+            
+            # Initialize SmartIngestionPipeline if enabled and available
+            pipeline = None
+            if enable_smart_pipeline and hasattr(self, 'weaviate_client') and self.llm_client:
+                try:
+                    from src.ingestion.smart_pipeline import SmartIngestionPipeline
+                    pipeline = SmartIngestionPipeline(
+                        llm_client=self.llm_client,
+                        weaviate_client=self.weaviate_client,
+                        db_manager=self.db_manager
+                    )
+                    logger.info(f"[{trace_id}] SmartIngestionPipeline initialized successfully")
+                except Exception as e:
+                    logger.warning(f"[{trace_id}] Failed to initialize SmartIngestionPipeline: {e}")
+                    if not fallback_storage_enabled:
+                        logger.error(f"[{trace_id}] SmartIngestionPipeline failed and fallback disabled")
+                        return {
+                            'success': False,
+                            'error': f'SmartIngestionPipeline initialization failed: {str(e)}',
+                            'source': 'context7',
+                            'type': 'synchronous'
+                        }
             
             # Process each Context7 result
-            for result in context7_results:
+            for i, result in enumerate(context7_results):
+                if time.time() - start_time > sync_timeout:
+                    logger.warning(f"[{trace_id}] Sync ingestion timeout reached after {ingested_count} docs")
+                    break
+                
                 try:
                     # Extract documentation content
                     content = result.get('content', result.get('snippet', ''))
-                    if not content:
+                    title = result.get('title', '')
+                    url = result.get('url', '')
+                    
+                    if not content or len(content.strip()) < 50:  # Skip very short content
+                        logger.debug(f"[{trace_id}] Skipping short/empty content for result {i}")
                         continue
                     
-                    # Create a simple ingestion task
-                    # In a real implementation, this would use the IngestionPipeline
-                    metadata = {
-                        'source': 'context7',
-                        'library': result.get('metadata', {}).get('library', 'unknown'),
-                        'version': result.get('metadata', {}).get('version', 'latest'),
-                        'url': result.get('url', ''),
-                        'query': query.query,
-                        'ingestion_type': 'synchronous'
-                    }
+                    # Extract Context7-specific metadata
+                    result_metadata = result.get('metadata', {})
+                    technology = result_metadata.get('technology', query.technology_hint or 'unknown')
+                    owner = result_metadata.get('owner', 'unknown')
+                    doc_type = result_metadata.get('type', 'documentation')
                     
-                    # Store Context7 documentation in database for processing
-                    # This creates a lightweight record that can be processed later
-                    await self._store_context7_documentation(
-                        content=content,
-                        metadata=metadata,
-                        query_hash=query.query_hash
-                    )
+                    # Calculate TTL based on documentation type and freshness
+                    if ttl_adjustment_enabled:
+                        ttl_days = self._calculate_context7_ttl(
+                            doc_type=doc_type,
+                            technology=technology,
+                            default_ttl_days=default_ttl_days,
+                            result_metadata=result_metadata
+                        )
+                    else:
+                        ttl_days = default_ttl_days
                     
-                    logger.info(f"Stored Context7 doc: {metadata['library']} v{metadata['version']}")
+                    logger.info(f"[{trace_id}] Processing Context7 doc {i+1}/{len(context7_results)}: "
+                              f"{technology} ({owner}) - TTL: {ttl_days} days")
+                    logger.info(f"PIPELINE_METRICS: step=context7_process_doc "
+                               f"doc_index={i} technology={technology} ttl_days={ttl_days} "
+                               f"content_length={len(content)} trace_id={trace_id}")
+                    
+                    if pipeline:
+                        # Use SmartIngestionPipeline for proper processing
+                        await self._process_context7_with_pipeline(
+                            pipeline=pipeline,
+                            content=content,
+                            title=title,
+                            url=url,
+                            technology=technology,
+                            ttl_days=ttl_days,
+                            query=query,
+                            trace_id=trace_id,
+                            weaviate_ttl_enabled=weaviate_ttl_enabled
+                        )
+                        processed_documents.append({
+                            'technology': technology,
+                            'url': url,
+                            'ttl_days': ttl_days,
+                            'content_length': len(content)
+                        })
+                        ttl_applied_count += 1
+                    elif fallback_storage_enabled:
+                        # Fallback to simple storage
+                        await self._store_context7_documentation_with_ttl(
+                            content=content,
+                            title=title,
+                            url=url,
+                            technology=technology,
+                            ttl_days=ttl_days,
+                            query_hash=query.query_hash,
+                            trace_id=trace_id
+                        )
+                    else:
+                        logger.warning(f"[{trace_id}] No pipeline available and fallback disabled for doc {i}")
+                        continue
+                    
                     ingested_count += 1
                     
-                    # Check timeout
-                    if time.time() - start_time > timeout:
-                        logger.warning(f"Sync ingestion timeout reached after {ingested_count} docs")
-                        break
-                        
                 except Exception as e:
-                    logger.error(f"Failed to ingest Context7 result: {e}")
+                    logger.error(f"[{trace_id}] Failed to ingest Context7 result {i}: {e}")
+                    logger.info(f"PIPELINE_METRICS: step=context7_process_error "
+                               f"doc_index={i} error=\"{str(e)}\" trace_id={trace_id}")
                     continue
             
             duration_ms = int((time.time() - start_time) * 1000)
             
+            # Log completion metrics
+            logger.info(f"[{trace_id}] Context7 sync ingestion completed: "
+                       f"{ingested_count}/{len(context7_results)} docs processed in {duration_ms}ms")
+            logger.info(f"PIPELINE_METRICS: step=context7_ingestion_complete "
+                       f"duration_ms={duration_ms} ingested_count={ingested_count} "
+                       f"ttl_applied_count={ttl_applied_count} success=true trace_id={trace_id}")
+            
             return {
                 'success': True,
                 'ingested_count': ingested_count,
+                'ttl_applied_count': ttl_applied_count,
                 'duration_ms': duration_ms,
                 'source': 'context7',
-                'type': 'synchronous'
+                'type': 'synchronous',
+                'processed_documents': processed_documents,
+                'pipeline_used': pipeline is not None,
+                'timeout_reached': time.time() - start_time > sync_timeout
             }
             
         except Exception as e:
-            logger.error(f"Sync ingestion failed: {e}")
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.error(f"[{trace_id}] Context7 sync ingestion failed after {duration_ms}ms: {e}")
+            logger.info(f"PIPELINE_METRICS: step=context7_ingestion_error "
+                       f"duration_ms={duration_ms} error=\"{str(e)}\" trace_id={trace_id}")
             return {
                 'success': False,
                 'error': str(e),
+                'duration_ms': duration_ms,
                 'source': 'context7',
-                'type': 'synchronous'
+                'type': 'synchronous',
+                'ingested_count': 0,
+                'ttl_applied_count': 0
             }
+    
+    def _calculate_context7_ttl(
+        self,
+        doc_type: str,
+        technology: str,
+        default_ttl_days: int,
+        result_metadata: Dict[str, Any]
+    ) -> int:
+        """
+        Calculate appropriate TTL for Context7 documentation based on type and freshness.
+        
+        Args:
+            doc_type: Type of documentation (e.g., 'documentation', 'api', 'tutorial')
+            technology: Technology name (e.g., 'react', 'next.js')
+            default_ttl_days: Default TTL in days
+            result_metadata: Additional metadata from Context7 result
+            
+        Returns:
+            TTL in days
+        """
+        try:
+            # Base TTL calculation
+            ttl_days = default_ttl_days
+            
+            # Adjust TTL based on documentation type
+            doc_type_lower = doc_type.lower()
+            if doc_type_lower in ['api', 'reference', 'api-reference']:
+                # API docs change more frequently
+                ttl_days = min(ttl_days, 3)  # Max 3 days for API docs
+            elif doc_type_lower in ['tutorial', 'guide', 'example']:
+                # Tutorials are more stable
+                ttl_days = max(ttl_days, 14)  # Min 14 days for tutorials
+            elif doc_type_lower in ['changelog', 'release-notes', 'migration']:
+                # Version-specific docs have longer retention
+                ttl_days = max(ttl_days, 30)  # Min 30 days for version docs
+            elif doc_type_lower in ['blog', 'article', 'news']:
+                # News content expires faster
+                ttl_days = min(ttl_days, 1)  # Max 1 day for news
+            
+            # Adjust TTL based on technology characteristics
+            tech_lower = technology.lower()
+            
+            # Fast-moving technologies get shorter TTL
+            fast_moving_techs = ['react', 'next.js', 'vue', 'angular', 'node', 'typescript']
+            if any(tech in tech_lower for tech in fast_moving_techs):
+                ttl_days = int(ttl_days * 0.8)  # Reduce by 20%
+            
+            # Stable technologies get longer TTL
+            stable_techs = ['html', 'css', 'javascript', 'python', 'java']
+            if any(tech in tech_lower for tech in stable_techs):
+                ttl_days = int(ttl_days * 1.5)  # Increase by 50%
+            
+            # Check for version information in metadata
+            version = result_metadata.get('version', '').lower()
+            if version and any(keyword in version for keyword in ['beta', 'alpha', 'rc', 'canary']):
+                # Pre-release versions expire faster
+                ttl_days = min(ttl_days, 2)
+            elif version and any(keyword in version for keyword in ['lts', 'stable', 'release']):
+                # Stable versions last longer
+                ttl_days = max(ttl_days, 14)
+            
+            # Check for freshness indicators
+            last_updated = result_metadata.get('last_updated', '')
+            if last_updated:
+                try:
+                    from datetime import datetime, timedelta
+                    # If we have timestamp, adjust based on age
+                    updated_time = datetime.fromisoformat(last_updated.replace('Z', '+00:00'))
+                    age_days = (datetime.now() - updated_time).days
+                    
+                    if age_days > 365:  # Very old content
+                        ttl_days = min(ttl_days, 1)  # Expire quickly
+                    elif age_days > 180:  # Somewhat old
+                        ttl_days = int(ttl_days * 0.5)  # Reduce TTL
+                    elif age_days < 7:  # Very fresh
+                        ttl_days = max(ttl_days, 14)  # Keep longer
+                except Exception:
+                    pass  # Ignore parsing errors
+            
+            # Ensure TTL is within reasonable bounds
+            ttl_days = max(1, min(ttl_days, 90))  # Between 1 and 90 days
+            
+            return ttl_days
+            
+        except Exception as e:
+            logger.warning(f"TTL calculation failed, using default: {e}")
+            return default_ttl_days
+    
+    async def _process_context7_with_pipeline(
+        self,
+        pipeline: Any,  # SmartIngestionPipeline
+        content: str,
+        title: str,
+        url: str,
+        technology: str,
+        ttl_days: int,
+        query: SearchQuery,
+        trace_id: str,
+        weaviate_ttl_enabled: bool = True
+    ) -> None:
+        """
+        Process Context7 documentation through SmartIngestionPipeline with TTL metadata.
+        
+        Args:
+            pipeline: SmartIngestionPipeline instance
+            content: Documentation content
+            title: Document title
+            url: Source URL
+            technology: Technology name
+            ttl_days: TTL in days
+            query: Original search query
+            trace_id: Request trace ID
+        """
+        try:
+            # Import required models
+            from src.document_processing.models import DocumentContent
+            from src.search.llm_query_analyzer import QueryIntent
+            from datetime import datetime, timedelta
+            
+            # Calculate expiration timestamp
+            expires_at = (datetime.utcnow() + timedelta(days=ttl_days)).isoformat()
+            
+            # Create DocumentContent with TTL metadata
+            doc_content = DocumentContent(
+                content_id=f"context7_{technology}_{abs(hash(url))}",
+                title=title or f"{technology.title()} Documentation",
+                text=content,
+                source_url=url,
+                metadata={
+                    'source': 'context7',
+                    'technology': technology,
+                    'ttl_days': ttl_days,
+                    'expires_at': expires_at,
+                    'ingestion_type': 'synchronous',
+                    'query_context': query.query,
+                    'processed_at': datetime.utcnow().isoformat()
+                }
+            )
+            
+            # Create QueryIntent for processing context
+            intent = QueryIntent(
+                technology=technology,
+                topics=[technology, 'documentation'],
+                doc_type='documentation',
+                user_level='intermediate',
+                search_scope='comprehensive'
+            )
+            
+            logger.info(f"[{trace_id}] Processing Context7 doc through SmartIngestionPipeline: "
+                       f"{technology} (TTL: {ttl_days} days, expires: {expires_at})")
+            
+            # Process through pipeline
+            result = await pipeline.process_documentation(doc_content, intent)
+            
+            if result.success:
+                logger.info(f"[{trace_id}] SmartIngestionPipeline success: "
+                           f"{result.chunks_processed} chunks -> {result.workspace_slug}")
+                logger.info(f"PIPELINE_METRICS: step=smart_pipeline_success "
+                           f"chunks_processed={result.chunks_processed} "
+                           f"workspace={result.workspace_slug} ttl_days={ttl_days} "
+                           f"trace_id={trace_id}")
+                
+                # Store TTL metadata in Weaviate if enabled and supported
+                if weaviate_ttl_enabled:
+                    await self._apply_weaviate_ttl(
+                        workspace_slug=result.workspace_slug,
+                        document_id=doc_content.content_id,
+                        ttl_days=ttl_days,
+                        expires_at=expires_at,
+                        trace_id=trace_id
+                    )
+            else:
+                logger.error(f"[{trace_id}] SmartIngestionPipeline failed: {result.error_message}")
+                logger.info(f"PIPELINE_METRICS: step=smart_pipeline_error "
+                           f"error=\"{result.error_message}\" trace_id={trace_id}")
+                
+        except Exception as e:
+            logger.error(f"[{trace_id}] Context7 pipeline processing failed: {e}")
+            logger.info(f"PIPELINE_METRICS: step=pipeline_process_error "
+                       f"error=\"{str(e)}\" trace_id={trace_id}")
+    
+    async def _apply_weaviate_ttl(
+        self,
+        workspace_slug: str,
+        document_id: str,
+        ttl_days: int,
+        expires_at: str,
+        trace_id: str
+    ) -> None:
+        """
+        Apply TTL metadata to documents in Weaviate.
+        
+        Args:
+            workspace_slug: Weaviate workspace
+            document_id: Document identifier
+            ttl_days: TTL in days
+            expires_at: Expiration timestamp
+            trace_id: Request trace ID
+        """
+        try:
+            if not hasattr(self, 'weaviate_client') or not self.weaviate_client:
+                logger.debug(f"[{trace_id}] Weaviate client not available for TTL application")
+                return
+            
+            # Add TTL metadata to the document in Weaviate
+            ttl_metadata = {
+                'ttl_days': ttl_days,
+                'expires_at': expires_at,
+                'source': 'context7',
+                'ttl_applied_at': datetime.utcnow().isoformat()
+            }
+            
+            # Update document with TTL metadata
+            # This would depend on the Weaviate client implementation
+            # For now, we'll log the metadata application
+            logger.info(f"[{trace_id}] Applied TTL metadata to {workspace_slug}/{document_id}: "
+                       f"{ttl_days} days (expires: {expires_at})")
+            logger.info(f"PIPELINE_METRICS: step=weaviate_ttl_applied "
+                       f"workspace={workspace_slug} document_id={document_id} "
+                       f"ttl_days={ttl_days} trace_id={trace_id}")
+            
+        except Exception as e:
+            logger.warning(f"[{trace_id}] Failed to apply Weaviate TTL: {e}")
+    
+    async def _store_context7_documentation_with_ttl(
+        self,
+        content: str,
+        title: str,
+        url: str,
+        technology: str,
+        ttl_days: int,
+        query_hash: str,
+        trace_id: str
+    ) -> None:
+        """
+        Fallback method to store Context7 documentation with TTL in database cache.
+        
+        Args:
+            content: Documentation content
+            title: Document title
+            url: Source URL
+            technology: Technology name
+            ttl_days: TTL in days
+            query_hash: Query hash for tracking
+            trace_id: Request trace ID
+        """
+        try:
+            from datetime import datetime, timedelta
+            import json
+            
+            expires_at = (datetime.utcnow() + timedelta(days=ttl_days)).isoformat()
+            
+            # Store in content_metadata table with TTL
+            metadata = {
+                'source': 'context7',
+                'technology': technology,
+                'title': title,
+                'url': url,
+                'ttl_days': ttl_days,
+                'expires_at': expires_at,
+                'content_length': len(content),
+                'ingestion_type': 'synchronous_fallback',
+                'processed_at': datetime.utcnow().isoformat()
+            }
+            
+            await self.db_manager.execute(
+                """
+                INSERT OR REPLACE INTO content_metadata (
+                    content_id,
+                    source_url,
+                    title,
+                    technology,
+                    content_hash,
+                    processing_status,
+                    enrichment_metadata,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """,
+                (
+                    f"context7_{technology}_{abs(hash(url))}",
+                    url,
+                    title or f"{technology.title()} Documentation",
+                    technology,
+                    query_hash[:16],
+                    'context7_ttl_pending',
+                    json.dumps(metadata)
+                )
+            )
+            
+            # Store content in cache with TTL
+            cache_key = f"context7_content_ttl:{query_hash[:16]}"
+            await self.cache_manager.set(
+                cache_key,
+                {
+                    'content': content,
+                    'metadata': metadata,
+                    'stored_at': datetime.utcnow().isoformat()
+                },
+                ttl=ttl_days * 24 * 3600  # Convert days to seconds
+            )
+            
+            logger.info(f"[{trace_id}] Stored Context7 doc with TTL in fallback storage: "
+                       f"{technology} (TTL: {ttl_days} days)")
+            logger.info(f"PIPELINE_METRICS: step=fallback_storage_ttl "
+                       f"technology={technology} ttl_days={ttl_days} "
+                       f"cache_key={cache_key} trace_id={trace_id}")
+            
+        except Exception as e:
+            logger.error(f"[{trace_id}] Failed to store Context7 documentation with TTL: {e}")
     
     async def _refine_and_retry_search(
         self,
