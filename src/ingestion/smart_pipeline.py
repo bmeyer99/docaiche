@@ -108,20 +108,37 @@ class SmartIngestionPipeline:
                 
                 doc_chunk = DocumentChunk(
                     id=f"{content.source_url}_{chunk.index}",
+                    parent_document_id=content.content_id,
                     content=chunk.text,
                     chunk_index=chunk.index,
                     total_chunks=len(chunks),
-                    metadata=metadata
+                    created_at=datetime.utcnow(),
+                    source_provider=content.metadata.get('source', 'unknown') if hasattr(content, 'metadata') and content.metadata else None
                 )
                 doc_chunks.append(doc_chunk)
             
             # Create ProcessedDocument with all chunks
+            from src.database.connection import DocumentMetadata
+            
+            # Create metadata for the document
+            doc_metadata = DocumentMetadata(
+                word_count=sum(len(chunk.text.split()) for chunk in chunks),
+                heading_count=sum(1 for chunk in chunks for line in chunk.text.split('\n') if line.strip().startswith('#')),
+                code_block_count=sum(chunk.text.count('```') // 2 for chunk in chunks),
+                content_hash=str(hash(content.text))[:16],
+                created_at=datetime.utcnow()
+            )
+            
             processed_doc = ProcessedDocument(
-                id=content.source_url,
+                id=content.content_id,
                 title=content.title or content.source_url.split('/')[-1],
+                full_content=content.text,
                 source_url=content.source_url,
                 technology=intent.technology,
-                chunks=doc_chunks
+                metadata=doc_metadata,
+                quality_score=0.8,  # Default quality score
+                chunks=doc_chunks,
+                created_at=datetime.utcnow()
             )
             
             # Upload entire document to Weaviate
