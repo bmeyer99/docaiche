@@ -51,7 +51,8 @@ export function ProvidersConfig({ onChangeDetected, onProviderUpdate }: Provider
     saveAllChanges,
     hasUnsavedChanges,
     isLoading: isGlobalLoading,
-    isSaving: isGlobalSaving
+    isSaving: isGlobalSaving,
+    clearProviderDirtyFields
   } = useProviderSettings()
   
   // Local UI state
@@ -196,6 +197,11 @@ export function ProvidersConfig({ onChangeDetected, onProviderUpdate }: Provider
         models: result.success && result.availableModels ? result.availableModels : [],
         enabled: result.success
       })
+      
+      // Clear dirty fields if test was successful (backend auto-saves)
+      if (result.success) {
+        clearProviderDirtyFields(selectedProvider)
+      }
       
       // Notify parent that providers have been updated
       if (result.success && onProviderUpdate) {

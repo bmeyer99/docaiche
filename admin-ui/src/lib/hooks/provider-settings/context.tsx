@@ -228,6 +228,24 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
     setDirtyFields(prev => removeFieldFromDirty(prev, fieldPath));
   }, [isMounted]);
 
+  /**
+   * Clear all dirty fields for a specific provider
+   * Used after test connection when backend auto-saves
+   */
+  const clearProviderDirtyFields = useCallback((providerId: string) => {
+    if (!isMounted()) return;
+    setDirtyFields(prev => {
+      const newDirty = new Set(prev);
+      const prefix = `provider.${providerId}.`;
+      Array.from(newDirty).forEach(field => {
+        if (field.startsWith(prefix)) {
+          newDirty.delete(field);
+        }
+      });
+      return newDirty;
+    });
+  }, [isMounted]);
+
   // Load settings on mount
   useEffect(() => {
     loadSettings();
@@ -289,6 +307,7 @@ export function ProviderSettingsProvider({ children }: { children: ReactNode }) 
     hasUnsavedChanges,
     isFieldDirty,
     markFieldClean,
+    clearProviderDirtyFields,
   };
 
   return (

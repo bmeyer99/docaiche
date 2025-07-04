@@ -795,7 +795,8 @@ class SearchOrchestrator:
                 return None
             
             # Create MCP models for refinement
-            from src.mcp.core.models import NormalizedQuery, RefinedQuery
+            from src.mcp.core.models import NormalizedQuery
+            from src.mcp.text_ai.models import RefinedQuery
             
             normalized = NormalizedQuery(
                 original_query=original_query.query,
@@ -926,25 +927,42 @@ class SearchOrchestrator:
         Returns:
             List of external search results converted to internal format
         """
-        if not self.mcp_enhancer or not self.mcp_enhancer.is_external_search_available():
+        trace_id = getattr(query, 'trace_id', f"ext_{int(time.time() * 1000)}")
+        
+        if not self.mcp_enhancer:
+            logger.warning(f"[{trace_id}] MCP enhancer not available for external search")
+            return []
+        
+        is_available = self.mcp_enhancer.is_external_search_available()
+        logger.info(f"[{trace_id}] External search available: {is_available}")
+        
+        if not is_available:
+            logger.warning(f"[{trace_id}] No external search providers available")
             return []
         
         try:
-            logger.info(f"Enhancing search with external providers for query: {query.query[:50]}...")
+            logger.info(f"[{trace_id}] Starting external search enhancement for query: {query.query[:50]}...")
+            logger.info(f"[{trace_id}] Technology hint: {query.technology_hint}")
+            logger.info(f"[{trace_id}] Current results count: {len(current_results.results)}")
             
             # Generate optimized external query
+            logger.info(f"[{trace_id}] Generating optimized external query...")
             external_query = await self.mcp_enhancer.get_external_search_query(
                 query.query,
                 technology_hint=query.technology_hint
             )
+            logger.info(f"[{trace_id}] External query generated: {external_query[:100]}...")
             
             # Execute external search with performance optimizations
+            logger.info(f"[{trace_id}] Executing external search...")
             external_results = await self.mcp_enhancer.execute_external_search(
                 query=external_query,
                 technology_hint=query.technology_hint,
                 max_results=10,
-                provider_ids=query.external_providers
+                provider_ids=query.external_providers,
+                trace_id=trace_id
             )
+            logger.info(f"[{trace_id}] External search returned {len(external_results) if external_results else 0} results")
             
             if not external_results:
                 return []

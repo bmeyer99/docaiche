@@ -68,7 +68,6 @@ function SearchConfigContent() {
   const [activeTab, setActiveTab] = useState(searchParams?.get('tab') || 'providers');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [providerRefreshKey, setProviderRefreshKey] = useState(0);
   
   // Calculate validation status
   const validation = validateSearchConfig(
@@ -241,13 +240,12 @@ function SearchConfigContent() {
             <TabsContent value="providers" className="h-full m-0">
               <ProvidersConfig 
                 onChangeDetected={() => setHasUnsavedChanges(true)} 
-                onProviderUpdate={() => setProviderRefreshKey(prev => prev + 1)}
+                onProviderUpdate={() => {/* Providers are automatically refreshed via context */}}
               />
             </TabsContent>
             
             <TabsContent value="vector" className="h-full m-0">
               <VectorSearchConfig 
-                key={`vector-${providerRefreshKey}`}
                 onChangeDetected={() => setHasUnsavedChanges(true)} 
                 onSaveSuccess={() => setHasUnsavedChanges(false)}
               />
@@ -255,7 +253,6 @@ function SearchConfigContent() {
             
             <TabsContent value="text-ai" className="h-full m-0">
               <TextAIConfig 
-                key={`textai-${providerRefreshKey}`}
                 onChangeDetected={() => setHasUnsavedChanges(true)} 
                 onSaveSuccess={() => setHasUnsavedChanges(false)}
               />

@@ -123,11 +123,13 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
   }, [loadedVectorConfig]);
 
   // Track changes to embedding config
+  const [isInitialized, setIsInitialized] = useState(false);
   useEffect(() => {
-    // Skip on initial load
-    if (embeddingConfig.provider || embeddingConfig.model) {
-      onChangeDetected?.();
+    if (!isInitialized) {
+      setIsInitialized(true);
+      return;
     }
+    onChangeDetected?.();
   }, [embeddingConfig.provider, embeddingConfig.model, embeddingConfig.useDefaultEmbedding]);
 
 
@@ -188,7 +190,17 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
 
   const handleSaveEmbeddingConfig = async (data: EmbeddingConfig) => {
     try {
-      const updated = await apiClient.updateEmbeddingConfig(data);
+      // Include all embedding config fields
+      const configToSave = {
+        useDefaultEmbedding: data.useDefaultEmbedding,
+        provider: data.provider || '',
+        model: data.model || '',
+        dimensions: data.dimensions || 768,
+        chunkSize: data.chunkSize || 1000,
+        chunkOverlap: data.chunkOverlap || 200
+      };
+      
+      const updated = await apiClient.updateEmbeddingConfig(configToSave);
       updateEmbeddingConfig(updated);
       // Clear unsaved changes after successful save
       onSaveSuccess?.();
@@ -197,6 +209,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
         description: "Embedding configuration updated successfully"
       });
     } catch (error: any) {
+      console.error('[VectorSearch] Save error:', error);
       toast({
         title: "Save Failed",
         description: error.message || "Failed to save configuration",
@@ -205,7 +218,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
     }
   };
 
-  // Get tested providers that support embeddings
+  // Get configured providers that support embeddings
   const getEmbeddingProviders = () => {
     // Guard against missing or invalid providers data
     if (!providers || typeof providers !== 'object') {
@@ -224,10 +237,10 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
           return false;
         }
         
-        return (
-          provider?.supportsEmbedding &&
-          (config.status === 'tested' || config.status === 'connected')
-        );
+        // Only show providers that are marked as configured (tested/connected)
+        const isConfigured = config.status === 'tested' || config.status === 'connected' || config.configured === true;
+        
+        return provider?.supportsEmbedding && isConfigured;
       })
       .map(([id, config]) => ({
         id,
@@ -235,7 +248,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
         models: Array.isArray(config.models) ? config.models : []
       }));
       
-    console.log('[VectorSearch] Embedding providers:', embeddingProviders);
+    console.log('[VectorSearch] Configured embedding providers:', embeddingProviders);
     return embeddingProviders;
   };
 
@@ -522,9 +535,9 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                           </SelectTrigger>
                           <SelectContent>
                             {getEmbeddingModels().length === 0 ? (
-                              <SelectItem value="" disabled>
+                              <div className="py-2 px-3 text-sm text-muted-foreground">
                                 No embedding models available
-                              </SelectItem>
+                              </div>
                             ) : (
                               getEmbeddingModels().map((model: string) => (
                                 <SelectItem key={model} value={model}>

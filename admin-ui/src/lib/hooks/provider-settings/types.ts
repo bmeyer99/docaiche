@@ -50,6 +50,7 @@ export interface ProviderSettingsContextValue extends ProviderSettings {
   hasUnsavedChanges: () => boolean;
   isFieldDirty: (fieldPath: string) => boolean;
   markFieldClean: (fieldPath: string) => void;
+  clearProviderDirtyFields: (providerId: string) => void;
 }
 
 export const SavedStateSchema = z.object({

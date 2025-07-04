@@ -171,7 +171,7 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
     }
   };
 
-  // Get tested providers that support text generation
+  // Get configured providers that support text generation
   const getTextProviders = () => {
     // Guard against missing or invalid providers data
     if (!providers || typeof providers !== 'object') {
@@ -190,10 +190,10 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
           return false;
         }
         
-        return (
-          provider?.supportsChat &&
-          (config.status === 'tested' || config.status === 'connected')
-        );
+        // Only show providers that are marked as configured (tested/connected)
+        const isConfigured = config.status === 'tested' || config.status === 'connected' || config.configured === true;
+        
+        return provider?.supportsChat && isConfigured;
       })
       .map(([id, config]) => ({
         id,
@@ -201,7 +201,7 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
         models: Array.isArray(config.models) ? config.models : []
       }));
       
-    console.log('[TextAI] Text providers:', textProviders);
+    console.log('[TextAI] Configured text providers:', textProviders);
     console.log('[TextAI] Current selection:', { selectedProvider, selectedModel });
     return textProviders;
   };
@@ -278,7 +278,10 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
       console.error('[TextAI] Failed to save provider selection:', error);
     }
     
-    onChangeDetected?.();
+    // Only trigger change detection if this is a user-initiated change
+    if (providerId !== savedConfig?.provider) {
+      onChangeDetected?.();
+    }
   };
 
   const handleModelChange = async (model: string) => {
@@ -312,7 +315,10 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
       console.error('[TextAI] Failed to save model selection:', error);
     }
     
-    onChangeDetected?.();
+    // Only trigger change detection if this is a user-initiated change
+    if (model !== savedConfig?.model) {
+      onChangeDetected?.();
+    }
   };
 
   return (

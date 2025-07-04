@@ -47,7 +47,7 @@ class Context7Provider(SearchProvider):
             config: Provider configuration
         """
         super().__init__(config)
-        self.base_url = "https://context7.com/vercel"
+        self.base_url = "https://context7.com"
         self.session = None
         
         # Cache for documentation
@@ -92,9 +92,9 @@ class Context7Provider(SearchProvider):
             # Skip circuit breaker check for now - Context7 is reliable
             # TODO: Implement proper circuit breaker if needed
             
-            # Extract technology name from query
-            technology = self._extract_technology_name(options.query)
-            if not technology:
+            # Extract technology info from query
+            tech_info = self._extract_technology_info(options.query)
+            if not tech_info:
                 return SearchResults(
                     results=[],
                     total_results=0,
@@ -104,12 +104,15 @@ class Context7Provider(SearchProvider):
                     error="No technology name detected in query"
                 )
             
+            owner = tech_info['owner']
+            technology = tech_info['technology']
+            
             # Ensure HTTP session is initialized
             if not self.session:
                 await self.initialize()
             
             # Fetch documentation content
-            content = await self._fetch_documentation(technology)
+            content = await self._fetch_documentation(owner, technology)
             if not content:
                 return SearchResults(
                     results=[],
@@ -117,7 +120,7 @@ class Context7Provider(SearchProvider):
                     execution_time_ms=int((time.time() - start_time) * 1000),
                     provider="context7",
                     query=options.query,
-                    error=f"No documentation found for '{technology}'"
+                    error=f"No documentation found for '{owner}/{technology}'"
                 )
             
             # Create search result from documentation content
@@ -129,11 +132,12 @@ class Context7Provider(SearchProvider):
                 for i, chunk in enumerate(content_chunks[:5]):  # Limit to top 5 chunks
                     results.append(SearchResult(
                         title=f"{technology.title()} Documentation - Section {i+1}",
-                        url=f"https://context7.com/vercel/{technology}/llms.txt",
+                        url=f"https://context7.com/{owner}/{technology}/llms.txt",
                         snippet=chunk[:500],
                         content=chunk,
                         score=self._calculate_relevance(chunk, options.query),
                         metadata={
+                            'owner': owner,
                             'technology': technology,
                             'section': i+1,
                             'total_sections': len(content_chunks),
@@ -167,26 +171,27 @@ class Context7Provider(SearchProvider):
                 error=str(e)
             )
     
-    async def _fetch_documentation(self, technology: str) -> Optional[str]:
+    async def _fetch_documentation(self, owner: str, technology: str) -> Optional[str]:
         """
         Fetch documentation content from Context7 API.
         
         Args:
-            technology: Technology name (e.g., 'next.js', 'react')
+            owner: Repository owner (e.g., 'vercel', 'microsoft')
+            technology: Technology name (e.g., 'next.js', 'typescript')
             
         Returns:
             Documentation content or None if not found
         """
         # Check cache first
-        cache_key = f"docs_{technology}"
+        cache_key = f"docs_{owner}_{technology}"
         if cache_key in self._doc_cache:
             cached = self._doc_cache[cache_key]
             if time.time() - cached['timestamp'] < self._cache_ttl:
-                logger.debug(f"Returning cached documentation for {technology}")
+                logger.debug(f"Returning cached documentation for {owner}/{technology}")
                 return cached['content']
         
         try:
-            url = f"{self.base_url}/{technology}/llms.txt"
+            url = f"{self.base_url}/{owner}/{technology}/llms.txt"
             logger.info(f"Fetching Context7 documentation from: {url}")
             
             async with self.session.get(url) as response:
@@ -199,14 +204,14 @@ class Context7Provider(SearchProvider):
                         'timestamp': time.time()
                     }
                     
-                    logger.info(f"Successfully fetched {len(content)} characters for {technology}")
+                    logger.info(f"Successfully fetched {len(content)} characters for {owner}/{technology}")
                     return content
                 else:
-                    logger.warning(f"Context7 API returned status {response.status} for {technology}")
+                    logger.warning(f"Context7 API returned status {response.status} for {owner}/{technology}")
                     return None
             
         except Exception as e:
-            logger.error(f"Failed to fetch documentation for '{technology}': {e}")
+            logger.error(f"Failed to fetch documentation for '{owner}/{technology}': {e}")
             return None
     
     def _split_content(self, content: str, query: str) -> List[str]:
@@ -297,80 +302,103 @@ class Context7Provider(SearchProvider):
         
         return max(0.1, score)  # Minimum score of 0.1
     
-    def _extract_technology_name(self, query: str) -> Optional[str]:
+    def _extract_technology_info(self, query: str) -> Optional[Dict[str, str]]:
         """
-        Extract technology name from search query.
+        Extract technology name and owner from search query.
         
         Args:
             query: Search query
             
         Returns:
-            Technology name or None
+            Dict with 'technology' and 'owner' keys, or None
         """
         # Common patterns for technology mentions
         query_lower = query.lower()
         
-        # Known technologies available on Context7
-        known_technologies = [
-            'next.js', 'nextjs', 'next',
-            'react', 'reactjs',
-            'vue', 'vuejs', 'vue.js',
-            'angular', 'angularjs',
-            'svelte', 'sveltekit',
-            'express', 'expressjs',
-            'fastify',
-            'nestjs', 'nest',
-            'koa', 'koajs',
-            'django',
-            'flask',
-            'fastapi',
-            'nuxt', 'nuxtjs', 'nuxt.js',
-            'gatsby', 'gatsbyjs',
-            'tailwind', 'tailwindcss',
-            'bootstrap',
-            'material-ui', 'mui',
-            'redux',
-            'mobx',
-            'zustand',
-            'typescript', 'ts',
-            'javascript', 'js',
-            'node', 'nodejs', 'node.js'
-        ]
+        # Known technologies with their owners on Context7
+        # Format: technology_name -> (owner, normalized_name)
+        known_technologies = {
+            # Vercel projects
+            'next.js': ('vercel', 'next.js'),
+            'nextjs': ('vercel', 'next.js'),
+            'next': ('vercel', 'next.js'),
+            'turbo': ('vercel', 'turbo'),
+            'turborepo': ('vercel', 'turbo'),
+            'swr': ('vercel', 'swr'),
+            
+            # Facebook/Meta projects
+            'react': ('facebook', 'react'),
+            'reactjs': ('facebook', 'react'),
+            'react.js': ('facebook', 'react'),
+            
+            # Microsoft projects
+            'typescript': ('microsoft', 'typescript'),
+            'ts': ('microsoft', 'typescript'),
+            'vscode': ('microsoft', 'vscode'),
+            'playwright': ('microsoft', 'playwright'),
+            
+            # Vue projects
+            'vue': ('vuejs', 'vue'),
+            'vuejs': ('vuejs', 'vue'),
+            'vue.js': ('vuejs', 'vue'),
+            'nuxt': ('nuxt', 'nuxt'),
+            'nuxtjs': ('nuxt', 'nuxt'),
+            'nuxt.js': ('nuxt', 'nuxt'),
+            
+            # Angular
+            'angular': ('angular', 'angular'),
+            'angularjs': ('angular', 'angular'),
+            
+            # Other frameworks
+            'svelte': ('sveltejs', 'svelte'),
+            'sveltekit': ('sveltejs', 'kit'),
+            'express': ('expressjs', 'express'),
+            'expressjs': ('expressjs', 'express'),
+            'fastify': ('fastify', 'fastify'),
+            'nestjs': ('nestjs', 'nest'),
+            'nest': ('nestjs', 'nest'),
+            'koa': ('koajs', 'koa'),
+            'koajs': ('koajs', 'koa'),
+            'gatsby': ('gatsbyjs', 'gatsby'),
+            'gatsbyjs': ('gatsbyjs', 'gatsby'),
+            
+            # CSS frameworks
+            'tailwind': ('tailwindlabs', 'tailwindcss'),
+            'tailwindcss': ('tailwindlabs', 'tailwindcss'),
+            'bootstrap': ('twbs', 'bootstrap'),
+            'material-ui': ('mui', 'material-ui'),
+            'mui': ('mui', 'material-ui'),
+            
+            # State management
+            'redux': ('reduxjs', 'redux'),
+            'mobx': ('mobxjs', 'mobx'),
+            'zustand': ('pmndrs', 'zustand'),
+            
+            # Languages and runtimes
+            'javascript': ('tc39', 'javascript'),
+            'js': ('tc39', 'javascript'),
+            'node': ('nodejs', 'node'),
+            'nodejs': ('nodejs', 'node'),
+            'node.js': ('nodejs', 'node'),
+            'deno': ('denoland', 'deno'),
+            'bun': ('oven-sh', 'bun'),
+            
+            # Python frameworks
+            'django': ('django', 'django'),
+            'flask': ('pallets', 'flask'),
+            'fastapi': ('tiangolo', 'fastapi'),
+            
+            # Testing frameworks
+            'jest': ('jestjs', 'jest'),
+            'mocha': ('mochajs', 'mocha'),
+            'cypress': ('cypress-io', 'cypress'),
+            'vitest': ('vitest-dev', 'vitest'),
+        }
         
         # Direct matches
-        for tech in known_technologies:
-            if tech in query_lower:
-                # Map common variations to standard names
-                if tech in ['nextjs', 'next']:
-                    return 'next.js'
-                elif tech in ['reactjs']:
-                    return 'react'
-                elif tech in ['vuejs', 'vue.js']:
-                    return 'vue'
-                elif tech in ['angularjs']:
-                    return 'angular'
-                elif tech in ['expressjs']:
-                    return 'express'
-                elif tech in ['nestjs', 'nest']:
-                    return 'nestjs'
-                elif tech in ['koajs']:
-                    return 'koa'
-                elif tech in ['nuxtjs', 'nuxt.js']:
-                    return 'nuxt'
-                elif tech in ['gatsbyjs']:
-                    return 'gatsby'
-                elif tech in ['tailwindcss']:
-                    return 'tailwind'
-                elif tech in ['material-ui', 'mui']:
-                    return 'material-ui'
-                elif tech in ['ts']:
-                    return 'typescript'
-                elif tech in ['js']:
-                    return 'javascript'
-                elif tech in ['nodejs', 'node.js']:
-                    return 'node'
-                else:
-                    return tech
+        for tech_variant, (owner, tech_name) in known_technologies.items():
+            if tech_variant in query_lower:
+                return {'owner': owner, 'technology': tech_name}
         
         # Try to extract from patterns like "X documentation" or "how to use X"
         import re
@@ -390,11 +418,9 @@ class Context7Provider(SearchProvider):
                 potential_tech = match.group(1)
                 if len(potential_tech) > 2:  # Skip very short matches
                     # Check if it's a known technology
-                    for tech in known_technologies:
-                        if potential_tech == tech or potential_tech in tech:
-                            return tech
-                    # If not known, try the extracted name as-is
-                    return potential_tech
+                    for tech_variant, (owner, tech_name) in known_technologies.items():
+                        if potential_tech == tech_variant or potential_tech in tech_variant:
+                            return {'owner': owner, 'technology': tech_name}
         
         return None
     
@@ -429,7 +455,7 @@ class Context7Provider(SearchProvider):
             
             # Try a simple health check by fetching a known technology
             start_time = time.time()
-            test_url = f"{self.base_url}/next.js/llms.txt"
+            test_url = f"{self.base_url}/vercel/next.js/llms.txt"
             
             async with self.session.head(test_url) as response:
                 latency = int((time.time() - start_time) * 1000)

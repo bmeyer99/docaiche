@@ -98,7 +98,7 @@ export default function GrafanaDashboardsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col space-y-6 p-6">
+      <div className="flex flex-col space-y-6 p-6 h-full">
         <div className="flex items-center justify-between">
           <div>
             <Skeleton className="h-8 w-64 mb-2" />
@@ -120,7 +120,7 @@ export default function GrafanaDashboardsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col space-y-6 p-6">
+      <div className="flex flex-col space-y-6 p-6 h-full">
         <div>
           <h1 className="text-3xl font-bold">Grafana Dashboards</h1>
           <p className="text-muted-foreground">View and manage Grafana dashboards</p>
@@ -136,7 +136,7 @@ export default function GrafanaDashboardsPage() {
   }
 
   return (
-    <div className="flex flex-col space-y-6 p-6">
+    <div className="flex flex-col space-y-6 p-6 h-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -173,10 +173,10 @@ export default function GrafanaDashboardsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1">
         {/* Sidebar - Dashboard Selection */}
         <div className="lg:col-span-1">
-          <Card>
+          <Card className="h-full flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Icons.dashboard className="h-5 w-5" />
@@ -186,11 +186,11 @@ export default function GrafanaDashboardsPage() {
                 Select a dashboard to view ({dashboards.length} available)
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1 flex flex-col">
               {/* Dashboard List */}
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1 flex flex-col">
                 <label className="text-sm font-medium">Available Dashboards</label>
-                <div className="space-y-1 max-h-64 overflow-y-auto">
+                <div className="space-y-1 flex-1 overflow-y-auto">
                   {filteredDashboards.map((dashboard) => (
                     <button
                       key={dashboard.uid}
