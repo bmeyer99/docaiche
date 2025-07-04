@@ -55,33 +55,15 @@ class DatabaseManager:
     async def connect(self) -> None:
         """Establish async database connection with proper connection pooling"""
         try:
-            # Determine if we're using SQLite or PostgreSQL
-            is_sqlite = "sqlite" in self.database_url.lower()
-            
-            # Create async engine with appropriate configuration
-            if is_sqlite:
-                # SQLite-specific configuration
-                self.engine = create_async_engine(
-                    self.database_url,
-                    echo=False,  # Set to True for SQL logging in debug mode
-                    pool_pre_ping=True,
-                    pool_recycle=3600,
-                    pool_size=10,  # Connection pool size for performance
-                    max_overflow=20,  # Max overflow connections
-                    connect_args={
-                        "check_same_thread": False,  # Required for SQLite with async
-                    },
-                )
-            else:
-                # PostgreSQL/generic configuration
-                self.engine = create_async_engine(
-                    self.database_url,
-                    echo=False,  # Set to True for SQL logging in debug mode
-                    pool_pre_ping=True,
-                    pool_recycle=3600,
-                    pool_size=10,  # Connection pool size for performance
-                    max_overflow=20,  # Max overflow connections
-                )
+            # Create async engine with PostgreSQL configuration
+            self.engine = create_async_engine(
+                self.database_url,
+                echo=False,  # Set to True for SQL logging in debug mode
+                pool_pre_ping=True,
+                pool_recycle=3600,
+                pool_size=10,  # Connection pool size for performance
+                max_overflow=20,  # Max overflow connections
+            )
 
             # Create session factory with async transaction support (DB-015)
             self.session_factory = async_sessionmaker(
@@ -92,11 +74,8 @@ class DatabaseManager:
                 autocommit=False,  # Explicit transaction control
             )
 
-            # Test connection and enable foreign key constraints
+            # Test connection
             async with self.engine.begin() as conn:
-                # Enable foreign key constraints (SQLite specific)
-                if is_sqlite:
-                    await conn.execute(text("PRAGMA foreign_keys = ON"))
                 await conn.execute(text("SELECT 1"))
 
             self._connected = True

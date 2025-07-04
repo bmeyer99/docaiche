@@ -6,7 +6,6 @@ This migration adds tables for tracking AI operations, conversations,
 correlation IDs, and performance metrics for the AI logging system.
 """
 
-import sqlite3
 import logging
 from datetime import datetime
 
@@ -16,12 +15,11 @@ MIGRATION_VERSION = "2.0.0"
 MIGRATION_DESCRIPTION = "Add AI logging and analytics tables"
 
 
-def upgrade(conn: sqlite3.Connection) -> None:
+def upgrade(conn) -> None:
     """Apply migration to add AI logging tables."""
     logger.info("Applying migration 002: Add AI logging tables")
     
-    # Enable foreign key constraints
-    conn.execute("PRAGMA foreign_keys = ON")
+    # Foreign key constraints are enabled by default in PostgreSQL
     
     # AI Operations table - tracks all AI requests
     conn.execute("""
@@ -83,7 +81,7 @@ def upgrade(conn: sqlite3.Connection) -> None:
             -- Conversation metadata
             title TEXT,
             summary TEXT,
-            tags JSON,
+            tags JSONB,
             
             -- Metrics
             message_count INTEGER DEFAULT 0,
@@ -111,7 +109,7 @@ def upgrade(conn: sqlite3.Connection) -> None:
             root_operation_id TEXT,
             
             -- Flow tracking
-            service_chain JSON NOT NULL DEFAULT '[]',
+            service_chain JSONB NOT NULL DEFAULT '[]',
             total_operations INTEGER DEFAULT 1,
             
             -- Performance
@@ -153,7 +151,7 @@ def upgrade(conn: sqlite3.Connection) -> None:
             tokens_total INTEGER DEFAULT 0,
             
             -- Model breakdown
-            model_usage JSON NOT NULL DEFAULT '{}',
+            model_usage JSONB NOT NULL DEFAULT '{}',
             
             -- Performance metrics
             avg_response_time_ms REAL,
@@ -193,7 +191,7 @@ def upgrade(conn: sqlite3.Connection) -> None:
             first_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             occurrence_count INTEGER DEFAULT 1,
-            affected_services JSON DEFAULT '[]',
+            affected_services JSONB DEFAULT '[]',
             
             -- Resolution
             is_resolved BOOLEAN DEFAULT FALSE,
@@ -288,7 +286,7 @@ def upgrade(conn: sqlite3.Connection) -> None:
     logger.info("Migration 002 completed successfully")
 
 
-def downgrade(conn: sqlite3.Connection) -> None:
+def downgrade(conn) -> None:
     """Rollback migration - drop AI logging tables."""
     logger.info("Rolling back migration 002: Remove AI logging tables")
     

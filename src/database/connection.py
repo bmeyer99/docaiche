@@ -120,7 +120,7 @@ class DatabaseManager:
         Initialize DatabaseManager with async SQLAlchemy engine.
 
         Args:
-            database_url: SQLite database URL (e.g., "sqlite+aiosqlite:///app/data/docaiche.db")
+            database_url: PostgreSQL database URL (e.g., "postgresql+asyncpg://user:pass@host:port/db")
         """
         self.database_url = database_url
         self.engine: Optional[AsyncEngine] = None
@@ -134,28 +134,17 @@ class DatabaseManager:
         try:
             if _db_logger:
                 _db_logger.log_connection_event("connection_attempt", client_ip="localhost")
-            # Create async engine with database-specific configuration
-            connect_args = {}
+            # Create async engine with PostgreSQL-specific configuration
+            connect_args = {
+                "server_settings": {
+                    "application_name": "docaiche",
+                    "jit": "off"  # Disable JIT for more predictable performance
+                },
+                "command_timeout": 60,
+                "prepared_statement_cache_size": 0,  # Disable to prevent cache bloat
+            }
             pool_size = 10
             max_overflow = 20
-            
-            # Configure based on database type
-            if self.database_url.startswith("sqlite"):
-                connect_args = {"check_same_thread": False}
-                pool_size = 1  # SQLite doesn't support true concurrency
-                max_overflow = 0
-            elif self.database_url.startswith("postgresql"):
-                # PostgreSQL optimizations
-                connect_args = {
-                    "server_settings": {
-                        "application_name": "docaiche",
-                        "jit": "off"  # Disable JIT for more predictable performance
-                    },
-                    "command_timeout": 60,
-                    "prepared_statement_cache_size": 0,  # Disable to prevent cache bloat
-                }
-                pool_size = 10
-                max_overflow = 20
             
             self.engine = create_async_engine(
                 self.database_url,
@@ -172,29 +161,21 @@ class DatabaseManager:
                 self.engine, class_=AsyncSession, expire_on_commit=False
             )
 
-            # Test connection and configure database-specific settings
+            # Test connection and configure PostgreSQL-specific settings
             async with self.engine.begin() as conn:
-                if self.database_url.startswith("sqlite"):
-                    # SQLite-specific configuration
-                    await conn.execute(text("PRAGMA foreign_keys = ON"))
-                    await conn.execute(text("PRAGMA journal_mode = WAL"))
-                    await conn.execute(text("PRAGMA synchronous = NORMAL"))
-                    await conn.execute(text("PRAGMA wal_checkpoint(PASSIVE)"))
-                elif self.database_url.startswith("postgresql"):
-                    # PostgreSQL-specific configuration
-                    # Set search path if needed
-                    await conn.execute(text("SET search_path TO public"))
-                    # Ensure we're using UTC
-                    await conn.execute(text("SET timezone = 'UTC'"))
+                # PostgreSQL-specific configuration
+                # Set search path if needed
+                await conn.execute(text("SET search_path TO public"))
+                # Ensure we're using UTC
+                await conn.execute(text("SET timezone = 'UTC'"))
                 
                 # Test connection
                 await conn.execute(text("SELECT 1"))
 
             self._connected = True
             connection_duration = (time.time() - start_time) * 1000
-            db_type = "PostgreSQL" if self.database_url.startswith("postgresql") else "SQLite"
             logger.info(
-                f"Database connection established successfully ({db_type})"
+                "Database connection established successfully (PostgreSQL)"
             )
             if _db_logger:
                 _db_logger.log_connection_event(

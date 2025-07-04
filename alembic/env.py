@@ -91,7 +91,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    # Use async engine for SQLite with aiosqlite
+    # Use async engine for PostgreSQL with asyncpg
     asyncio.run(run_async_migrations())
 
 

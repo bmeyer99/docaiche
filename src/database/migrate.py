@@ -4,7 +4,6 @@ Database migration runner.
 This module handles running database migrations in order.
 """
 
-import sqlite3
 import logging
 import importlib.util
 import os
@@ -24,17 +23,9 @@ class MigrationRunner:
         
     def get_current_version(self) -> str:
         """Get current database schema version."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.execute("""
-                    SELECT version_id FROM schema_versions 
-                    ORDER BY applied_at DESC LIMIT 1
-                """)
-                result = cursor.fetchone()
-                return result[0] if result else "0.0.0"
-        except sqlite3.OperationalError:
-            # Table doesn't exist yet
-            return "0.0.0"
+        # SQLite version check has been removed
+        logger.warning("SQLite migrations are no longer supported. Use PostgreSQL instead.")
+        return "0.0.0"
     
     def get_available_migrations(self) -> List[Dict[str, Any]]:
         """Get list of available migration files."""
@@ -66,15 +57,9 @@ class MigrationRunner:
     
     def get_applied_versions(self) -> List[str]:
         """Get list of applied migration versions."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.execute("""
-                    SELECT version_id FROM schema_versions 
-                    ORDER BY applied_at
-                """)
-                return [row[0] for row in cursor.fetchall()]
-        except sqlite3.OperationalError:
-            return []
+        # SQLite version retrieval has been removed
+        logger.warning("SQLite migrations are no longer supported. Use PostgreSQL instead.")
+        return []
     
     def run_migrations(self, target_version: str = None) -> None:
         """Run pending migrations up to target version."""
@@ -97,21 +82,8 @@ class MigrationRunner:
             
         logger.info(f"Found {len(pending_migrations)} pending migrations")
         
-        # Apply migrations in order
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute("PRAGMA foreign_keys = ON")
-            
-            for migration in sorted(pending_migrations, key=lambda x: x['version']):
-                logger.info(f"Applying migration {migration['version']}: {migration['description']}")
-                
-                try:
-                    migration['upgrade_function'](conn)
-                    conn.commit()
-                    logger.info(f"Migration {migration['version']} applied successfully")
-                except Exception as e:
-                    logger.error(f"Failed to apply migration {migration['version']}: {e}")
-                    conn.rollback()
-                    raise
+        # SQLite migrations have been removed
+        logger.warning("SQLite migrations are no longer supported. Use PostgreSQL instead.")
     
     def rollback_migration(self, version: str) -> None:
         """Rollback a specific migration."""
@@ -137,17 +109,8 @@ class MigrationRunner:
             
         logger.info(f"Rolling back migration {version}: {migration['description']}")
         
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute("PRAGMA foreign_keys = ON")
-            
-            try:
-                migration['downgrade_function'](conn)
-                conn.commit()
-                logger.info(f"Migration {version} rolled back successfully")
-            except Exception as e:
-                logger.error(f"Failed to rollback migration {version}: {e}")
-                conn.rollback()
-                raise
+        # SQLite rollback has been removed
+        logger.warning("SQLite migrations are no longer supported. Use PostgreSQL instead.")
     
     def show_status(self) -> None:
         """Show migration status."""

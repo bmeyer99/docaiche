@@ -6,7 +6,6 @@ Transfers all data while preserving relationships and converting data types
 
 import os
 import sys
-import sqlite3
 import json
 import logging
 from datetime import datetime
@@ -63,9 +62,9 @@ class SQLiteToPostgresMigrator:
             logger.error(f"SQLite database not found: {self.sqlite_path}")
             return False
         
-        # Connect to both databases
-        sqlite_conn = sqlite3.connect(self.sqlite_path)
-        sqlite_conn.row_factory = sqlite3.Row
+        # SQLite connection has been removed
+        logger.error("SQLite is no longer supported. Cannot migrate from SQLite.")
+        return False
         
         pg_engine = create_engine(self.postgres_url, poolclass=NullPool)
         
@@ -108,14 +107,14 @@ class SQLiteToPostgresMigrator:
             sqlite_conn.close()
             pg_engine.dispose()
     
-    def _get_sqlite_tables(self, conn: sqlite3.Connection) -> List[str]:
+    def _get_sqlite_tables(self, conn) -> List[str]:
         """Get list of tables from SQLite database."""
         cursor = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         )
         return [row['name'] for row in cursor]
     
-    def _migrate_table(self, sqlite_conn: sqlite3.Connection, pg_conn, table_name: str):
+    def _migrate_table(self, sqlite_conn, pg_conn, table_name: str):
         """Migrate a single table from SQLite to PostgreSQL."""
         logger.info(f"Migrating table: {table_name}")
         
@@ -216,7 +215,7 @@ class SQLiteToPostgresMigrator:
                         logger.error(f"  Failed to migrate row: {row_error}")
                         logger.debug(f"  Row data: {row_dict}")
     
-    def _verify_migration(self, sqlite_conn: sqlite3.Connection, pg_engine):
+    def _verify_migration(self, sqlite_conn, pg_engine):
         """Verify that migration was successful."""
         logger.info("\nVerifying migration...")
         
@@ -224,10 +223,10 @@ class SQLiteToPostgresMigrator:
             for table_name in self.table_order:
                 # Get counts from both databases
                 try:
-                    sqlite_cursor = sqlite_conn.execute(f"SELECT COUNT(*) as count FROM {table_name}")
-                    sqlite_count = sqlite_cursor.fetchone()['count']
-                except sqlite3.OperationalError:
-                    # Table doesn't exist in SQLite
+                    # SQLite count check has been removed
+                    sqlite_count = 0
+                except Exception:
+                    # Table doesn't exist
                     continue
                 
                 try:
@@ -278,7 +277,9 @@ def main():
     if args.verify_only:
         logger.info("Verification mode - checking existing data...")
         # Just verify
-        sqlite_conn = sqlite3.connect(args.sqlite_path)
+        # SQLite connection has been removed
+        logger.error("SQLite is no longer supported. Cannot verify migration.")
+        sys.exit(1)
         pg_engine = create_engine(postgres_url.replace("+asyncpg", "").replace("+aiosqlite", ""))
         migrator._verify_migration(sqlite_conn, pg_engine)
         sqlite_conn.close()

@@ -1,0 +1,209 @@
+# Recording Rules for Query Performance Optimization
+# These rules pre-calculate expensive queries to improve dashboard performance
+
+groups:
+  - name: performance_aggregations
+    interval: 1m
+    rules:
+      # API Performance Metrics
+      - record: api:request_duration_seconds:p95_1m
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le, service, method))
+      
+      - record: api:request_duration_seconds:p99_1m
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[1m])) by (le, service, method))
+      
+      - record: api:requests_per_second
+        expr: sum(rate(http_requests_total[1m])) by (service, method, status)
+      
+      - record: api:error_rate
+        expr: sum(rate(http_requests_total{status=~"5.."}[1m])) by (service) / sum(rate(http_requests_total[1m])) by (service)
+
+  - name: service_level_indicators
+    interval: 30s
+    rules:
+      # Service availability
+      - record: service:up:ratio_5m
+        expr: avg_over_time(up[5m])
+      
+      # Service latency SLI
+      - record: service:latency_sli:ratio_5m
+        expr: |
+          (
+            sum(rate(http_request_duration_seconds_bucket{le="0.5"}[5m])) by (service)
+            /
+            sum(rate(http_request_duration_seconds_count[5m])) by (service)
+          )
+      
+      # Service error rate SLI
+      - record: service:error_sli:ratio_5m
+        expr: |
+          (
+            1 - (
+              sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+              /
+              sum(rate(http_requests_total[5m])) by (service)
+            )
+          )
+
+  - name: resource_utilization
+    interval: 1m
+    rules:
+      # CPU utilization by service
+      - record: service:cpu_usage:ratio
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total[1m])) by (container_label_docaiche_service)
+          /
+          sum(container_spec_cpu_quota) by (container_label_docaiche_service) * 100
+      
+      # Memory utilization by service
+      - record: service:memory_usage:ratio
+        expr: |
+          sum(container_memory_working_set_bytes) by (container_label_docaiche_service)
+          /
+          sum(container_spec_memory_limit_bytes) by (container_label_docaiche_service) * 100
+      
+      # Disk I/O by service
+      - record: service:disk_io_rate:bytes_per_second
+        expr: |
+          sum(rate(container_fs_reads_bytes_total[1m]) + rate(container_fs_writes_bytes_total[1m])) 
+          by (container_label_docaiche_service)
+
+  - name: database_performance
+    interval: 1m
+    rules:
+      # PostgreSQL query performance
+      - record: postgres:query_duration:p95_1m
+        expr: histogram_quantile(0.95, sum(rate(pg_stat_statements_seconds_bucket[1m])) by (le, query))
+      
+      # PostgreSQL connection pool utilization
+      - record: postgres:connection_pool:utilization
+        expr: pg_stat_database_numbackends / pg_settings_max_connections
+      
+      # PostgreSQL cache hit ratio
+      - record: postgres:cache_hit:ratio
+        expr: |
+          sum(pg_stat_database_blks_hit) by (datname)
+          /
+          (sum(pg_stat_database_blks_hit) by (datname) + sum(pg_stat_database_blks_read) by (datname))
+
+  - name: weaviate_performance
+    interval: 1m
+    rules:
+      # Weaviate query latency
+      - record: weaviate:query_latency:p95_1m
+        expr: histogram_quantile(0.95, sum(rate(weaviate_query_duration_seconds_bucket[1m])) by (le, class_name))
+      
+      # Weaviate object ingestion rate
+      - record: weaviate:ingestion_rate:objects_per_second
+        expr: sum(rate(weaviate_objects_total[1m])) by (class_name)
+      
+      # Weaviate vector index efficiency
+      - record: weaviate:vector_index:efficiency
+        expr: |
+          sum(rate(weaviate_vector_index_operations_total{operation="search"}[1m])) by (class_name)
+          /
+          sum(rate(weaviate_vector_index_operations_duration_seconds_sum[1m])) by (class_name)
+
+  - name: monitoring_stack_health
+    interval: 30s
+    rules:
+      # VictoriaMetrics ingestion performance
+      - record: vm:ingestion_rate:samples_per_second
+        expr: sum(rate(vm_rows_inserted_total[1m]))
+      
+      # VictoriaMetrics query performance
+      - record: vm:query_duration:p95_1m
+        expr: histogram_quantile(0.95, sum(rate(vm_query_duration_seconds_bucket[1m])) by (le))
+      
+      # VictoriaMetrics cache efficiency
+      - record: vm:cache_hit_rate:ratio
+        expr: |
+          sum(rate(vm_cache_hits_total[1m]))
+          /
+          (sum(rate(vm_cache_hits_total[1m])) + sum(rate(vm_cache_misses_total[1m])))
+      
+      # Loki ingestion rate
+      - record: loki:ingestion_rate:bytes_per_second
+        expr: sum(rate(loki_ingester_bytes_received_total[1m]))
+      
+      # Grafana dashboard query performance
+      - record: grafana:query_duration:p95_1m
+        expr: histogram_quantile(0.95, sum(rate(grafana_api_dataproxy_request_duration_seconds_bucket[1m])) by (le))
+
+  - name: business_metrics
+    interval: 5m
+    rules:
+      # Search request success rate
+      - record: business:search_success:ratio_5m
+        expr: |
+          sum(rate(search_requests_total{status="success"}[5m]))
+          /
+          sum(rate(search_requests_total[5m]))
+      
+      # Document processing throughput
+      - record: business:document_processing:rate_5m
+        expr: sum(rate(documents_processed_total[5m])) by (processor_type)
+      
+      # AI provider usage
+      - record: business:ai_provider:requests_per_minute
+        expr: sum(rate(ai_provider_requests_total[1m])) by (provider, model)
+      
+      # Content enrichment efficiency
+      - record: business:enrichment:success_ratio_5m
+        expr: |
+          sum(rate(enrichment_operations_total{status="success"}[5m])) by (enrichment_type)
+          /
+          sum(rate(enrichment_operations_total[5m])) by (enrichment_type)
+
+  - name: cost_optimization
+    interval: 5m
+    rules:
+      # API calls per dollar (hypothetical cost metric)
+      - record: cost:api_efficiency:calls_per_dollar
+        expr: |
+          sum(rate(ai_provider_requests_total[5m])) by (provider)
+          /
+          sum(ai_provider_estimated_cost_dollars) by (provider)
+      
+      # Storage cost efficiency
+      - record: cost:storage_efficiency:gb_per_dollar
+        expr: |
+          sum(vm_data_size_bytes) / 1024 / 1024 / 1024
+          /
+          10  # Assuming $10/month for storage
+
+  - name: hourly_aggregations
+    interval: 1h
+    rules:
+      # Hourly request summaries
+      - record: hourly:requests:total
+        expr: sum(increase(http_requests_total[1h])) by (service, method)
+      
+      # Hourly error summaries
+      - record: hourly:errors:total
+        expr: sum(increase(http_requests_total{status=~"5.."}[1h])) by (service)
+      
+      # Hourly resource usage peaks
+      - record: hourly:cpu:max
+        expr: max_over_time(service:cpu_usage:ratio[1h])
+      
+      - record: hourly:memory:max
+        expr: max_over_time(service:memory_usage:ratio[1h])
+
+  - name: daily_aggregations
+    interval: 24h
+    rules:
+      # Daily active users
+      - record: daily:active_users:count
+        expr: count(count by (user_id) (increase(user_activity_total[24h])))
+      
+      # Daily data growth
+      - record: daily:data_growth:bytes
+        expr: increase(vm_data_size_bytes[24h])
+      
+      # Daily cost estimates
+      - record: daily:estimated_cost:dollars
+        expr: |
+          sum(increase(ai_provider_requests_total[24h])) by (provider) 
+          * 
+          sum(ai_provider_cost_per_request_dollars) by (provider)

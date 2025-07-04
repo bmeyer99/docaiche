@@ -1,0 +1,146 @@
+# Docker Compose Override for Optimized Monitoring Stack
+# Use with: docker-compose -f docker-compose.yml -f monitoring/optimizations/docker-compose.monitoring-optimized.yml up -d
+
+version: '3.8'
+
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.101.0
+    command:
+      # Storage Configuration
+      - '-storageDataPath=/victoria-metrics-data'
+      - '-retentionPeriod=12'  # 12 months retention
+      
+      # Performance Optimization
+      - '-search.maxConcurrentRequests=16'
+      - '-search.maxQueueDuration=30s'
+      - '-search.maxQueryDuration=300s'
+      - '-search.maxSamplesPerQuery=1e10'
+      - '-search.latencyOffset=30s'
+      - '-search.minStalenessInterval=0'
+      - '-search.maxPointsPerTimeseries=1e6'
+      
+      # Memory Management
+      - '-memory.allowedPercent=80'
+      - '-search.maxMemoryPerQuery=2GB'
+      - '-search.cacheDataPath=/cache'
+      
+      # Deduplication and Downsampling
+      - '-dedup.minScrapeInterval=30s'
+      - '-downsampling.period=30d:5m,90d:15m,365d:1h'
+      
+      # HTTP Configuration
+      - '-httpListenAddr=:8428'
+      - '-http.maxGracefulShutdownDuration=30s'
+      - '-http.shutdownDelay=0s'
+      - '-http.idleConnTimeout=1m'
+      - '-http.connTimeout=2m'
+      
+      # Logging
+      - '-loggerLevel=INFO'
+      - '-loggerFormat=json'
+      - '-loggerOutput=stderr'
+      
+      # Snapshot Configuration
+      - '-snapshot.createURL=http://localhost:8428/snapshot/create'
+      - '-snapshot.deleteURL=http://localhost:8428/snapshot/delete'
+      - '-snapshot.listURL=http://localhost:8428/snapshot/list'
+      
+      # Insert Configuration
+      - '-maxInsertRequestSize=32MB'
+      - '-maxLabelValueLen=4096'
+      - '-maxLabelsPerTimeseries=64'
+      
+      # Storage Optimization
+      - '-bigMergeConcurrency=4'
+      - '-smallMergeConcurrency=8'
+      - '-retentionTimezoneOffset=0h'
+      
+      # Monitoring
+      - '-selfScrapeInterval=30s'
+      - '-promscrape.suppressScrapeErrors'
+      
+    volumes:
+      - victoriametrics_data:/victoria-metrics-data
+      - victoriametrics_cache:/cache
+      - victoriametrics_snapshots:/snapshots
+      - ./monitoring/maintenance:/monitoring/maintenance:ro
+      - ./monitoring/backup:/monitoring/backup:ro
+      
+    environment:
+      GOGC: "50"
+      GOMEMLIMIT: "7GiB"
+      
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+          
+    labels:
+      - "docaiche.service=victoriametrics"
+      - "docaiche.monitoring=true"
+      - "docaiche.backup=enabled"
+  
+  # Maintenance container for scheduled tasks
+  monitoring-maintenance:
+    image: alpine:latest
+    command: |
+      sh -c "
+        apk add --no-cache bash curl jq bc coreutils
+        # Install cron
+        apk add --no-cache dcron
+        # Copy scripts
+        cp -r /monitoring/maintenance/* /usr/local/bin/
+        chmod +x /usr/local/bin/*.sh
+        # Setup cron
+        echo '0 2 * * * /usr/local/bin/maintenance-scheduler.sh daily' > /etc/crontabs/root
+        echo '0 3 * * 0 /usr/local/bin/maintenance-scheduler.sh weekly' >> /etc/crontabs/root
+        echo '0 4 1 * * /usr/local/bin/maintenance-scheduler.sh monthly' >> /etc/crontabs/root
+        echo '*/5 * * * * /usr/local/bin/health-check.sh' >> /etc/crontabs/root
+        echo '0 * * * * /usr/local/bin/collect-metrics.sh' >> /etc/crontabs/root
+        # Start cron
+        crond -f -l 2
+      "
+    volumes:
+      - ./monitoring/maintenance:/monitoring/maintenance:ro
+      - ./monitoring/backup:/monitoring/backup:ro
+      - /var/log/monitoring-maintenance:/var/log/monitoring-maintenance
+      - victoriametrics_snapshots:/snapshots
+      - monitoring_backups:/data/backups/monitoring
+    networks:
+      - docaiche
+    depends_on:
+      - victoriametrics
+      - grafana
+      - loki
+    restart: unless-stopped
+    labels:
+      - "docaiche.service=monitoring-maintenance"
+  
+  # Update Prometheus with optimized recording rules
+  prometheus:
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml
+      - ./monitoring/optimizations/recording-rules.yml:/etc/prometheus/prometheus-recording-rules.yml
+      - prometheus_data:/prometheus
+      
+  # Update Grafana with performance dashboards
+  grafana:
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/optimizations/grafana-dashboards:/var/lib/grafana/dashboards/performance:ro
+
+volumes:
+  victoriametrics_cache:
+    driver: local
+  victoriametrics_snapshots:
+    driver: local
+  monitoring_backups:
+    driver: local

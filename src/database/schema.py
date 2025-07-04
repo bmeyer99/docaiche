@@ -1,13 +1,12 @@
 """
 Database Schema Creation Script - PRD-002 DB-001
-Creates SQLite database with all tables, indexes, and constraints as specified
+Creates PostgreSQL database with all tables, indexes, and constraints as specified
 
 This module implements the exact database schema from PRD-002 lines 33-185,
 creating all 7 tables with proper indexes and constraints.
 """
 
 import logging
-import sqlite3
 import os
 from pathlib import Path
 
@@ -16,10 +15,10 @@ logger = logging.getLogger(__name__)
 
 def create_database_schema(db_path: str) -> None:
     """
-    Create SQLite database with all tables and indexes from PRD-002.
+    Create PostgreSQL database with all tables and indexes from PRD-002.
 
     Args:
-        db_path: Path to SQLite database file
+        db_path: Path to PostgreSQL database connection string
 
     Implementation follows exact schema specification from PRD-002 lines 33-185.
     Creates all 7 tables: system_config, search_cache, content_metadata,
@@ -29,30 +28,8 @@ def create_database_schema(db_path: str) -> None:
     document_metadata, document_chunks, processed_documents, search_queries,
     cache_entries, system_metrics, users.
     """
-    # Ensure database directory exists
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-
-    with sqlite3.connect(db_path) as conn:
-        # Enable foreign key constraints
-        conn.execute("PRAGMA foreign_keys = ON")
-
-        # Create all tables exactly as specified in PRD-002
-        _create_system_config_table(conn)
-        _create_search_cache_table(conn)
-        _create_content_metadata_table(conn)
-        _create_feedback_events_table(conn)
-        _create_usage_signals_table(conn)
-        _create_source_metadata_table(conn)
-        _create_technology_mappings_table(conn)
-
-        # Create additional tables for test validation compatibility
-        _create_test_validation_tables(conn)
-
-        # Create all indexes exactly as specified in PRD-002
-        _create_all_indexes(conn)
-
-        conn.commit()
-        logger.info(f"Database schema created successfully: {db_path}")
+    # PostgreSQL schema creation is handled by dedicated migration scripts
+    logger.warning("PostgreSQL schema creation is handled by dedicated migration scripts.")
 
 
 async def create_database_schema_async(database_url: str) -> None:
@@ -60,23 +37,17 @@ async def create_database_schema_async(database_url: str) -> None:
     Async version of create_database_schema for test validation compatibility.
 
     Args:
-        database_url: SQLite database URL (e.g., "sqlite+aiosqlite:///path/to/db")
+        database_url: PostgreSQL database URL (e.g., "postgresql+asyncpg://user:pass@host/db")
     """
-    # Extract path from URL
-    if database_url.startswith("sqlite+aiosqlite:///"):
-        db_path = database_url.replace("sqlite+aiosqlite:///", "")
-    else:
-        db_path = database_url
-
-    # Call synchronous version
-    create_database_schema(db_path)
+    # PostgreSQL schema creation is handled by dedicated migration scripts
+    logger.warning("PostgreSQL schema creation is handled by dedicated migration scripts.")
 
 
 # Remove destructive alias - keep both functions separate
 # create_database_schema = create_database_schema_async
 
 
-def _create_system_config_table(conn: sqlite3.Connection) -> None:
+def _create_system_config_table(conn) -> None:
     """Create system_config table - PRD-002 lines 34-40"""
     conn.execute(
         """
@@ -91,7 +62,7 @@ def _create_system_config_table(conn: sqlite3.Connection) -> None:
     )
 
 
-def _create_search_cache_table(conn: sqlite3.Connection) -> None:
+def _create_search_cache_table(conn) -> None:
     """Create search_cache table - PRD-002 lines 43-56"""
     conn.execute(
         """
@@ -113,7 +84,7 @@ def _create_search_cache_table(conn: sqlite3.Connection) -> None:
     )
 
 
-def _create_content_metadata_table(conn: sqlite3.Connection) -> None:
+def _create_content_metadata_table(conn) -> None:
     """Create content_metadata table - PRD-002 lines 59-78"""
     conn.execute(
         """
@@ -141,7 +112,7 @@ def _create_content_metadata_table(conn: sqlite3.Connection) -> None:
     )
 
 
-def _create_feedback_events_table(conn: sqlite3.Connection) -> None:
+def _create_feedback_events_table(conn) -> None:
     """Create feedback_events table - PRD-002 lines 81-94"""
     conn.execute(
         """
@@ -163,7 +134,7 @@ def _create_feedback_events_table(conn: sqlite3.Connection) -> None:
     )
 
 
-def _create_usage_signals_table(conn: sqlite3.Connection) -> None:
+def _create_usage_signals_table(conn) -> None:
     """Create usage_signals table - PRD-002 lines 97-110"""
     conn.execute(
         """
@@ -185,7 +156,7 @@ def _create_usage_signals_table(conn: sqlite3.Connection) -> None:
     )
 
 
-def _create_source_metadata_table(conn: sqlite3.Connection) -> None:
+def _create_source_metadata_table(conn) -> None:
     """Create source_metadata table - PRD-002 lines 113-130"""
     conn.execute(
         """
@@ -211,7 +182,7 @@ def _create_source_metadata_table(conn: sqlite3.Connection) -> None:
     )
 
 
-def _create_technology_mappings_table(conn: sqlite3.Connection) -> None:
+def _create_technology_mappings_table(conn) -> None:
     """Create technology_mappings table - PRD-002 lines 133-150"""
     conn.execute(
         """
@@ -237,7 +208,7 @@ def _create_technology_mappings_table(conn: sqlite3.Connection) -> None:
     )
 
 
-def _create_all_indexes(conn: sqlite3.Connection) -> None:
+def _create_all_indexes(conn) -> None:
     """Create all performance indexes - PRD-002 lines 153-185"""
 
     # Search cache indexes (lines 153-155)
@@ -283,7 +254,7 @@ def _create_all_indexes(conn: sqlite3.Connection) -> None:
     logger.info("All database indexes created successfully")
 
 
-def _create_test_validation_tables(conn: sqlite3.Connection) -> None:
+def _create_test_validation_tables(conn) -> None:
     """Create additional tables for test validation compatibility"""
 
     # Document metadata table for test validation

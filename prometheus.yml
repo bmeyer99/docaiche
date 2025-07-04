@@ -11,6 +11,23 @@ global:
     cluster: 'docaiche'
     environment: 'production'
 
+# Remote write configuration for VictoriaMetrics
+remote_write:
+  - url: http://victoriametrics:8428/api/v1/write
+    queue_config:
+      capacity: 10000
+      max_shards: 30
+      min_shards: 1
+      max_samples_per_send: 5000
+      batch_send_deadline: 5s
+      min_backoff: 30ms
+      max_backoff: 100ms
+
+# Remote read configuration for VictoriaMetrics
+remote_read:
+  - url: http://victoriametrics:8428/api/v1/read
+    read_recent: true
+
 # Alerting configuration
 alerting:
   alertmanagers:

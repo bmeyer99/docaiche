@@ -6,7 +6,6 @@ This module implements the exact database schema from the task requirements,
 integrating with the CFG-001 configuration system for database settings.
 """
 
-import sqlite3
 import os
 import logging
 import uuid
@@ -94,26 +93,10 @@ class DatabaseInitializer:
                 os.remove(self.db_path)
                 logger.info(f"Removed existing database: {self.db_path}")
 
-        with sqlite3.connect(self.db_path) as conn:
-            # Enable foreign key constraints
-            conn.execute("PRAGMA foreign_keys = ON")
+        # SQLite initialization has been removed
+        logger.warning("SQLite initialization is no longer supported. Use PostgreSQL instead.")
 
-            # Create all tables
-            self._create_tables(conn)
-
-            # Create all indexes
-            self._create_indexes(conn)
-
-            # Insert initial schema version
-            self._insert_schema_version(conn)
-
-            # Insert default technology mappings
-            self._insert_default_mappings(conn)
-
-            conn.commit()
-            logger.info(f"Database initialized successfully: {self.db_path}")
-
-    def _create_tables(self, conn: sqlite3.Connection) -> None:
+    def _create_tables(self, conn) -> None:
         """Create all database tables exactly as specified in task requirements"""
 
         # System configuration table
@@ -277,7 +260,7 @@ class DatabaseInitializer:
 
         logger.info("All database tables created successfully")
 
-    def _create_indexes(self, conn: sqlite3.Connection) -> None:
+    def _create_indexes(self, conn) -> None:
         """Create all performance indexes exactly as specified in task requirements"""
 
         indexes = [
@@ -322,7 +305,7 @@ class DatabaseInitializer:
 
         logger.info("All database indexes created successfully")
 
-    def _insert_schema_version(self, conn: sqlite3.Connection) -> None:
+    def _insert_schema_version(self, conn) -> None:
         """Insert initial schema version record"""
         conn.execute(
             """
@@ -332,7 +315,7 @@ class DatabaseInitializer:
             (self.schema_version, "Initial database schema"),
         )
 
-    def _insert_default_mappings(self, conn: sqlite3.Connection) -> None:
+    def _insert_default_mappings(self, conn) -> None:
         """Insert default technology-to-repository mappings"""
 
         default_mappings = [
@@ -462,38 +445,9 @@ class DatabaseInitializer:
         if not self.check_database_exists():
             return {"exists": False, "path": self.db_path}
 
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Get table count
-                cursor = conn.execute(
-                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-                )
-                table_count = cursor.fetchone()[0]
-
-                # Get schema version
-                try:
-                    cursor = conn.execute(
-                        "SELECT version_id FROM schema_versions ORDER BY applied_at DESC LIMIT 1"
-                    )
-                    schema_version = cursor.fetchone()
-                    schema_version = schema_version[0] if schema_version else "unknown"
-                except sqlite3.OperationalError:
-                    schema_version = "unknown"
-
-                # Get file size
-                file_size = os.path.getsize(self.db_path)
-
-                return {
-                    "exists": True,
-                    "path": self.db_path,
-                    "table_count": table_count,
-                    "schema_version": schema_version,
-                    "file_size_bytes": file_size,
-                    "file_size_mb": round(file_size / 1024 / 1024, 2),
-                }
-        except Exception as e:
-            logger.error(f"Error getting database info: {e}")
-            return {"exists": True, "path": self.db_path, "error": str(e)}
+        # SQLite database info has been removed
+        logger.warning("SQLite database info is no longer supported. Use PostgreSQL instead.")
+        return {"exists": False, "path": self.db_path, "error": "SQLite not supported"}
 
 
 def main():

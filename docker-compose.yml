@@ -403,6 +403,47 @@ services:
     labels:
       - "docaiche.service=redis-exporter"
 
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.101.0
+    command:
+      - '-storageDataPath=/storage'
+      - '-retentionPeriod=12' # 12 months retention
+      - '-httpListenAddr=:8428'
+      - '-loggerLevel=INFO'
+      - '-loggerFormat=json'
+      - '-search.latencyOffset=30s'
+      - '-search.maxQueryDuration=30s'
+      - '-search.maxConcurrentRequests=8'
+      - '-search.maxSamplesPerQuery=1e9'
+      - '-dedup.minScrapeInterval=30s'
+    volumes:
+      - victoriametrics_data:/storage
+    networks:
+      - docaiche
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8428/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    labels:
+      - "docaiche.service=victoriametrics"
+      - "traefik.enable=true"
+      - "traefik.http.routers.victoriametrics.rule=PathPrefix(`/victoriametrics`)"
+      - "traefik.http.routers.victoriametrics.priority=99"
+      - "traefik.http.services.victoriametrics.loadbalancer.server.port=8428"
+      - "traefik.http.middlewares.vm-stripprefix.stripprefix.prefixes=/victoriametrics"
+      - "traefik.http.routers.victoriametrics.middlewares=vm-stripprefix"
+
 networks:
   docaiche:
 
@@ -415,3 +456,4 @@ volumes:
   grafana_data:
   prometheus_data:
   logs_data:
+  victoriametrics_data:

@@ -406,17 +406,18 @@ class ConfigurationManager:
             raise ValueError("Database manager not available for configuration updates")
 
         try:
-            # For JSONB columns, serialize to JSON string
-            if isinstance(config_value, (dict, list, bool, int, float)):
-                serialized_value = json.dumps(config_value)
-            else:
-                serialized_value = str(config_value)
+            # For JSONB columns, all values must be JSON-serializable
+            # Always serialize to JSON to ensure PostgreSQL JSONB compatibility
+            serialized_value = json.dumps(config_value)
+            
+            logger.debug(f"Storing config: key={config_key}, value={serialized_value}, type={type(serialized_value)}")
 
-            # Upsert configuration value using PostgreSQL syntax with JSONB cast
+            # Upsert configuration value using PostgreSQL syntax
+            # Include all required columns: schema_version and updated_by have defaults
             await self._db_manager.execute(
                 """
-                INSERT INTO system_config (key, value, updated_at)
-                VALUES (?, ?::jsonb, CURRENT_TIMESTAMP)
+                INSERT INTO system_config (key, value, schema_version, updated_at, updated_by)
+                VALUES (:param_0, :param_1, '1.0', CURRENT_TIMESTAMP, 'system')
                 ON CONFLICT (key) DO UPDATE SET 
                     value = EXCLUDED.value,
                     updated_at = CURRENT_TIMESTAMP
