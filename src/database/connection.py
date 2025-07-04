@@ -1090,7 +1090,7 @@ async def create_database_manager(
     config: Optional[Dict[str, Any]] = None,
 ) -> DatabaseManager:
     """
-    Factory function to create DatabaseManager with configuration integration.
+    Factory function to create DatabaseManager with PostgreSQL configuration.
 
     Args:
         config: Optional configuration override
@@ -1098,42 +1098,20 @@ async def create_database_manager(
     Returns:
         Configured DatabaseManager instance
     """
-    # Check for DATABASE_URL environment variable first
+    # POSTGRESQL ONLY - NO BACKWARDS COMPATIBILITY
     database_url = os.environ.get("DATABASE_URL")
     
-    if database_url:
-        # Use the provided DATABASE_URL
-        logger.info(f"Using DATABASE_URL from environment: {database_url.split('@')[0]}...")
-    elif config and "database_url" in config:
-        database_url = config["database_url"]
-    else:
-        # Fall back to SQLite configuration
-        if config is None:
-            # Integrate with CFG-001 configuration system
-            try:
-                if get_system_configuration is not None:
-                    system_config = get_system_configuration()
-                    db_path = f"{system_config.app.data_dir}/docaiche.db"
-                else:
-                    db_path = "/data/docaiche.db"
-            except Exception as e:
-                logger.warning(f"Could not load configuration, using default: {e}")
-                db_path = "/data/docaiche.db"
-        else:
-            db_path = config.get("db_path", "/data/docaiche.db")
-
-        # Fix SQLite URL construction for aiosqlite
-        # Convert relative paths to absolute and ensure proper URL format
-        if not os.path.isabs(db_path):
-            db_path = os.path.abspath(db_path)
-
-        # Ensure database directory exists for SQLite
-        db_dir = os.path.dirname(db_path)
-        os.makedirs(db_dir, exist_ok=True)
-
-        # Construct proper SQLite URL for aiosqlite
-        database_url = f"sqlite+aiosqlite:///{db_path}"
+    if not database_url:
+        # Build PostgreSQL URL from environment variables
+        host = os.environ.get("POSTGRES_HOST", "postgres")
+        port = os.environ.get("POSTGRES_PORT", "5432")
+        db = os.environ.get("POSTGRES_DB", "docaiche")
+        user = os.environ.get("POSTGRES_USER", "docaiche")
+        password = os.environ.get("POSTGRES_PASSWORD", "docaiche-secure-password-2025")
+        
+        database_url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
     
+    logger.info(f"Using PostgreSQL: {database_url.split('@')[0]}...")
     return DatabaseManager(database_url)
 
 

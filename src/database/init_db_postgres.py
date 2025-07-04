@@ -494,7 +494,7 @@ class PostgreSQLInitializer:
             conn.execute(text("""
                 INSERT INTO technology_mappings 
                 (mapping_id, technology, source_type, owner, repo, docs_path, file_patterns, priority, is_official)
-                VALUES (:id, :tech, :type, :owner, :repo, :path, :patterns::jsonb, :priority, :official)
+                VALUES (:id, :tech, :type, :owner, :repo, :path, CAST(:patterns AS jsonb), :priority, :official)
                 ON CONFLICT DO NOTHING
             """), mapping)
         
