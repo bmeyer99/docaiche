@@ -151,19 +151,33 @@ class ConfigurationManager:
         if not self._db_manager:
             try:
                 # Try direct database connection for configuration loading
-                import aiosqlite
                 import os
+                database_url = os.environ.get("DATABASE_URL")
                 
-                db_path = os.getenv('DATABASE_PATH', '/data/docaiche.db')
-                if os.path.exists(db_path):
-                    async with aiosqlite.connect(db_path) as db:
-                        async with db.execute("SELECT key, value FROM system_config") as cursor:
-                            rows = await cursor.fetchall()
+                if database_url:
+                    # PostgreSQL connection
+                    import asyncpg
+                    
+                    # Parse connection URL
+                    if "postgresql+asyncpg://" in database_url:
+                        conn_str = database_url.replace("postgresql+asyncpg://", "postgresql://")
+                    else:
+                        conn_str = database_url
+                    
+                    try:
+                        conn = await asyncpg.connect(conn_str)
+                        try:
+                            rows = await conn.fetch("SELECT key, value FROM system_config")
                             
                             for row in rows:
                                 try:
-                                    key = row[0]
-                                    value = json.loads(row[1])
+                                    key = row['key']
+                                    value_str = row['value']
+                                    # Handle JSONB values (PostgreSQL returns dict directly)
+                                    if isinstance(value_str, str):
+                                        value = json.loads(value_str)
+                                    else:
+                                        value = value_str
                                     apply_nested_override(config_dict, key, value)
                                     
                                     # Debug logging for MCP providers
@@ -175,11 +189,20 @@ class ConfigurationManager:
                                             
                                 except (json.JSONDecodeError, AttributeError):
                                     # Treat as string value
-                                    apply_nested_override(config_dict, row[0], row[1])
+                                    apply_nested_override(config_dict, row['key'], row['value'])
                             
                             if rows:
-                                logger.info(f"Loaded {len(rows)} configuration overrides from database (direct connection)")
-                                
+                                logger.info(f"Loaded {len(rows)} configuration overrides from PostgreSQL database (direct connection)")
+                        finally:
+                            await conn.close()
+                    except Exception as pg_error:
+                        logger.warning(f"Failed to load config from PostgreSQL: {pg_error}")
+                        # Return empty config instead of raising
+                        return config_dict
+                else:
+                    # No DATABASE_URL set, log warning
+                    logger.warning("No DATABASE_URL environment variable set for configuration storage")
+                                    
             except Exception as e:
                 logger.debug(f"Direct database connection not available: {e}")
                 return config_dict
@@ -194,12 +217,23 @@ class ConfigurationManager:
 
                 for row in rows:
                     try:
-                        # Parse JSON value
-                        value = json.loads(row.value)
-                        apply_nested_override(config_dict, row.key, value)
+                        # Handle both dict and Row object formats
+                        if isinstance(row, dict):
+                            key = row.get('key')
+                            value_str = row.get('value')
+                        else:
+                            key = row.key
+                            value_str = row.value
+                        
+                        # Parse JSON value if it's a string, otherwise use as-is (JSONB returns dict)
+                        if isinstance(value_str, str):
+                            value = json.loads(value_str)
+                        else:
+                            value = value_str
+                        apply_nested_override(config_dict, key, value)
                         
                         # Debug logging for MCP providers
-                        if row.key == "mcp" and isinstance(value, dict):
+                        if key == "mcp" and isinstance(value, dict):
                             external_search = value.get("external_search", {})
                             providers = external_search.get("providers", {})
                             if providers:
@@ -210,7 +244,7 @@ class ConfigurationManager:
                                         
                     except (json.JSONDecodeError, AttributeError):
                         # Treat as string value
-                        apply_nested_override(config_dict, row.key, row.value)
+                        apply_nested_override(config_dict, key, value_str)
 
                 if config_dict:
                     logger.info(f"Loaded {len(rows)} configuration overrides from database")
@@ -372,19 +406,22 @@ class ConfigurationManager:
             raise ValueError("Database manager not available for configuration updates")
 
         try:
-            # Serialize value as JSON if it's not a string
+            # For JSONB columns, serialize to JSON string
             if isinstance(config_value, (dict, list, bool, int, float)):
                 serialized_value = json.dumps(config_value)
             else:
                 serialized_value = str(config_value)
 
-            # Upsert configuration value
+            # Upsert configuration value using PostgreSQL syntax with JSONB cast
             await self._db_manager.execute(
                 """
-                INSERT OR REPLACE INTO system_config (key, value, updated_at)
-                VALUES (:param_0, :param_1, :param_2)
+                INSERT INTO system_config (key, value, updated_at)
+                VALUES (?, ?::jsonb, CURRENT_TIMESTAMP)
+                ON CONFLICT (key) DO UPDATE SET 
+                    value = EXCLUDED.value,
+                    updated_at = CURRENT_TIMESTAMP
                 """,
-                (config_key, serialized_value, int(time.time())),
+                (config_key, serialized_value),
             )
 
             logger.info(f"Configuration updated in database: {config_key}")
@@ -422,9 +459,19 @@ class ConfigurationManager:
 
             if row:
                 try:
-                    return json.loads(row.value)
+                    # Handle both dict and Row object formats
+                    if isinstance(row, dict):
+                        value_str = row.get('value')
+                    else:
+                        value_str = row.value
+                    
+                    # Handle JSONB values (PostgreSQL returns dict directly)
+                    if isinstance(value_str, str):
+                        return json.loads(value_str)
+                    else:
+                        return value_str
                 except json.JSONDecodeError:
-                    return row.value
+                    return value_str
 
             return None
 

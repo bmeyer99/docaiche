@@ -192,8 +192,9 @@ class DatabaseManager:
 
             self._connected = True
             connection_duration = (time.time() - start_time) * 1000
+            db_type = "PostgreSQL" if self.database_url.startswith("postgresql") else "SQLite"
             logger.info(
-                "Database connection established successfully with foreign key constraints enabled"
+                f"Database connection established successfully ({db_type})"
             )
             if _db_logger:
                 _db_logger.log_connection_event(

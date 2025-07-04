@@ -70,25 +70,16 @@ async def admin_search_content(
         try:
             config = config_manager.get_configuration()
             
-            # Validate content_metadata table schema
-            schema_validation_query = """
-                SELECT sql FROM sqlite_master 
-                WHERE type='table' AND name='content_metadata'
-            """
-            schema_result = await db_manager.fetch_one(schema_validation_query)
-            
-            if not schema_result:
-                logger.error("content_metadata table not found")
+            # Skip schema validation for PostgreSQL - just check table accessibility
+            try:
+                test_query = "SELECT 1 FROM content_metadata LIMIT 1"
+                await db_manager.fetch_one(test_query)
+            except Exception as table_error:
+                logger.error(f"content_metadata table not accessible: {table_error}")
                 raise HTTPException(status_code=500, detail="Content metadata table not available")
             
-            table_sql = schema_result.get('sql', '') if schema_result else ''
-            
-            # Check if content_type column exists (it should not in current schema)
-            has_content_type_column = 'content_type' in table_sql
-            
-            if content_type and not has_content_type_column:
-                logger.warning(f"Ignoring content_type filter - column does not exist in schema")
-                content_type = None  # Ignore the parameter if column doesn't exist
+            # For PostgreSQL, we'll trust that the schema is correct
+            # If content_type column doesn't exist, the query will fail and we'll handle it
                 
         except Exception as e:
             logger.error(f"Schema validation failed: {e}")

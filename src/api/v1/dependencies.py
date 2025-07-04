@@ -189,11 +189,11 @@ async def get_database_manager() -> DatabaseManager:
         # Database should already be initialized at startup
         # Just log a warning if we detect issues but don't auto-reinitialize
         try:
-            # Simple connection verification
-            result = await _db_manager.fetch_one("SELECT COUNT(*) as count FROM sqlite_master WHERE type='table'")
-            table_count = result.get("count", 0) if result else 0
-            if table_count < 8:
-                logger.warning(f"Database appears incomplete (found {table_count} tables). Database should be initialized at startup.")
+            # Simple connection verification - check if we can query the database
+            # Use a database-agnostic query
+            result = await _db_manager.fetch_one("SELECT 1 as test")
+            if not result:
+                logger.warning("Database connection verification failed: no result from test query")
         except Exception as e:
             logger.warning(f"Database connection verification failed: {e}")
 

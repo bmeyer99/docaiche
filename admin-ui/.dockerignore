@@ -1,18 +1,90 @@
+# Dependencies
 node_modules
+.pnpm-store
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Next.js build output
 .next
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+out
+build
+dist
+
+# Testing
+coverage
+.nyc_output
+jest-results
+test-results
+e2e-results
+puppeteer
+
+# IDE and OS
+.vscode
+.idea
+*.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Documentation
+README.md
+docs
+*.md
+!components.json
+
+# Git
 .git
 .gitignore
-README.md
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
 .vercel
-coverage
-.env
-package-lock.json
+
+# Development files
+.eslintcache
+.prettierignore
+.husky
+.commitlint*
+lint-staged.config*
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.temp
+
+# Build artifacts
+*.tsbuildinfo
+build-output.log
+
+# Storybook
+.storybook
+storybook-static
+
+# Other development files
+.dockerignore
+Dockerfile*
+docker-compose*
+kubernetes
+k8s
+jest.config.js
+jest-puppeteer.config.js

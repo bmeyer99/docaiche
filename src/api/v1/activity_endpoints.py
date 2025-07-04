@@ -69,15 +69,15 @@ async def get_recent_activity(
             # Configuration-driven required tables for activity tracking
             required_tables = ['search_cache', 'content_metadata', 'system_config']
             
-            # Comprehensive schema validation
-            schema_validation_query = """
-                SELECT name, type 
-                FROM sqlite_master 
-                WHERE type='table' AND name IN ('search_cache', 'content_metadata', 'system_config')
-            """
-            
-            existing_tables = await db_manager.fetch_all(schema_validation_query)
-            existing_table_names = {row['name'] for row in existing_tables or []}
+            # Skip comprehensive schema validation for PostgreSQL
+            # Just check if tables exist by trying to query them
+            existing_table_names = set()
+            for table in required_tables:
+                try:
+                    await db_manager.fetch_one(f"SELECT 1 FROM {table} LIMIT 1")
+                    existing_table_names.add(table)
+                except Exception:
+                    pass
             missing_tables = set(required_tables) - existing_table_names
             
             if missing_tables:
@@ -101,13 +101,15 @@ async def get_recent_activity(
         except Exception as e:
             logger.error(f"Configuration-driven schema validation failed: {e}")
             # Fallback to basic validation if config fails
-            basic_table_check = """
-                SELECT COUNT(*) as count 
-                FROM sqlite_master 
-                WHERE type='table' AND name IN ('search_cache', 'content_metadata', 'system_config')
-            """
-            basic_result = await db_manager.fetch_one(basic_table_check)
-            if not basic_result or basic_result.get("count", 0) < 3:
+            # Check if all required tables exist
+            table_count = 0
+            for table in ['search_cache', 'content_metadata', 'system_config']:
+                try:
+                    await db_manager.fetch_one(f"SELECT 1 FROM {table} LIMIT 1")
+                    table_count += 1
+                except Exception:
+                    pass
+            if table_count < 3:
                 return []
             
         # Build query based on activity type
@@ -221,16 +223,11 @@ async def get_recent_searches(
         try:
             config = config_manager.get_configuration()
             
-            # Validate search_cache table with column verification
-            search_schema_query = """
-                SELECT sql 
-                FROM sqlite_master 
-                WHERE type='table' AND name='search_cache'
-            """
-            
-            schema_result = await db_manager.fetch_one(search_schema_query)
-            if not schema_result:
-                logger.warning("search_cache table not found")
+            # Validate search_cache table accessibility
+            try:
+                await db_manager.fetch_one("SELECT 1 FROM search_cache LIMIT 1")
+            except Exception as e:
+                logger.warning(f"search_cache table not accessible: {e}")
                 
                 # Log schema validation issue for admin monitoring
                 if _security_logger:
@@ -254,10 +251,9 @@ async def get_recent_searches(
         except Exception as e:
             logger.error(f"Search schema validation failed: {e}")
             # Fallback to basic table existence check
-            basic_check = await db_manager.fetch_one(
-                "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='search_cache'"
-            )
-            if not basic_check or basic_check.get("count", 0) == 0:
+            try:
+                await db_manager.fetch_one("SELECT 1 FROM search_cache LIMIT 1")
+            except Exception:
                 return []
             
         # Get real search data from search_cache table

@@ -45,7 +45,7 @@ class DatabaseManager:
         Initialize DatabaseManager with async SQLAlchemy engine.
 
         Args:
-            database_url: SQLite database URL (e.g., "sqlite+aiosqlite:///app/data/docaiche.db")
+            database_url: Database URL (e.g., "postgresql+asyncpg://user:pass@host:port/db")
         """
         self.database_url = database_url
         self.engine: Optional[AsyncEngine] = None
@@ -55,18 +55,33 @@ class DatabaseManager:
     async def connect(self) -> None:
         """Establish async database connection with proper connection pooling"""
         try:
-            # Create async engine with SQLite-specific configuration and connection pooling (DB-015)
-            self.engine = create_async_engine(
-                self.database_url,
-                echo=False,  # Set to True for SQL logging in debug mode
-                pool_pre_ping=True,
-                pool_recycle=3600,
-                pool_size=10,  # Connection pool size for performance
-                max_overflow=20,  # Max overflow connections
-                connect_args={
-                    "check_same_thread": False,  # Required for SQLite with async
-                },
-            )
+            # Determine if we're using SQLite or PostgreSQL
+            is_sqlite = "sqlite" in self.database_url.lower()
+            
+            # Create async engine with appropriate configuration
+            if is_sqlite:
+                # SQLite-specific configuration
+                self.engine = create_async_engine(
+                    self.database_url,
+                    echo=False,  # Set to True for SQL logging in debug mode
+                    pool_pre_ping=True,
+                    pool_recycle=3600,
+                    pool_size=10,  # Connection pool size for performance
+                    max_overflow=20,  # Max overflow connections
+                    connect_args={
+                        "check_same_thread": False,  # Required for SQLite with async
+                    },
+                )
+            else:
+                # PostgreSQL/generic configuration
+                self.engine = create_async_engine(
+                    self.database_url,
+                    echo=False,  # Set to True for SQL logging in debug mode
+                    pool_pre_ping=True,
+                    pool_recycle=3600,
+                    pool_size=10,  # Connection pool size for performance
+                    max_overflow=20,  # Max overflow connections
+                )
 
             # Create session factory with async transaction support (DB-015)
             self.session_factory = async_sessionmaker(
@@ -79,13 +94,14 @@ class DatabaseManager:
 
             # Test connection and enable foreign key constraints
             async with self.engine.begin() as conn:
-                # CRITICAL: Enable foreign key constraints for data integrity
-                await conn.execute(text("PRAGMA foreign_keys = ON"))
+                # Enable foreign key constraints (SQLite specific)
+                if is_sqlite:
+                    await conn.execute(text("PRAGMA foreign_keys = ON"))
                 await conn.execute(text("SELECT 1"))
 
             self._connected = True
             logger.info(
-                "Database connection established successfully with foreign key constraints enabled"
+                f"Database connection established successfully to {self.database_url.split('@')[0] if '@' in self.database_url else self.database_url}"
             )
 
         except Exception as e:
@@ -605,31 +621,22 @@ async def create_database_manager(
     Returns:
         Configured DatabaseManager instance
     """
-    if config is None:
-        # Integrate with PRD-003 configuration system
-        try:
-            from src.core.config import get_system_configuration
-
-            if get_system_configuration is not None:
-                system_config = get_system_configuration()
-                db_path = f"{system_config.app.data_dir}/docaiche.db"
-            else:
-                db_path = "/data/docaiche.db"
-        except ImportError:
-            logger.warning("Could not load configuration, using default")
-            db_path = "/data/docaiche.db"
-    else:
-        db_path = config.get("db_path", "/data/docaiche.db")
-
-    # Fix SQLite URL construction for aiosqlite
-    # Convert relative paths to absolute and ensure proper URL format
-    if not os.path.isabs(db_path):
-        db_path = os.path.abspath(db_path)
-
-    # Ensure database directory exists
-    db_dir = os.path.dirname(db_path)
-    os.makedirs(db_dir, exist_ok=True)
-
-    # Construct proper SQLite URL for aiosqlite
-    database_url = f"sqlite+aiosqlite:///{db_path}"
+    # POSTGRESQL ONLY - NO BACKWARDS COMPATIBILITY
+    database_url = os.environ.get("DATABASE_URL")
+    
+    if not database_url:
+        # Build PostgreSQL URL from environment variables
+        host = os.environ.get("POSTGRES_HOST", "postgres")
+        port = os.environ.get("POSTGRES_PORT", "5432")
+        db = os.environ.get("POSTGRES_DB", "docaiche")
+        user = os.environ.get("POSTGRES_USER", "docaiche")
+        password = os.environ.get("POSTGRES_PASSWORD", "docaiche-secure-password-2025")
+        
+        database_url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
+    
+    # Ensure we're using asyncpg driver for PostgreSQL
+    if "postgresql" in database_url and "+asyncpg" not in database_url:
+        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://")
+    
+    logger.info(f"[create_database_manager] Using PostgreSQL: {database_url.split('@')[0]}...")
     return DatabaseManager(database_url)

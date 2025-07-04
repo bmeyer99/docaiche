@@ -395,14 +395,23 @@ async def initialize_providers(config_manager: ConfigurationManager = None) -> b
         from src.database.manager import DatabaseManager
         import os
         
-        # Get the absolute path for the database
-        db_path = os.getenv("DB_PATH", "/data/docaiche.db")
-        database_url = f"sqlite+aiosqlite:///{db_path}"
+        # Get DATABASE_URL from environment
+        database_url = os.environ.get("DATABASE_URL")
         
-        logger.debug(f"Using database URL: {database_url}", extra={
+        if not database_url:
+            # Build PostgreSQL URL from environment variables
+            host = os.environ.get("POSTGRES_HOST", "postgres")
+            port = os.environ.get("POSTGRES_PORT", "5432")
+            db = os.environ.get("POSTGRES_DB", "docaiche")
+            user = os.environ.get("POSTGRES_USER", "docaiche")
+            password = os.environ.get("POSTGRES_PASSWORD", "docaiche-secure-password-2025")
+            
+            database_url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
+        
+        logger.debug(f"Using database URL: {database_url.split('@')[0]}...", extra={
             "event": "provider_init_db_connect",
             "correlation_id": correlation_id,
-            "database_url": database_url
+            "database_url": database_url.split('@')[0] + "..."
         })
         
         db_manager = DatabaseManager(database_url)
@@ -811,9 +820,20 @@ async def _get_config_from_db(db_manager, config_key: str) -> Optional[Dict[str,
             (config_key,)
         )
         
-        if row and row.value:
+        if row:
             import json
-            return json.loads(row.value)
+            # Handle both dict and Row object formats
+            if isinstance(row, dict):
+                value_str = row.get('value')
+            else:
+                value_str = row.value if hasattr(row, 'value') else None
+            
+            if value_str:
+                # Handle JSONB values (PostgreSQL returns dict directly)
+                if isinstance(value_str, str):
+                    return json.loads(value_str)
+                else:
+                    return value_str
         return None
             
     except Exception as e:
@@ -826,17 +846,20 @@ async def _save_config_to_db(db_manager, config_key: str, config_value: Any) -> 
     try:
         import json
         
-        # Serialize value as JSON
-        serialized_value = json.dumps(config_value, default=str)
-        
-        # Use INSERT OR REPLACE to handle both insert and update
+        # For JSONB columns, pass the value directly (PostgreSQL will handle serialization)
+        # Use PostgreSQL UPSERT syntax to handle both insert and update
         # SystemConfig schema has: key, value, schema_version, updated_at, updated_by
         await db_manager.execute(
             """
-            INSERT OR REPLACE INTO system_config (key, value, schema_version, updated_at, updated_by)
-            VALUES (:param_0, :param_1, :param_2, datetime('now'), :param_3)
+            INSERT INTO system_config (key, value, schema_version, updated_at, updated_by)
+            VALUES (:param_0, :param_1::jsonb, :param_2, CURRENT_TIMESTAMP, :param_3)
+            ON CONFLICT (key) DO UPDATE SET 
+                value = EXCLUDED.value,
+                schema_version = EXCLUDED.schema_version,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = EXCLUDED.updated_by
             """,
-            (config_key, serialized_value, "1.0", "startup_init")
+            (config_key, json.dumps(config_value, default=str), "1.0", "startup_init")
         )
             
     except Exception as e:
