@@ -13,7 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Users, 
   Bot, 
-  Database, 
   Globe, 
   HardDrive, 
   BarChart3, 
@@ -29,7 +28,6 @@ import { useSearchConfigForm } from '../hooks/use-search-config-form';
 
 // Import tab components
 import { ProvidersConfig } from './tabs/providers';
-import { VectorSearchConfig } from './tabs/vector-search';
 import { EmbeddingAIConfig } from './tabs/embedding-ai';
 import { TextAIConfig } from './tabs/text-ai';
 import { IngestionConfig } from './tabs/ingestion';
@@ -37,16 +35,14 @@ import { SystemSettings } from './tabs/settings';
 
 const TABS: TabConfig[] = [
   { id: 'providers', label: 'AI Providers', icon: 'Users', shortcut: 'Cmd+1' },
-  { id: 'vector', label: 'Vector Search', icon: 'Database', shortcut: 'Cmd+2' },
-  { id: 'embedding-ai', label: 'Embedding AI', icon: 'Bot', shortcut: 'Cmd+3' },
-  { id: 'text-ai', label: 'Text AI', icon: 'Bot', shortcut: 'Cmd+4' },
-  { id: 'ingestion', label: 'Ingestion', icon: 'HardDrive', shortcut: 'Cmd+5', badge: 'Soon' },
-  { id: 'settings', label: 'Settings', icon: 'Settings', shortcut: 'Cmd+6', badge: 'Soon' }
+  { id: 'embedding-ai', label: 'Embedding AI', icon: 'Bot', shortcut: 'Cmd+2' },
+  { id: 'text-ai', label: 'Text AI', icon: 'Bot', shortcut: 'Cmd+3' },
+  { id: 'ingestion', label: 'Ingestion', icon: 'HardDrive', shortcut: 'Cmd+4', badge: 'Soon' },
+  { id: 'settings', label: 'Settings', icon: 'Settings', shortcut: 'Cmd+5', badge: 'Soon' }
 ];
 
 const ICON_MAP = {
   Users,
-  Database,
   Bot,
   Globe,
   HardDrive,
@@ -58,7 +54,6 @@ function SearchConfigContent() {
   const { 
     isLoading, 
     loading,
-    vectorConfig, 
     embeddingConfig, 
     modelParameters,
     reloadConfigurations
@@ -91,7 +86,7 @@ function SearchConfigContent() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '6') {
+      if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '5') {
         e.preventDefault();
         const tabIndex = parseInt(e.key) - 1;
         if (TABS[tabIndex]) {
@@ -237,12 +232,6 @@ function SearchConfigContent() {
               />
             </TabsContent>
             
-            <TabsContent value="vector" className="h-full m-0">
-              <VectorSearchConfig 
-                onChangeDetected={() => setHasUnsavedChanges(true)} 
-                onSaveSuccess={() => setHasUnsavedChanges(false)}
-              />
-            </TabsContent>
             
             <TabsContent value="embedding-ai" className="h-full m-0">
               <EmbeddingAIConfig 
@@ -273,7 +262,7 @@ function SearchConfigContent() {
       <div className="border-t px-6 py-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-4">
           <span>Keyboard shortcuts:</span>
-          <span>⌘1-6 to switch tabs</span>
+          <span>⌘1-5 to switch tabs</span>
           <span>⌘S to save</span>
           <span>ESC to cancel</span>
         </div>
