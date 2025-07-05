@@ -72,6 +72,7 @@ mcp search "FastAPI testing examples"
 1. Read and understand ALL standards documentation
 2. Use MCP to research relevant technology patterns
 3. Review current codebase and existing implementations
+4. Follow the implementation roadmap at `/home/lab/docaiche/enterprise-improvement-plan/implementation-guides/IMPLEMENTATION_ROADMAP.md`
 
 **SPECIFIC IMPLEMENTATION REQUIREMENTS**:
 
@@ -92,6 +93,7 @@ mcp search "FastAPI testing examples"
 1. Read `/STANDARDS/coding-standards/README.md` TypeScript section
 2. Use MCP to research relevant technology patterns
 3. Review current UI architecture and components
+4. Follow the implementation roadmap at `/home/lab/docaiche/enterprise-improvement-plan/implementation-guides/IMPLEMENTATION_ROADMAP.md`
 
 **SPECIFIC IMPLEMENTATION REQUIREMENTS**:
 
@@ -111,6 +113,7 @@ mcp search "FastAPI testing examples"
 1. Thoroughly review `/STANDARDS/security/README.md`
 2. Use MCP to research security patterns and vulnerabilities
 3. Review current security posture and implementations
+4. Follow the implementation roadmap at `/home/lab/docaiche/enterprise-improvement-plan/implementation-guides/IMPLEMENTATION_ROADMAP.md`
 
 **SPECIFIC IMPLEMENTATION REQUIREMENTS**:
 
@@ -126,6 +129,7 @@ mcp search "FastAPI testing examples"
 1. Review `/STANDARDS/processes/git-workflow.md` and `/STANDARDS/processes/definition-of-done.md`
 2. Use MCP to research CI/CD and infrastructure patterns
 3. Review current deployment and monitoring setup
+4. Follow the implementation roadmap at `/home/lab/docaiche/enterprise-improvement-plan/implementation-guides/IMPLEMENTATION_ROADMAP.md`
 
 **SPECIFIC IMPLEMENTATION REQUIREMENTS**:
 
@@ -141,6 +145,7 @@ mcp search "FastAPI testing examples"
 1. Study `/STANDARDS/testing/README.md` thoroughly
 2. Use MCP to research testing patterns and best practices
 3. Review current test coverage and infrastructure
+4. Follow the implementation roadmap at `/home/lab/docaiche/enterprise-improvement-plan/implementation-guides/IMPLEMENTATION_ROADMAP.md`
 
 **SPECIFIC IMPLEMENTATION REQUIREMENTS**:
 
@@ -173,13 +178,16 @@ mcp search "FastAPI testing examples"
 
 ## IMPLEMENTATION TIMELINE
 
-**Reference Document**: See `/STANDARDS/IMPLEMENTATION_SUMMARY.md` for detailed timeline, milestones, and daily tasks.
+**CRITICAL**: Follow the detailed implementation roadmap at `/home/lab/docaiche/enterprise-improvement-plan/implementation-guides/IMPLEMENTATION_ROADMAP.md`
 
-**Key Phases**:
-1. **Week 1**: Foundation and Critical Security
-2. **Week 2**: API Standards and Quality Infrastructure  
-3. **Week 3**: Comprehensive Testing and Security Validation
-4. **Week 4**: Production Readiness and Documentation
+This roadmap provides the complete 16-week implementation plan with specific daily tasks, commands, and deliverables. **YOU MUST EXECUTE THE EXISTING ROADMAP - DO NOT CREATE A NEW PLAN**. 
+
+**YOUR ROLE**: Execute the day-by-day tasks specified in the roadmap. Review the current codebase only to understand what exists so you can properly execute the existing implementation steps.
+
+**Phase 1 (Weeks 1-3)**: Critical Security Foundation
+- Week 1: Authentication & Rate Limiting
+- Week 2: Secrets Management & CORS  
+- Week 3: Audit Logging & Encryption
 
 **Success Criteria**: All requirements in Definition of Done must be met for each deliverable.
 
