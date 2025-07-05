@@ -32,9 +32,10 @@ MANIFEST
 # ============================================================================
 .env
 .venv
-env/
-venv/
-ENV/
+# Only ignore env/venv folders at root level
+/env/
+/venv/
+/ENV/
 env.bak/
 venv.bak/
 .conda/
@@ -106,9 +107,12 @@ appendonly.aof
 # ============================================================================
 # Logs
 # ============================================================================
-logs/
+# Only ignore logs folders at root and container levels, not in source code
+/logs/
+/*/logs/
 *.log
-log/
+# Only ignore log folder at root level
+/log/
 app.log
 error.log
 access.log
@@ -130,7 +134,8 @@ document_cache/
 # ============================================================================
 # Ollama & LLM Models
 # ============================================================================
-models/
+# Only ignore models folder at root level, not source code model definitions
+/models/
 *.gguf
 *.bin
 ollama_data/
@@ -139,7 +144,8 @@ model_cache/
 # ============================================================================
 # Content Processing & Scraped Data
 # ============================================================================
-downloads/
+# Only ignore downloads at root level
+/downloads/
 scraped_content/
 processed_docs/
 temp_files/
@@ -272,7 +278,8 @@ backups/
 # ============================================================================
 *.prof
 profile_stats/
-metrics/
+# Only ignore metrics folders at root level, not in source code
+/metrics/
 .profiler/
 
 # ============================================================================
