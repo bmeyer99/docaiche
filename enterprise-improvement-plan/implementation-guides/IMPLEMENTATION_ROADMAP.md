@@ -20,7 +20,7 @@ This roadmap provides a comprehensive guide for implementing all enterprise impr
 - [ ] Compliance specialist for regulatory requirements
 
 ### Tool Requirements
-- [ ] HashiCorp Vault for secrets management
+- [ ] HashiCorp Vault for secrets management (vault.no13productions.com)
 - [ ] Terraform for Infrastructure as Code
 - [ ] Trivy for container security scanning
 - [ ] OWASP ZAP for security testing
