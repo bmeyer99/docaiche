@@ -474,7 +474,7 @@ async def update_provider_test_results(
     try:
         # Get existing configuration
         config_key = f"ai.providers.{provider_id}"
-        existing_config = config_manager.get_setting(config_key) or {}
+        existing_config = await config_manager.get_from_db(config_key) or {}
         
         # Update with test results
         updated_config = {**existing_config}
@@ -1053,7 +1053,7 @@ async def update_provider_config(
         # Get existing configuration or create new one
         config_key = f"ai.providers.{provider_id}"
         try:
-            existing_config = config_manager.get_setting(config_key) or {}
+            existing_config = await config_manager.get_from_db(config_key) or {}
         except Exception:
             existing_config = {}
 
@@ -1219,7 +1219,7 @@ async def get_provider_models(
         
         # Get custom models from configuration
         config_key = f"ai.providers.{provider_id}.custom_models"
-        custom_models = config_manager.get_setting(config_key) or []
+        custom_models = await config_manager.get_from_db(config_key) or []
         
         # Combine default and custom models, removing duplicates
         all_models = list(dict.fromkeys(models + custom_models))
@@ -1259,7 +1259,7 @@ async def add_custom_model(
     
     # Get existing custom models
     config_key = f"ai.providers.{provider_id}.custom_models"
-    custom_models = config_manager.get_setting(config_key) or []
+    custom_models = await config_manager.get_from_db(config_key) or []
     
     # Check if model already exists
     if model_name in custom_models:
@@ -1303,7 +1303,7 @@ async def remove_custom_model(
     
     # Get existing custom models
     config_key = f"ai.providers.{provider_id}.custom_models"
-    custom_models = config_manager.get_setting(config_key) or []
+    custom_models = await config_manager.get_from_db(config_key) or []
     
     # Check if model exists in custom models
     if model_name not in custom_models:

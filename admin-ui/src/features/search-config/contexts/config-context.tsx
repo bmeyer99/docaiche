@@ -190,24 +190,26 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     }));
     
     try {
-      // Load providers and models first
+      // Load providers and models from saved configuration
       let availableProviders: string[] = [];
       let availableModels: Record<string, string[]> = {};
       
       try {
-        const providers = await apiClient.getAvailableProviders();
-        availableProviders = providers || [];
+        // Get provider configurations which includes models
+        const providerConfigs = await apiClient.getProviderConfigurations();
         
-        // Load models for each provider
-        for (const provider of availableProviders) {
-          try {
-            const models = await apiClient.getProviderModels(provider);
-            availableModels[provider] = models || [];
-          } catch (error) {
-            console.warn(`[ConfigProvider] Failed to load models for ${provider}:`, error);
-            availableModels[provider] = [];
-          }
-        }
+        // Extract provider IDs and models from the configurations
+        availableProviders = providerConfigs.map(p => p.id);
+        
+        // Build models map from provider configurations
+        providerConfigs.forEach(provider => {
+          availableModels[provider.id] = provider.models || [];
+        });
+        
+        console.log('[ConfigProvider] Loaded providers and models from saved config:', {
+          providers: availableProviders,
+          modelCounts: Object.entries(availableModels).map(([id, models]) => `${id}: ${models.length}`)
+        });
         
         setState(prev => ({ 
           ...prev, 

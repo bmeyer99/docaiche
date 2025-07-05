@@ -608,60 +608,97 @@ export class DocaicheApiClient {
    */
   async getProviderConfigurations(): Promise<Array<{
     id: string;
+    name: string;
+    type: string;
     enabled?: boolean;
+    configured?: boolean;
     config?: Record<string, any>;
     status?: string;
-    last_tested?: string;
+    last_tested?: string | null;
     models?: string[];
+    category?: string;
+    description?: string;
+    requires_api_key?: boolean;
+    supports_embedding?: boolean;
+    supports_chat?: boolean;
   }>> {
+    console.log('[API] Loading provider configurations from saved config...');
+    
     try {
-      // First try the main providers endpoint with a shorter timeout
-      try {
-        const response = await this.get<Array<{
-          id: string;
-          enabled?: boolean;
-          config?: Record<string, any>;
-          status?: string;
-          last_tested?: string;
-          models?: string[];
-        }>>('/providers', { timeout: 5000, retries: 1 });
-        return response;
-      } catch (providerError) {
-        console.warn('[API] Main providers endpoint failed, trying fallback:', providerError);
-        
-        // Fallback to admin/search/providers endpoint
-        const response = await this.get<{
-          providers: Array<{
-            id: string;
-            name: string;
-            type: string;
-            enabled: boolean;
-            health: string;
-            latency_ms: number;
-            error_rate: number;
-            last_check: string;
-            circuit_breaker_state: string;
-            rate_limit_remaining: number | null;
-          }>;
-        }>('/admin/search/providers');
-        
-        // Transform to match expected format
-        return response.providers.map(provider => ({
-          id: provider.id,
-          enabled: provider.enabled,
-          config: {}, // Not provided by this endpoint
-          status: provider.health === 'healthy' ? 'tested' : 'untested',
-          last_tested: provider.last_check,
-          models: [] // Not provided by this endpoint
-        }));
-      }
-    } catch (error) {
-      // Return empty array on circuit breaker or repeated failures
-      if (error instanceof Error && error.message?.includes('Circuit Breaker')) {
-        console.warn('Provider configurations unavailable due to circuit breaker');
+      // Get the full configuration to extract provider info
+      const config = await this.getConfiguration();
+      
+      // Extract model selection which contains the user's selected providers
+      const modelSelectionItem = config.items?.find(item => item.key === 'ai.model_selection');
+      if (!modelSelectionItem || !modelSelectionItem.value) {
+        console.warn('[API] No model selection found in config');
         return [];
       }
-      console.error('[API] Failed to get provider configurations:', error);
+      
+      const modelSelection = modelSelectionItem.value as any;
+      const providers: Array<any> = [];
+      
+      // Extract text generation provider if configured
+      if (modelSelection.textGeneration?.provider) {
+        const providerId = modelSelection.textGeneration.provider;
+        const providerConfigKey = `ai.providers.${providerId}`;
+        const providerConfigItem = config.items?.find(item => item.key === providerConfigKey);
+        
+        if (providerConfigItem?.value) {
+          const providerData = providerConfigItem.value as any;
+          providers.push({
+            id: providerId,
+            name: providerData.name || providerId,
+            type: 'ai',
+            enabled: true,
+            configured: true,
+            config: providerData.config || {},
+            status: providerData.status || 'tested',
+            last_tested: providerData.lastTested,
+            models: providerData.models || [],
+            category: providerData.category || 'Unknown',
+            description: providerData.description || '',
+            requires_api_key: providerData.requiresApiKey ?? true,
+            supports_embedding: providerData.supportsEmbedding ?? false,
+            supports_chat: providerData.supportsChat ?? true
+          });
+        }
+      }
+      
+      // Extract embeddings provider if different from text generation
+      if (modelSelection.embeddings?.provider && 
+          modelSelection.embeddings.provider !== modelSelection.textGeneration?.provider) {
+        const providerId = modelSelection.embeddings.provider;
+        const providerConfigKey = `ai.providers.${providerId}`;
+        const providerConfigItem = config.items?.find(item => item.key === providerConfigKey);
+        
+        if (providerConfigItem?.value) {
+          const providerData = providerConfigItem.value as any;
+          providers.push({
+            id: providerId,
+            name: providerData.name || providerId,
+            type: 'ai',
+            enabled: true,
+            configured: true,
+            config: providerData.config || {},
+            status: providerData.status || 'tested',
+            last_tested: providerData.lastTested,
+            models: providerData.models || [],
+            category: providerData.category || 'Unknown',
+            description: providerData.description || '',
+            requires_api_key: providerData.requiresApiKey ?? true,
+            supports_embedding: providerData.supportsEmbedding ?? true,
+            supports_chat: providerData.supportsChat ?? false
+          });
+        }
+      }
+      
+      console.log('[API] Loaded provider configurations from saved config:', providers);
+      return providers;
+      
+    } catch (error) {
+      console.error('[API] Failed to load provider configurations:', error);
+      // Return empty array on error rather than throwing
       return [];
     }
   }
@@ -703,48 +740,42 @@ export class DocaicheApiClient {
 
   async getAvailableProviders(): Promise<string[]> {
     try {
-      // First try the main providers endpoint with a shorter timeout
-      try {
-        const response = await this.get<Array<{
-          id: string;
-          enabled?: boolean;
-          config?: Record<string, any>;
-          status?: string;
-          last_tested?: string;
-          models?: string[];
-        }>>('/providers', { timeout: 5000, retries: 1 });
-        return response.map(provider => provider.id);
-      } catch (providerError) {
-        console.warn('[API] Main providers endpoint failed, trying fallback:', providerError);
-        
-        // Fallback to admin/search/providers endpoint
-        const response = await this.get<{
-          providers: Array<{
-            id: string;
-            name: string;
-            type: string;
-            enabled: boolean;
-            health: string;
-            latency_ms: number;
-            error_rate: number;
-            last_check: string;
-            circuit_breaker_state: string;
-            rate_limit_remaining: number | null;
-          }>;
-        }>('/admin/search/providers');
-        
-        return response.providers.map(provider => provider.id);
+      // Get available providers from the saved configuration
+      const providers = await this.getProviderConfigurations();
+      
+      // Return the IDs of configured providers
+      const providerIds = providers.map(p => p.id);
+      
+      if (providerIds.length > 0) {
+        console.log('[API] Available providers from saved config:', providerIds);
+        return providerIds;
       }
+      
+      // If no providers are configured, return a default list
+      console.log('[API] No configured providers found, returning defaults');
+      return ['ollama', 'openai', 'anthropic', 'groq', 'google'];
+      
     } catch (error) {
       console.error('[API] Failed to get available providers:', error);
-      return [];
+      // Return static fallback provider IDs
+      return ['ollama', 'openai', 'anthropic', 'groq', 'google'];
     }
   }
 
   async getProviderModels(providerId: string): Promise<string[]> {
     try {
-      const response = await this.get<{ provider: string; models: string[]; queryable: boolean; custom_count?: number }>(`/providers/${providerId}/models`);
-      return response.models || [];
+      // Get models from the saved provider configuration
+      const providers = await this.getProviderConfigurations();
+      const provider = providers.find(p => p.id === providerId);
+      
+      if (provider && provider.models) {
+        console.log(`[API] Got models for ${providerId} from saved config:`, provider.models);
+        return provider.models;
+      }
+      
+      console.warn(`[API] No models found for provider ${providerId} in saved config`);
+      return [];
+      
     } catch (error) {
       console.error(`[API] Failed to get models for provider ${providerId}:`, error);
       return [];
@@ -802,18 +833,15 @@ export class DocaicheApiClient {
       const modelSelectionItem = response.items?.find(item => item.key === 'ai.model_selection');
       
       if (modelSelectionItem && modelSelectionItem.value) {
-        // Validate the structure
-        const selection = modelSelectionItem.value;
-        if (typeof selection === 'object' && selection !== null && 
-            'textGeneration' in selection && 'embeddings' in selection && 
-            'sharedProvider' in selection &&
-            typeof (selection as any).sharedProvider === 'boolean') {
-          return selection as {
-            textGeneration: { provider: string; model: string };
-            embeddings: { provider: string; model: string };
-            sharedProvider: boolean;
-          };
-        }
+        // The database has: {"textGeneration": {"model": "phi4:14b", "provider": "ollama"}}
+        const selection = modelSelectionItem.value as any;
+        
+        // Return with proper structure, filling in defaults for missing fields
+        return {
+          textGeneration: selection.textGeneration || { provider: 'ollama', model: 'phi4:14b' },
+          embeddings: selection.embeddings || { provider: 'ollama', model: 'mxbai-embed-large:latest' },
+          sharedProvider: selection.sharedProvider ?? true
+        };
       }
       
       return null;

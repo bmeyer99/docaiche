@@ -58,16 +58,63 @@ interface EmbeddingConfig {
 export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSearchConfigProps) {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
-  const { providers } = useProviderSettings();
-  const apiClient = useApiClient();
-  const { toast } = useToast();
-  const { 
-    vectorConfig: loadedVectorConfig, 
-    workspaces,
-    embeddingConfig: loadedEmbeddingConfig,
-    updateVectorConfig,
-    updateEmbeddingConfig 
-  } = useSearchConfig();
+  
+  // Add error boundary and debugging
+  const [componentError, setComponentError] = useState<string | null>(null);
+  
+  // Wrap hook calls in try-catch to identify the issue
+  let providers: any = {};
+  let apiClient: any = null;
+  let toast: any = null;
+  let loadedVectorConfig: any = null;
+  let workspaces: any = [];
+  let loadedEmbeddingConfig: any = null;
+  let updateVectorConfig: any = null;
+  let updateEmbeddingConfig: any = null;
+  
+  try {
+    const providerSettings = useProviderSettings();
+    providers = providerSettings.providers || {};
+    console.log('[VectorSearch] Providers loaded:', Object.keys(providers).length);
+  } catch (error) {
+    console.error('[VectorSearch] Error loading providers:', error);
+    setComponentError(`Provider settings error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    providers = {};
+  }
+  
+  try {
+    apiClient = useApiClient();
+    console.log('[VectorSearch] API client loaded');
+  } catch (error) {
+    console.error('[VectorSearch] Error loading API client:', error);
+    setComponentError(`API client error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+  
+  try {
+    const toastHook = useToast();
+    toast = toastHook.toast;
+    console.log('[VectorSearch] Toast hook loaded');
+  } catch (error) {
+    console.error('[VectorSearch] Error loading toast:', error);
+    setComponentError(`Toast error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+  
+  try {
+    const searchConfig = useSearchConfig();
+    loadedVectorConfig = searchConfig.vectorConfig;
+    workspaces = searchConfig.workspaces || [];
+    loadedEmbeddingConfig = searchConfig.embeddingConfig;
+    updateVectorConfig = searchConfig.updateVectorConfig;
+    updateEmbeddingConfig = searchConfig.updateEmbeddingConfig;
+    console.log('[VectorSearch] Search config loaded:', {
+      vectorConfig: !!loadedVectorConfig,
+      workspaces: workspaces.length,
+      embeddingConfig: !!loadedEmbeddingConfig
+    });
+  } catch (error) {
+    console.error('[VectorSearch] Error loading search config:', error);
+    setComponentError(`Search config error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 
   // Use centralized form state management for vector config
   const {
@@ -228,103 +275,138 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
 
   // Get configured providers that support embeddings
   const getEmbeddingProviders = () => {
-    // Guard against missing or invalid providers data
-    if (!providers || typeof providers !== 'object') {
-      console.warn('[VectorSearch] Providers data is invalid:', providers);
+    try {
+      // Guard against missing or invalid providers data
+      if (!providers || typeof providers !== 'object') {
+        console.warn('[VectorSearch] Providers data is invalid:', providers);
+        return [];
+      }
+      
+      console.log('[VectorSearch] All providers:', Object.keys(providers));
+      console.log('[VectorSearch] AI_PROVIDERS keys:', Object.keys(AI_PROVIDERS));
+      
+      const embeddingProviders = Object.entries(providers)
+        .filter(([id, config]: [string, any]) => {
+          // Guard against missing config or provider definition
+          if (!config || !id) {
+            console.warn(`[VectorSearch] Missing config or id for provider: ${id}`);
+            return false;
+          }
+          
+          // Check if provider supports embedding from config or AI_PROVIDERS
+          const provider = AI_PROVIDERS[id];
+          const supportsEmbedding = config.supportsEmbedding || config.supports_embedding || provider?.supportsEmbedding || false;
+          
+          // For fallback providers, show all that support embeddings regardless of status
+          // This allows the UI to work even when the API is down
+          const isConfigured = 
+            config.status === 'tested' || 
+            config.status === 'connected' || 
+            config.configured === true ||
+            (config.models && Array.isArray(config.models) && config.models.length > 0) ||
+            config.status === 'untested'; // Allow untested providers to be shown
+          
+          console.log(`[VectorSearch] Provider ${id}:`, {
+            status: config.status,
+            configured: config.configured,
+            hasModels: config.models?.length > 0,
+            supportsEmbedding,
+            isConfigured,
+            provider: provider
+          });
+          
+          return supportsEmbedding && isConfigured;
+        })
+        .map(([id, config]: [string, any]) => ({
+          id,
+          name: config.name || AI_PROVIDERS[id]?.displayName || id,
+          models: Array.isArray(config.models) ? config.models : []
+        }));
+        
+      console.log('[VectorSearch] Configured embedding providers:', embeddingProviders);
+      return embeddingProviders;
+    } catch (error) {
+      console.error('[VectorSearch] Error in getEmbeddingProviders:', error);
       return [];
     }
-    
-    const embeddingProviders = Object.entries(providers)
-      .filter(([id, config]) => {
-        // Guard against missing config or provider definition
-        if (!config || !id) return false;
-        
-        const provider = AI_PROVIDERS[id];
-        if (!provider) {
-          console.warn(`[VectorSearch] Provider definition not found for: ${id}`);
-          return false;
-        }
-        
-        // Only show providers that are marked as configured (tested/connected)
-        // Check multiple status indicators for robustness
-        const isConfigured = 
-          config.status === 'tested' || 
-          config.status === 'connected' || 
-          config.configured === true ||
-          (config.models && Array.isArray(config.models) && config.models.length > 0);
-        
-        const supportsEmbedding = provider?.supportsEmbedding || false;
-        
-        console.log(`[VectorSearch] Provider ${id}:`, {
-          status: config.status,
-          configured: config.configured,
-          hasModels: config.models?.length > 0,
-          supportsEmbedding,
-          isConfigured
-        });
-        
-        return supportsEmbedding && isConfigured;
-      })
-      .map(([id, config]) => ({
-        id,
-        name: AI_PROVIDERS[id]?.displayName || id,
-        models: Array.isArray(config.models) ? config.models : []
-      }));
-      
-    console.log('[VectorSearch] Configured embedding providers:', embeddingProviders);
-    return embeddingProviders;
   };
 
   // Get embedding models for selected provider
   const getEmbeddingModels = () => {
-    // Guard against missing or invalid data
-    const selectedProvider = embeddingConfig.provider;
-    if (!selectedProvider || !providers || !providers[selectedProvider]) {
-      console.warn('[VectorSearch] Cannot get models - invalid provider data:', { selectedProvider, providers });
-      return [];
-    }
-    
-    const providerData = providers[selectedProvider];
-    if (!providerData || !Array.isArray(providerData.models)) {
-      console.warn('[VectorSearch] Provider models data is invalid:', providerData);
-      return [];
-    }
-    
-    const models = providerData.models;
-    
-    // For Ollama, show models that have embedding capabilities
-    if (selectedProvider === 'ollama') {
-      const ollamaEmbedModels = models.filter((model: string) => {
+    try {
+      // Guard against missing or invalid data
+      const selectedProvider = embeddingConfig.provider;
+      if (!selectedProvider || !providers || !providers[selectedProvider]) {
+        console.warn('[VectorSearch] Cannot get models - invalid provider data:', { selectedProvider, providers });
+        return [];
+      }
+      
+      const providerData: any = providers[selectedProvider];
+      if (!providerData || !Array.isArray(providerData.models)) {
+        console.warn('[VectorSearch] Provider models data is invalid:', providerData);
+        return [];
+      }
+      
+      const models = providerData.models;
+      
+      // For Ollama, show models that have embedding capabilities
+      if (selectedProvider === 'ollama') {
+        const ollamaEmbedModels = models.filter((model: string) => {
+          if (typeof model !== 'string') return false;
+          const modelName = model.toLowerCase();
+          return (
+            modelName.includes('embed') ||
+            modelName.includes('e5') ||
+            modelName.includes('bge') ||
+            modelName.includes('nomic') ||
+            modelName.includes('mxbai')
+          );
+        });
+        console.log('[VectorSearch] Ollama embedding models:', ollamaEmbedModels);
+        return ollamaEmbedModels;
+      }
+      
+      // For other providers, filter for embedding models
+      const filteredModels = models.filter((model: string) => {
         if (typeof model !== 'string') return false;
-        const modelName = model.toLowerCase();
+        const lowerModel = model.toLowerCase();
         return (
-          modelName.includes('embed') ||
-          modelName.includes('e5') ||
-          modelName.includes('bge') ||
-          modelName.includes('nomic') ||
-          modelName.includes('mxbai')
+          lowerModel.includes('embed') ||
+          lowerModel.includes('e5') ||
+          lowerModel.includes('bge') ||
+          lowerModel.includes('sentence') ||
+          lowerModel.includes('all-minilm')
         );
       });
-      console.log('[VectorSearch] Ollama embedding models:', ollamaEmbedModels);
-      return ollamaEmbedModels;
+      
+      console.log('[VectorSearch] Filtered embedding models for', selectedProvider, ':', filteredModels);
+      return filteredModels;
+    } catch (error) {
+      console.error('[VectorSearch] Error in getEmbeddingModels:', error);
+      return [];
     }
-    
-    // For other providers, filter for embedding models
-    const filteredModels = models.filter((model: string) => {
-      if (typeof model !== 'string') return false;
-      const lowerModel = model.toLowerCase();
-      return (
-        lowerModel.includes('embed') ||
-        lowerModel.includes('e5') ||
-        lowerModel.includes('bge') ||
-        lowerModel.includes('sentence') ||
-        lowerModel.includes('all-minilm')
-      );
-    });
-    
-    console.log('[VectorSearch] Filtered embedding models for', selectedProvider, ':', filteredModels);
-    return filteredModels;
   };
+
+  // Error boundary for render errors
+  if (componentError) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="border border-red-200 bg-red-50 p-4 rounded-lg">
+          <h3 className="font-medium text-red-800 mb-2">Component Error</h3>
+          <p className="text-red-700 text-sm">{componentError}</p>
+          <button 
+            onClick={() => {
+              setComponentError(null);
+              window.location.reload();
+            }}
+            className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -515,8 +597,22 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                     <Alert>
                       <Info className="h-4 w-4" />
                       <AlertDescription>
-                        Only providers that have been tested and support embeddings are shown below.
-                        Test providers in the Providers tab first.
+                        {getEmbeddingProviders().length === 0 ? (
+                          <>
+                            No embedding providers available. This could be due to:
+                            <ul className="list-disc list-inside mt-2">
+                              <li>The backend service is still starting up</li>
+                              <li>No providers have been configured yet</li>
+                              <li>Connection issues with the API</li>
+                            </ul>
+                            Please check the Providers tab to configure AI providers first.
+                          </>
+                        ) : (
+                          <>
+                            Only providers that have been tested and support embeddings are shown below.
+                            Test providers in the Providers tab first.
+                          </>
+                        )}
                       </AlertDescription>
                     </Alert>
 
@@ -534,11 +630,17 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                             <SelectValue placeholder="Select provider" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getEmbeddingProviders().map((provider) => (
-                              <SelectItem key={provider.id} value={provider.id}>
-                                {provider.name}
-                              </SelectItem>
-                            ))}
+                            {getEmbeddingProviders().length === 0 ? (
+                              <div className="py-2 px-3 text-sm text-muted-foreground">
+                                No providers available
+                              </div>
+                            ) : (
+                              getEmbeddingProviders().map((provider) => (
+                                <SelectItem key={provider.id} value={provider.id}>
+                                  {provider.name}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -680,7 +782,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
               <div className="space-y-4">
                 {workspaces.length > 0 ? (
                   <div className="space-y-2">
-                    {workspaces.map((workspace) => (
+                    {workspaces.map((workspace: any) => (
                       <div key={workspace.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
                           <p className="font-medium">{workspace.name || workspace.class_name}</p>

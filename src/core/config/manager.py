@@ -560,13 +560,10 @@ class ConfigurationManager:
                 # Error in traversing, fall back to database
                 pass
         
-        # Fall back to database lookup
-        try:
-            import asyncio
-            return asyncio.run(self.get_from_db(config_key))
-        except Exception as e:
-            logger.warning(f"Failed to get setting '{config_key}': {e}")
-            return None
+        # For database lookup, return None to avoid async issues
+        # This method should not be used for database lookups in async contexts
+        logger.debug(f"Setting '{config_key}' not found in runtime config, database lookup skipped in sync context")
+        return None
 
     def get_configuration(self) -> SystemConfiguration:
         """
