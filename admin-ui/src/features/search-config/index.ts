@@ -33,9 +33,3 @@ export * from './hooks/use-search-config-websocket';
 export * from './types';
 
 // Utils
-export { 
-  DeferredValidator, 
-  getDeferredValidator, 
-  useDeferredValidation,
-  hasRealValidationIssues 
-} from './utils/deferred-validator';

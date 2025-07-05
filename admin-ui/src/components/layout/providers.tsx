@@ -2,7 +2,6 @@
 import React from 'react';
 import { ActiveThemeProvider } from '../active-theme';
 import { ApiClientProvider } from '@/components/providers/api-client-provider';
-import { ApiHealthProvider } from '@/components/providers/api-health-provider';
 import { BrowserLoggerProvider } from '@/components/providers/browser-logger-provider';
 import { ProviderSettingsProvider } from '@/lib/hooks/use-provider-settings';
 import { AnalyticsProvider } from '@/providers/analytics-provider';
@@ -18,15 +17,13 @@ export default function Providers({
     <>
       <ActiveThemeProvider initialTheme={activeThemeValue}>
         <ApiClientProvider>
-          <ApiHealthProvider>
-            <BrowserLoggerProvider>
-              <ProviderSettingsProvider>
-                <AnalyticsProvider>
-                  {children}
-                </AnalyticsProvider>
-              </ProviderSettingsProvider>
-            </BrowserLoggerProvider>
-          </ApiHealthProvider>
+          <BrowserLoggerProvider>
+            <ProviderSettingsProvider>
+              <AnalyticsProvider>
+                {children}
+              </AnalyticsProvider>
+            </ProviderSettingsProvider>
+          </BrowserLoggerProvider>
         </ApiClientProvider>
       </ActiveThemeProvider>
     </>

@@ -14,7 +14,7 @@
 **Solution Implemented:**
 - Created `DeferredValidator` class in `/admin-ui/src/features/search-config/utils/deferred-validator.ts`
 - Implemented loading state tracking for all data sources (providers, vector config, embedding config, model selection, model parameters)
-- Added `useDeferredValidation` hook that waits for all data to load before running validation
+- Added deferred validation system that waits for all data to load before running validation
 - Modified validation system to return loading messages instead of false warnings during data fetch
 
 **Key Features:**

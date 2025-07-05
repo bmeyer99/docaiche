@@ -3,7 +3,6 @@
  */
 
 export { SearchConfigLayout } from './search-config-layout';
-export { ConfigValidation, ValidationStatusBadge } from './config-validation';
 export { PromptCard } from './prompt-card';
 
 // Export all tab components

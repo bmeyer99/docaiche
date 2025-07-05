@@ -12,7 +12,7 @@ I have successfully implemented a deferred validation system for the Search Conf
 - Provides loading messages instead of errors during data fetch
 
 ### 2. React Hook Integration
-- `useDeferredValidation` hook provides easy integration with React components
+- Deferred validation system provides easy integration with React components
 - Automatically manages validation lifecycle
 - Handles component unmounting gracefully
 - Shows appropriate loading states
@@ -20,7 +20,7 @@ I have successfully implemented a deferred validation system for the Search Conf
 ### 3. Updated Search Config Layout
 The SearchConfigLayout component now uses the deferred validator:
 ```tsx
-const validation = useDeferredValidation({
+const validation = deferredValidation({
   vectorConfig,
   embeddingConfig,
   modelSelection,

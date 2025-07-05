@@ -114,41 +114,20 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
     }
   }, [hasTextGenChanges, hasParamChanges, onChangeDetected]);
   
-  // Load saved configuration on mount
+  // Load saved configuration from synchronized state
   useEffect(() => {
-    const loadSavedConfig = async () => {
-      try {
-        isSystemUpdateRef.current = true;
-        const centralConfig = await apiClient.getConfiguration();
-        const modelSelectionItem = centralConfig.items?.find(i => i.key === 'ai.model_selection');
-        if (modelSelectionItem?.value && typeof modelSelectionItem.value === 'object' && 'textGeneration' in modelSelectionItem.value) {
-          const textConfig = (modelSelectionItem.value as any).textGeneration;
-          if (textConfig.provider && textConfig.model) {
-            const config = {
-              provider: textConfig.provider,
-              model: textConfig.model
-            };
-            setTextGenConfig(config);
-            setSavedTextGenConfig(config);
-            
-            // Also update the model selection context
-            updateModelSelection({
-              ...modelSelection,
-              textGeneration: {
-                provider: textConfig.provider,
-                model: textConfig.model
-              }
-            });
-          }
-        }
-      } catch (error) {
-        console.warn('[TextAI] Failed to load saved configuration:', error);
-      } finally {
-        isSystemUpdateRef.current = false;
-      }
-    };
-    loadSavedConfig();
-  }, []);
+    if (modelSelection.textGeneration?.provider && modelSelection.textGeneration?.model) {
+      isSystemUpdateRef.current = true;
+      const config = {
+        provider: modelSelection.textGeneration.provider,
+        model: modelSelection.textGeneration.model
+      };
+      setTextGenConfig(config);
+      setSavedTextGenConfig(config);
+      isSystemUpdateRef.current = false;
+      console.log('[TextAI] Loaded saved configuration from synchronized state:', config);
+    }
+  }, [modelSelection.textGeneration]);
   
   // Load model parameters when selection changes
   useEffect(() => {

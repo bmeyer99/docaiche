@@ -12,7 +12,6 @@ import { Progress } from '@/components/ui/progress';
 import { Icons } from '@/components/icons';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
-import { CircuitBreakerIndicator } from '@/components/ui/circuit-breaker-indicator';
 import { useDebouncedApi } from '@/lib/hooks/use-debounced-api';
 
 interface Collection {
@@ -237,27 +236,6 @@ export default function CollectionsPage() {
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* Circuit Breaker Status */}
-      <CircuitBreakerIndicator 
-        identifier="collections-api" 
-        onReset={refetchCollections}
-      />
-      
-      {/* Show circuit state info */}
-      {!canMakeRequest && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <Icons.alertCircle className="w-5 h-5 text-red-600" />
-            <div>
-              <div className="font-medium text-red-800">API Connection Blocked</div>
-              <div className="text-sm text-red-600">
-                Circuit breaker is {circuitState} - Collections API calls are temporarily disabled
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Collections Grid */}
       {collectionsLoading ? (

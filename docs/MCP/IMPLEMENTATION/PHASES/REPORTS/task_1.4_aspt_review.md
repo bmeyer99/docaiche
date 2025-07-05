@@ -15,7 +15,7 @@ Created comprehensive API scaffold for the MCP search system admin interface wit
 
 ### 2. Pydantic Models ✓
 Created comprehensive models in `models.py`:
-- **Configuration Models**: SearchConfigRequest/Response, ConfigValidation, ConfigExport/Import
+- **Configuration Models**: SearchConfigRequest/Response, ConfigExport/Import
 - **Vector Search Models**: VectorConnectionConfig/Status, WorkspaceConfig, VectorTest
 - **Text AI Models**: TextAIModelConfig/Status, PromptTemplate, PromptTest/Enhance
 - **Provider Models**: ProviderConfig/Status, ProviderTest, ProviderPriority

@@ -25,9 +25,6 @@ import {
 import { TabConfig } from '../types';
 import { ConfigProvider, useSearchConfig } from '../contexts/config-context';
 import { useProviderSettings, useModelSelection } from '@/lib/hooks/use-provider-settings';
-import { validateSearchConfig } from '@/lib/utils/config-validator';
-import { ConfigValidation, ValidationStatusBadge } from './config-validation';
-import { useDeferredValidation } from '../utils/deferred-validator';
 import { useSearchConfigForm } from '../hooks/use-search-config-form';
 
 // Import tab components
@@ -77,21 +74,6 @@ function SearchConfigContent() {
   // Use centralized form management
   const { isDirty, saveForm, resetForm } = useSearchConfigForm();
   
-  // Use deferred validation to wait for data loading
-  const validation = useDeferredValidation({
-    vectorConfig,
-    embeddingConfig,
-    modelSelection,
-    modelParameters,
-    providers,
-    isLoading: {
-      providers: providersLoading,
-      vectorConfig: isLoading,
-      embeddingConfig: isLoading,
-      modelSelection: modelSelectionLoading,
-      modelParameters: isLoading
-    }
-  });
 
   // Update URL when tab changes
   const handleTabChange = (value: string) => {
@@ -210,13 +192,6 @@ function SearchConfigContent() {
         </div>
       </div>
 
-      {/* Configuration Validation */}
-      <div className="px-6 py-4 border-b bg-gray-50/50">
-        <ConfigValidation 
-          validation={validation}
-          onNavigateToTab={handleTabChange}
-        />
-      </div>
 
       {/* Tabs */}
       <div className="flex-1 overflow-hidden">
@@ -237,12 +212,6 @@ function SearchConfigContent() {
                       <Badge variant="secondary" className="ml-2">
                         {tab.badge}
                       </Badge>
-                    )}
-                    {/* Show validation status for specific tabs */}
-                    {(tab.id === 'vector' || tab.id === 'embedding-ai' || tab.id === 'text-ai') && (
-                      <div className="ml-2">
-                        <ValidationStatusBadge validation={validation} />
-                      </div>
                     )}
                   </TabsTrigger>
                 );

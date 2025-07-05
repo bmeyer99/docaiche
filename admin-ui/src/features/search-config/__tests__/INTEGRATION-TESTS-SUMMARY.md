@@ -65,7 +65,7 @@ Create comprehensive integration tests that verify both issues are fixed:
 
 ### 1. Deferred Validation System
 ```typescript
-// The useDeferredValidation hook successfully:
+// The deferred validation system successfully:
 - ✅ Waits for all data to load before running validation
 - ✅ Shows loading messages instead of false warnings  
 - ✅ Caches validation results for performance

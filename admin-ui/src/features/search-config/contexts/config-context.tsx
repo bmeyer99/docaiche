@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useApiClient } from '@/lib/hooks/use-api-client';
 import { useToast } from '@/hooks/use-toast';
+import { useModelSelection } from '@/lib/hooks/use-provider-settings';
 
 interface VectorConfig {
   enabled: boolean;
@@ -121,6 +122,7 @@ interface ConfigProviderProps {
 export function ConfigProvider({ children }: ConfigProviderProps) {
   const apiClient = useApiClient();
   const { toast } = useToast();
+  const { modelSelection, updateModelSelection } = useModelSelection();
   
   const [state, setState] = useState<ConfigState>({
     vectorConfig: null,
@@ -227,6 +229,18 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         const centralConfig = await apiClient.getConfiguration();
         console.log('[ConfigProvider] Loaded central configuration');
         configs = extractConfigurationsFromCentral(centralConfig);
+        
+        // Synchronize model selections with ProviderSettingsProvider
+        if (configs.modelSelections && updateModelSelection) {
+          const hasTextGeneration = configs.modelSelections.textGeneration?.provider && configs.modelSelections.textGeneration?.model;
+          const hasEmbeddings = configs.modelSelections.embeddings?.provider && configs.modelSelections.embeddings?.model;
+          
+          if (hasTextGeneration || hasEmbeddings) {
+            console.log('[ConfigProvider] Synchronizing model selections with ProviderSettingsProvider:', configs.modelSelections);
+            updateModelSelection(configs.modelSelections);
+          }
+        }
+        
         setState(prev => ({ 
           ...prev, 
           loading: { ...prev.loading, configLoaded: true }
@@ -324,15 +338,22 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
       modelParameters: {} as Record<string, Record<string, ModelParameters>>,
       ingestionSettings: null,
       systemSettings: {} as Record<string, any>,
-      dashboardUrls: null
+      dashboardUrls: null,
+      modelSelections: {
+        textGeneration: { provider: '', model: '' },
+        embeddings: { provider: '', model: '' },
+        sharedProvider: false
+      }
     };
     
     // Process config items
     if (configResponse?.items) {
       configResponse.items.forEach((item: any) => {
-        // Extract model selection for embedding config
+        // Extract model selection for embedding config and model selections
         if (item.key === 'ai.model_selection' && item.value) {
           const selection = item.value;
+          
+          // Extract embedding configuration
           if (selection.embeddings) {
             configs.embeddingConfig = {
               useDefaultEmbedding: false,
@@ -342,6 +363,25 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
               chunkSize: 1000,
               chunkOverlap: 200
             };
+          }
+          
+          // Extract model selections for synchronization
+          if (selection.textGeneration) {
+            configs.modelSelections.textGeneration = {
+              provider: selection.textGeneration.provider || '',
+              model: selection.textGeneration.model || ''
+            };
+          }
+          
+          if (selection.embeddings) {
+            configs.modelSelections.embeddings = {
+              provider: selection.embeddings.provider || '',
+              model: selection.embeddings.model || ''
+            };
+          }
+          
+          if (typeof selection.sharedProvider === 'boolean') {
+            configs.modelSelections.sharedProvider = selection.sharedProvider;
           }
         }
         
