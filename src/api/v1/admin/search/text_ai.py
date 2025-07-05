@@ -79,7 +79,7 @@ async def get_text_ai_status():
             usage_today={
                 "requests": 1250,
                 "tokens": 450000,
-                "cost_usd": 13.50
+                "cost_usd": 1350  # Cost in cents instead of dollars
             }
         )
     except Exception as e:

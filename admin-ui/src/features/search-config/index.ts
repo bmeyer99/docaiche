@@ -10,6 +10,7 @@ export { SearchConfigLayout } from './components/search-config-layout';
 // Tab components
 export { SearchConfigDashboard } from './components/tabs/dashboard';
 export { VectorSearchConfig } from './components/tabs/vector-search';
+export { EmbeddingAIConfig } from './components/tabs/embedding-ai';
 export { TextAIConfig } from './components/tabs/text-ai';
 export { IngestionConfig } from './components/tabs/ingestion';
 export { MonitoringConfig } from './components/tabs/monitoring';
@@ -31,5 +32,10 @@ export * from './hooks/use-search-config-websocket';
 // Types
 export * from './types';
 
-// Utils (if any)
-// export * from './utils';
+// Utils
+export { 
+  DeferredValidator, 
+  getDeferredValidator, 
+  useDeferredValidation,
+  hasRealValidationIssues 
+} from './utils/deferred-validator';

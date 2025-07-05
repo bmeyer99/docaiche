@@ -73,12 +73,12 @@ services:
     labels:
       - "docaiche.service=api"
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=PathPrefix(`/api/`) || PathPrefix(`/ws/`) || PathPrefix(`/mcp`)"
-      - "traefik.http.routers.api.priority=105"
+      - "traefik.http.routers.docaiche-api.rule=PathPrefix(`/api/`) || PathPrefix(`/ws/`) || PathPrefix(`/mcp`)"
+      - "traefik.http.routers.docaiche-api.priority=105"
       - "traefik.http.services.api.loadbalancer.server.port=4000"
       - "traefik.http.middlewares.ws-rewrite.replacepathregex.regex=^/ws/(.*)"
       - "traefik.http.middlewares.ws-rewrite.replacepathregex.replacement=/api/v1/ws/$$1"
-      - "traefik.http.routers.api.middlewares=ws-rewrite"
+      - "traefik.http.routers.docaiche-api.middlewares=ws-rewrite"
 
   admin-ui:
     build:
@@ -114,8 +114,8 @@ services:
     labels:
       - "docaiche.service=admin-ui"
       - "traefik.enable=true"
-      - "traefik.http.routers.admin-ui.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.admin-ui.priority=1"
+      - "traefik.http.routers.docaiche-admin-ui.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.docaiche-admin-ui.priority=1"
       - "traefik.http.services.admin-ui.loadbalancer.server.port=3000"
 
   redis:
@@ -245,11 +245,11 @@ services:
     labels:
       - "docaiche.service=loki"
       - "traefik.enable=true"
-      - "traefik.http.routers.loki.rule=PathPrefix(`/loki`)"
-      - "traefik.http.routers.loki.priority=95"
+      - "traefik.http.routers.docaiche-loki.rule=PathPrefix(`/loki`)"
+      - "traefik.http.routers.docaiche-loki.priority=95"
       - "traefik.http.services.loki.loadbalancer.server.port=3100"
       - "traefik.http.middlewares.loki-stripprefix.stripprefix.prefixes=/loki"
-      - "traefik.http.routers.loki.middlewares=loki-stripprefix"
+      - "traefik.http.routers.docaiche-loki.middlewares=loki-stripprefix"
 
   promtail:
     image: grafana/promtail:3.5.0
@@ -322,12 +322,12 @@ services:
     labels:
       - "docaiche.service=grafana"
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
-      - "traefik.http.routers.grafana.priority=98"
+      - "traefik.http.routers.docaiche-grafana.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.docaiche-grafana.priority=98"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
       - "traefik.http.middlewares.grafana-headers.headers.customrequestheaders.X-Forwarded-Proto=http"
       - "traefik.http.middlewares.grafana-headers.headers.customrequestheaders.X-Forwarded-Host={{.Request.Host}}"
-      - "traefik.http.routers.grafana.middlewares=grafana-headers"
+      - "traefik.http.routers.docaiche-grafana.middlewares=grafana-headers"
 
   prometheus:
     image: prom/prometheus:v3.4.2
@@ -359,11 +359,11 @@ services:
     labels:
       - "docaiche.service=prometheus"
       - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.rule=PathPrefix(`/prometheus`)"
-      - "traefik.http.routers.prometheus.priority=100"
+      - "traefik.http.routers.docaiche-prometheus.rule=PathPrefix(`/prometheus`)"
+      - "traefik.http.routers.docaiche-prometheus.priority=100"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
       - "traefik.http.middlewares.prometheus-stripprefix.stripprefix.prefixes=/prometheus"
-      - "traefik.http.routers.prometheus.middlewares=prometheus-stripprefix"
+      - "traefik.http.routers.docaiche-prometheus.middlewares=prometheus-stripprefix"
 
   node-exporter:
     image: prom/node-exporter:v1.8.2
@@ -457,11 +457,11 @@ services:
     labels:
       - "docaiche.service=victoriametrics"
       - "traefik.enable=true"
-      - "traefik.http.routers.victoriametrics.rule=PathPrefix(`/victoriametrics`)"
-      - "traefik.http.routers.victoriametrics.priority=99"
+      - "traefik.http.routers.docaiche-victoriametrics.rule=PathPrefix(`/victoriametrics`)"
+      - "traefik.http.routers.docaiche-victoriametrics.priority=99"
       - "traefik.http.services.victoriametrics.loadbalancer.server.port=8428"
       - "traefik.http.middlewares.vm-stripprefix.stripprefix.prefixes=/victoriametrics"
-      - "traefik.http.routers.victoriametrics.middlewares=vm-stripprefix"
+      - "traefik.http.routers.docaiche-victoriametrics.middlewares=vm-stripprefix"
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.0

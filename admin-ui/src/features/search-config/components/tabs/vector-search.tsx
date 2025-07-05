@@ -2,10 +2,10 @@
 
 /**
  * Vector Search configuration tab
+ * Refactored to use centralized state management with proper change detection
  */
 
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useProviderSettings } from '@/lib/hooks/use-provider-settings';
 import { AI_PROVIDERS } from '@/lib/config/providers';
 import { useSearchConfig } from '../../contexts/config-context';
+import { useSearchConfigSection } from '../../hooks/use-search-config-form';
 
 interface VectorSearchConfigProps {
   onChangeDetected?: () => void;
@@ -68,49 +69,44 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
     updateEmbeddingConfig 
   } = useSearchConfig();
 
-  const { register: registerVector, handleSubmit: handleSubmitVector, watch: watchVector, reset, setValue: setVectorValue } = useForm<VectorConfig>({
-    defaultValues: loadedVectorConfig || {
-      enabled: true,
-      base_url: 'http://weaviate:8080',
-      api_key: '',
-      timeout_seconds: 30,
-      max_retries: 3,
-      verify_ssl: false
-    }
+  // Use centralized form state management for vector config
+  const {
+    value: vectorConfig,
+    setValue: setVectorConfig,
+    isDirty: isVectorConfigDirty
+  } = useSearchConfigSection<VectorConfig>('vectorConfig', {
+    enabled: true,
+    base_url: 'http://weaviate:8080',
+    api_key: '',
+    timeout_seconds: 30,
+    max_retries: 3,
+    verify_ssl: false
   });
 
-  const vectorConfig = watchVector();
-
-  // Debug logging
-  useEffect(() => {
-    console.log('[VectorSearch] Loaded embedding config:', loadedEmbeddingConfig);
-    console.log('[VectorSearch] Available providers:', providers);
-  }, [loadedEmbeddingConfig, providers]);
-  
-  const { register: registerEmbedding, handleSubmit: handleSubmitEmbedding, watch: watchEmbedding, setValue: setEmbeddingValue, reset: resetEmbedding } = useForm<EmbeddingConfig>({
-    defaultValues: loadedEmbeddingConfig || {
-      useDefaultEmbedding: true,
-      provider: '',
-      model: '',
-      dimensions: 768,
-      chunkSize: 1000,
-      chunkOverlap: 200
-    }
+  // Use centralized form state management for embedding config
+  const {
+    value: embeddingConfig,
+    setValue: setEmbeddingConfig,
+    isDirty: isEmbeddingConfigDirty
+  } = useSearchConfigSection<EmbeddingConfig>('embeddingConfig', {
+    useDefaultEmbedding: true,
+    provider: '',
+    model: '',
+    dimensions: 768,
+    chunkSize: 1000,
+    chunkOverlap: 200
   });
-  
-  // Reset form when loaded config changes
-  useEffect(() => {
-    if (loadedEmbeddingConfig) {
-      console.log('[VectorSearch] Loading saved embedding config:', loadedEmbeddingConfig);
-      resetEmbedding(loadedEmbeddingConfig);
-    }
-  }, [loadedEmbeddingConfig, resetEmbedding]);
 
-  const embeddingConfig = watchEmbedding();
-  const selectedProvider = embeddingConfig.provider;
-  const selectedModel = embeddingConfig.model;
+  // Helper functions to update individual fields
+  const updateVectorField = useCallback((field: keyof VectorConfig, value: any) => {
+    setVectorConfig({ ...vectorConfig, [field]: value }, 'user');
+  }, [vectorConfig, setVectorConfig]);
 
-  // Set connection status from loaded config
+  const updateEmbeddingField = useCallback((field: keyof EmbeddingConfig, value: any) => {
+    setEmbeddingConfig({ ...embeddingConfig, [field]: value }, 'user');
+  }, [embeddingConfig, setEmbeddingConfig]);
+
+  // Initialize connection status from loaded config
   useEffect(() => {
     if (loadedVectorConfig) {
       setConnectionStatus({
@@ -122,26 +118,34 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
     }
   }, [loadedVectorConfig]);
 
-  // Track changes to embedding config
-  const [isInitialized, setIsInitialized] = useState(false);
+  // Load saved configs using system updates (doesn't trigger dirty state)
   useEffect(() => {
-    if (!isInitialized) {
-      setIsInitialized(true);
-      return;
+    if (loadedVectorConfig) {
+      setVectorConfig(loadedVectorConfig, 'system');
     }
-    onChangeDetected?.();
-  }, [embeddingConfig.provider, embeddingConfig.model, embeddingConfig.useDefaultEmbedding]);
+  }, [loadedVectorConfig, setVectorConfig]);
 
+  useEffect(() => {
+    if (loadedEmbeddingConfig) {
+      setEmbeddingConfig(loadedEmbeddingConfig, 'system');
+    }
+  }, [loadedEmbeddingConfig, setEmbeddingConfig]);
+
+  // Notify parent when there are user changes
+  useEffect(() => {
+    if (isVectorConfigDirty || isEmbeddingConfigDirty) {
+      onChangeDetected?.();
+    }
+  }, [isVectorConfigDirty, isEmbeddingConfigDirty, onChangeDetected]);
 
   const handleConnectionTest = async () => {
     setIsTestingConnection(true);
     try {
-      const formData = watchVector();
       const result = await apiClient.testWeaviateConnection({
-        base_url: formData.base_url,
-        api_key: formData.api_key,
-        timeout_seconds: formData.timeout_seconds,
-        verify_ssl: formData.verify_ssl
+        base_url: vectorConfig.base_url,
+        api_key: vectorConfig.api_key,
+        timeout_seconds: vectorConfig.timeout_seconds,
+        verify_ssl: vectorConfig.verify_ssl
       });
       
       setConnectionStatus({
@@ -171,10 +175,12 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
     }
   };
 
-  const handleSaveVectorConfig = async (data: VectorConfig) => {
+  const handleSaveVectorConfig = async () => {
     try {
-      const updated = await apiClient.updateWeaviateConfig(data);
+      const updated = await apiClient.updateWeaviateConfig(vectorConfig);
       updateVectorConfig(updated);
+      // Update the form state with system source to clear dirty flag
+      setVectorConfig(updated, 'system');
       toast({
         title: "Configuration Saved",
         description: "Weaviate configuration updated successfully"
@@ -188,20 +194,22 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
     }
   };
 
-  const handleSaveEmbeddingConfig = async (data: EmbeddingConfig) => {
+  const handleSaveEmbeddingConfig = async () => {
     try {
       // Include all embedding config fields
       const configToSave = {
-        useDefaultEmbedding: data.useDefaultEmbedding,
-        provider: data.provider || '',
-        model: data.model || '',
-        dimensions: data.dimensions || 768,
-        chunkSize: data.chunkSize || 1000,
-        chunkOverlap: data.chunkOverlap || 200
+        useDefaultEmbedding: embeddingConfig.useDefaultEmbedding,
+        provider: embeddingConfig.provider || '',
+        model: embeddingConfig.model || '',
+        dimensions: embeddingConfig.dimensions || 768,
+        chunkSize: embeddingConfig.chunkSize || 1000,
+        chunkOverlap: embeddingConfig.chunkOverlap || 200
       };
       
       const updated = await apiClient.updateEmbeddingConfig(configToSave);
       updateEmbeddingConfig(updated);
+      // Update the form state with system source to clear dirty flag
+      setEmbeddingConfig(updated, 'system');
       // Clear unsaved changes after successful save
       onSaveSuccess?.();
       toast({
@@ -238,9 +246,24 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
         }
         
         // Only show providers that are marked as configured (tested/connected)
-        const isConfigured = config.status === 'tested' || config.status === 'connected' || config.configured === true;
+        // Check multiple status indicators for robustness
+        const isConfigured = 
+          config.status === 'tested' || 
+          config.status === 'connected' || 
+          config.configured === true ||
+          (config.models && Array.isArray(config.models) && config.models.length > 0);
         
-        return provider?.supportsEmbedding && isConfigured;
+        const supportsEmbedding = provider?.supportsEmbedding || false;
+        
+        console.log(`[VectorSearch] Provider ${id}:`, {
+          status: config.status,
+          configured: config.configured,
+          hasModels: config.models?.length > 0,
+          supportsEmbedding,
+          isConfigured
+        });
+        
+        return supportsEmbedding && isConfigured;
       })
       .map(([id, config]) => ({
         id,
@@ -255,6 +278,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
   // Get embedding models for selected provider
   const getEmbeddingModels = () => {
     // Guard against missing or invalid data
+    const selectedProvider = embeddingConfig.provider;
     if (!selectedProvider || !providers || !providers[selectedProvider]) {
       console.warn('[VectorSearch] Cannot get models - invalid provider data:', { selectedProvider, providers });
       return [];
@@ -321,17 +345,14 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmitVector(handleSaveVectorConfig)} className="space-y-4">
+              <form onSubmit={(e) => { e.preventDefault(); handleSaveVectorConfig(); }} className="space-y-4">
                 <div className="flex items-start gap-4">
                   <div className="flex-1 space-y-4">
                     <div className="flex items-center space-x-2">
                       <Switch
                         id="enabled"
                         checked={vectorConfig.enabled}
-                        onCheckedChange={(checked) => {
-                          setVectorValue('enabled', checked);
-                          onChangeDetected?.();
-                        }}
+                        onCheckedChange={(checked) => updateVectorField('enabled', checked)}
                       />
                       <Label htmlFor="enabled">Enable Vector Search</Label>
                     </div>
@@ -340,7 +361,8 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                       <Label htmlFor="base_url">Base URL</Label>
                       <Input
                         id="base_url"
-                        {...registerVector('base_url')}
+                        value={vectorConfig.base_url}
+                        onChange={(e) => updateVectorField('base_url', e.target.value)}
                         placeholder="http://weaviate:8080"
                       />
                     </div>
@@ -350,7 +372,8 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                       <Input
                         id="api_key"
                         type="password"
-                        {...registerVector('api_key')}
+                        value={vectorConfig.api_key || ''}
+                        onChange={(e) => updateVectorField('api_key', e.target.value)}
                         placeholder="Enter API key if required"
                       />
                     </div>
@@ -361,7 +384,8 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                         <Input
                           id="timeout_seconds"
                           type="number"
-                          {...registerVector('timeout_seconds', { valueAsNumber: true })}
+                          value={vectorConfig.timeout_seconds}
+                          onChange={(e) => updateVectorField('timeout_seconds', parseInt(e.target.value) || 30)}
                         />
                       </div>
                       
@@ -370,7 +394,8 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                         <Input
                           id="max_retries"
                           type="number"
-                          {...registerVector('max_retries', { valueAsNumber: true })}
+                          value={vectorConfig.max_retries}
+                          onChange={(e) => updateVectorField('max_retries', parseInt(e.target.value) || 3)}
                         />
                       </div>
                     </div>
@@ -379,10 +404,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                       <Switch
                         id="verify_ssl"
                         checked={vectorConfig.verify_ssl}
-                        onCheckedChange={(checked) => {
-                          setVectorValue('verify_ssl', checked);
-                          onChangeDetected?.();
-                        }}
+                        onCheckedChange={(checked) => updateVectorField('verify_ssl', checked)}
                       />
                       <Label htmlFor="verify_ssl">Verify SSL Certificate</Label>
                     </div>
@@ -448,8 +470,13 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit">Save Connection Settings</Button>
+                <div className="flex justify-end items-center gap-4">
+                  {isVectorConfigDirty && (
+                    <span className="text-sm text-muted-foreground">You have unsaved changes</span>
+                  )}
+                  <Button type="submit" disabled={!isVectorConfigDirty}>
+                    Save Connection Settings
+                  </Button>
                 </div>
               </form>
             </CardContent>
@@ -466,7 +493,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmitEmbedding(handleSaveEmbeddingConfig)} className="space-y-6">
+              <form onSubmit={(e) => { e.preventDefault(); handleSaveEmbeddingConfig(); }} className="space-y-6">
                 {/* Default Embedding Toggle */}
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="space-y-1">
@@ -478,10 +505,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                   <Switch
                     id="useDefaultEmbedding"
                     checked={embeddingConfig.useDefaultEmbedding}
-                    onCheckedChange={(checked) => {
-                      setEmbeddingValue('useDefaultEmbedding', checked);
-                      onChangeDetected?.();
-                    }}
+                    onCheckedChange={(checked) => updateEmbeddingField('useDefaultEmbedding', checked)}
                   />
                 </div>
 
@@ -500,11 +524,10 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                       <div>
                         <Label htmlFor="provider">Embedding Provider</Label>
                         <Select
-                          value={embeddingConfig.provider}
+                          value={embeddingConfig.provider || ''}
                           onValueChange={(value) => {
-                            setEmbeddingValue('provider', value);
-                            setEmbeddingValue('model', ''); // Reset model
-                            onChangeDetected?.();
+                            updateEmbeddingField('provider', value);
+                            updateEmbeddingField('model', ''); // Reset model
                           }}
                         >
                           <SelectTrigger>
@@ -524,10 +547,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                         <Label htmlFor="model">Embedding Model</Label>
                         <Select
                           value={embeddingConfig.model || ''}
-                          onValueChange={(value) => {
-                            setEmbeddingValue('model', value);
-                            onChangeDetected?.();
-                          }}
+                          onValueChange={(value) => updateEmbeddingField('model', value)}
                           disabled={!embeddingConfig.provider}
                         >
                           <SelectTrigger>
@@ -583,7 +603,8 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                           <Input
                             id="dimensions"
                             type="number"
-                            {...registerEmbedding('dimensions', { valueAsNumber: true })}
+                            value={embeddingConfig.dimensions || 768}
+                            onChange={(e) => updateEmbeddingField('dimensions', parseInt(e.target.value) || 768)}
                             placeholder="768"
                           />
                           <p className="text-xs text-muted-foreground mt-1">
@@ -600,10 +621,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                               max={4000}
                               step={100}
                               value={[embeddingConfig.chunkSize || 1000]}
-                              onValueChange={(value) => {
-                                setEmbeddingValue('chunkSize', value[0]);
-                                onChangeDetected?.();
-                              }}
+                              onValueChange={(value) => updateEmbeddingField('chunkSize', value[0])}
                               className="flex-1"
                             />
                             <span className="w-16 text-sm">{embeddingConfig.chunkSize}</span>
@@ -622,10 +640,7 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                               max={500}
                               step={50}
                               value={[embeddingConfig.chunkOverlap || 200]}
-                              onValueChange={(value) => {
-                                setEmbeddingValue('chunkOverlap', value[0]);
-                                onChangeDetected?.();
-                              }}
+                              onValueChange={(value) => updateEmbeddingField('chunkOverlap', value[0])}
                               className="flex-1"
                             />
                             <span className="w-16 text-sm">{embeddingConfig.chunkOverlap}</span>
@@ -639,8 +654,13 @@ export function VectorSearchConfig({ onChangeDetected, onSaveSuccess }: VectorSe
                   </div>
                 )}
 
-                <div className="flex justify-end">
-                  <Button type="submit">Save Model Configuration</Button>
+                <div className="flex justify-end items-center gap-4">
+                  {isEmbeddingConfigDirty && (
+                    <span className="text-sm text-muted-foreground">You have unsaved changes</span>
+                  )}
+                  <Button type="submit" disabled={!isEmbeddingConfigDirty}>
+                    Save Model Configuration
+                  </Button>
                 </div>
               </form>
             </CardContent>

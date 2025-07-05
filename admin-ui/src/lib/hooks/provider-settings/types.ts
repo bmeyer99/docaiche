@@ -70,6 +70,7 @@ export interface ModelSelectionHookReturn {
   modelSelection: ProviderSettings['modelSelection'];
   updateModelSelection: (selection: Partial<ProviderSettings['modelSelection']>) => void;
   isDirty: boolean;
+  isLoading: boolean;
 }
 
 // API Response schemas

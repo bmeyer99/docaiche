@@ -218,7 +218,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(1 - rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100",
+          "expr": "(1 - rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100",
           "refId": "A"
         }
       ],
@@ -1158,7 +1158,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(1 - rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100",
+          "expr": "(1 - rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100",
           "legendFormat": "CPU Usage %",
           "refId": "B"
         },
@@ -1173,11 +1173,10 @@
         }
       ],
       "title": "System Performance Overview",
-      "type": "timeseries"
-    },
-,
-  ],
-  "refresh": "30s",
+    "type": "timeseries"
+  }
+],
+"refresh": "30s",
   "schemaVersion": 41,
   "tags": [
     "docaiche",

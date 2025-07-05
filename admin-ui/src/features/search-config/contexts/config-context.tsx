@@ -41,6 +41,24 @@ interface ModelParameters {
   systemPrompt?: string;
 }
 
+interface LoadingState {
+  // Overall loading state
+  isLoading: boolean;
+  
+  // Individual data source loading states
+  providersLoaded: boolean;
+  configLoaded: boolean;
+  modelsLoaded: boolean;
+  vectorConfigLoaded: boolean;
+  workspacesLoaded: boolean;
+  
+  // Error tracking
+  loadError: string | null;
+  
+  // Computed property helpers
+  allDataLoaded: boolean;
+}
+
 interface ConfigState {
   // Vector Search
   vectorConfig: VectorConfig | null;
@@ -49,6 +67,8 @@ interface ConfigState {
   
   // Text AI
   modelParameters: Record<string, Record<string, ModelParameters>>;
+  availableProviders: string[];
+  availableModels: Record<string, string[]>;
   
   // Ingestion
   ingestionRules: any[];
@@ -62,8 +82,7 @@ interface ConfigState {
   systemSettings: any;
   
   // Loading state
-  isLoading: boolean;
-  loadError: string | null;
+  loading: LoadingState;
 }
 
 interface ConfigContextValue extends ConfigState {
@@ -78,6 +97,11 @@ interface ConfigContextValue extends ConfigState {
   
   // Reload all configurations
   reloadConfigurations: () => Promise<void>;
+  
+  // Loading state helpers (for easier access)
+  isLoading: boolean;
+  allDataLoaded: boolean;
+  loadError: string | null;
 }
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -103,13 +127,23 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     workspaces: [],
     embeddingConfig: null,
     modelParameters: {},
+    availableProviders: [],
+    availableModels: {},
     ingestionRules: [],
     ingestionSettings: null,
     alertRules: [],
     dashboardUrls: null,
     systemSettings: null,
-    isLoading: true,
-    loadError: null
+    loading: {
+      isLoading: true,
+      providersLoaded: false,
+      configLoaded: false,
+      modelsLoaded: false,
+      vectorConfigLoaded: false,
+      workspacesLoaded: false,
+      loadError: null,
+      allDataLoaded: false
+    }
   });
   
   // Load all configurations on mount
@@ -117,16 +151,93 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     loadAllConfigurations();
   }, []);
   
+  // Helper to update individual loading states
+  const updateLoadingState = (updates: Partial<LoadingState>) => {
+    setState(prev => ({
+      ...prev,
+      loading: {
+        ...prev.loading,
+        ...updates,
+        // Recompute allDataLoaded
+        allDataLoaded: updates.allDataLoaded !== undefined ? updates.allDataLoaded : (
+          prev.loading.providersLoaded &&
+          prev.loading.configLoaded &&
+          prev.loading.modelsLoaded &&
+          prev.loading.vectorConfigLoaded &&
+          prev.loading.workspacesLoaded
+        )
+      }
+    }));
+  };
+  
   const loadAllConfigurations = async () => {
-    setState(prev => ({ ...prev, isLoading: true, loadError: null }));
+    // Reset loading state
+    setState(prev => ({ 
+      ...prev, 
+      loading: {
+        ...prev.loading,
+        isLoading: true, 
+        loadError: null,
+        providersLoaded: false,
+        configLoaded: false,
+        modelsLoaded: false,
+        vectorConfigLoaded: false,
+        workspacesLoaded: false,
+        allDataLoaded: false
+      }
+    }));
     
     try {
-      // Load central configuration first
-      const centralConfig = await apiClient.getConfiguration();
-      console.log('[ConfigProvider] Loaded central configuration');
+      // Load providers and models first
+      let availableProviders: string[] = [];
+      let availableModels: Record<string, string[]> = {};
       
-      // Extract configurations from central store
-      const configs = extractConfigurationsFromCentral(centralConfig);
+      try {
+        const providers = await apiClient.getAvailableProviders();
+        availableProviders = providers || [];
+        
+        // Load models for each provider
+        for (const provider of availableProviders) {
+          try {
+            const models = await apiClient.getProviderModels(provider);
+            availableModels[provider] = models || [];
+          } catch (error) {
+            console.warn(`[ConfigProvider] Failed to load models for ${provider}:`, error);
+            availableModels[provider] = [];
+          }
+        }
+        
+        setState(prev => ({ 
+          ...prev, 
+          availableProviders,
+          availableModels,
+          loading: { ...prev.loading, providersLoaded: true, modelsLoaded: true }
+        }));
+      } catch (error) {
+        console.error('[ConfigProvider] Failed to load providers:', error);
+        setState(prev => ({ 
+          ...prev, 
+          loading: { ...prev.loading, providersLoaded: true, modelsLoaded: true }
+        }));
+      }
+      
+      // Load central configuration
+      let configs: any = {};
+      try {
+        const centralConfig = await apiClient.getConfiguration();
+        console.log('[ConfigProvider] Loaded central configuration');
+        configs = extractConfigurationsFromCentral(centralConfig);
+        setState(prev => ({ 
+          ...prev, 
+          loading: { ...prev.loading, configLoaded: true }
+        }));
+      } catch (error) {
+        console.error('[ConfigProvider] Failed to load central configuration:', error);
+        setState(prev => ({ 
+          ...prev, 
+          loading: { ...prev.loading, configLoaded: true }
+        }));
+      }
       
       // Load service-specific data
       const [
@@ -142,12 +253,22 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         workspaces: workspaces.status
       });
       
+      // Check if all data is loaded
+      const allLoaded = 
+        vectorConfig.status === 'fulfilled' && 
+        workspaces.status === 'fulfilled' &&
+        availableProviders.length > 0;
+      
       setState({
+        // From providers/models
+        availableProviders,
+        availableModels,
+        
         // From central config
-        embeddingConfig: configs.embeddingConfig,
-        modelParameters: configs.modelParameters,
+        embeddingConfig: configs.embeddingConfig || null,
+        modelParameters: configs.modelParameters || {},
         ingestionSettings: configs.ingestionSettings,
-        systemSettings: configs.systemSettings,
+        systemSettings: configs.systemSettings || {},
         dashboardUrls: configs.dashboardUrls,
         
         // From service endpoints
@@ -158,15 +279,28 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         ingestionRules: [],
         alertRules: [],
         
-        isLoading: false,
-        loadError: null
+        // Update loading state
+        loading: {
+          isLoading: false,
+          providersLoaded: true,
+          configLoaded: true,
+          modelsLoaded: true,
+          vectorConfigLoaded: vectorConfig.status === 'fulfilled',
+          workspacesLoaded: workspaces.status === 'fulfilled',
+          loadError: null,
+          allDataLoaded: allLoaded
+        }
       });
     } catch (error) {
       console.error('[ConfigProvider] Failed to load configurations:', error);
       setState(prev => ({
         ...prev,
-        isLoading: false,
-        loadError: 'Failed to load configurations'
+        loading: {
+          ...prev.loading,
+          isLoading: false,
+          loadError: 'Failed to load configurations',
+          allDataLoaded: false
+        }
       }));
       toast({
         title: "Configuration Load Failed",
@@ -321,7 +455,11 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     updateIngestionSettings,
     updateAlertRules,
     updateSystemSettings,
-    reloadConfigurations: loadAllConfigurations
+    reloadConfigurations: loadAllConfigurations,
+    // Loading state helpers for easier access
+    isLoading: state.loading.isLoading,
+    allDataLoaded: state.loading.allDataLoaded,
+    loadError: state.loading.loadError
   };
   
   return (

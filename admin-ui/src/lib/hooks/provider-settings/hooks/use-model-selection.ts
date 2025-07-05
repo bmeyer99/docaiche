@@ -13,7 +13,7 @@ export function useModelSelection(): ModelSelectionHookReturn {
     throw new Error('useModelSelection must be used within a ProviderSettingsProvider');
   }
   
-  const { modelSelection, updateModelSelection, isFieldDirty } = context;
+  const { modelSelection, updateModelSelection, isFieldDirty, isLoading } = context;
   
   const isDirty = isFieldDirty('modelSelection.textGeneration') || 
                   isFieldDirty('modelSelection.embeddings') || 
@@ -23,5 +23,6 @@ export function useModelSelection(): ModelSelectionHookReturn {
     modelSelection,
     updateModelSelection,
     isDirty,
+    isLoading,
   };
 }

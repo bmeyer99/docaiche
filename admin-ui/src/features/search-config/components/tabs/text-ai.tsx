@@ -2,10 +2,11 @@
 
 /**
  * Text AI configuration tab
+ * 
+ * Refactored to use proper state synchronization with change tracking
  */
 
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Bot, 
@@ -46,6 +46,11 @@ interface ModelParameters {
   systemPrompt?: string;
 }
 
+interface TextGenerationConfig {
+  provider: string;
+  model: string;
+}
+
 export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { providers } = useProviderSettings();
@@ -54,23 +59,79 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
   const { toast } = useToast();
   const { modelParameters, updateModelParameters } = useSearchConfig();
   
-  // Try to get saved configuration from central config first
-  const [savedConfig, setSavedConfig] = useState<{provider: string, model: string} | null>(null);
+  // Track saved state to detect changes
+  const [savedTextGenConfig, setSavedTextGenConfig] = useState<TextGenerationConfig>({
+    provider: '',
+    model: ''
+  });
   
+  // Current text generation config
+  const [textGenConfig, setTextGenConfig] = useState<TextGenerationConfig>({
+    provider: '',
+    model: ''
+  });
+  
+  // Track if this is a system update (loading saved values)
+  const isSystemUpdateRef = useRef(false);
+  
+  // Selected provider and model
+  const selectedProvider = textGenConfig.provider || modelSelection.textGeneration.provider;
+  const selectedModel = textGenConfig.model || modelSelection.textGeneration.model;
+  
+  // Track saved parameters for current model
+  const [savedParams, setSavedParams] = useState<ModelParameters>({
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 40,
+    maxTokens: 2048,
+    presencePenalty: 0,
+    frequencyPenalty: 0,
+    systemPrompt: ''
+  });
+  
+  // Current parameters
+  const [currentParams, setCurrentParams] = useState<ModelParameters>({
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 40,
+    maxTokens: 2048,
+    presencePenalty: 0,
+    frequencyPenalty: 0,
+    systemPrompt: ''
+  });
+  
+  // Check if configuration has changed
+  const hasTextGenChanges = 
+    textGenConfig.provider !== savedTextGenConfig.provider ||
+    textGenConfig.model !== savedTextGenConfig.model;
+    
+  const hasParamChanges = JSON.stringify(currentParams) !== JSON.stringify(savedParams);
+  
+  // Notify parent when changes are detected
   useEffect(() => {
-    // Load saved text generation configuration
+    if ((hasTextGenChanges || hasParamChanges) && !isSystemUpdateRef.current && onChangeDetected) {
+      onChangeDetected();
+    }
+  }, [hasTextGenChanges, hasParamChanges, onChangeDetected]);
+  
+  // Load saved configuration on mount
+  useEffect(() => {
     const loadSavedConfig = async () => {
       try {
+        isSystemUpdateRef.current = true;
         const centralConfig = await apiClient.getConfiguration();
         const modelSelectionItem = centralConfig.items?.find(i => i.key === 'ai.model_selection');
         if (modelSelectionItem?.value && typeof modelSelectionItem.value === 'object' && 'textGeneration' in modelSelectionItem.value) {
           const textConfig = (modelSelectionItem.value as any).textGeneration;
-          setSavedConfig({
-            provider: textConfig.provider || '',
-            model: textConfig.model || ''
-          });
-          // Update model selection to show saved config
           if (textConfig.provider && textConfig.model) {
+            const config = {
+              provider: textConfig.provider,
+              model: textConfig.model
+            };
+            setTextGenConfig(config);
+            setSavedTextGenConfig(config);
+            
+            // Also update the model selection context
             updateModelSelection({
               ...modelSelection,
               textGeneration: {
@@ -82,66 +143,50 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
         }
       } catch (error) {
         console.warn('[TextAI] Failed to load saved configuration:', error);
+      } finally {
+        isSystemUpdateRef.current = false;
       }
     };
     loadSavedConfig();
   }, []);
-
-  const selectedProvider = savedConfig?.provider || modelSelection.textGeneration.provider;
-  const selectedModel = savedConfig?.model || modelSelection.textGeneration.model;
   
-  // Get pre-loaded parameters for selected model
-  const loadedParams = modelParameters[selectedProvider]?.[selectedModel];
-
-  const { register, handleSubmit, watch, setValue } = useForm<ModelParameters>({
-    defaultValues: loadedParams || {
-      temperature: 0.7,
-      topP: 0.9,
-      topK: 40,
-      maxTokens: 2048,
-      presencePenalty: 0,
-      frequencyPenalty: 0,
-      systemPrompt: ''
-    }
-  });
-
+  // Load model parameters when selection changes
   useEffect(() => {
-    // When model changes, load parameters if not already loaded
-    if (selectedProvider && selectedModel && !loadedParams) {
-      loadModelParameters();
-    } else if (loadedParams) {
-      // Use pre-loaded parameters
-      setValue('temperature', loadedParams.temperature || 0.7);
-      setValue('topP', loadedParams.topP || 0.9);
-      setValue('topK', loadedParams.topK || 40);
-      setValue('maxTokens', loadedParams.maxTokens || 2048);
-      setValue('presencePenalty', loadedParams.presencePenalty || 0);
-      setValue('frequencyPenalty', loadedParams.frequencyPenalty || 0);
-      setValue('systemPrompt', loadedParams.systemPrompt || '');
+    if (selectedProvider && selectedModel) {
+      isSystemUpdateRef.current = true;
+      
+      // Check if we already have loaded parameters
+      const loadedParams = modelParameters[selectedProvider]?.[selectedModel];
+      if (loadedParams) {
+        setCurrentParams(loadedParams);
+        setSavedParams(loadedParams);
+        isSystemUpdateRef.current = false;
+      } else {
+        // Load from API
+        loadModelParameters();
+      }
     }
-  }, [selectedProvider, selectedModel, loadedParams]);
-
+  }, [selectedProvider, selectedModel]);
+  
   const loadModelParameters = async () => {
     if (!selectedProvider || !selectedModel) return;
     
     try {
       const params = await apiClient.getModelParameters(selectedProvider, selectedModel);
       if (params) {
+        // Update context
         updateModelParameters(selectedProvider, selectedModel, params);
-        setValue('temperature', params.temperature || 0.7);
-        setValue('topP', params.topP || 0.9);
-        setValue('topK', params.topK || 40);
-        setValue('maxTokens', params.maxTokens || 2048);
-        setValue('presencePenalty', params.presencePenalty || 0);
-        setValue('frequencyPenalty', params.frequencyPenalty || 0);
-        setValue('systemPrompt', params.systemPrompt || '');
+        setCurrentParams(params);
+        setSavedParams(params);
       }
     } catch (error) {
       console.error('Failed to load model parameters:', error);
+    } finally {
+      isSystemUpdateRef.current = false;
     }
   };
-
-  const handleSaveConfig = async (data: ModelParameters) => {
+  
+  const handleSaveConfig = async () => {
     if (!selectedProvider || !selectedModel) {
       toast({
         title: "No Model Selected",
@@ -153,8 +198,33 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
 
     setIsSaving(true);
     try {
-      await apiClient.updateModelParameters(selectedProvider, selectedModel, data);
-      updateModelParameters(selectedProvider, selectedModel, data);
+      // Save model parameters
+      await apiClient.updateModelParameters(selectedProvider, selectedModel, currentParams);
+      updateModelParameters(selectedProvider, selectedModel, currentParams);
+      
+      // Save text generation config
+      const currentConfig = await apiClient.getConfiguration();
+      const modelSelectionItem = currentConfig.items?.find(i => i.key === 'ai.model_selection');
+      const currentModelSelection = modelSelectionItem?.value || {};
+      
+      await apiClient.updateConfiguration({
+        key: 'ai.model_selection',
+        value: {
+          ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
+          textGeneration: {
+            provider: selectedProvider,
+            model: selectedModel
+          }
+        }
+      });
+      
+      // Update saved state
+      setSavedTextGenConfig({
+        provider: selectedProvider,
+        model: selectedModel
+      });
+      setSavedParams(currentParams);
+      
       // Clear unsaved changes after successful save
       onSaveSuccess?.();
       toast({
@@ -171,10 +241,9 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
       setIsSaving(false);
     }
   };
-
+  
   // Get configured providers that support text generation
   const getTextProviders = () => {
-    // Guard against missing or invalid providers data
     if (!providers || typeof providers !== 'object') {
       console.warn('[TextAI] Providers data is invalid:', providers);
       return [];
@@ -182,7 +251,6 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
     
     const textProviders = Object.entries(providers)
       .filter(([id, config]) => {
-        // Guard against missing config or provider definition
         if (!config || !id) return false;
         
         const provider = AI_PROVIDERS[id];
@@ -192,9 +260,24 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
         }
         
         // Only show providers that are marked as configured (tested/connected)
-        const isConfigured = config.status === 'tested' || config.status === 'connected' || config.configured === true;
+        // Check multiple status indicators for robustness
+        const isConfigured = 
+          config.status === 'tested' || 
+          config.status === 'connected' || 
+          config.configured === true ||
+          (config.models && Array.isArray(config.models) && config.models.length > 0);
         
-        return provider?.supportsChat && isConfigured;
+        const supportsChat = provider?.supportsChat || false;
+        
+        console.log(`[TextAI] Provider ${id}:`, {
+          status: config.status,
+          configured: config.configured,
+          hasModels: config.models?.length > 0,
+          supportsChat,
+          isConfigured
+        });
+        
+        return supportsChat && isConfigured;
       })
       .map(([id, config]) => ({
         id,
@@ -209,7 +292,6 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
 
   // Get text generation models for selected provider
   const getTextModels = () => {
-    // Guard against missing or invalid data
     if (!selectedProvider || !providers || !providers[selectedProvider]) {
       console.warn('[TextAI] Cannot get models - invalid provider data:', { selectedProvider, providers });
       return [];
@@ -248,44 +330,30 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
     return textModels;
   };
 
-  const handleProviderChange = async (providerId: string) => {
+  const handleProviderChange = (providerId: string) => {
+    setTextGenConfig({
+      provider: providerId,
+      model: ''
+    });
+    
+    // Update model selection context
     const newSelection = {
       ...modelSelection,
       textGeneration: {
         provider: providerId,
-        model: '' // Reset model
+        model: ''
       }
     };
     updateModelSelection(newSelection);
-    setSavedConfig({ provider: providerId, model: '' });
-    
-    // Save to central config
-    try {
-      const currentConfig = await apiClient.getConfiguration();
-      const modelSelectionItem = currentConfig.items?.find(i => i.key === 'ai.model_selection');
-      const currentModelSelection = modelSelectionItem?.value || {};
-      
-      await apiClient.updateConfiguration({
-        key: 'ai.model_selection',
-        value: {
-          ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
-          textGeneration: {
-            provider: providerId,
-            model: ''
-          }
-        }
-      });
-    } catch (error) {
-      console.error('[TextAI] Failed to save provider selection:', error);
-    }
-    
-    // Only trigger change detection if this is a user-initiated change
-    if (providerId !== savedConfig?.provider) {
-      onChangeDetected?.();
-    }
   };
 
-  const handleModelChange = async (model: string) => {
+  const handleModelChange = (model: string) => {
+    setTextGenConfig({
+      provider: selectedProvider,
+      model
+    });
+    
+    // Update model selection context
     const newSelection = {
       ...modelSelection,
       textGeneration: {
@@ -294,32 +362,13 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
       }
     };
     updateModelSelection(newSelection);
-    setSavedConfig({ provider: selectedProvider, model });
-    
-    // Save to central config
-    try {
-      const currentConfig = await apiClient.getConfiguration();
-      const modelSelectionItem = currentConfig.items?.find(i => i.key === 'ai.model_selection');
-      const currentModelSelection = modelSelectionItem?.value || {};
-      
-      await apiClient.updateConfiguration({
-        key: 'ai.model_selection',
-        value: {
-          ...(typeof currentModelSelection === 'object' ? currentModelSelection : {}),
-          textGeneration: {
-            provider: selectedProvider,
-            model
-          }
-        }
-      });
-    } catch (error) {
-      console.error('[TextAI] Failed to save model selection:', error);
-    }
-    
-    // Only trigger change detection if this is a user-initiated change
-    if (model !== savedConfig?.model) {
-      onChangeDetected?.();
-    }
+  };
+  
+  const handleParameterChange = (key: keyof ModelParameters, value: any) => {
+    setCurrentParams({
+      ...currentParams,
+      [key]: value
+    });
   };
 
   return (
@@ -402,7 +451,7 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
 
               {selectedProvider && selectedModel && (
                 <div className="p-4 border rounded-lg bg-muted/30">
-                  <h4 className="font-medium mb-2">Current Saved Configuration</h4>
+                  <h4 className="font-medium mb-2">Current Configuration</h4>
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Provider:</span>
@@ -416,7 +465,9 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Status:</span>
-                      <Badge variant="outline">Saved</Badge>
+                      <Badge variant={hasTextGenChanges || hasParamChanges ? "default" : "outline"}>
+                        {hasTextGenChanges || hasParamChanges ? "Unsaved Changes" : "Saved"}
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -435,150 +486,139 @@ export function TextAIConfig({ onChangeDetected, onSaveSuccess }: TextAIConfigPr
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit(handleSaveConfig)} className="space-y-6">
-                {!selectedModel ? (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Please select a provider and model in the Model Selection tab first.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="temperature">Temperature</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            id="temperature"
-                            min={0}
-                            max={2}
-                            step={0.1}
-                            value={[watch('temperature')]}
-                            onValueChange={(value) => {
-                              setValue('temperature', value[0]);
-                              onChangeDetected?.();
-                            }}
-                            className="flex-1"
-                          />
-                          <span className="w-12 text-sm">{watch('temperature')}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Controls randomness (0 = deterministic, 2 = very random)
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="topP">Top P</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            id="topP"
-                            min={0}
-                            max={1}
-                            step={0.05}
-                            value={[watch('topP')]}
-                            onValueChange={(value) => {
-                              setValue('topP', value[0]);
-                              onChangeDetected?.();
-                            }}
-                            className="flex-1"
-                          />
-                          <span className="w-12 text-sm">{watch('topP')}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Nucleus sampling threshold
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="maxTokens">Max Tokens</Label>
-                        <Input
-                          id="maxTokens"
-                          type="number"
-                          {...register('maxTokens', { valueAsNumber: true })}
-                          onChange={(e) => onChangeDetected?.()}
+              {!selectedModel ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Please select a provider and model in the Model Selection tab first.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="temperature">Temperature</Label>
+                      <div className="flex items-center gap-4">
+                        <Slider
+                          id="temperature"
+                          min={0}
+                          max={2}
+                          step={0.1}
+                          value={[currentParams.temperature]}
+                          onValueChange={(value) => handleParameterChange('temperature', value[0])}
+                          className="flex-1"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Maximum response length
-                        </p>
+                        <span className="w-12 text-sm">{currentParams.temperature}</span>
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="topK">Top K (Optional)</Label>
-                        <Input
-                          id="topK"
-                          type="number"
-                          {...register('topK', { valueAsNumber: true })}
-                          onChange={(e) => onChangeDetected?.()}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Top-k sampling (if supported)
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="presencePenalty">Presence Penalty</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            id="presencePenalty"
-                            min={-2}
-                            max={2}
-                            step={0.1}
-                            value={[watch('presencePenalty') || 0]}
-                            onValueChange={(value) => {
-                              setValue('presencePenalty', value[0]);
-                              onChangeDetected?.();
-                            }}
-                            className="flex-1"
-                          />
-                          <span className="w-12 text-sm">{watch('presencePenalty') || 0}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Penalize new topics (-2 to 2)
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="frequencyPenalty">Frequency Penalty</Label>
-                        <div className="flex items-center gap-4">
-                          <Slider
-                            id="frequencyPenalty"
-                            min={-2}
-                            max={2}
-                            step={0.1}
-                            value={[watch('frequencyPenalty') || 0]}
-                            onValueChange={(value) => {
-                              setValue('frequencyPenalty', value[0]);
-                              onChangeDetected?.();
-                            }}
-                            className="flex-1"
-                          />
-                          <span className="w-12 text-sm">{watch('frequencyPenalty') || 0}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Penalize repetition (-2 to 2)
-                        </p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Controls randomness (0 = deterministic, 2 = very random)
+                      </p>
                     </div>
 
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={isSaving}>
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="h-4 w-4 mr-2" />
-                            Save Parameters
-                          </>
-                        )}
-                      </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="topP">Top P</Label>
+                      <div className="flex items-center gap-4">
+                        <Slider
+                          id="topP"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={[currentParams.topP]}
+                          onValueChange={(value) => handleParameterChange('topP', value[0])}
+                          className="flex-1"
+                        />
+                        <span className="w-12 text-sm">{currentParams.topP}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Nucleus sampling threshold
+                      </p>
                     </div>
-                  </>
-                )}
-              </form>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="maxTokens">Max Tokens</Label>
+                      <Input
+                        id="maxTokens"
+                        type="number"
+                        value={currentParams.maxTokens}
+                        onChange={(e) => handleParameterChange('maxTokens', parseInt(e.target.value) || 0)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Maximum response length
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="topK">Top K (Optional)</Label>
+                      <Input
+                        id="topK"
+                        type="number"
+                        value={currentParams.topK || ''}
+                        onChange={(e) => handleParameterChange('topK', e.target.value ? parseInt(e.target.value) : undefined)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Top-k sampling (if supported)
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="presencePenalty">Presence Penalty</Label>
+                      <div className="flex items-center gap-4">
+                        <Slider
+                          id="presencePenalty"
+                          min={-2}
+                          max={2}
+                          step={0.1}
+                          value={[currentParams.presencePenalty || 0]}
+                          onValueChange={(value) => handleParameterChange('presencePenalty', value[0])}
+                          className="flex-1"
+                        />
+                        <span className="w-12 text-sm">{currentParams.presencePenalty || 0}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Penalize new topics (-2 to 2)
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="frequencyPenalty">Frequency Penalty</Label>
+                      <div className="flex items-center gap-4">
+                        <Slider
+                          id="frequencyPenalty"
+                          min={-2}
+                          max={2}
+                          step={0.1}
+                          value={[currentParams.frequencyPenalty || 0]}
+                          onValueChange={(value) => handleParameterChange('frequencyPenalty', value[0])}
+                          className="flex-1"
+                        />
+                        <span className="w-12 text-sm">{currentParams.frequencyPenalty || 0}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Penalize repetition (-2 to 2)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button 
+                      onClick={handleSaveConfig} 
+                      disabled={isSaving || (!hasTextGenChanges && !hasParamChanges)}
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Configuration
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -615,21 +615,54 @@ export class DocaicheApiClient {
     models?: string[];
   }>> {
     try {
-      return await this.get<Array<{
-        id: string;
-        enabled?: boolean;
-        config?: Record<string, any>;
-        status?: string;
-        last_tested?: string;
-        models?: string[];
-      }>>('/providers');
+      // First try the main providers endpoint with a shorter timeout
+      try {
+        const response = await this.get<Array<{
+          id: string;
+          enabled?: boolean;
+          config?: Record<string, any>;
+          status?: string;
+          last_tested?: string;
+          models?: string[];
+        }>>('/providers', { timeout: 5000, retries: 1 });
+        return response;
+      } catch (providerError) {
+        console.warn('[API] Main providers endpoint failed, trying fallback:', providerError);
+        
+        // Fallback to admin/search/providers endpoint
+        const response = await this.get<{
+          providers: Array<{
+            id: string;
+            name: string;
+            type: string;
+            enabled: boolean;
+            health: string;
+            latency_ms: number;
+            error_rate: number;
+            last_check: string;
+            circuit_breaker_state: string;
+            rate_limit_remaining: number | null;
+          }>;
+        }>('/admin/search/providers');
+        
+        // Transform to match expected format
+        return response.providers.map(provider => ({
+          id: provider.id,
+          enabled: provider.enabled,
+          config: {}, // Not provided by this endpoint
+          status: provider.health === 'healthy' ? 'tested' : 'untested',
+          last_tested: provider.last_check,
+          models: [] // Not provided by this endpoint
+        }));
+      }
     } catch (error) {
       // Return empty array on circuit breaker or repeated failures
       if (error instanceof Error && error.message?.includes('Circuit Breaker')) {
         console.warn('Provider configurations unavailable due to circuit breaker');
         return [];
       }
-      throw error;
+      console.error('[API] Failed to get provider configurations:', error);
+      return [];
     }
   }
 
@@ -668,9 +701,54 @@ export class DocaicheApiClient {
     }
   }
 
-  async getProviderModels(providerId: string): Promise<{ provider: string; models: string[]; queryable: boolean; custom_count?: number }> {
-    // This will be logged by the browser logger via fetch monkey-patch
-    return this.get<{ provider: string; models: string[]; queryable: boolean; custom_count?: number }>(`/providers/${providerId}/models`);
+  async getAvailableProviders(): Promise<string[]> {
+    try {
+      // First try the main providers endpoint with a shorter timeout
+      try {
+        const response = await this.get<Array<{
+          id: string;
+          enabled?: boolean;
+          config?: Record<string, any>;
+          status?: string;
+          last_tested?: string;
+          models?: string[];
+        }>>('/providers', { timeout: 5000, retries: 1 });
+        return response.map(provider => provider.id);
+      } catch (providerError) {
+        console.warn('[API] Main providers endpoint failed, trying fallback:', providerError);
+        
+        // Fallback to admin/search/providers endpoint
+        const response = await this.get<{
+          providers: Array<{
+            id: string;
+            name: string;
+            type: string;
+            enabled: boolean;
+            health: string;
+            latency_ms: number;
+            error_rate: number;
+            last_check: string;
+            circuit_breaker_state: string;
+            rate_limit_remaining: number | null;
+          }>;
+        }>('/admin/search/providers');
+        
+        return response.providers.map(provider => provider.id);
+      }
+    } catch (error) {
+      console.error('[API] Failed to get available providers:', error);
+      return [];
+    }
+  }
+
+  async getProviderModels(providerId: string): Promise<string[]> {
+    try {
+      const response = await this.get<{ provider: string; models: string[]; queryable: boolean; custom_count?: number }>(`/providers/${providerId}/models`);
+      return response.models || [];
+    } catch (error) {
+      console.error(`[API] Failed to get models for provider ${providerId}:`, error);
+      return [];
+    }
   }
 
   async addCustomModel(providerId: string, modelName: string): Promise<{ success: boolean; message: string }> {
@@ -718,14 +796,7 @@ export class DocaicheApiClient {
     sharedProvider: boolean;
   } | null> {
     try {
-      const response = await this.get<{
-        items: Array<{
-          key: string;
-          value: any;
-          description: string;
-        }>;
-        timestamp: string;
-      }>('/config');
+      const response = await this.getConfiguration();
       
       // Look for model selection in the configuration items
       const modelSelectionItem = response.items?.find(item => item.key === 'ai.model_selection');
@@ -733,9 +804,15 @@ export class DocaicheApiClient {
       if (modelSelectionItem && modelSelectionItem.value) {
         // Validate the structure
         const selection = modelSelectionItem.value;
-        if (selection.textGeneration && selection.embeddings && 
-            typeof selection.sharedProvider === 'boolean') {
-          return selection;
+        if (typeof selection === 'object' && selection !== null && 
+            'textGeneration' in selection && 'embeddings' in selection && 
+            'sharedProvider' in selection &&
+            typeof (selection as any).sharedProvider === 'boolean') {
+          return selection as {
+            textGeneration: { provider: string; model: string };
+            embeddings: { provider: string; model: string };
+            sharedProvider: boolean;
+          };
         }
       }
       
@@ -755,7 +832,13 @@ export class DocaicheApiClient {
   }
 
   async getRecentActivity(): Promise<ActivityItem[]> {
-    return this.get<ActivityItem[]>('/admin/activity/recent');
+    try {
+      return await this.get<ActivityItem[]>('/admin/activity/recent');
+    } catch (error) {
+      // Return empty array on error since this endpoint may not be implemented
+      console.warn('[API] Recent activity endpoint not available:', error);
+      return [];
+    }
   }
 
 
@@ -1059,7 +1142,17 @@ export class DocaicheApiClient {
 
   // System Prompts Management - Using Text AI endpoints
   async getSystemPrompts(): Promise<any> {
-    return this.get<any>('/admin/search/text-ai/prompts');
+    try {
+      const response = await this.get<any>('/admin/search/text-ai/prompts');
+      return response;
+    } catch (error) {
+      // Return default structure on error
+      console.warn('[API] Failed to get system prompts:', error);
+      return {
+        prompts: [],
+        total: 0
+      };
+    }
   }
 
   async updateSystemPrompt(promptType: string, data: any): Promise<any> {
@@ -1070,8 +1163,10 @@ export class DocaicheApiClient {
     return this.get<any[]>(`/admin/search/text-ai/prompts/${promptType}/versions`);
   }
   
-  async enhancePrompt(promptId: string, data: any): Promise<any> {
-    return this.post<any>(`/admin/search/text-ai/prompts/${promptId}/enhance`, data);
+  async enhancePrompt(promptType: string, data?: any): Promise<any> {
+    // Note: The enhance endpoint uses prompt type, not prompt ID
+    // and doesn't require any data in the body
+    return this.post<any>(`/admin/search/text-ai/prompts/${promptType}/enhance`, data || {});
   }
 
 }

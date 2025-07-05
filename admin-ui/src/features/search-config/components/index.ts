@@ -9,6 +9,7 @@ export { PromptCard } from './prompt-card';
 // Export all tab components
 export * from './tabs/providers';
 export * from './tabs/vector-search';
+export * from './tabs/embedding-ai';
 export * from './tabs/text-ai';
 export * from './tabs/ingestion';
 export * from './tabs/settings';
